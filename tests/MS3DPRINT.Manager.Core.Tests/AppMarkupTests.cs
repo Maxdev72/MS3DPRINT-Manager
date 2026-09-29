@@ -92,6 +92,19 @@ public sealed class AppMarkupTests
         Assert.Contains("Height = Math.Min(850, SystemParameters.WorkArea.Height * 0.85);", source);
     }
 
+    [Fact]
+    public void MainWindow_UsesACompactSecondaryButtonForStructureVerification()
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "MainWindow.xaml");
+
+        Assert.Contains(document.Descendants(), element =>
+            element.Name.LocalName == "Button" &&
+            (string?)element.Attribute("Click") == "VerifyStructure_Click" &&
+            (string?)element.Attribute("Style") == "{StaticResource SecondaryActionButton}" &&
+            (string?)element.Attribute("HorizontalAlignment") == "Left" &&
+            (string?)element.Attribute("Content") == "Vérifier l’arborescence");
+    }
+
     private static XDocument LoadMarkup(params string[] relativePath)
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
