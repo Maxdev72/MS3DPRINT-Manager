@@ -11,6 +11,7 @@ public partial class MainWindow : Window
     private readonly MainViewModel _viewModel;
     private readonly FolderTreeService _folders = new();
     private readonly ClientCodeRegistry _codes;
+    private readonly ThemeSettingsStore _themeSettings;
 
     public MainWindow()
     {
@@ -18,7 +19,12 @@ public partial class MainWindow : Window
         _viewModel = new MainViewModel(Environment.GetEnvironmentVariable("MS3DPRINT_STORAGE_ROOT"));
         var dataDirectory = Environment.GetEnvironmentVariable("MS3DPRINT_DATA_DIRECTORY");
         _codes = new ClientCodeRegistry(string.IsNullOrWhiteSpace(dataDirectory) ? null : dataDirectory);
+        _themeSettings = new ThemeSettingsStore(string.IsNullOrWhiteSpace(dataDirectory) ? null : dataDirectory);
         DataContext = _viewModel;
+        MaxHeight = SystemParameters.WorkArea.Height * 0.92;
+        MaxWidth = SystemParameters.WorkArea.Width * 0.92;
+        Width = Math.Min(Width, MaxWidth);
+        Height = Math.Min(Height, MaxHeight);
     }
 
     private void VerifyStructure_Click(object sender, RoutedEventArgs e) => Run(() =>
@@ -47,6 +53,9 @@ public partial class MainWindow : Window
         ExplorerService.Open(_viewModel.StorageRoot);
         _viewModel.Status = "Dossier MS3DPRINT ouvert dans l’Explorateur.";
     });
+
+    private void Settings_Click(object sender, RoutedEventArgs e) => Run(() =>
+        new SettingsWindow(_themeSettings) { Owner = this }.ShowDialog());
 
     private void ShowNamedItem(string title, string parentFolder, IReadOnlyList<string> template)
         => Run(() => ShowDialog(new CreateNamedItemWindow(title, Path.Combine(_viewModel.StorageRoot, parentFolder), template, _folders) { Owner = this }));

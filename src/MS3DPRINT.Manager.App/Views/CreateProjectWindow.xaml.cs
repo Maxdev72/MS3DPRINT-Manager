@@ -20,6 +20,8 @@ public partial class CreateProjectWindow : Window, ICreatedFolderDialog
         _registry = registry;
         _viewModel = new CreateProjectViewModel(storageRoot, registry);
         DataContext = _viewModel;
+        MaxHeight = SystemParameters.WorkArea.Height * 0.9;
+        MaxWidth = SystemParameters.WorkArea.Width * 0.9;
         Loaded += (_, _) => ClientBox.Focus();
     }
 

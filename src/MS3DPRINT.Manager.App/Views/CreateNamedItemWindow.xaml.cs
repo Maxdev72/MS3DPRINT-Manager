@@ -19,6 +19,8 @@ public partial class CreateNamedItemWindow : Window, ICreatedFolderDialog
         _targetRoot = targetRoot;
         _template = template;
         _folders = folders;
+        MaxHeight = SystemParameters.WorkArea.Height * 0.9;
+        MaxWidth = SystemParameters.WorkArea.Width * 0.9;
         Loaded += (_, _) => NameBox.Focus();
     }
 

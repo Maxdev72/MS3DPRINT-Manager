@@ -22,6 +22,8 @@ public partial class CreateClientWindow : Window, ICreatedFolderDialog
         _folders = folders;
         _registry = registry;
         DataContext = _viewModel;
+        MaxHeight = SystemParameters.WorkArea.Height * 0.9;
+        MaxWidth = SystemParameters.WorkArea.Width * 0.9;
         Loaded += (_, _) => NameBox.Focus();
     }
 

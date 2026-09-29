@@ -6,6 +6,11 @@
         <SolidColorBrush x:Key="InkBrush" Color="#183153" />
         <SolidColorBrush x:Key="AccentBrush" Color="#1769AA" />
         <SolidColorBrush x:Key="BackgroundBrush" Color="#F5F7FA" />
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="TextBrush" Color="#183153" />
+        <SolidColorBrush x:Key="MutedBrush" Color="#52657A" />
+        <SolidColorBrush x:Key="InputBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="BorderBrush" Color="#D8E2EC" />
         <Style TargetType="Button">
             <Setter Property="Height" Value="36" />
             <Setter Property="Padding" Value="14,5" />
@@ -25,7 +30,11 @@
             <Setter Property="MinHeight" Value="32" />
             <Setter Property="Padding" Value="7,5" />
             <Setter Property="FontSize" Value="14" />
+            <Setter Property="Background" Value="{DynamicResource InputBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
         </Style>
+        <Style TargetType="TextBlock"><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Style>
         <Style TargetType="ComboBox">
             <Setter Property="MinHeight" Value="32" />
             <Setter Property="FontSize" Value="14" />

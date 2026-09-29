@@ -5,12 +5,14 @@ namespace MS3DPRINT.Manager.Core.Tests;
 public sealed class AppMarkupTests
 {
     [Fact]
-    public void MainWindow_UsesATwoColumnActionCardGrid()
+    public void MainWindow_UsesAnAdaptiveWrappingActionCardLayout()
     {
         var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "MainWindow.xaml");
 
-        Assert.Contains(document.Descendants().Where(element => element.Name.LocalName == "UniformGrid"),
-            element => (string?)element.Attribute("Columns") == "2");
+        Assert.Contains(document.Descendants(), element => element.Name.LocalName == "WrapPanel");
+        Assert.Contains(document.Descendants().Where(element => element.Name.LocalName == "Button"),
+            element => (string?)element.Attribute("Style") == "{StaticResource ActionCardButton}" &&
+                       element.Attribute("Height") is null);
     }
 
     [Fact]
