@@ -61,6 +61,21 @@ public sealed class AppMarkupTests
             (string?)element.Attribute("BorderBrush") == "{DynamicResource BorderBrush}");
     }
 
+    [Fact]
+    public void ActionCards_UseAControlledHoverTemplate()
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "MainWindow.xaml");
+        var actionCardStyle = document.Descendants()
+            .Single(element => element.Name.LocalName == "Style" &&
+                               element.Attributes().Any(attribute => attribute.Name.LocalName == "Key" && attribute.Value == "ActionCardButton"));
+
+        Assert.Contains(actionCardStyle.Descendants(), element => element.Name.LocalName == "ControlTemplate");
+        Assert.Contains(actionCardStyle.Descendants(), element =>
+            element.Name.LocalName == "Setter" &&
+            (string?)element.Attribute("TargetName") == "CardBorder" &&
+            (string?)element.Attribute("Value") == "{DynamicResource CardHoverBrush}");
+    }
+
     private static XDocument LoadMarkup(params string[] relativePath)
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

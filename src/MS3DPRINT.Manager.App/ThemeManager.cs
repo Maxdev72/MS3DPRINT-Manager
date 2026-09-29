@@ -14,6 +14,7 @@ public static class ThemeManager
         SetBrush("AccentBrush", dark ? "#58A6FF" : "#1769AA");
         SetBrush("BackgroundBrush", dark ? "#17212B" : "#F5F7FA");
         SetBrush("SurfaceBrush", dark ? "#22303D" : "#FFFFFF");
+        SetBrush("CardHoverBrush", dark ? "#2C4052" : "#E8F3FC");
         SetBrush("TextBrush", dark ? "#EAF2FA" : "#183153");
         SetBrush("MutedBrush", dark ? "#B2C5D7" : "#52657A");
         SetBrush("InputBrush", dark ? "#111A22" : "#FFFFFF");
