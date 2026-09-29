@@ -58,8 +58,26 @@
                                               ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
                                               TextElement.Foreground="{TemplateBinding Foreground}" />
                             <ToggleButton x:Name="DropDownToggle" Width="30" HorizontalAlignment="Right"
-                                          Background="Transparent" BorderThickness="0"
+                                          Background="Transparent" Foreground="{TemplateBinding Foreground}" BorderThickness="0"
                                           IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="{x:Type ToggleButton}">
+                                        <Border x:Name="DropDownToggleBorder" Background="{TemplateBinding Background}" CornerRadius="0,2,2,0">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="DropDownToggleBorder" Property="Background" Value="{DynamicResource CardHoverBrush}" />
+                                            </Trigger>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter TargetName="DropDownToggleBorder" Property="Background" Value="{DynamicResource CardHoverBrush}" />
+                                            </Trigger>
+                                            <Trigger Property="IsEnabled" Value="False">
+                                                <Setter TargetName="DropDownToggleBorder" Property="Opacity" Value="0.55" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
                                 <TextBlock Text="⌄" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" Foreground="{TemplateBinding Foreground}" />
                             </ToggleButton>
                             <Popup x:Name="PART_Popup" Placement="Bottom" AllowsTransparency="True"

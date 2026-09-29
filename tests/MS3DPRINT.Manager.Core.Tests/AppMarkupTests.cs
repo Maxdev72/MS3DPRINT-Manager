@@ -52,6 +52,9 @@ public sealed class AppMarkupTests
             element.Name.LocalName == "Trigger" &&
             (string?)element.Attribute("Property") == "IsEnabled" &&
             (string?)element.Attribute("Value") == "False");
+        Assert.Contains(comboBoxStyle.Descendants(), element =>
+            element.Name.LocalName == "Border" &&
+            element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "DropDownToggleBorder"));
         Assert.Contains(comboBoxItemStyle.Elements(), element =>
             (string?)element.Attribute("Property") == "Background" &&
             (string?)element.Attribute("Value") == "{DynamicResource SurfaceBrush}");
