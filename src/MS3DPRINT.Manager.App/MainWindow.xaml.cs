@@ -56,7 +56,7 @@ public partial class MainWindow : Window
         ShowDialog(new ClassifyFileWindow(_viewModel.StorageRoot) { Owner = this }));
 
     private void Settings_Click(object sender, RoutedEventArgs e) => Run(() =>
-        new SettingsWindow(_themeSettings) { Owner = this }.ShowDialog());
+        new SettingsWindow(_themeSettings, _viewModel.StorageRoot) { Owner = this }.ShowDialog());
 
     private void ShowNamedItem(string title, string parentFolder, IReadOnlyList<string> template)
         => Run(() => ShowDialog(new CreateNamedItemWindow(title, Path.Combine(_viewModel.StorageRoot, parentFolder), template, _folders) { Owner = this }));
