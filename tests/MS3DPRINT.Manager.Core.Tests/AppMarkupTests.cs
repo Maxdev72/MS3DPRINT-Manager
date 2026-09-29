@@ -44,6 +44,14 @@ public sealed class AppMarkupTests
         Assert.Contains(comboBoxStyle.Elements(), element =>
             (string?)element.Attribute("Property") == "Foreground" &&
             (string?)element.Attribute("Value") == "{DynamicResource TextBrush}");
+        Assert.Contains(comboBoxStyle.Descendants(), element =>
+            element.Name.LocalName == "ContentPresenter" &&
+            element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "SelectionPresenter") &&
+            (string?)element.Attribute("TextElement.Foreground") == "{TemplateBinding Foreground}");
+        Assert.Contains(comboBoxStyle.Descendants(), element =>
+            element.Name.LocalName == "Trigger" &&
+            (string?)element.Attribute("Property") == "IsEnabled" &&
+            (string?)element.Attribute("Value") == "False");
         Assert.Contains(comboBoxItemStyle.Elements(), element =>
             (string?)element.Attribute("Property") == "Background" &&
             (string?)element.Attribute("Value") == "{DynamicResource SurfaceBrush}");
