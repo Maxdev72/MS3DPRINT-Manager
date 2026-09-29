@@ -40,4 +40,18 @@ public class ProjectReferenceGeneratorTests
     [Fact]
     public void Create_RejectsSequenceBeyond999()
         => Assert.Throws<ArgumentOutOfRangeException>(() => ProjectReferenceGenerator.Create("MPO", 2026, ["MPO-2026-999_OLD"], "New"));
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(0)]
+    [InlineData(999)]
+    [InlineData(10000)]
+    public void Create_RejectsYearsWithoutExactlyFourDigits(int year)
+        => Assert.Throws<ArgumentOutOfRangeException>(() => ProjectReferenceGenerator.Create("MPO", year, [], "New"));
+
+    [Theory]
+    [InlineData(1000, "MPO-1000-001_NEW")]
+    [InlineData(9999, "MPO-9999-001_NEW")]
+    public void Create_AcceptsFourDigitBoundaryYears(int year, string expectedFolderName)
+        => Assert.Equal(expectedFolderName, ProjectReferenceGenerator.Create("MPO", year, [], "New").FolderName);
 }

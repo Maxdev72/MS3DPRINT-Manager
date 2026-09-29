@@ -11,6 +11,10 @@ public static class ProjectReferenceGenerator
         ArgumentNullException.ThrowIfNull(clientCode);
         ArgumentNullException.ThrowIfNull(existingNames);
         ArgumentNullException.ThrowIfNull(projectName);
+        if (year is < 1000 or > 9999)
+        {
+            throw new ArgumentOutOfRangeException(nameof(year), "Year must have exactly four digits.");
+        }
 
         var normalizedCode = NameNormalizer.Normalize(clientCode);
         if (normalizedCode.Length == 0)
