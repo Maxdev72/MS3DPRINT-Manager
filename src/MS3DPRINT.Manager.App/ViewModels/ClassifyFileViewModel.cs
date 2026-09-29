@@ -1,10 +1,12 @@
 using System.Collections.ObjectModel;
+using System.Text.RegularExpressions;
 using MS3DPRINT.Manager.Core.Files;
 
 namespace MS3DPRINT.Manager.App.ViewModels;
 
 public sealed class ClassifyFileViewModel : ObservableObject
 {
+    private static readonly Regex ProjectFolderPattern = new("^[A-Z0-9]+-[0-9]{4}-[0-9]{3}(?:_|$)", RegexOptions.CultureInvariant);
     private static readonly string[] AllowedRelativeDirectories =
     [
         "01_DEVIS_FACTURES",
@@ -103,6 +105,7 @@ public sealed class ClassifyFileViewModel : ObservableObject
             var clientName = Path.GetFileName(clientPath);
             foreach (var projectPath in Directory.EnumerateDirectories(clientPath, "*", SearchOption.TopDirectoryOnly)
                          .Where(path => (File.GetAttributes(path) & FileAttributes.Hidden) == 0)
+                         .Where(path => ProjectFolderPattern.IsMatch(Path.GetFileName(path)))
                          .OrderBy(path => Path.GetFileName(path), StringComparer.CurrentCultureIgnoreCase))
             {
                 var label = clientName + " — " + Path.GetFileName(projectPath);

@@ -20,6 +20,54 @@
 
 ---
 
+### Task 0: Restrict file classification to real projects
+
+**Files:**
+- Modify: `src/MS3DPRINT.Manager.App/ViewModels/ClassifyFileViewModel.cs`
+- Modify: `tests/MS3DPRINT.Manager.Core.Tests/ViewModels/ClassifyFileViewModelTests.cs`
+
+**Interfaces:**
+- Produces: a `Projects` collection containing only folders whose leading reference matches `CODE-AAAA-001`.
+
+- [ ] **Step 1: Write the failing test**
+
+```csharp
+[Fact]
+public void Constructor_ExcludesClientMetadataAndArchiveFoldersFromProjects()
+{
+    Directory.CreateDirectory(Path.Combine(_clientsRoot, "MPO", "00_CLIENT"));
+    Directory.CreateDirectory(Path.Combine(_clientsRoot, "MPO", "99_ARCHIVES"));
+    Directory.CreateDirectory(Path.Combine(_clientsRoot, "MPO", "MPO-2026-001_OUTILLAGE"));
+
+    var viewModel = new ClassifyFileViewModel(_storageRoot);
+
+    Assert.Equal(["MPO — MPO-2026-001_OUTILLAGE"], viewModel.Projects);
+}
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `dotnet test tests/MS3DPRINT.Manager.Core.Tests/MS3DPRINT.Manager.Core.Tests.csproj --filter "FullyQualifiedName~ClassifyFileViewModelTests"`
+
+Expected: FAIL because the collection currently includes `00_CLIENT` and `99_ARCHIVES`.
+
+- [ ] **Step 3: Write minimal implementation**
+
+Filter each candidate project folder by a compiled pattern matching `^[A-Z0-9]+-[0-9]{4}-[0-9]{3}(_|$)` before it is added to `_projectPaths` or `Projects`.
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `dotnet test tests/MS3DPRINT.Manager.Core.Tests/MS3DPRINT.Manager.Core.Tests.csproj --filter "FullyQualifiedName~ClassifyFileViewModelTests"`
+
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/MS3DPRINT.Manager.App/ViewModels/ClassifyFileViewModel.cs tests/MS3DPRINT.Manager.Core.Tests/ViewModels/ClassifyFileViewModelTests.cs
+git commit -m "fix: restrict file classification to project folders"
+```
+
 ### Task 1: Storage provider catalog
 
 **Files:**
@@ -135,4 +183,3 @@ Expected: test PASS and build succeeds.
 git add src/MS3DPRINT.Manager.App tests/MS3DPRINT.Manager.Core.Tests/AppMarkupTests.cs
 git commit -m "feat: show planned storage providers in settings"
 ```
-

@@ -23,6 +23,19 @@ public sealed class ClassifyFileViewModelTests : IDisposable
         Assert.Equal("DEV2026-05__MPO-2026-001.pdf", viewModel.FinalFileName);
     }
 
+    [Fact]
+    public void Constructor_ExcludesClientMetadataAndArchiveFoldersFromProjects()
+    {
+        var client = Path.Combine(_root, "01_CLIENTS", "MPO");
+        Directory.CreateDirectory(Path.Combine(client, "00_CLIENT"));
+        Directory.CreateDirectory(Path.Combine(client, "99_ARCHIVES"));
+        Directory.CreateDirectory(Path.Combine(client, "MPO-2026-001_OUTILLAGE"));
+
+        var viewModel = new ClassifyFileViewModel(_root);
+
+        Assert.Equal(["MPO — MPO-2026-001_OUTILLAGE"], viewModel.Projects);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
