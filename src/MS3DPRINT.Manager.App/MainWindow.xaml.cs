@@ -21,6 +21,8 @@ public partial class MainWindow : Window
         _codes = new ClientCodeRegistry(string.IsNullOrWhiteSpace(dataDirectory) ? null : dataDirectory);
         _themeSettings = new ThemeSettingsStore(string.IsNullOrWhiteSpace(dataDirectory) ? null : dataDirectory);
         DataContext = _viewModel;
+        Width = Math.Min(1200, SystemParameters.WorkArea.Width * 0.84);
+        Height = Math.Min(850, SystemParameters.WorkArea.Height * 0.85);
     }
 
     private void VerifyStructure_Click(object sender, RoutedEventArgs e) => Run(() =>

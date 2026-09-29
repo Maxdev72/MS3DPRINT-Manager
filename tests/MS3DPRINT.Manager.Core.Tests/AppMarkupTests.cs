@@ -81,11 +81,15 @@ public sealed class AppMarkupTests
     }
 
     [Fact]
-    public void MainWindow_StartsMaximizedToUseTheAvailableWorkArea()
+    public void MainWindow_UsesAnAdaptiveNormalStartupSize()
     {
         var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "MainWindow.xaml");
 
-        Assert.Equal("Maximized", (string?)document.Root?.Attribute("WindowState"));
+        Assert.NotEqual("Maximized", (string?)document.Root?.Attribute("WindowState"));
+
+        var source = LoadSource("src", "MS3DPRINT.Manager.App", "MainWindow.xaml.cs");
+        Assert.Contains("Width = Math.Min(1200, SystemParameters.WorkArea.Width * 0.84);", source);
+        Assert.Contains("Height = Math.Min(850, SystemParameters.WorkArea.Height * 0.85);", source);
     }
 
     private static XDocument LoadMarkup(params string[] relativePath)
@@ -98,5 +102,17 @@ public sealed class AppMarkupTests
 
         Assert.NotNull(directory);
         return XDocument.Load(Path.Combine([directory!.FullName, .. relativePath]));
+    }
+
+    private static string LoadSource(params string[] relativePath)
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "MS3DPRINT.Manager.sln")))
+        {
+            directory = directory.Parent;
+        }
+
+        Assert.NotNull(directory);
+        return File.ReadAllText(Path.Combine([directory!.FullName, .. relativePath]));
     }
 }
