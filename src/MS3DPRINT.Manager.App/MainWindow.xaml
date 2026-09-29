@@ -118,6 +118,9 @@
                     <Button Style="{StaticResource ActionCardButton}" Click="OpenRoot_Click">
                         <StackPanel><TextBlock Text="&#xE8B7;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Ouvrir les dossiers" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Afficher MS3DPRINT dans l’Explorateur." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
                     </Button>
+                    <Button Style="{StaticResource ActionCardButton}" Click="ClassifyFile_Click">
+                        <StackPanel><TextBlock Text="&#xE8A5;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Classer un fichier" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Déplacer et rattacher un fichier à un projet." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
+                    </Button>
                 </controls:ResponsiveCardPanel>
             </StackPanel>
         </ScrollViewer>

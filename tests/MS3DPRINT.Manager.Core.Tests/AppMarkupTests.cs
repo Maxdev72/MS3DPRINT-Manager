@@ -106,6 +106,17 @@ public sealed class AppMarkupTests
         Assert.Equal("Grid", button.Parent?.Name.LocalName);
     }
 
+    [Fact]
+    public void ClassifyFileWindow_ProvidesSourceProjectDestinationAndMoveControls()
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "ClassifyFileWindow.xaml");
+
+        Assert.Contains(document.Descendants(), element => element.Name.LocalName == "Button" && (string?)element.Attribute("Click") == "Browse_Click");
+        Assert.Contains(document.Descendants(), element => element.Name.LocalName == "ComboBox" && element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "ProjectBox"));
+        Assert.Contains(document.Descendants(), element => element.Name.LocalName == "ComboBox" && element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "DestinationBox"));
+        Assert.Contains(document.Descendants(), element => element.Name.LocalName == "Button" && (string?)element.Attribute("Content") == "Déplacer le fichier");
+    }
+
     private static XDocument LoadMarkup(params string[] relativePath)
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

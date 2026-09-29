@@ -52,6 +52,9 @@ public partial class MainWindow : Window
         _viewModel.Status = "Dossier MS3DPRINT ouvert dans l’Explorateur.";
     });
 
+    private void ClassifyFile_Click(object sender, RoutedEventArgs e) => Run(() =>
+        ShowDialog(new ClassifyFileWindow(_viewModel.StorageRoot) { Owner = this }));
+
     private void Settings_Click(object sender, RoutedEventArgs e) => Run(() =>
         new SettingsWindow(_themeSettings) { Owner = this }.ShowDialog());
 
@@ -60,7 +63,7 @@ public partial class MainWindow : Window
 
     private void ShowDialog(Window dialog)
     {
-        if (dialog.ShowDialog() == true) _viewModel.Status = "Dossier créé : " + ((ICreatedFolderDialog)dialog).CreatedPath;
+        if (dialog.ShowDialog() == true) _viewModel.Status = "Élément traité : " + ((ICreatedFolderDialog)dialog).CreatedPath;
     }
 
     private void Run(Action action)
