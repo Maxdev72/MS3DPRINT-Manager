@@ -3,6 +3,30 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Gestionnaire MS3DPRINT" Width="620" Height="700" MinWidth="470" MinHeight="650"
         WindowStartupLocation="CenterScreen" Background="{StaticResource BackgroundBrush}">
+    <Window.Resources>
+        <Style x:Key="ActionCardButton" TargetType="Button">
+            <Setter Property="Height" Value="120" />
+            <Setter Property="Margin" Value="0,0,14,14" />
+            <Setter Property="Padding" Value="18" />
+            <Setter Property="Background" Value="White" />
+            <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
+            <Setter Property="BorderBrush" Value="#D8E2EC" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Stretch" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#EAF3FA" />
+                    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                </Trigger>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                    <Setter Property="BorderBrush" Value="#F3AF35" />
+                    <Setter Property="BorderThickness" Value="3" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
     <DockPanel>
         <Border DockPanel.Dock="Top" Background="{StaticResource InkBrush}" Padding="28,24">
             <StackPanel>
@@ -17,13 +41,28 @@
             <StackPanel Margin="28,23">
                 <TextBlock Text="Dossier de stockage" Foreground="{StaticResource InkBrush}" FontWeight="SemiBold" />
                 <TextBlock Text="{Binding StorageRoot}" Margin="0,6,0,22" TextWrapping="Wrap" />
-                <Button Height="44" Margin="0,0,0,12" Content="Vérifier l’arborescence" Click="VerifyStructure_Click" />
-                <Button Height="44" Margin="0,0,0,12" Content="Nouveau client" Click="NewClient_Click" />
-                <Button Height="44" Margin="0,0,0,12" Content="Nouveau projet client" Click="NewProject_Click" />
-                <Button Height="44" Margin="0,0,0,12" Content="Nouveau modèle 3D" Click="NewModel_Click" />
-                <Button Height="44" Margin="0,0,0,12" Content="Nouveau produit MS3DPRINT" Click="NewProduct_Click" />
-                <Button Height="44" Margin="0,0,0,12" Content="Nouveau fournisseur" Click="NewSupplier_Click" />
-                <Button Height="44" Margin="0,0,0,12" Content="Ouvrir le dossier MS3DPRINT" Click="OpenRoot_Click" />
+                <TextBlock Text="Actions rapides" Foreground="{StaticResource InkBrush}" FontWeight="SemiBold" FontSize="17" Margin="0,0,0,14" />
+                <UniformGrid Columns="2">
+                    <Button Style="{StaticResource ActionCardButton}" Click="NewClient_Click">
+                        <StackPanel><TextBlock Text="&#xE77B;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{StaticResource AccentBrush}" /><TextBlock Text="Nouveau client" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Créer le dossier et le code client." TextWrapping="Wrap" Foreground="#52657A" /></StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource ActionCardButton}" Click="NewProject_Click">
+                        <StackPanel><TextBlock Text="&#xE8F1;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{StaticResource AccentBrush}" /><TextBlock Text="Nouveau projet" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Créer une référence et son arborescence." TextWrapping="Wrap" Foreground="#52657A" /></StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource ActionCardButton}" Click="NewModel_Click">
+                        <StackPanel><TextBlock Text="&#xF1C5;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{StaticResource AccentBrush}" /><TextBlock Text="Nouveau modèle 3D" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Organiser les sources, STEP et STL." TextWrapping="Wrap" Foreground="#52657A" /></StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource ActionCardButton}" Click="NewProduct_Click">
+                        <StackPanel><TextBlock Text="&#xE719;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{StaticResource AccentBrush}" /><TextBlock Text="Nouveau produit" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Préparer un produit MS3DPRINT." TextWrapping="Wrap" Foreground="#52657A" /></StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource ActionCardButton}" Click="NewSupplier_Click">
+                        <StackPanel><TextBlock Text="&#xE716;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{StaticResource AccentBrush}" /><TextBlock Text="Nouveau fournisseur" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Centraliser les contacts et tarifs." TextWrapping="Wrap" Foreground="#52657A" /></StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource ActionCardButton}" Click="OpenRoot_Click">
+                        <StackPanel><TextBlock Text="&#xE8B7;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{StaticResource AccentBrush}" /><TextBlock Text="Ouvrir les dossiers" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Afficher MS3DPRINT dans l’Explorateur." TextWrapping="Wrap" Foreground="#52657A" /></StackPanel>
+                    </Button>
+                </UniformGrid>
+                <Button Content="&#xE895;  Vérifier l’arborescence" FontFamily="Segoe UI" Margin="0,0,14,8" Click="VerifyStructure_Click" />
             </StackPanel>
         </ScrollViewer>
     </DockPanel>
