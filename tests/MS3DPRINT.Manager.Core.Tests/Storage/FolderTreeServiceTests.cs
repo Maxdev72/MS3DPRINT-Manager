@@ -28,6 +28,20 @@ public sealed class FolderTreeServiceTests : IDisposable
     }
 
     [Fact]
+    public void EnsureMainStructure_DoesNotCreateEarlierFoldersWhenLaterFolderIsAFile()
+    {
+        Directory.CreateDirectory(_root);
+        var conflict = Path.Combine(_root, "99_ARCHIVES");
+        File.WriteAllText(conflict, "keep");
+
+        Assert.Throws<FolderConflictException>(() => _service.EnsureMainStructure(_root));
+
+        Assert.Equal("keep", File.ReadAllText(conflict));
+        Assert.All(FolderTemplates.Main.Where(folder => folder != "99_ARCHIVES"),
+            folder => Assert.False(Directory.Exists(Path.Combine(_root, folder)), folder));
+    }
+
+    [Fact]
     public void CreateTree_ThrowsBeforeWritingWhenDestinationDirectoryExists()
     {
         var target = Path.Combine(_root, "EXISTANT");

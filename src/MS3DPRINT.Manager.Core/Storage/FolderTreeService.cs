@@ -24,6 +24,15 @@ public sealed class FolderTreeService
             throw Conflict(rootPath);
         }
 
+        foreach (var folder in FolderTemplates.Main)
+        {
+            var path = Path.Combine(rootPath, folder);
+            if (File.Exists(path))
+            {
+                throw Conflict(path);
+            }
+        }
+
         Directory.CreateDirectory(rootPath);
         var created = new List<string>();
         foreach (var folder in FolderTemplates.Main)

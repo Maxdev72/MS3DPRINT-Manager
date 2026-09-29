@@ -1,22 +1,22 @@
 using System.ComponentModel;
 using System.Windows;
 using MS3DPRINT.Manager.App.ViewModels;
+using MS3DPRINT.Manager.Core.Projects;
 using MS3DPRINT.Manager.Core.Storage;
-using MS3DPRINT.Manager.Core.Templates;
 
 namespace MS3DPRINT.Manager.App.Views;
 
 public partial class CreateProjectWindow : Window, ICreatedFolderDialog
 {
     private readonly CreateProjectViewModel _viewModel;
-    private readonly FolderTreeService _folders;
+    private readonly ProjectCreationService _projects;
     private readonly ClientCodeRegistry _registry;
     private PendingCodeRegistration? _pendingRegistration;
 
     public CreateProjectWindow(string storageRoot, FolderTreeService folders, ClientCodeRegistry registry)
     {
         InitializeComponent();
-        _folders = folders;
+        _projects = new ProjectCreationService(folders);
         _registry = registry;
         _viewModel = new CreateProjectViewModel(storageRoot, registry);
         DataContext = _viewModel;
@@ -52,14 +52,14 @@ public partial class CreateProjectWindow : Window, ICreatedFolderDialog
                     if (answer != MessageBoxResult.Yes) return;
                 }
 
-                var registration = needsRegistration
-                    ? new PendingCodeRegistration(_viewModel.SelectedClient!, reference.ClientCode)
+                var createdReference = _projects.Create(_viewModel.ClientPath, reference.ClientCode, reference.Year, _viewModel.ProjectName);
+                CreatedPath = Path.Combine(_viewModel.ClientPath, createdReference.FolderName);
+                _pendingRegistration = needsRegistration
+                    ? new PendingCodeRegistration(_viewModel.SelectedClient!, createdReference.ClientCode)
                     : null;
-                CreatedPath = _folders.CreateTree(Path.Combine(_viewModel.ClientPath, reference.FolderName), FolderTemplates.Project).DestinationPath;
-                _pendingRegistration = registration;
-                if (registration is not null)
+                if (_pendingRegistration is not null)
                 {
-                    _viewModel.FreezeReferencePreview(reference.FolderName);
+                    _viewModel.FreezeReferencePreview(createdReference.FolderName);
                     ClientBox.IsEnabled = false;
                     CodeBox.IsEnabled = false;
                     YearBox.IsEnabled = false;
