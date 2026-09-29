@@ -93,16 +93,17 @@ public sealed class AppMarkupTests
     }
 
     [Fact]
-    public void MainWindow_UsesACompactSecondaryButtonForStructureVerification()
+    public void MainWindow_PlacesStructureVerificationBesideTheStorageFolder()
     {
         var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "MainWindow.xaml");
 
-        Assert.Contains(document.Descendants(), element =>
-            element.Name.LocalName == "Button" &&
-            (string?)element.Attribute("Click") == "VerifyStructure_Click" &&
-            (string?)element.Attribute("Style") == "{StaticResource SecondaryActionButton}" &&
-            (string?)element.Attribute("HorizontalAlignment") == "Left" &&
-            (string?)element.Attribute("Content") == "Vérifier l’arborescence");
+        var button = Assert.Single(document.Descendants().Where(element =>
+            element.Name.LocalName == "Button" && (string?)element.Attribute("Click") == "VerifyStructure_Click"));
+
+        Assert.Equal("{StaticResource SecondaryActionButton}", (string?)button.Attribute("Style"));
+        Assert.Equal("Vérifier", (string?)button.Attribute("Content"));
+        Assert.Equal("1", (string?)button.Attribute("Grid.Column"));
+        Assert.Equal("Grid", button.Parent?.Name.LocalName);
     }
 
     private static XDocument LoadMarkup(params string[] relativePath)

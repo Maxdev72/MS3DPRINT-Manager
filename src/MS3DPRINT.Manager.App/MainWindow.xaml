@@ -64,8 +64,8 @@
                                 <Setter TargetName="SecondaryBorder" Property="Background" Value="{DynamicResource CardHoverBrush}" />
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="SecondaryBorder" Property="BorderBrush" Value="#F3AF35" />
-                                <Setter TargetName="SecondaryBorder" Property="BorderThickness" Value="3" />
+                                <Setter TargetName="SecondaryBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                                <Setter TargetName="SecondaryBorder" Property="BorderThickness" Value="2" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -85,8 +85,18 @@
         </Border>
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="28,23">
-                <TextBlock Text="Dossier de stockage" Foreground="{DynamicResource InkBrush}" FontWeight="SemiBold" />
-                <TextBlock Text="{Binding StorageRoot}" Margin="0,6,0,22" TextWrapping="Wrap" />
+                <Grid Margin="0,0,0,22">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Dossier de stockage" Foreground="{DynamicResource InkBrush}" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding StorageRoot}" Margin="0,6,0,0" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Content="Vérifier" Style="{StaticResource SecondaryActionButton}"
+                            VerticalAlignment="Center" Margin="24,0,0,0" Click="VerifyStructure_Click" />
+                </Grid>
                 <TextBlock Text="Actions rapides" Foreground="{DynamicResource InkBrush}" FontWeight="SemiBold" FontSize="17" Margin="0,0,0,14" />
                 <controls:ResponsiveCardPanel MaxColumns="4" MinimumItemWidth="240" ItemHeightRatio="0.42" Gap="14">
                     <Button Style="{StaticResource ActionCardButton}" Click="NewClient_Click">
@@ -109,7 +119,6 @@
                         <StackPanel><TextBlock Text="&#xE8B7;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Ouvrir les dossiers" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Afficher MS3DPRINT dans l’Explorateur." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
                     </Button>
                 </controls:ResponsiveCardPanel>
-                <Button Content="Vérifier l’arborescence" Style="{StaticResource SecondaryActionButton}" HorizontalAlignment="Left" Margin="0,0,0,8" Click="VerifyStructure_Click" />
             </StackPanel>
         </ScrollViewer>
     </DockPanel>
