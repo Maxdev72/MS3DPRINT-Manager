@@ -76,6 +76,14 @@ public sealed class AppMarkupTests
             (string?)element.Attribute("Value") == "{DynamicResource CardHoverBrush}");
     }
 
+    [Fact]
+    public void MainWindow_StartsMaximizedToUseTheAvailableWorkArea()
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "MainWindow.xaml");
+
+        Assert.Equal("Maximized", (string?)document.Root?.Attribute("WindowState"));
+    }
+
     private static XDocument LoadMarkup(params string[] relativePath)
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
