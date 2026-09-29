@@ -5,14 +5,18 @@ namespace MS3DPRINT.Manager.Core.Tests;
 public sealed class AppMarkupTests
 {
     [Fact]
-    public void MainWindow_UsesAnAdaptiveWrappingActionCardLayout()
+    public void MainWindow_UsesAResponsiveActionCardLayout()
     {
         var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "MainWindow.xaml");
 
-        Assert.Contains(document.Descendants(), element => element.Name.LocalName == "WrapPanel");
+        Assert.Contains(document.Descendants(), element =>
+            element.Name.LocalName == "ResponsiveCardPanel" &&
+            (string?)element.Attribute("MaxColumns") == "4" &&
+            (string?)element.Attribute("ItemHeightRatio") == "0.42");
         Assert.Contains(document.Descendants().Where(element => element.Name.LocalName == "Button"),
             element => (string?)element.Attribute("Style") == "{StaticResource ActionCardButton}" &&
-                       element.Attribute("Height") is null);
+                       element.Attribute("Height") is null &&
+                       element.Attribute("Width") is null);
     }
 
     [Fact]
