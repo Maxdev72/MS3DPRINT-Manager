@@ -18,6 +18,13 @@ dotnet run --project src/MS3DPRINT.Manager.App/MS3DPRINT.Manager.App.csproj
 dotnet publish src/MS3DPRINT.Manager.App/MS3DPRINT.Manager.App.csproj -p:PublishProfile=PortableWinX64 -o outputs/MS3DPRINT-Manager
 ```
 
-Le fichier `data\client-codes.json` doit voyager avec l'exécutable afin de
-conserver les codes clients enregistrés. Lors de la livraison, copiez le
-dossier publié complet, y compris ce fichier s'il a été créé.
+## Livraison
+
+Après publication, distribuez le dossier complet `outputs\MS3DPRINT-Manager`.
+L'exécutable `MS3DPRINT.Manager.App.exe` est autonome et fonctionne sur
+Windows x64 sans installation du runtime .NET. Copiez ce dossier entier vers
+l'emplacement de livraison et lancez l'exécutable depuis ce dossier.
+
+Si l'application a déjà enregistré des codes clients, conservez également
+`data\client-codes.json` dans le dossier livré. Ce fichier contient le
+registre local nécessaire pour retrouver ces codes.
