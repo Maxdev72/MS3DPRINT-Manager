@@ -18,14 +18,14 @@
                 <TextBlock Text="Client" FontWeight="SemiBold" />
                 <ComboBox x:Name="ClientBox" ItemsSource="{Binding Clients}" SelectedItem="{Binding SelectedClient}" Margin="0,6,0,14" />
                 <TextBlock Text="Code client" FontWeight="SemiBold" />
-                <TextBox Text="{Binding ClientCode, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="{Binding CodeIsReadOnly}" Margin="0,6,0,5" />
+                <TextBox x:Name="CodeBox" Text="{Binding ClientCode, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="{Binding CodeIsReadOnly}" Margin="0,6,0,5" />
                 <TextBlock Text="{Binding CodeLoadError}" Foreground="#A92828" TextWrapping="Wrap" />
                 <TextBlock Text="Si aucun code n’est enregistré, saisissez-le. Sa sauvegarde sera confirmée avant création."
                            FontSize="12" Foreground="#52657A" TextWrapping="Wrap" Margin="0,0,0,14" />
                 <TextBlock Text="Année" FontWeight="SemiBold" />
-                <TextBox Text="{Binding Year, UpdateSourceTrigger=PropertyChanged}" MaxLength="4" Margin="0,6,0,14" />
+                <TextBox x:Name="YearBox" Text="{Binding Year, UpdateSourceTrigger=PropertyChanged}" MaxLength="4" Margin="0,6,0,14" />
                 <TextBlock Text="Nom du projet" FontWeight="SemiBold" />
-                <TextBox Text="{Binding ProjectName, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,14" />
+                <TextBox x:Name="ProjectNameBox" Text="{Binding ProjectName, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,14" />
                 <TextBlock Text="Référence du dossier" FontWeight="SemiBold" />
                 <TextBox Text="{Binding ReferencePreview, Mode=OneWay}" IsReadOnly="True" Background="#E9EEF3" Margin="0,6,0,0" />
             </StackPanel>

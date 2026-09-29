@@ -12,6 +12,7 @@ public partial class CreateClientWindow : Window, ICreatedFolderDialog
     private readonly FolderTreeService _folders;
     private readonly ClientCodeRegistry _registry;
     private readonly CreateClientViewModel _viewModel = new();
+    private PendingCodeRegistration? _pendingRegistration;
 
     public CreateClientWindow(string storageRoot, FolderTreeService folders, ClientCodeRegistry registry)
     {
@@ -25,36 +26,45 @@ public partial class CreateClientWindow : Window, ICreatedFolderDialog
 
     public string? CreatedPath { get; private set; }
 
-    private void Cancel_Click(object sender, RoutedEventArgs e) => DialogResult = false;
+    private void Cancel_Click(object sender, RoutedEventArgs e)
+    {
+        if (_pendingRegistration?.IsPending == true &&
+            MessageBox.Show(this, "Le dossier client existe déjà, mais son code n’est pas enregistré. Fermer ce formulaire sans réessayer ?",
+                "Code client en attente", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            return;
+        DialogResult = false;
+    }
 
     private void Create_Click(object sender, RoutedEventArgs e)
     {
         ErrorText.Text = string.Empty;
-        if (_viewModel.NormalizedName.Length == 0)
-        {
-            ErrorText.Text = "Saisissez un nom contenant au moins une lettre ou un chiffre.";
-            return;
-        }
-        if (NameNormalizer.Normalize(_viewModel.ClientCode).Length == 0)
-        {
-            ErrorText.Text = "Saisissez un code client contenant au moins une lettre ou un chiffre.";
-            return;
-        }
-
         try
         {
-            if (_registry.GetCode(_viewModel.NormalizedName) is not null)
-                throw new FolderConflictException("Un code est déjà enregistré pour ce client.");
-            var destination = Path.Combine(_storageRoot, "01_CLIENTS", _viewModel.NormalizedName);
-            CreatedPath = _folders.CreateTree(destination, FolderTemplates.Client).DestinationPath;
-            try { _registry.Add(_viewModel.NormalizedName, _viewModel.ClientCode); }
+            if (_pendingRegistration is null)
+            {
+                if (_viewModel.NormalizedName.Length == 0)
+                    throw new ArgumentException("Saisissez un nom contenant au moins une lettre ou un chiffre.");
+                if (NameNormalizer.Normalize(_viewModel.ClientCode).Length == 0)
+                    throw new ArgumentException("Saisissez un code client contenant au moins une lettre ou un chiffre.");
+                if (_registry.GetCode(_viewModel.NormalizedName) is not null)
+                    throw new FolderConflictException("Un code est déjà enregistré pour ce client.");
+
+                var registration = new PendingCodeRegistration(_viewModel.NormalizedName, _viewModel.ClientCode);
+                var destination = Path.Combine(_storageRoot, "01_CLIENTS", _viewModel.NormalizedName);
+                CreatedPath = _folders.CreateTree(destination, FolderTemplates.Client).DestinationPath;
+                _pendingRegistration = registration;
+                NameBox.IsEnabled = false;
+                CodeBox.IsEnabled = false;
+            }
+
+            try { _pendingRegistration.Complete(_registry); }
             catch (Exception exception)
             {
-                MessageBox.Show(this, "Le dossier a été créé, mais son code n’a pas été enregistré. " + UiErrorMessages.For(exception),
-                    "MS3DPRINT — code non enregistré", MessageBoxButton.OK, MessageBoxImage.Warning);
-                DialogResult = true;
+                ErrorText.Text = "Le dossier client a été créé, mais son code n’a pas été enregistré. Vous pouvez réessayer sans recréer le dossier. "
+                    + UiErrorMessages.For(exception);
                 return;
             }
+
             OfferOpenFolder();
             DialogResult = true;
         }

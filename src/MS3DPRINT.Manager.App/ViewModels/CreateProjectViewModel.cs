@@ -15,6 +15,7 @@ public sealed class CreateProjectViewModel : ObservableObject
     private string _year = DateTime.Now.Year.ToString();
     private bool _codeRegistered;
     private string? _codeLoadError;
+    private string? _referenceOverride;
 
     public CreateProjectViewModel(string storageRoot, ClientCodeRegistry registry)
     {
@@ -88,6 +89,7 @@ public sealed class CreateProjectViewModel : ObservableObject
     {
         get
         {
+            if (_referenceOverride is not null) return _referenceOverride;
             if (_codeLoadError is not null) return _codeLoadError;
             if (SelectedClient is null || string.IsNullOrEmpty(NormalizedName) || string.IsNullOrEmpty(NameNormalizer.Normalize(ClientCode)) ||
                 !int.TryParse(Year, out var year) || year is < 1000 or > 9999)
@@ -97,6 +99,12 @@ public sealed class CreateProjectViewModel : ObservableObject
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
             { return "Aperçu indisponible : " + UiErrorMessages.For(exception); }
         }
+    }
+
+    public void FreezeReferencePreview(string folderName)
+    {
+        _referenceOverride = folderName;
+        OnPropertyChanged(nameof(ReferencePreview));
     }
 
     public string ClientPath => SelectedClient is null

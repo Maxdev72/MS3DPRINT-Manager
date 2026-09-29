@@ -8,6 +8,7 @@ internal static class UiErrorMessages
 {
     public static string For(Exception exception) => exception switch
     {
+        ExplorerOpenException => "Impossible d’ouvrir le dossier dans l’Explorateur Windows. Vérifiez que le chemin existe et que l’Explorateur est disponible.",
         FolderConflictException => "Un dossier ou un code existe déjà. " + exception.Message,
         UnauthorizedAccessException => "Accès refusé. Vérifiez vos droits sur le dossier de stockage.",
         DirectoryNotFoundException => "Un dossier requis est introuvable. " + exception.Message,

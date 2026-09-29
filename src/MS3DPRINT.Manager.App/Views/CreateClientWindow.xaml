@@ -19,7 +19,7 @@
             <TextBlock Text="Nom du dossier" FontWeight="SemiBold" />
             <TextBox Text="{Binding NormalizedName, Mode=OneWay}" IsReadOnly="True" Background="#E9EEF3" Margin="0,6,0,16" />
             <TextBlock Text="Code client (modifiable)" FontWeight="SemiBold" />
-            <TextBox Text="{Binding ClientCode, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,0" />
+            <TextBox x:Name="CodeBox" Text="{Binding ClientCode, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,0" />
         </StackPanel>
     </DockPanel>
 </Window>
