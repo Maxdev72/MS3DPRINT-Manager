@@ -25,7 +25,6 @@ public static class ThemeManager
 
     private static void SetBrush(string key, string color)
     {
-        if (Application.Current.Resources[key] is SolidColorBrush brush)
-            brush.Color = (Color)ColorConverter.ConvertFromString(color)!;
+        Application.Current.Resources[key] = new SolidColorBrush((Color)ColorConverter.ConvertFromString(color)!);
     }
 }
