@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Gestionnaire MS3DPRINT" Width="700" Height="760" MinWidth="390" MinHeight="500"
-        WindowStartupLocation="CenterScreen" Background="{StaticResource BackgroundBrush}">
+        WindowStartupLocation="CenterScreen" Background="{DynamicResource BackgroundBrush}">
     <Window.Resources>
         <Style x:Key="ActionCardButton" TargetType="Button">
             <Setter Property="Width" Value="250" />
@@ -19,7 +19,7 @@
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Background" Value="#294157" />
-                    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
                 </Trigger>
                 <Trigger Property="IsKeyboardFocused" Value="True">
                     <Setter Property="BorderBrush" Value="#F3AF35" />
@@ -29,39 +29,39 @@
         </Style>
     </Window.Resources>
     <DockPanel>
-        <Border DockPanel.Dock="Top" Background="{StaticResource InkBrush}" Padding="28,24">
+        <Border DockPanel.Dock="Top" Background="{DynamicResource HeaderBrush}" Padding="28,24">
             <StackPanel>
-                <TextBlock Text="Gestionnaire MS3DPRINT" FontSize="25" FontWeight="SemiBold" Foreground="White" />
-                <TextBlock Text="Organisation des dossiers Nextcloud" Margin="0,6,0,0" FontSize="14" Foreground="#D7E5F0" />
+                <TextBlock Text="Gestionnaire MS3DPRINT" FontSize="25" FontWeight="SemiBold" Foreground="{DynamicResource HeaderTextBrush}" />
+                <TextBlock Text="Organisation des dossiers Nextcloud" Margin="0,6,0,0" FontSize="14" Foreground="{DynamicResource HeaderMutedBrush}" />
             </StackPanel>
         </Border>
-        <Border DockPanel.Dock="Bottom" BorderBrush="#D9E1E8" BorderThickness="0,1,0,0" Padding="28,14" Background="White">
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="28,14" Background="{DynamicResource SurfaceBrush}">
             <TextBlock Text="{Binding Status}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
         </Border>
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="28,23">
-                <TextBlock Text="Dossier de stockage" Foreground="{StaticResource InkBrush}" FontWeight="SemiBold" />
+                <TextBlock Text="Dossier de stockage" Foreground="{DynamicResource InkBrush}" FontWeight="SemiBold" />
                 <TextBlock Text="{Binding StorageRoot}" Margin="0,6,0,22" TextWrapping="Wrap" />
-                <TextBlock Text="Actions rapides" Foreground="{StaticResource InkBrush}" FontWeight="SemiBold" FontSize="17" Margin="0,0,0,14" />
+                <TextBlock Text="Actions rapides" Foreground="{DynamicResource InkBrush}" FontWeight="SemiBold" FontSize="17" Margin="0,0,0,14" />
                 <WrapPanel>
                     <Button Style="{StaticResource ActionCardButton}" Click="NewClient_Click">
-                        <StackPanel><TextBlock Text="&#xE77B;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{StaticResource AccentBrush}" /><TextBlock Text="Nouveau client" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Créer le dossier et le code client." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
+                        <StackPanel><TextBlock Text="&#xE77B;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Nouveau client" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Créer le dossier et le code client." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
                     </Button>
-                    <Button Style="{StaticResource ActionCardButton}" Click="Settings_Click"><StackPanel><TextBlock Text="&#xE713;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{StaticResource AccentBrush}" /><TextBlock Text="Paramètres" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Choisir le thème de l’application." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel></Button>
+                    <Button Style="{StaticResource ActionCardButton}" Click="Settings_Click"><StackPanel><TextBlock Text="&#xE713;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Paramètres" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Choisir le thème de l’application." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel></Button>
                     <Button Style="{StaticResource ActionCardButton}" Click="NewProject_Click">
-                        <StackPanel><TextBlock Text="&#xE8F1;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{StaticResource AccentBrush}" /><TextBlock Text="Nouveau projet" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Créer une référence et son arborescence." TextWrapping="Wrap" Foreground="#52657A" /></StackPanel>
+                        <StackPanel><TextBlock Text="&#xE8F1;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Nouveau projet" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Créer une référence et son arborescence." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
                     </Button>
                     <Button Style="{StaticResource ActionCardButton}" Click="NewModel_Click">
-                        <StackPanel><TextBlock Text="&#xF1C5;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{StaticResource AccentBrush}" /><TextBlock Text="Nouveau modèle 3D" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Organiser les sources, STEP et STL." TextWrapping="Wrap" Foreground="#52657A" /></StackPanel>
+                        <StackPanel><TextBlock Text="&#xF1C5;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Nouveau modèle 3D" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Organiser les sources, STEP et STL." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
                     </Button>
                     <Button Style="{StaticResource ActionCardButton}" Click="NewProduct_Click">
-                        <StackPanel><TextBlock Text="&#xE719;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{StaticResource AccentBrush}" /><TextBlock Text="Nouveau produit" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Préparer un produit MS3DPRINT." TextWrapping="Wrap" Foreground="#52657A" /></StackPanel>
+                        <StackPanel><TextBlock Text="&#xE719;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Nouveau produit" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Préparer un produit MS3DPRINT." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
                     </Button>
                     <Button Style="{StaticResource ActionCardButton}" Click="NewSupplier_Click">
-                        <StackPanel><TextBlock Text="&#xE716;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{StaticResource AccentBrush}" /><TextBlock Text="Nouveau fournisseur" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Centraliser les contacts et tarifs." TextWrapping="Wrap" Foreground="#52657A" /></StackPanel>
+                        <StackPanel><TextBlock Text="&#xE716;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Nouveau fournisseur" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Centraliser les contacts et tarifs." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
                     </Button>
                     <Button Style="{StaticResource ActionCardButton}" Click="OpenRoot_Click">
-                        <StackPanel><TextBlock Text="&#xE8B7;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{StaticResource AccentBrush}" /><TextBlock Text="Ouvrir les dossiers" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Afficher MS3DPRINT dans l’Explorateur." TextWrapping="Wrap" Foreground="#52657A" /></StackPanel>
+                        <StackPanel><TextBlock Text="&#xE8B7;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Ouvrir les dossiers" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Afficher MS3DPRINT dans l’Explorateur." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
                     </Button>
                 </WrapPanel>
                 <Button Content="&#xE895;  Vérifier l’arborescence" FontFamily="Segoe UI" Margin="0,0,14,8" Click="VerifyStructure_Click" />

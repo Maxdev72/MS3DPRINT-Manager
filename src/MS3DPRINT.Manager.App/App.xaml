@@ -10,11 +10,15 @@
         <SolidColorBrush x:Key="TextBrush" Color="#183153" />
         <SolidColorBrush x:Key="MutedBrush" Color="#52657A" />
         <SolidColorBrush x:Key="InputBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="ReadOnlyInputBrush" Color="#E9EEF3" />
         <SolidColorBrush x:Key="BorderBrush" Color="#D8E2EC" />
+        <SolidColorBrush x:Key="HeaderBrush" Color="#183153" />
+        <SolidColorBrush x:Key="HeaderTextBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="HeaderMutedBrush" Color="#D7E5F0" />
         <Style TargetType="Button">
             <Setter Property="Height" Value="36" />
             <Setter Property="Padding" Value="14,5" />
-            <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
             <Setter Property="Foreground" Value="White" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="FontSize" Value="14" />
@@ -38,6 +42,23 @@
         <Style TargetType="ComboBox">
             <Setter Property="MinHeight" Value="32" />
             <Setter Property="FontSize" Value="14" />
+            <Setter Property="Background" Value="{DynamicResource InputBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+        </Style>
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+                    <Setter Property="Foreground" Value="White" />
+                </Trigger>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource BorderBrush}" />
+                </Trigger>
+            </Style.Triggers>
         </Style>
     </Application.Resources>
 </Application>

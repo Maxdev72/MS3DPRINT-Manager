@@ -25,6 +25,42 @@ public sealed class AppMarkupTests
             (string?)element.Attribute("VerticalScrollBarVisibility") == "Auto");
     }
 
+    [Fact]
+    public void ApplicationStyles_KeepComboBoxesReadableInTheDarkTheme()
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "App.xaml");
+
+        var styles = document.Descendants().Where(element => element.Name.LocalName == "Style").ToList();
+        var comboBoxStyle = Assert.Single(styles.Where(element => (string?)element.Attribute("TargetType") == "ComboBox"));
+        var comboBoxItemStyle = Assert.Single(styles.Where(element => (string?)element.Attribute("TargetType") == "ComboBoxItem"));
+
+        Assert.Contains(comboBoxStyle.Elements(), element =>
+            (string?)element.Attribute("Property") == "Background" &&
+            (string?)element.Attribute("Value") == "{DynamicResource InputBrush}");
+        Assert.Contains(comboBoxStyle.Elements(), element =>
+            (string?)element.Attribute("Property") == "Foreground" &&
+            (string?)element.Attribute("Value") == "{DynamicResource TextBrush}");
+        Assert.Contains(comboBoxItemStyle.Elements(), element =>
+            (string?)element.Attribute("Property") == "Background" &&
+            (string?)element.Attribute("Value") == "{DynamicResource SurfaceBrush}");
+        Assert.Contains(comboBoxItemStyle.Elements(), element =>
+            (string?)element.Attribute("Property") == "Foreground" &&
+            (string?)element.Attribute("Value") == "{DynamicResource TextBrush}");
+    }
+
+    [Fact]
+    public void MainWindow_UsesThemeResourcesForHeaderAndStatusBar()
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "MainWindow.xaml");
+        var borders = document.Descendants().Where(element => element.Name.LocalName == "Border").ToList();
+
+        Assert.Contains(borders, element =>
+            (string?)element.Attribute("Background") == "{DynamicResource HeaderBrush}");
+        Assert.Contains(borders, element =>
+            (string?)element.Attribute("Background") == "{DynamicResource SurfaceBrush}" &&
+            (string?)element.Attribute("BorderBrush") == "{DynamicResource BorderBrush}");
+    }
+
     private static XDocument LoadMarkup(params string[] relativePath)
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

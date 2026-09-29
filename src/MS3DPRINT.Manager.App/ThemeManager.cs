@@ -17,7 +17,11 @@ public static class ThemeManager
         SetBrush("TextBrush", dark ? "#EAF2FA" : "#183153");
         SetBrush("MutedBrush", dark ? "#B2C5D7" : "#52657A");
         SetBrush("InputBrush", dark ? "#111A22" : "#FFFFFF");
+        SetBrush("ReadOnlyInputBrush", dark ? "#1C2935" : "#E9EEF3");
         SetBrush("BorderBrush", dark ? "#405263" : "#D8E2EC");
+        SetBrush("HeaderBrush", dark ? "#101923" : "#183153");
+        SetBrush("HeaderTextBrush", "#FFFFFF");
+        SetBrush("HeaderMutedBrush", dark ? "#B2C5D7" : "#D7E5F0");
     }
 
     private static bool WindowsUsesDarkTheme()
