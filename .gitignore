@@ -1,0 +1,5 @@
+bin/
+obj/
+outputs/
+work/
+.superpowers/
