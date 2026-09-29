@@ -16,6 +16,7 @@ public sealed class CreateProjectViewModel : ObservableObject
     private bool _codeRegistered;
     private string? _codeLoadError;
     private string? _referenceOverride;
+    private IReadOnlyList<string> _existingProjectNames = [];
 
     public CreateProjectViewModel(string storageRoot, ClientCodeRegistry registry)
     {
@@ -33,10 +34,15 @@ public sealed class CreateProjectViewModel : ObservableObject
         {
             if (!SetProperty(ref _selectedClient, value)) return;
             _codeLoadError = null;
-            try { _clientCode = value is null ? string.Empty : _registry.GetCode(value) ?? string.Empty; }
+            try
+            {
+                _clientCode = value is null ? string.Empty : _registry.GetCode(value) ?? string.Empty;
+                RefreshExistingProjectNames();
+            }
             catch (Exception exception)
             {
                 _clientCode = string.Empty;
+                _existingProjectNames = [];
                 _codeLoadError = UiErrorMessages.For(exception);
             }
             _codeRegistered = _clientCode.Length > 0;
@@ -122,9 +128,7 @@ public sealed class CreateProjectViewModel : ObservableObject
             throw new ArgumentException("Saisissez un code client contenant au moins une lettre ou un chiffre.");
         if (NormalizedName.Length == 0)
             throw new ArgumentException("Saisissez un nom de projet contenant au moins une lettre ou un chiffre.");
-        var existingNames = Directory.EnumerateDirectories(ClientPath, "*", SearchOption.TopDirectoryOnly)
-            .Select(Path.GetFileName).OfType<string>();
-        return ProjectReferenceGenerator.Create(ClientCode, year, existingNames, ProjectName);
+        return ProjectReferenceGenerator.Create(ClientCode, year, _existingProjectNames, ProjectName);
     }
 
     public void RefreshClients()
@@ -137,5 +141,19 @@ public sealed class CreateProjectViewModel : ObservableObject
         {
             Clients.Add(Path.GetFileName(path));
         }
+    }
+
+    private void RefreshExistingProjectNames()
+    {
+        if (SelectedClient is null)
+        {
+            _existingProjectNames = [];
+            return;
+        }
+
+        if (!Directory.Exists(ClientPath)) throw new DirectoryNotFoundException("Le dossier du client sélectionné est introuvable.");
+        _existingProjectNames = Directory.EnumerateDirectories(ClientPath, "*", SearchOption.TopDirectoryOnly)
+            .Select(Path.GetFileName).OfType<string>()
+            .ToArray();
     }
 }

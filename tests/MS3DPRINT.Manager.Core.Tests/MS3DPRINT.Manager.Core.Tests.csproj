@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\MS3DPRINT.Manager.Core\MS3DPRINT.Manager.Core.csproj" />
+    <ProjectReference Include="..\..\src\MS3DPRINT.Manager.App\MS3DPRINT.Manager.App.csproj" />
   </ItemGroup>
 
 </Project>
