@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Windows;
 using MS3DPRINT.Manager.App.ViewModels;
 using MS3DPRINT.Manager.Core.Naming;
@@ -26,13 +27,14 @@ public partial class CreateClientWindow : Window, ICreatedFolderDialog
 
     public string? CreatedPath { get; private set; }
 
-    private void Cancel_Click(object sender, RoutedEventArgs e)
+    private void Cancel_Click(object sender, RoutedEventArgs e) => Close();
+
+    private void Window_Closing(object? sender, CancelEventArgs e)
     {
-        if (_pendingRegistration?.IsPending == true &&
-            MessageBox.Show(this, "Le dossier client existe déjà, mais son code n’est pas enregistré. Fermer ce formulaire sans réessayer ?",
-                "Code client en attente", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
-            return;
-        DialogResult = false;
+        if (_pendingRegistration?.IsPending == true)
+            e.Cancel = MessageBox.Show(this,
+                "Le dossier client existe déjà, mais son code n’est pas enregistré. Fermer ce formulaire sans réessayer ?",
+                "Code client en attente", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes;
     }
 
     private void Create_Click(object sender, RoutedEventArgs e)
