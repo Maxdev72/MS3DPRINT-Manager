@@ -1,23 +1,68 @@
-﻿using System.Text;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using MS3DPRINT.Manager.App.ViewModels;
+using MS3DPRINT.Manager.App.Views;
+using MS3DPRINT.Manager.Core.Storage;
+using MS3DPRINT.Manager.Core.Templates;
 
 namespace MS3DPRINT.Manager.App;
 
-/// <summary>
-/// Interaction logic for MainWindow.xaml
-/// </summary>
 public partial class MainWindow : Window
 {
+    private readonly MainViewModel _viewModel;
+    private readonly FolderTreeService _folders = new();
+    private readonly ClientCodeRegistry _codes;
+
     public MainWindow()
     {
         InitializeComponent();
+        _viewModel = new MainViewModel(Environment.GetEnvironmentVariable("MS3DPRINT_STORAGE_ROOT"));
+        var dataDirectory = Environment.GetEnvironmentVariable("MS3DPRINT_DATA_DIRECTORY");
+        _codes = new ClientCodeRegistry(string.IsNullOrWhiteSpace(dataDirectory) ? null : dataDirectory);
+        DataContext = _viewModel;
+    }
+
+    private void VerifyStructure_Click(object sender, RoutedEventArgs e) => Run(() =>
+    {
+        var result = _folders.EnsureMainStructure(_viewModel.StorageRoot);
+        _viewModel.Status = result.CreatedFolders.Count == 0
+            ? "Arborescence vérifiée : tous les dossiers principaux existent."
+            : $"Arborescence vérifiée : {result.CreatedFolders.Count} dossier(s) ajouté(s).";
+    });
+
+    private void NewClient_Click(object sender, RoutedEventArgs e) => Run(() =>
+        ShowDialog(new CreateClientWindow(_viewModel.StorageRoot, _folders, _codes) { Owner = this }));
+
+    private void NewProject_Click(object sender, RoutedEventArgs e) => Run(() =>
+        ShowDialog(new CreateProjectWindow(_viewModel.StorageRoot, _folders, _codes) { Owner = this }));
+
+    private void NewModel_Click(object sender, RoutedEventArgs e) => ShowNamedItem("Nouveau modèle 3D", "02_MODELES_3D", FolderTemplates.Model);
+
+    private void NewProduct_Click(object sender, RoutedEventArgs e) => ShowNamedItem("Nouveau produit MS3DPRINT", "03_PRODUITS_MS3DPRINT", FolderTemplates.Product);
+
+    private void NewSupplier_Click(object sender, RoutedEventArgs e) => ShowNamedItem("Nouveau fournisseur", "06_FOURNISSEURS", FolderTemplates.Supplier);
+
+    private void OpenRoot_Click(object sender, RoutedEventArgs e) => Run(() =>
+    {
+        _folders.EnsureMainStructure(_viewModel.StorageRoot);
+        ExplorerService.Open(_viewModel.StorageRoot);
+        _viewModel.Status = "Dossier MS3DPRINT ouvert dans l’Explorateur.";
+    });
+
+    private void ShowNamedItem(string title, string parentFolder, IReadOnlyList<string> template)
+        => Run(() => ShowDialog(new CreateNamedItemWindow(title, Path.Combine(_viewModel.StorageRoot, parentFolder), template, _folders) { Owner = this }));
+
+    private void ShowDialog(Window dialog)
+    {
+        if (dialog.ShowDialog() == true) _viewModel.Status = "Dossier créé : " + ((ICreatedFolderDialog)dialog).CreatedPath;
+    }
+
+    private void Run(Action action)
+    {
+        try { action(); }
+        catch (Exception exception)
+        {
+            _viewModel.Status = UiErrorMessages.For(exception);
+            MessageBox.Show(this, _viewModel.Status, "MS3DPRINT — erreur", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 }

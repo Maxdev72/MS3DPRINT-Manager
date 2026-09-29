@@ -1,12 +1,30 @@
-﻿<Window x:Class="MS3DPRINT.Manager.App.MainWindow"
+<Window x:Class="MS3DPRINT.Manager.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:MS3DPRINT.Manager.App"
-        mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
-
-    </Grid>
+        Title="Gestionnaire MS3DPRINT" Width="620" Height="700" MinWidth="470" MinHeight="650"
+        WindowStartupLocation="CenterScreen" Background="{StaticResource BackgroundBrush}">
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Background="{StaticResource InkBrush}" Padding="28,24">
+            <StackPanel>
+                <TextBlock Text="Gestionnaire MS3DPRINT" FontSize="25" FontWeight="SemiBold" Foreground="White" />
+                <TextBlock Text="Organisation des dossiers Nextcloud" Margin="0,6,0,0" FontSize="14" Foreground="#D7E5F0" />
+            </StackPanel>
+        </Border>
+        <Border DockPanel.Dock="Bottom" BorderBrush="#D9E1E8" BorderThickness="0,1,0,0" Padding="28,14" Background="White">
+            <TextBlock Text="{Binding Status}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+        </Border>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="28,23">
+                <TextBlock Text="Dossier de stockage" Foreground="{StaticResource InkBrush}" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding StorageRoot}" Margin="0,6,0,22" TextWrapping="Wrap" />
+                <Button Height="44" Margin="0,0,0,12" Content="Vérifier l’arborescence" Click="VerifyStructure_Click" />
+                <Button Height="44" Margin="0,0,0,12" Content="Nouveau client" Click="NewClient_Click" />
+                <Button Height="44" Margin="0,0,0,12" Content="Nouveau projet client" Click="NewProject_Click" />
+                <Button Height="44" Margin="0,0,0,12" Content="Nouveau modèle 3D" Click="NewModel_Click" />
+                <Button Height="44" Margin="0,0,0,12" Content="Nouveau produit MS3DPRINT" Click="NewProduct_Click" />
+                <Button Height="44" Margin="0,0,0,12" Content="Nouveau fournisseur" Click="NewSupplier_Click" />
+                <Button Height="44" Margin="0,0,0,12" Content="Ouvrir le dossier MS3DPRINT" Click="OpenRoot_Click" />
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
 </Window>
