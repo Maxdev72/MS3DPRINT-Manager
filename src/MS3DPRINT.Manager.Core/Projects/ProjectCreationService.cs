@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using MS3DPRINT.Manager.Core.Storage;
 using MS3DPRINT.Manager.Core.Templates;
+using MS3DPRINT.Manager.Core.Clients;
 
 namespace MS3DPRINT.Manager.Core.Projects;
 
@@ -46,6 +47,22 @@ public sealed class ProjectCreationService
         {
             if (acquired) mutex.ReleaseMutex();
         }
+    }
+
+    public (ProjectReference Reference, ProjectProfile Profile) CreateWithProfile(
+        ClientSummary client, int year, string projectName, ProjectProfileStore profiles, DateOnly? dueDate, string? description)
+    {
+        ArgumentNullException.ThrowIfNull(client);
+        ArgumentNullException.ThrowIfNull(profiles);
+        if (client.Profile is null) throw new InvalidOperationException("Complétez la fiche client avant de créer un projet suivi.");
+
+        var reference = Create(client.ClientPath, client.ClientCode, year, projectName);
+        var now = DateTimeOffset.UtcNow;
+        var profile = new ProjectProfile(Guid.NewGuid(), client.Profile.Id, client.ClientCode,
+            $"{reference.ClientCode}-{reference.Year:D4}-{reference.Sequence:D3}", reference.FolderName,
+            reference.NormalizedProjectName, ProjectStatus.Quote, now, dueDate, description, null, now);
+        profiles.Create(profile);
+        return (reference, profile);
     }
 
     private static string LockName(string clientPath)
