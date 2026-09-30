@@ -144,6 +144,16 @@ public sealed class AppMarkupTests
     }
 
     [Fact]
+    public void ProjectsView_ProvidesClientAndYearFiltersAndSelection()
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "ProjectsView.xaml");
+
+        Assert.Contains(document.Descendants(), element => element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "ClientFilterBox"));
+        Assert.Contains(document.Descendants(), element => element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "YearFilterBox"));
+        Assert.Contains(document.Descendants(), element => element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "ProjectsList"));
+    }
+
+    [Fact]
     public void ClassifyFileWindow_ProvidesSourceProjectDestinationAndMoveControls()
     {
         var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "ClassifyFileWindow.xaml");

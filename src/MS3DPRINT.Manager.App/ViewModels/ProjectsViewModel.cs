@@ -10,6 +10,8 @@ public sealed class ProjectsViewModel : ObservableObject
     private IReadOnlyList<ProjectSummary> _visibleProjects = [];
     private string _searchText = string.Empty;
     private ProjectStatus? _selectedStatus;
+    private string? _selectedClient;
+    private int? _selectedYear;
 
     public ProjectsViewModel(ProjectCatalog catalog, string workspaceRoot)
     {
@@ -29,6 +31,21 @@ public sealed class ProjectsViewModel : ObservableObject
         set { if (SetProperty(ref _selectedStatus, value)) ApplyFilter(); }
     }
 
+    public string? SelectedClient
+    {
+        get => _selectedClient;
+        set { if (SetProperty(ref _selectedClient, value)) ApplyFilter(); }
+    }
+
+    public int? SelectedYear
+    {
+        get => _selectedYear;
+        set { if (SetProperty(ref _selectedYear, value)) ApplyFilter(); }
+    }
+
+    public IReadOnlyList<string> AvailableClients { get; private set; } = [];
+    public IReadOnlyList<int> AvailableYears { get; private set; } = [];
+
     public IReadOnlyList<ProjectSummary> VisibleProjects
     {
         get => _visibleProjects;
@@ -38,6 +55,8 @@ public sealed class ProjectsViewModel : ObservableObject
     public void Refresh()
     {
         _allProjects = _catalog.Load(_workspaceRoot);
+        AvailableClients = _allProjects.Select(project => project.ClientFolderName).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(client => client, StringComparer.OrdinalIgnoreCase).ToArray();
+        AvailableYears = _allProjects.Select(project => TryGetYear(project.Reference)).Where(year => year.HasValue).Select(year => year!.Value).Distinct().OrderByDescending(year => year).ToArray();
         ApplyFilter();
     }
 
@@ -46,7 +65,15 @@ public sealed class ProjectsViewModel : ObservableObject
         var query = SearchText.Trim();
         VisibleProjects = _allProjects
             .Where(project => SelectedStatus is null || project.Status == SelectedStatus)
+            .Where(project => string.IsNullOrWhiteSpace(SelectedClient) || string.Equals(project.ClientFolderName, SelectedClient, StringComparison.OrdinalIgnoreCase))
+            .Where(project => SelectedYear is null || TryGetYear(project.Reference) == SelectedYear)
             .Where(project => query.Length == 0 || project.Reference.Contains(query, StringComparison.OrdinalIgnoreCase) || project.ProjectName.Contains(query, StringComparison.OrdinalIgnoreCase) || project.ClientFolderName.Contains(query, StringComparison.OrdinalIgnoreCase))
             .ToArray();
+    }
+
+    private static int? TryGetYear(string reference)
+    {
+        var parts = reference.Split('-', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 3 && int.TryParse(parts[1], out var year) ? year : null;
     }
 }

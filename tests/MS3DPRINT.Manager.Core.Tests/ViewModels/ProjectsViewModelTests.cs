@@ -25,6 +25,22 @@ public sealed class ProjectsViewModelTests : IDisposable
         Assert.Equal("MPO-2026-001", Assert.Single(viewModel.VisibleProjects).Reference);
     }
 
+    [Fact]
+    public void VisibleProjects_CombinesClientAndYearFilters()
+    {
+        var store = new ProjectProfileStore(new WorkspaceMetadataPaths(_root));
+        var profile = new ProjectProfile(Guid.NewGuid(), Guid.NewGuid(), "MPO", "MPO-2026-001", "MPO-2026-001_OUTILLAGE", "OUTILLAGE", ProjectStatus.Quote, DateTimeOffset.UtcNow, null, null, null, DateTimeOffset.UtcNow);
+        store.Create(profile);
+        Directory.CreateDirectory(Path.Combine(_root, "01_CLIENTS", "MPO", profile.FolderName));
+        var viewModel = new ProjectsViewModel(new ProjectCatalog(store), _root);
+
+        viewModel.Refresh();
+        viewModel.SelectedClient = "MPO";
+        viewModel.SelectedYear = 2026;
+
+        Assert.Equal("MPO-2026-001", Assert.Single(viewModel.VisibleProjects).Reference);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);

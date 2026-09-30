@@ -84,6 +84,19 @@ public partial class MainWindow : Window
             ShowDialog(new CreateTrackedProjectWindow(_viewModel.StorageRoot, _folders, _clientCatalog, _projectProfiles) { Owner = this });
             ShowProjects();
         });
+        page.ProjectSelected += ShowProjectDetail;
+        PageHost.Content = page;
+    }
+
+    private void ShowProjectDetail(ProjectSummary project)
+    {
+        if (project.Profile is null)
+        {
+            _viewModel.Status = "Ce projet existe déjà, mais sa fiche reste à compléter.";
+            return;
+        }
+        var page = new ProjectDetailView(new ProjectDetailViewModel(project.Profile, _projectProfiles));
+        page.BackRequested += (_, _) => ShowProjects();
         PageHost.Content = page;
     }
 
