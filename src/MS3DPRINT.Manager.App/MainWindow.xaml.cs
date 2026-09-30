@@ -95,8 +95,9 @@ public partial class MainWindow : Window
             _viewModel.Status = "Ce projet existe déjà, mais sa fiche reste à compléter.";
             return;
         }
-        var page = new ProjectDetailView(new ProjectDetailViewModel(project.Profile, _projectProfiles));
+        var page = new ProjectDetailView(new ProjectDetailViewModel(project, _projectProfiles));
         page.BackRequested += (_, _) => ShowProjects();
+        page.ClassifyRequested += (_, _) => Run(() => ShowDialog(new ClassifyFileWindow(_viewModel.StorageRoot, project.ProjectPath) { Owner = this }));
         PageHost.Content = page;
     }
 

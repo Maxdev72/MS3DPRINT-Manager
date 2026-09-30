@@ -26,10 +26,11 @@ public sealed class ClassifyFileViewModel : ObservableObject
     private string _finalFileName = string.Empty;
     private ProjectFileCategory _category = ProjectFileCategory.ClientFiles;
 
-    public ClassifyFileViewModel(string storageRoot)
+    public ClassifyFileViewModel(string storageRoot, string? initialProjectPath = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(storageRoot);
         LoadProjects(Path.Combine(Path.GetFullPath(storageRoot), "01_CLIENTS"));
+        if (!string.IsNullOrWhiteSpace(initialProjectPath)) SelectProject(initialProjectPath);
     }
 
     public ObservableCollection<string> Projects { get; } = new();
@@ -113,6 +114,14 @@ public sealed class ClassifyFileViewModel : ObservableObject
                 Projects.Add(label);
             }
         }
+    }
+
+    private void SelectProject(string projectPath)
+    {
+        var fullPath = Path.GetFullPath(projectPath);
+        var match = _projectPaths.FirstOrDefault(pair => string.Equals(Path.GetFullPath(pair.Value), fullPath,
+            OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal));
+        if (!string.IsNullOrEmpty(match.Key)) SelectedProject = match.Key;
     }
 
     private void RefreshDestinationDirectories()

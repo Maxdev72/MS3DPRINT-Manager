@@ -11,10 +11,10 @@ public partial class ClassifyFileWindow : Window, ICreatedFolderDialog
     private readonly ClassifyFileViewModel _viewModel;
     private readonly ProjectFileTransferService _transfer = new();
 
-    public ClassifyFileWindow(string storageRoot)
+    public ClassifyFileWindow(string storageRoot, string? initialProjectPath = null)
     {
         InitializeComponent();
-        _viewModel = new ClassifyFileViewModel(storageRoot);
+        _viewModel = new ClassifyFileViewModel(storageRoot, initialProjectPath);
         DataContext = _viewModel;
         MaxHeight = SystemParameters.WorkArea.Height * 0.9;
         MaxWidth = SystemParameters.WorkArea.Width * 0.9;

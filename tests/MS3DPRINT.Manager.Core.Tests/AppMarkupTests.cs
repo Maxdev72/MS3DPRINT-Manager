@@ -154,6 +154,16 @@ public sealed class AppMarkupTests
     }
 
     [Fact]
+    public void ProjectDetailView_ProvidesOnDemandFileNavigation()
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "ProjectDetailView.xaml");
+
+        Assert.Contains(document.Descendants(), element => element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "FilesList"));
+        Assert.Contains(document.Descendants(), element => element.Name.LocalName == "Button" && (string?)element.Attribute("Content") == "Remonter");
+        Assert.Contains(document.Descendants(), element => element.Name.LocalName == "Button" && (string?)element.Attribute("Content") == "Classer un fichier…");
+    }
+
+    [Fact]
     public void ClassifyFileWindow_ProvidesSourceProjectDestinationAndMoveControls()
     {
         var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "ClassifyFileWindow.xaml");
