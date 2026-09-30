@@ -79,12 +79,16 @@ public partial class MainWindow : Window
     private void ShowProjects()
     {
         var page = new ProjectsView(new ProjectsViewModel(_projectCatalog, _viewModel.StorageRoot));
-        page.CreateRequested += (_, _) => Run(() => ShowDialog(new CreateProjectWindow(_viewModel.StorageRoot, _folders, _codes) { Owner = this }));
+        page.CreateRequested += (_, _) => Run(() =>
+        {
+            ShowDialog(new CreateTrackedProjectWindow(_viewModel.StorageRoot, _folders, _clientCatalog, _projectProfiles) { Owner = this });
+            ShowProjects();
+        });
         PageHost.Content = page;
     }
 
     private void NewProject_Click(object sender, RoutedEventArgs e) => Run(() =>
-        ShowDialog(new CreateProjectWindow(_viewModel.StorageRoot, _folders, _codes) { Owner = this }));
+        ShowDialog(new CreateTrackedProjectWindow(_viewModel.StorageRoot, _folders, _clientCatalog, _projectProfiles) { Owner = this }));
 
     private void NewModel_Click(object sender, RoutedEventArgs e) => ShowNamedItem("Nouveau modèle 3D", "02_MODELES_3D", FolderTemplates.Model);
 

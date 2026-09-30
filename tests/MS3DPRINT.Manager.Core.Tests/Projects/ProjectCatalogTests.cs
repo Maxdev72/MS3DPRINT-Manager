@@ -24,4 +24,17 @@ public sealed class ProjectCatalogTests : IDisposable
     {
         if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
     }
+
+    [Theory]
+    [InlineData(ProjectStatus.Quote, "DEVIS")]
+    [InlineData(ProjectStatus.InProgress, "EN_COURS")]
+    [InlineData(ProjectStatus.Completed, "TERMINE")]
+    public void ProjectSummary_ProvidesFrenchStatusLabels(ProjectStatus status, string expected)
+    {
+        var project = new ProjectSummary("CLIENT", _root, _root, "CLI-2026-001", "CLI-2026-001_TEST", new ProjectProfile(
+            Guid.NewGuid(), Guid.NewGuid(), "CLI", "CLI-2026-001", "CLI-2026-001_TEST", "TEST", status,
+            DateTimeOffset.UtcNow, null, null, null, DateTimeOffset.UtcNow));
+
+        Assert.Equal(expected, project.StatusLabel);
+    }
 }

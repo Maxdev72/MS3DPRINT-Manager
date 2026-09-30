@@ -4,5 +4,12 @@ public sealed record ProjectSummary(string ClientFolderName, string ClientPath, 
 {
     public bool IsProfileMissing => Profile is null;
     public ProjectStatus? Status => Profile?.Status;
+    public string StatusLabel => Status switch
+    {
+        ProjectStatus.Quote => "DEVIS",
+        ProjectStatus.InProgress => "EN_COURS",
+        ProjectStatus.Completed => "TERMINE",
+        _ => "À compléter"
+    };
     public string ProjectName => Profile?.ProjectName ?? FolderName[(FolderName.IndexOf('_') + 1)..];
 }

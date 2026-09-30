@@ -130,6 +130,20 @@ public sealed class AppMarkupTests
     }
 
     [Fact]
+    public void TrackedProjectDialog_UsesAProfiledClientAndProjectFields()
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "CreateTrackedProjectWindow.xaml");
+
+        Assert.Contains(document.Descendants(), element =>
+            element.Name.LocalName == "ComboBox" &&
+            element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "ClientBox"));
+        Assert.Contains(document.Descendants(), element => element.Name.LocalName == "DatePicker");
+        Assert.Contains(document.Descendants(), element =>
+            element.Name.LocalName == "TextBox" &&
+            element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "ProjectNameBox"));
+    }
+
+    [Fact]
     public void ClassifyFileWindow_ProvidesSourceProjectDestinationAndMoveControls()
     {
         var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "ClassifyFileWindow.xaml");
