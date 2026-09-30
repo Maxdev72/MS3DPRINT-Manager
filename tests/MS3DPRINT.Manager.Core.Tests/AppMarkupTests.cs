@@ -136,6 +136,9 @@ public sealed class AppMarkupTests
         Assert.Contains(document.Descendants(), element => element.Name.LocalName == "TextBlock" && (string?)element.Attribute("Text") == "Stockages");
         Assert.Contains(document.Descendants(), element => element.Name.LocalName == "ItemsControl" && element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "StorageProviders"));
         Assert.Contains(document.Descendants(), element => element.Name.LocalName == "ScrollViewer" && (string?)element.Attribute("VerticalScrollBarVisibility") == "Auto");
+        Assert.Contains(document.Descendants(), element => element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "NextcloudLogo"));
+        Assert.Contains(document.Descendants(), element => element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "GoogleDriveLogo"));
+        Assert.Contains(document.Descendants(), element => element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "DropboxLogo"));
     }
 
     [Fact]
