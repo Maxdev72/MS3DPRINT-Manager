@@ -118,6 +118,18 @@ public sealed class AppMarkupTests
     }
 
     [Fact]
+    public void MainWindow_HostsPersistentNavigationAndClientsPage()
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "MainWindow.xaml");
+
+        Assert.Contains(document.Descendants(), element =>
+            element.Name.LocalName == "ContentControl" &&
+            element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "PageHost"));
+        Assert.Contains(document.Descendants(), element =>
+            element.Name.LocalName == "Button" && (string?)element.Attribute("Content") == "Clients");
+    }
+
+    [Fact]
     public void ClassifyFileWindow_ProvidesSourceProjectDestinationAndMoveControls()
     {
         var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "ClassifyFileWindow.xaml");

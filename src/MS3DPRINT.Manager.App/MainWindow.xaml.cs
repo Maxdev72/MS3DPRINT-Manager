@@ -1,8 +1,10 @@
 using System.Windows;
 using MS3DPRINT.Manager.App.ViewModels;
 using MS3DPRINT.Manager.App.Views;
+using MS3DPRINT.Manager.Core.Clients;
 using MS3DPRINT.Manager.Core.Storage;
 using MS3DPRINT.Manager.Core.Templates;
+using MS3DPRINT.Manager.Core.Workspace;
 
 namespace MS3DPRINT.Manager.App;
 
@@ -12,6 +14,8 @@ public partial class MainWindow : Window
     private readonly FolderTreeService _folders = new();
     private readonly ClientCodeRegistry _codes;
     private readonly ThemeSettingsStore _themeSettings;
+    private readonly ClientProfileStore _clientProfiles;
+    private readonly ClientCatalog _clientCatalog;
 
     public MainWindow()
     {
@@ -20,6 +24,8 @@ public partial class MainWindow : Window
         var dataDirectory = Environment.GetEnvironmentVariable("MS3DPRINT_DATA_DIRECTORY");
         _codes = new ClientCodeRegistry(string.IsNullOrWhiteSpace(dataDirectory) ? null : dataDirectory);
         _themeSettings = new ThemeSettingsStore(string.IsNullOrWhiteSpace(dataDirectory) ? null : dataDirectory);
+        _clientProfiles = new ClientProfileStore(new WorkspaceMetadataPaths(_viewModel.StorageRoot));
+        _clientCatalog = new ClientCatalog(_clientProfiles, _codes);
         DataContext = _viewModel;
         Width = Math.Min(1200, SystemParameters.WorkArea.Width * 0.84);
         Height = Math.Min(850, SystemParameters.WorkArea.Height * 0.85);
@@ -35,6 +41,21 @@ public partial class MainWindow : Window
 
     private void NewClient_Click(object sender, RoutedEventArgs e) => Run(() =>
         ShowDialog(new CreateClientWindow(_viewModel.StorageRoot, _folders, _codes) { Owner = this }));
+
+    private void Dashboard_Click(object sender, RoutedEventArgs e) => PageHost.Content = DashboardPage;
+
+    private void Clients_Click(object sender, RoutedEventArgs e) => ShowClients();
+
+    private void ShowClients()
+    {
+        var page = new ClientsView(new ClientsViewModel(_clientCatalog, _viewModel.StorageRoot));
+        page.CreateRequested += (_, _) => Run(() =>
+        {
+            ShowDialog(new CreateClientWindow(_viewModel.StorageRoot, _folders, _codes) { Owner = this });
+            ShowClients();
+        });
+        PageHost.Content = page;
+    }
 
     private void NewProject_Click(object sender, RoutedEventArgs e) => Run(() =>
         ShowDialog(new CreateProjectWindow(_viewModel.StorageRoot, _folders, _codes) { Owner = this }));

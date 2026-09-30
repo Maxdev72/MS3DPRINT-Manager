@@ -73,7 +73,23 @@
             </Setter>
         </Style>
     </Window.Resources>
-    <DockPanel>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="174" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Border Grid.Column="0" Background="{DynamicResource HeaderBrush}" Padding="12,22">
+            <StackPanel>
+                <TextBlock Text="MS3DPRINT" Foreground="{DynamicResource HeaderTextBrush}" FontWeight="SemiBold" FontSize="17" Margin="10,0,0,22" />
+                <Button Content="Tableau de bord" Click="Dashboard_Click" Background="Transparent" Foreground="{DynamicResource HeaderTextBrush}" HorizontalContentAlignment="Left" />
+                <Button Content="Clients" Click="Clients_Click" Background="Transparent" Foreground="{DynamicResource HeaderTextBrush}" HorizontalContentAlignment="Left" Margin="0,5,0,0" />
+                <Button Content="Projets" IsEnabled="False" Background="Transparent" Foreground="{DynamicResource HeaderMutedBrush}" HorizontalContentAlignment="Left" Margin="0,5,0,0" />
+                <Button Content="Modèles 3D" IsEnabled="False" Background="Transparent" Foreground="{DynamicResource HeaderMutedBrush}" HorizontalContentAlignment="Left" Margin="0,5,0,0" />
+                <Button Content="Produits" IsEnabled="False" Background="Transparent" Foreground="{DynamicResource HeaderMutedBrush}" HorizontalContentAlignment="Left" Margin="0,5,0,0" />
+                <Button Content="Fournisseurs" IsEnabled="False" Background="Transparent" Foreground="{DynamicResource HeaderMutedBrush}" HorizontalContentAlignment="Left" Margin="0,5,0,0" />
+            </StackPanel>
+        </Border>
+        <DockPanel Grid.Column="1">
         <Border DockPanel.Dock="Top" Background="{DynamicResource HeaderBrush}" Padding="28,24">
             <StackPanel>
                 <TextBlock Text="Gestionnaire MS3DPRINT" FontSize="25" FontWeight="SemiBold" Foreground="{DynamicResource HeaderTextBrush}" />
@@ -83,7 +99,8 @@
         <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="28,14" Background="{DynamicResource SurfaceBrush}">
             <TextBlock Text="{Binding Status}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
         </Border>
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <ContentControl x:Name="PageHost">
+        <ScrollViewer x:Name="DashboardPage" VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="28,23">
                 <Grid Margin="0,0,0,22">
                     <Grid.ColumnDefinitions>
@@ -124,5 +141,7 @@
                 </controls:ResponsiveCardPanel>
             </StackPanel>
         </ScrollViewer>
+        </ContentControl>
     </DockPanel>
+    </Grid>
 </Window>
