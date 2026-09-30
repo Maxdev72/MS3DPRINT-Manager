@@ -18,9 +18,17 @@ public partial class ClientsView : UserControl
     }
 
     public event EventHandler? CreateRequested;
+    public event Action<ClientSummary>? ClientSelected;
 
     private void Refresh_Click(object sender, RoutedEventArgs e) => _viewModel.Refresh();
     private void Create_Click(object sender, RoutedEventArgs e) => CreateRequested?.Invoke(this, EventArgs.Empty);
+
+    private void ClientsList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (ClientsList.SelectedItem is not ClientSummary client) return;
+        ClientsList.SelectedItem = null;
+        ClientSelected?.Invoke(client);
+    }
 
     private void KindFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {

@@ -1,0 +1,12 @@
+<UserControl x:Class="MS3DPRINT.Manager.App.Views.ClientDetailView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="28,23">
+        <Button Content="← Clients" Click="Back_Click" HorizontalAlignment="Left" Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource AccentBrush}" />
+        <TextBlock Text="{Binding DisplayName}" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource InkBrush}" Margin="0,18,0,4" />
+        <TextBlock Text="{Binding ClientCode}" Foreground="{DynamicResource MutedBrush}" />
+        <TextBlock Text="Contact principal" FontSize="16" FontWeight="SemiBold" Margin="0,22,0,6" />
+        <TextBlock Text="{Binding PrimaryContact.FirstName}" /><TextBlock Text="{Binding PrimaryContact.LastName}" /><TextBlock Text="{Binding PrimaryContact.Role}" /><TextBlock Text="{Binding PrimaryContact.Phone}" /><TextBlock Text="{Binding PrimaryContact.Email}" />
+        <TextBlock Text="Adresse" FontSize="16" FontWeight="SemiBold" Margin="0,20,0,6" /><TextBlock Text="{Binding Address}" TextWrapping="Wrap" />
+        <TextBlock Text="Notes" FontSize="16" FontWeight="SemiBold" Margin="0,20,0,6" /><TextBox Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="100" />
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0"><TextBlock x:Name="MessageText" VerticalAlignment="Center" Foreground="{DynamicResource MutedBrush}" Margin="0,0,12,0" /><Button Content="Enregistrer" Click="Save_Click" /></StackPanel>
+    </StackPanel></ScrollViewer>
+</UserControl>

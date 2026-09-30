@@ -54,6 +54,19 @@ public partial class MainWindow : Window
             ShowDialog(new CreateClientWindow(_viewModel.StorageRoot, _folders, _codes, _clientProfiles) { Owner = this });
             ShowClients();
         });
+        page.ClientSelected += ShowClientDetail;
+        PageHost.Content = page;
+    }
+
+    private void ShowClientDetail(ClientSummary client)
+    {
+        if (client.Profile is null)
+        {
+            _viewModel.Status = "Ce client existe déjà, mais sa fiche reste à compléter.";
+            return;
+        }
+        var page = new ClientDetailView(new ClientDetailViewModel(client.Profile, _clientProfiles));
+        page.BackRequested += (_, _) => ShowClients();
         PageHost.Content = page;
     }
 
