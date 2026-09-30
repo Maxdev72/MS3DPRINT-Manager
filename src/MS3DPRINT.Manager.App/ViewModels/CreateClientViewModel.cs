@@ -66,6 +66,14 @@ public sealed class CreateClientViewModel : ObservableObject
         }
     }
 
+    public string Address { get; set; } = string.Empty;
+    public string Notes { get; set; } = string.Empty;
+    public string ContactFirstName { get; set; } = string.Empty;
+    public string ContactLastName { get; set; } = string.Empty;
+    public string ContactRole { get; set; } = string.Empty;
+    public string ContactPhone { get; set; } = string.Empty;
+    public string ContactEmail { get; set; } = string.Empty;
+
     public string IdentityName => Kind == ClientKind.Professional
         ? ClientName
         : string.Join(" ", new[] { FirstName, LastName }.Where(value => !string.IsNullOrWhiteSpace(value)));
@@ -80,4 +88,19 @@ public sealed class CreateClientViewModel : ObservableObject
         _clientCode = ClientCodeSuggester.Suggest(IdentityName);
         OnPropertyChanged(nameof(ClientCode));
     }
+
+    public ClientProfile CreateProfile()
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new ClientProfile(
+            Guid.NewGuid(), Kind, NormalizedName, ClientCode,
+            Kind == ClientKind.Professional ? ClientName : null,
+            Kind == ClientKind.Individual ? FirstName : null,
+            Kind == ClientKind.Individual ? LastName : null,
+            NullIfEmpty(Address), NullIfEmpty(Notes),
+            new PrimaryContact(NullIfEmpty(ContactFirstName), NullIfEmpty(ContactLastName), NullIfEmpty(ContactRole), NullIfEmpty(ContactPhone), NullIfEmpty(ContactEmail)),
+            now, now);
+    }
+
+    private static string? NullIfEmpty(string value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

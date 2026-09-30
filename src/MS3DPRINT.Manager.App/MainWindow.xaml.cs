@@ -40,7 +40,7 @@ public partial class MainWindow : Window
     });
 
     private void NewClient_Click(object sender, RoutedEventArgs e) => Run(() =>
-        ShowDialog(new CreateClientWindow(_viewModel.StorageRoot, _folders, _codes) { Owner = this }));
+        ShowDialog(new CreateClientWindow(_viewModel.StorageRoot, _folders, _codes, _clientProfiles) { Owner = this }));
 
     private void Dashboard_Click(object sender, RoutedEventArgs e) => PageHost.Content = DashboardPage;
 
@@ -51,7 +51,7 @@ public partial class MainWindow : Window
         var page = new ClientsView(new ClientsViewModel(_clientCatalog, _viewModel.StorageRoot));
         page.CreateRequested += (_, _) => Run(() =>
         {
-            ShowDialog(new CreateClientWindow(_viewModel.StorageRoot, _folders, _codes) { Owner = this });
+            ShowDialog(new CreateClientWindow(_viewModel.StorageRoot, _folders, _codes, _clientProfiles) { Owner = this });
             ShowClients();
         });
         PageHost.Content = page;

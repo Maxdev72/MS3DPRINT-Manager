@@ -1,42 +1,38 @@
-using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls;
 using MS3DPRINT.Manager.App.ViewModels;
-using MS3DPRINT.Manager.Core.Naming;
+using MS3DPRINT.Manager.Core.Clients;
 using MS3DPRINT.Manager.Core.Storage;
-using MS3DPRINT.Manager.Core.Templates;
 
 namespace MS3DPRINT.Manager.App.Views;
 
 public partial class CreateClientWindow : Window, ICreatedFolderDialog
 {
     private readonly string _storageRoot;
-    private readonly FolderTreeService _folders;
-    private readonly ClientCodeRegistry _registry;
+    private readonly ClientCreationService _clients;
     private readonly CreateClientViewModel _viewModel = new();
-    private PendingCodeRegistration? _pendingRegistration;
 
-    public CreateClientWindow(string storageRoot, FolderTreeService folders, ClientCodeRegistry registry)
+    public CreateClientWindow(string storageRoot, FolderTreeService folders, ClientCodeRegistry registry, ClientProfileStore profiles)
     {
         InitializeComponent();
-        _storageRoot = storageRoot;
-        _folders = folders;
-        _registry = registry;
+        _storageRoot = Path.GetFullPath(storageRoot);
+        _clients = new ClientCreationService(_storageRoot, folders, profiles, registry);
         DataContext = _viewModel;
         MaxHeight = SystemParameters.WorkArea.Height * 0.9;
         MaxWidth = SystemParameters.WorkArea.Width * 0.9;
-        Loaded += (_, _) => NameBox.Focus();
+        Loaded += (_, _) => CompanyBox.Focus();
     }
 
     public string? CreatedPath { get; private set; }
 
     private void Cancel_Click(object sender, RoutedEventArgs e) => Close();
 
-    private void Window_Closing(object? sender, CancelEventArgs e)
+    private void Kind_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_pendingRegistration?.IsPending == true)
-            e.Cancel = MessageBox.Show(this,
-                "Le dossier client existe déjà, mais son code n’est pas enregistré. Fermer ce formulaire sans réessayer ?",
-                "Code client en attente", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes;
+        var individual = KindBox.SelectedIndex == 1;
+        _viewModel.Kind = individual ? ClientKind.Individual : ClientKind.Professional;
+        ProfessionalPanel.Visibility = individual ? Visibility.Collapsed : Visibility.Visible;
+        IndividualPanel.Visibility = individual ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void Create_Click(object sender, RoutedEventArgs e)
@@ -44,45 +40,10 @@ public partial class CreateClientWindow : Window, ICreatedFolderDialog
         ErrorText.Text = string.Empty;
         try
         {
-            if (_pendingRegistration is null)
-            {
-                if (_viewModel.NormalizedName.Length == 0)
-                    throw new ArgumentException("Saisissez un nom contenant au moins une lettre ou un chiffre.");
-                if (NameNormalizer.Normalize(_viewModel.ClientCode).Length == 0)
-                    throw new ArgumentException("Saisissez un code client contenant au moins une lettre ou un chiffre.");
-                if (_registry.GetCode(_viewModel.NormalizedName) is not null)
-                    throw new FolderConflictException("Un code est déjà enregistré pour ce client.");
-
-                var registration = new PendingCodeRegistration(_viewModel.NormalizedName, _viewModel.ClientCode);
-                var destination = Path.Combine(_storageRoot, "01_CLIENTS", _viewModel.NormalizedName);
-                CreatedPath = _folders.CreateTree(destination, FolderTemplates.Client).DestinationPath;
-                _pendingRegistration = registration;
-                NameBox.IsEnabled = false;
-                CodeBox.IsEnabled = false;
-            }
-
-            try { _pendingRegistration.Complete(_registry); }
-            catch (Exception exception)
-            {
-                ErrorText.Text = "Le dossier client a été créé, mais son code n’a pas été enregistré. Vous pouvez réessayer sans recréer le dossier. "
-                    + UiErrorMessages.For(exception);
-                return;
-            }
-
-            OfferOpenFolder();
+            var profile = _clients.Create(_viewModel.CreateProfile());
+            CreatedPath = Path.Combine(_storageRoot, "01_CLIENTS", profile.FolderName);
             DialogResult = true;
         }
-        catch (Exception exception)
-        {
-            ErrorText.Text = UiErrorMessages.For(exception);
-        }
-    }
-
-    private void OfferOpenFolder()
-    {
-        if (MessageBox.Show(this, "Client créé. Ouvrir son dossier ?", "MS3DPRINT", MessageBoxButton.YesNo, MessageBoxImage.Information) != MessageBoxResult.Yes)
-            return;
-        try { ExplorerService.Open(CreatedPath!); }
-        catch (Exception exception) { MessageBox.Show(this, UiErrorMessages.For(exception), "MS3DPRINT — Explorateur", MessageBoxButton.OK, MessageBoxImage.Warning); }
+        catch (Exception exception) { ErrorText.Text = UiErrorMessages.For(exception); }
     }
 }
