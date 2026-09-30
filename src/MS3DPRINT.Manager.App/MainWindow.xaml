@@ -83,7 +83,7 @@
                 <TextBlock Text="MS3DPRINT" Foreground="{DynamicResource HeaderTextBrush}" FontWeight="SemiBold" FontSize="17" Margin="10,0,0,22" />
                 <Button Content="Tableau de bord" Click="Dashboard_Click" Background="Transparent" Foreground="{DynamicResource HeaderTextBrush}" HorizontalContentAlignment="Left" />
                 <Button Content="Clients" Click="Clients_Click" Background="Transparent" Foreground="{DynamicResource HeaderTextBrush}" HorizontalContentAlignment="Left" Margin="0,5,0,0" />
-                <Button Content="Projets" IsEnabled="False" Background="Transparent" Foreground="{DynamicResource HeaderMutedBrush}" HorizontalContentAlignment="Left" Margin="0,5,0,0" />
+                <Button Content="Projets" Click="Projects_Click" Background="Transparent" Foreground="{DynamicResource HeaderTextBrush}" HorizontalContentAlignment="Left" Margin="0,5,0,0" />
                 <Button Content="Modèles 3D" IsEnabled="False" Background="Transparent" Foreground="{DynamicResource HeaderMutedBrush}" HorizontalContentAlignment="Left" Margin="0,5,0,0" />
                 <Button Content="Produits" IsEnabled="False" Background="Transparent" Foreground="{DynamicResource HeaderMutedBrush}" HorizontalContentAlignment="Left" Margin="0,5,0,0" />
                 <Button Content="Fournisseurs" IsEnabled="False" Background="Transparent" Foreground="{DynamicResource HeaderMutedBrush}" HorizontalContentAlignment="Left" Margin="0,5,0,0" />
