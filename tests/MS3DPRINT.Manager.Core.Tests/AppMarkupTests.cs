@@ -138,6 +138,16 @@ public sealed class AppMarkupTests
         Assert.Contains(document.Descendants(), element => element.Name.LocalName == "ScrollViewer" && (string?)element.Attribute("VerticalScrollBarVisibility") == "Auto");
     }
 
+    [Fact]
+    public void SettingsWindow_ShowsReadOnlyPerformanceDiagnostics()
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "SettingsWindow.xaml");
+
+        Assert.Contains(document.Descendants(), element => element.Name.LocalName == "TextBlock" && (string?)element.Attribute("Text") == "Performances");
+        Assert.Contains(document.Descendants(), element => element.Name.LocalName == "ItemsControl" && element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "GraphicsAdapters"));
+        Assert.Contains(document.Descendants(), element => element.Name.LocalName == "TextBlock" && ((string?)element.Attribute("Text") ?? string.Empty).Contains("GPU"));
+    }
+
     private static XDocument LoadMarkup(params string[] relativePath)
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

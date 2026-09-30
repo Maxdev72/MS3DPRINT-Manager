@@ -36,6 +36,28 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
+
+                <Separator Margin="0,8,0,20" Background="{DynamicResource BorderBrush}" />
+                <TextBlock Text="Performances" FontSize="21" FontWeight="SemiBold" />
+                <TextBlock Text="Diagnostic local lu une seule fois à l’ouverture." Margin="0,7,0,12" Foreground="{DynamicResource MutedBrush}" />
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="150" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                    <TextBlock Text="Processeur" FontWeight="SemiBold" Margin="0,0,0,7" />
+                    <TextBlock x:Name="ProcessorValue" Grid.Column="1" Text="Détection…" TextWrapping="Wrap" Margin="0,0,0,7" />
+                    <TextBlock Grid.Row="1" Text="Threads disponibles" FontWeight="SemiBold" Margin="0,0,0,7" />
+                    <TextBlock x:Name="ThreadsValue" Grid.Row="1" Grid.Column="1" Text="Détection…" Margin="0,0,0,7" />
+                    <TextBlock Grid.Row="2" Text="Mémoire" FontWeight="SemiBold" />
+                    <TextBlock x:Name="MemoryValue" Grid.Row="2" Grid.Column="1" Text="Détection…" />
+                </Grid>
+                <TextBlock Text="Cartes graphiques" FontWeight="SemiBold" />
+                <ItemsControl x:Name="GraphicsAdapters" Margin="0,6,0,12">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate><TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,0,0,4" /></DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="Accélération GPU : Automatique — préparation pour de futurs traitements 3D." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" />
+                <TextBlock Text="Les créations et déplacements actuels de fichiers ne sollicitent pas le GPU." Margin="0,5,0,0" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" />
             </StackPanel>
         </ScrollViewer>
     </DockPanel>
