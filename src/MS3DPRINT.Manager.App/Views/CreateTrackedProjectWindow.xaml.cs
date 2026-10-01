@@ -13,8 +13,9 @@ public partial class CreateTrackedProjectWindow : Window, ICreatedFolderDialog
     private readonly ProjectProfileStore _profiles;
     private readonly ProjectCreationService _projects;
     private readonly ProjectSummary? _existingProject;
+    private readonly ClientSummary? _preselectedClient;
 
-    public CreateTrackedProjectWindow(string storageRoot, FolderTreeService folders, ClientCatalog clients, ProjectProfileStore profiles, ProjectSummary? existingProject = null)
+    public CreateTrackedProjectWindow(string storageRoot, FolderTreeService folders, ClientCatalog clients, ProjectProfileStore profiles, ProjectSummary? existingProject = null, ClientSummary? preselectedClient = null)
     {
         InitializeComponent();
         _storageRoot = Path.GetFullPath(storageRoot);
@@ -22,6 +23,7 @@ public partial class CreateTrackedProjectWindow : Window, ICreatedFolderDialog
         _profiles = profiles;
         _projects = new ProjectCreationService(folders);
         _existingProject = existingProject;
+        _preselectedClient = preselectedClient;
         MaxHeight = SystemParameters.WorkArea.Height * 0.9;
         MaxWidth = SystemParameters.WorkArea.Width * 0.9;
         Loaded += OnLoaded;
@@ -50,7 +52,12 @@ public partial class CreateTrackedProjectWindow : Window, ICreatedFolderDialog
             YearBox.IsReadOnly = true;
             ProjectNameBox.IsReadOnly = true;
         }
-        if (ClientBox.Items.Count > 0) ClientBox.SelectedIndex = 0;
+        if (ClientBox.Items.Count > 0)
+        {
+            ClientBox.SelectedItem = _preselectedClient is null
+                ? ClientBox.Items[0]
+                : clients.FirstOrDefault(client => string.Equals(client.FolderName, _preselectedClient.FolderName, StringComparison.OrdinalIgnoreCase)) ?? ClientBox.Items[0];
+        }
         else ClientBox.IsEnabled = false;
         ProjectNameBox.Focus();
     }

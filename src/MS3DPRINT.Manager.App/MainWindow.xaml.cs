@@ -77,6 +77,11 @@ public partial class MainWindow : Window
         }
         var page = new ClientDetailView(new ClientDetailViewModel(client.Profile, _clientProfiles));
         page.BackRequested += (_, _) => ShowClients();
+        page.CreateProjectRequested += (_, _) => Run(() =>
+        {
+            ShowDialog(new CreateTrackedProjectWindow(_viewModel.StorageRoot, _folders, _clientCatalog, _projectProfiles, preselectedClient: client) { Owner = this });
+            ShowClientDetail(client);
+        });
         PageHost.Content = page;
     }
 

@@ -7,6 +7,6 @@
         <TextBlock Text="{Binding PrimaryContact.FirstName}" /><TextBlock Text="{Binding PrimaryContact.LastName}" /><TextBlock Text="{Binding PrimaryContact.Role}" /><TextBlock Text="{Binding PrimaryContact.Phone}" /><TextBlock Text="{Binding PrimaryContact.Email}" />
         <TextBlock Text="Adresse" FontSize="16" FontWeight="SemiBold" Margin="0,20,0,6" /><TextBlock Text="{Binding Address}" TextWrapping="Wrap" />
         <TextBlock Text="Notes" FontSize="16" FontWeight="SemiBold" Margin="0,20,0,6" /><TextBox Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="100" />
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0"><TextBlock x:Name="MessageText" VerticalAlignment="Center" Foreground="{DynamicResource MutedBrush}" Margin="0,0,12,0" /><Button Content="Enregistrer" Click="Save_Click" /></StackPanel>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0"><TextBlock x:Name="MessageText" VerticalAlignment="Center" Foreground="{DynamicResource MutedBrush}" Margin="0,0,12,0" /><Button Content="Nouveau projet" Click="CreateProject_Click" Margin="0,0,10,0" /><Button Content="Enregistrer" Click="Save_Click" /></StackPanel>
     </StackPanel></ScrollViewer>
 </UserControl>

@@ -303,6 +303,19 @@ public sealed class AppMarkupTests
     }
 
     [Fact]
+    public void ClientDetailView_ProvidesAProjectCreationAction()
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "ClientDetailView.xaml");
+        Assert.Contains(document.Descendants(), element =>
+            element.Name.LocalName == "Button" &&
+            (string?)element.Attribute("Content") == "Nouveau projet" &&
+            (string?)element.Attribute("Click") == "CreateProject_Click");
+
+        var source = LoadSource("src", "MS3DPRINT.Manager.App", "MainWindow.xaml.cs");
+        Assert.Contains("preselectedClient: client", source);
+    }
+
+    [Fact]
     public void ClientForm_ConnectsItsTypeSelectorOnlyAfterTheNamedPanelsExist()
     {
         var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "CreateClientWindow.xaml");
