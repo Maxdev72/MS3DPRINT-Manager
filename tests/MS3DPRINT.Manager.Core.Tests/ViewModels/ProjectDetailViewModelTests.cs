@@ -33,6 +33,26 @@ public sealed class ProjectDetailViewModelTests : IDisposable
         Assert.Equal(profile.Reference, saved.Reference);
     }
 
+    [Fact]
+    public void ReadFiles_DefersFileListChangesUntilTheResultIsApplied()
+    {
+        var store = new ProjectProfileStore(new WorkspaceMetadataPaths(_root));
+        var profile = new ProjectProfile(Guid.NewGuid(), Guid.NewGuid(), "MPO", "MPO-2026-001", "MPO-2026-001_OUTILLAGE", "OUTILLAGE", ProjectStatus.Quote,
+            DateTimeOffset.UtcNow, null, null, null, DateTimeOffset.UtcNow);
+        store.Create(profile);
+        var projectPath = Path.Combine(_root, "01_CLIENTS", "MPO", profile.FolderName);
+        Directory.CreateDirectory(projectPath);
+        File.WriteAllText(Path.Combine(projectPath, "brief.pdf"), "x");
+        var summary = new ProjectSummary("MPO", Path.GetDirectoryName(projectPath)!, projectPath, profile.Reference, profile.FolderName, profile);
+        var viewModel = new ProjectDetailViewModel(summary, store);
+
+        var listing = viewModel.ReadFiles();
+
+        Assert.Empty(viewModel.FileEntries);
+        viewModel.ApplyFileListing(listing);
+        Assert.Equal("brief.pdf", Assert.Single(viewModel.FileEntries).Name);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);

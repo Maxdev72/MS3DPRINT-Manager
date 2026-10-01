@@ -76,31 +76,52 @@ public sealed class ProjectDetailViewModel : ObservableObject
         });
     }
 
-    public void LoadFiles()
+    public ProjectFileListing ReadFiles()
     {
-        if (string.IsNullOrWhiteSpace(ProjectPath)) return;
         var current = string.IsNullOrWhiteSpace(CurrentDirectory) ? ProjectPath : CurrentDirectory;
-        var entries = _files.List(ProjectPath, current);
-        CurrentDirectory = current;
-        FileEntries = entries;
+        return string.IsNullOrWhiteSpace(current)
+            ? new ProjectFileListing(string.Empty, [])
+            : new ProjectFileListing(current, _files.List(ProjectPath, current));
+    }
+
+    public ProjectFileListing ReadFilesForDirectory(ProjectFileEntry entry)
+    {
+        if (!entry.IsDirectory) throw new ArgumentException("L’entrée sélectionnée n’est pas un dossier.", nameof(entry));
+        return new ProjectFileListing(entry.FullPath, _files.List(ProjectPath, entry.FullPath));
+    }
+
+    public ProjectFileListing ReadParentFiles()
+    {
+        if (!CanGoUp) return new ProjectFileListing(CurrentDirectory, FileEntries);
+        var parent = _files.GetParentDirectory(ProjectPath, CurrentDirectory);
+        return new ProjectFileListing(parent, _files.List(ProjectPath, parent));
+    }
+
+    public void ApplyFileListing(ProjectFileListing listing)
+    {
+        ArgumentNullException.ThrowIfNull(listing);
+        CurrentDirectory = listing.DirectoryPath;
+        FileEntries = listing.Entries;
         OnPropertyChanged(nameof(CurrentDirectory));
         OnPropertyChanged(nameof(FileEntries));
         OnPropertyChanged(nameof(CanGoUp));
     }
 
+    public void LoadFiles() => ApplyFileListing(ReadFiles());
+
     public void OpenDirectory(ProjectFileEntry entry)
     {
         if (!entry.IsDirectory) throw new ArgumentException("L’entrée sélectionnée n’est pas un dossier.", nameof(entry));
-        CurrentDirectory = entry.FullPath;
-        LoadFiles();
+        ApplyFileListing(ReadFilesForDirectory(entry));
     }
 
     public void GoUp()
     {
         if (!CanGoUp) return;
-        CurrentDirectory = _files.GetParentDirectory(ProjectPath, CurrentDirectory);
-        LoadFiles();
+        ApplyFileListing(ReadParentFiles());
     }
 
     private static string? TrimOrNull(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
+
+public sealed record ProjectFileListing(string DirectoryPath, IReadOnlyList<ProjectFileEntry> Entries);
