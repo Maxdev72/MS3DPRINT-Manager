@@ -34,6 +34,14 @@ public sealed class ClientCatalogTests : IDisposable
         Assert.Equal(1, client.ProjectCount);
     }
 
+    [Fact]
+    public void ClientSummary_UsesALabelInsteadOfShowingItsProfileBoolean()
+    {
+        var client = new ClientSummary(_root, "MPO", "MPO", "MPO", null, null, 1);
+
+        Assert.Equal("Fiche à compléter", client.ProfileLabel);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);

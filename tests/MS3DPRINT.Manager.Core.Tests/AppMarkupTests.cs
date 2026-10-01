@@ -199,6 +199,21 @@ public sealed class AppMarkupTests
     }
 
     [Fact]
+    public void ClientAndProjectLists_UseReadableBusinessLabels()
+    {
+        var clients = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "ClientsView.xaml");
+        var projects = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "ProjectsView.xaml");
+
+        Assert.DoesNotContain(clients.Descendants(), element => ((string?)element.Attribute("Text") ?? string.Empty).Contains("IsProfileMissing"));
+        Assert.Contains(clients.Descendants(), element => ((string?)element.Attribute("Text") ?? string.Empty).Contains("ProfileLabel"));
+        Assert.Contains(projects.Descendants(), element => ((string?)element.Attribute("Text") ?? string.Empty).Contains("StatusLabel"));
+        Assert.Contains(clients.Descendants(), element =>
+            element.Name.LocalName == "Setter" &&
+            (string?)element.Attribute("Property") == "HorizontalContentAlignment" &&
+            (string?)element.Attribute("Value") == "Stretch");
+    }
+
+    [Fact]
     public void ClassifyFileWindow_ProvidesSourceProjectDestinationAndMoveControls()
     {
         var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "ClassifyFileWindow.xaml");

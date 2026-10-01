@@ -41,7 +41,7 @@ public partial class ProjectsView : UserControl
     {
         ClientFilterBox.ItemsSource = new[] { "Tous les clients" }.Concat(_viewModel.AvailableClients).ToArray();
         ClientFilterBox.SelectedIndex = 0;
-        YearFilterBox.ItemsSource = new object[] { "Toutes les années" }.Concat(_viewModel.AvailableYears.Cast<object>()).ToArray();
+        YearFilterBox.ItemsSource = new object[] { "Toutes années" }.Concat(_viewModel.AvailableYears.Cast<object>()).ToArray();
         YearFilterBox.SelectedIndex = 0;
     }
 }

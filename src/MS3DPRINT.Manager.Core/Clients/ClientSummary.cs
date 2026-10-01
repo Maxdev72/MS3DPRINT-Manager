@@ -10,4 +10,7 @@ public sealed record ClientSummary(
     int ProjectCount)
 {
     public bool IsProfileMissing => Profile is null;
+    public string ProfileLabel => IsProfileMissing
+        ? "Fiche à compléter"
+        : Kind == ClientKind.Individual ? "Particulier" : "Professionnel";
 }

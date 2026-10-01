@@ -26,15 +26,16 @@
             <Button Grid.Column="2" Content="Actualiser" Click="Refresh_Click" Margin="12,0,0,0" />
         </Grid>
         <ListView x:Name="ClientsList" Grid.Row="2" ItemsSource="{Binding VisibleClients}" SelectionChanged="ClientsList_SelectionChanged" BorderBrush="{DynamicResource BorderBrush}" Background="{DynamicResource SurfaceBrush}">
+            <ListView.ItemContainerStyle><Style TargetType="ListViewItem"><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Padding" Value="0" /></Style></ListView.ItemContainerStyle>
             <ListView.ItemTemplate>
                 <DataTemplate>
-                    <Border Padding="14,10" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+                    <Border Padding="18,13" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
                         <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="2*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                            <StackPanel><TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" /><TextBlock Text="{Binding FolderName}" Foreground="{DynamicResource MutedBrush}" FontSize="12" /></StackPanel>
-                            <TextBlock Grid.Column="1" Text="{Binding ClientCode}" VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="2" Text="{Binding ProjectCount, StringFormat={}{0} projet(s)}" VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="3" Text="{Binding IsProfileMissing, StringFormat={}{0:À compléter;}}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" />
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="2*" /><ColumnDefinition Width="120" /><ColumnDefinition Width="130" /><ColumnDefinition Width="180" /></Grid.ColumnDefinitions>
+                            <StackPanel><TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="15" /><TextBlock Text="{Binding FolderName}" Foreground="{DynamicResource MutedBrush}" FontSize="12" Margin="0,3,0,0" /></StackPanel>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center"><TextBlock Text="CODE" Foreground="{DynamicResource MutedBrush}" FontSize="11" /><TextBlock Text="{Binding ClientCode}" Margin="0,2,0,0" /></StackPanel>
+                            <StackPanel Grid.Column="2" VerticalAlignment="Center"><TextBlock Text="PROJETS" Foreground="{DynamicResource MutedBrush}" FontSize="11" /><TextBlock Text="{Binding ProjectCount, StringFormat={}{0} projet(s)}" Margin="0,2,0,0" /></StackPanel>
+                            <Border Grid.Column="3" VerticalAlignment="Center" HorizontalAlignment="Right" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" Padding="9,4"><TextBlock Text="{Binding ProfileLabel}" Foreground="{DynamicResource AccentBrush}" /></Border>
                         </Grid>
                     </Border>
                 </DataTemplate>
