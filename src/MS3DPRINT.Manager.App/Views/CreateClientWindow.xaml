@@ -12,16 +12,26 @@
             <TextBlock x:Name="Heading" Text="Créer un client" FontSize="21" FontWeight="SemiBold" Foreground="{DynamicResource InkBrush}" />
             <TextBlock x:Name="IntroText" Text="La fiche, le dossier et le code sont créés après validation." Margin="0,7,0,18" TextWrapping="Wrap" />
             <TextBlock Text="Type de client" FontWeight="SemiBold" /><ComboBox x:Name="KindBox" Margin="0,6,0,14"><ComboBoxItem Content="Professionnel" IsSelected="True" /><ComboBoxItem Content="Particulier" /></ComboBox>
-            <StackPanel x:Name="ProfessionalPanel"><TextBlock Text="Entreprise" FontWeight="SemiBold" /><TextBox x:Name="CompanyBox" Text="{Binding ClientName, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,14" /></StackPanel>
+            <StackPanel x:Name="ProfessionalPanel">
+                <TextBlock Text="Rechercher une entreprise (nom ou SIRET)" FontWeight="SemiBold" />
+                <TextBox Text="{Binding CompanyQuery, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,6" />
+                <ListBox ItemsSource="{Binding CompanySuggestions}" DisplayMemberPath="Label" SelectionChanged="CompanySuggestion_SelectionChanged" MaxHeight="130" Margin="0,0,0,10" />
+                <TextBlock Text="Entreprise" FontWeight="SemiBold" /><TextBox x:Name="CompanyBox" Text="{Binding ClientName, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,10" />
+                <TextBlock Text="SIRET (facultatif)" /><TextBox Text="{Binding Siret, UpdateSourceTrigger=PropertyChanged}" Margin="0,5,0,14" />
+            </StackPanel>
             <StackPanel x:Name="IndividualPanel" Visibility="Collapsed"><TextBlock Text="Prénom" FontWeight="SemiBold" /><TextBox Text="{Binding FirstName, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,10" /><TextBlock Text="Nom" FontWeight="SemiBold" /><TextBox Text="{Binding LastName, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,14" /></StackPanel>
             <TextBlock Text="Nom du dossier" FontWeight="SemiBold" /><TextBox Text="{Binding NormalizedName, Mode=OneWay}" IsReadOnly="True" Background="{DynamicResource ReadOnlyInputBrush}" Margin="0,6,0,4" /><TextBlock x:Name="FolderHint" Text="Le nom sera créé automatiquement." Foreground="{DynamicResource MutedBrush}" FontSize="12" Margin="0,0,0,14" />
             <TextBlock Text="Code client" FontWeight="SemiBold" /><TextBox Text="{Binding ClientCode, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,14" />
             <TextBlock Text="Contact principal" FontWeight="SemiBold" FontSize="16" Margin="0,4,0,8" />
+            <StackPanel x:Name="ContactIdentityPanel">
             <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions><StackPanel Margin="0,0,6,0"><TextBlock Text="Prénom" /><TextBox Text="{Binding ContactFirstName, UpdateSourceTrigger=PropertyChanged}" Margin="0,5,0,10" /></StackPanel><StackPanel Grid.Column="1" Margin="6,0,0,0"><TextBlock Text="Nom" /><TextBox Text="{Binding ContactLastName, UpdateSourceTrigger=PropertyChanged}" Margin="0,5,0,10" /></StackPanel></Grid>
             <TextBlock Text="Fonction" /><TextBox Text="{Binding ContactRole, UpdateSourceTrigger=PropertyChanged}" Margin="0,5,0,10" />
+            </StackPanel>
             <TextBlock Text="Téléphone" /><TextBox Text="{Binding ContactPhone, UpdateSourceTrigger=PropertyChanged}" Margin="0,5,0,10" />
             <TextBlock Text="E-mail" /><TextBox Text="{Binding ContactEmail, UpdateSourceTrigger=PropertyChanged}" Margin="0,5,0,10" />
             <TextBlock Text="Adresse" /><TextBox Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}" Margin="0,5,0,10" TextWrapping="Wrap" AcceptsReturn="True" MinHeight="48" />
+            <ListBox ItemsSource="{Binding AddressSuggestions}" DisplayMemberPath="Label" SelectionChanged="AddressSuggestion_SelectionChanged" MaxHeight="110" Margin="0,0,0,8" />
+            <TextBlock Text="{Binding LookupStatus}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,0,0,8" />
             <TextBlock Text="Notes" /><TextBox Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" Margin="0,5,0,0" TextWrapping="Wrap" AcceptsReturn="True" MinHeight="56" />
         </StackPanel></ScrollViewer>
     </DockPanel>

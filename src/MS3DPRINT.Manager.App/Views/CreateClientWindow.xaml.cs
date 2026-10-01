@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using MS3DPRINT.Manager.App.ViewModels;
 using MS3DPRINT.Manager.Core.Clients;
 using MS3DPRINT.Manager.Core.Storage;
+using MS3DPRINT.Manager.App.Clients;
 
 namespace MS3DPRINT.Manager.App.Views;
 
@@ -38,6 +39,7 @@ public partial class CreateClientWindow : Window, ICreatedFolderDialog
             CreateButton.Content = "Enregistrer la fiche";
         }
         Loaded += (_, _) => CompanyBox.Focus();
+        Closed += (_, _) => _viewModel.Dispose();
     }
 
     public string? CreatedPath { get; private set; }
@@ -50,6 +52,17 @@ public partial class CreateClientWindow : Window, ICreatedFolderDialog
         _viewModel.Kind = individual ? ClientKind.Individual : ClientKind.Professional;
         ProfessionalPanel.Visibility = individual ? Visibility.Collapsed : Visibility.Visible;
         IndividualPanel.Visibility = individual ? Visibility.Visible : Visibility.Collapsed;
+        ContactIdentityPanel.Visibility = individual ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private void CompanySuggestion_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (((ListBox)sender).SelectedItem is CompanySuggestion suggestion) _viewModel.ApplyCompanySuggestion(suggestion);
+    }
+
+    private void AddressSuggestion_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (((ListBox)sender).SelectedItem is AddressSuggestion suggestion) _viewModel.ApplyAddressSuggestion(suggestion);
     }
 
     private void Create_Click(object sender, RoutedEventArgs e)

@@ -17,6 +17,7 @@ public sealed class ClientDetailViewModel : ObservableObject
         _profile = profile ?? throw new ArgumentNullException(nameof(profile));
         _store = store ?? throw new ArgumentNullException(nameof(store));
         CompanyName = profile.CompanyName ?? string.Empty;
+        Siret = profile.Siret ?? string.Empty;
         FirstName = profile.FirstName ?? string.Empty;
         LastName = profile.LastName ?? string.Empty;
         Address = profile.Address ?? string.Empty;
@@ -42,6 +43,7 @@ public sealed class ClientDetailViewModel : ObservableObject
     public bool IsProfessional => _profile.Kind == ClientKind.Professional;
     public bool IsIndividual => _profile.Kind == ClientKind.Individual;
     public string CompanyName { get; set; }
+    public string Siret { get; set; }
     public string FirstName { get; set; }
     public string LastName { get; set; }
     public string Address { get; set; }
@@ -68,11 +70,12 @@ public sealed class ClientDetailViewModel : ObservableObject
         var updated = _profile with
         {
             CompanyName = IsProfessional ? NullIfEmpty(CompanyName) : null,
+            Siret = IsProfessional ? NullIfEmpty(Siret) : null,
             FirstName = IsIndividual ? NullIfEmpty(FirstName) : null,
             LastName = IsIndividual ? NullIfEmpty(LastName) : null,
             Address = NullIfEmpty(Address),
             Notes = NullIfEmpty(Notes),
-            PrimaryContact = new PrimaryContact(NullIfEmpty(ContactFirstName), NullIfEmpty(ContactLastName), NullIfEmpty(ContactRole), NullIfEmpty(ContactPhone), NullIfEmpty(ContactEmail)),
+            PrimaryContact = new PrimaryContact(IsProfessional ? NullIfEmpty(ContactFirstName) : null, IsProfessional ? NullIfEmpty(ContactLastName) : null, IsProfessional ? NullIfEmpty(ContactRole) : null, NullIfEmpty(ContactPhone), NullIfEmpty(ContactEmail)),
             UpdatedAt = DateTimeOffset.UtcNow
         };
         _store.Update(updated);

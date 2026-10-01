@@ -12,4 +12,5 @@ public sealed record ClientProfile(
     string? Notes,
     PrimaryContact PrimaryContact,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    string? Siret = null);

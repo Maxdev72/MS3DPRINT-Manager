@@ -1,10 +1,25 @@
 using MS3DPRINT.Manager.Core.Naming;
 using MS3DPRINT.Manager.Core.Clients;
+using MS3DPRINT.Manager.App.Clients;
+using System.Net.Http;
+using System.Text.Json;
 
 namespace MS3DPRINT.Manager.App.ViewModels;
 
-public sealed class CreateClientViewModel : ObservableObject
+public sealed class CreateClientViewModel : ObservableObject, IDisposable
 {
+    private static readonly HttpClient LookupHttp = new() { Timeout = TimeSpan.FromSeconds(8) };
+    private readonly IClientLookup _lookup;
+    private CancellationTokenSource? _companyCancellation;
+    private CancellationTokenSource? _addressCancellation;
+    private bool _applyingSuggestion;
+    private bool _disposed;
+    private string _address = string.Empty;
+    private string _siret = string.Empty;
+    private string _companyQuery = string.Empty;
+    private string _lookupStatus = string.Empty;
+    private IReadOnlyList<CompanySuggestion> _companySuggestions = [];
+    private IReadOnlyList<AddressSuggestion> _addressSuggestions = [];
     private readonly string? _existingFolderName;
     private string _clientName = string.Empty;
     private string _clientCode = string.Empty;
@@ -13,9 +28,10 @@ public sealed class CreateClientViewModel : ObservableObject
     private string _firstName = string.Empty;
     private string _lastName = string.Empty;
 
-    public CreateClientViewModel() { }
+    public CreateClientViewModel() : this(new PublicClientLookup(LookupHttp)) { }
+    public CreateClientViewModel(IClientLookup lookup) => _lookup = lookup;
 
-    public CreateClientViewModel(string existingFolderName, string? existingClientCode)
+    public CreateClientViewModel(string existingFolderName, string? existingClientCode) : this()
     {
         _existingFolderName = existingFolderName ?? throw new ArgumentNullException(nameof(existingFolderName));
         _clientCode = string.IsNullOrWhiteSpace(existingClientCode) ? existingFolderName : existingClientCode;
@@ -34,6 +50,7 @@ public sealed class CreateClientViewModel : ObservableObject
                 _clientCode = ClientCodeSuggester.Suggest(value);
                 OnPropertyChanged(nameof(ClientCode));
             }
+            if (!_applyingSuggestion) CompanyQuery = value;
         }
     }
 
@@ -43,6 +60,8 @@ public sealed class CreateClientViewModel : ObservableObject
         set
         {
             if (!SetProperty(ref _kind, value)) return;
+            _companyCancellation?.Cancel();
+            CompanySuggestions = [];
             RefreshIdentity();
         }
     }
@@ -76,7 +95,79 @@ public sealed class CreateClientViewModel : ObservableObject
         }
     }
 
-    public string Address { get; set; } = string.Empty;
+    public string Address
+    {
+        get => _address;
+        set { if (SetProperty(ref _address, value) && !_applyingSuggestion) _ = RefreshSuggestionsAsync(false); }
+    }
+    public string Siret { get => _siret; set => SetProperty(ref _siret, value); }
+    public string CompanyQuery
+    {
+        get => _companyQuery;
+        set { if (SetProperty(ref _companyQuery, value)) _ = RefreshSuggestionsAsync(true); }
+    }
+    public string LookupStatus { get => _lookupStatus; private set => SetProperty(ref _lookupStatus, value); }
+    public IReadOnlyList<CompanySuggestion> CompanySuggestions { get => _companySuggestions; private set => SetProperty(ref _companySuggestions, value); }
+    public IReadOnlyList<AddressSuggestion> AddressSuggestions { get => _addressSuggestions; private set => SetProperty(ref _addressSuggestions, value); }
+
+    private async Task RefreshSuggestionsAsync(bool companies)
+    {
+        var previous = companies ? _companyCancellation : _addressCancellation;
+        previous?.Cancel();
+        var cancellation = new CancellationTokenSource();
+        if (companies) { _companyCancellation = cancellation; CompanySuggestions = []; }
+        else { _addressCancellation = cancellation; AddressSuggestions = []; }
+        var query = companies ? CompanyQuery : Address;
+        try
+        {
+            if (_disposed || query.Trim().Length < 3 || (companies && Kind != ClientKind.Professional)) return;
+            await Task.Delay(350, cancellation.Token);
+            if (companies)
+            {
+                var results = await _lookup.SearchCompaniesAsync(query, cancellation.Token);
+                cancellation.Token.ThrowIfCancellationRequested();
+                if (Kind == ClientKind.Professional) CompanySuggestions = results;
+            }
+            else
+            {
+                var results = await _lookup.SearchAddressesAsync(query, cancellation.Token);
+                cancellation.Token.ThrowIfCancellationRequested();
+                AddressSuggestions = results;
+            }
+            LookupStatus = string.Empty;
+        }
+        catch (OperationCanceledException)
+        {
+            if (!cancellation.IsCancellationRequested) LookupStatus = "Suggestions indisponibles. La saisie manuelle reste possible.";
+        }
+        catch (Exception exception) when (exception is HttpRequestException or JsonException)
+        {
+            if (!cancellation.IsCancellationRequested) LookupStatus = "Suggestions indisponibles. La saisie manuelle reste possible.";
+        }
+        finally { cancellation.Dispose(); if (companies && ReferenceEquals(_companyCancellation, cancellation)) _companyCancellation = null; if (!companies && ReferenceEquals(_addressCancellation, cancellation)) _addressCancellation = null; }
+    }
+
+    public void ApplyCompanySuggestion(CompanySuggestion suggestion)
+    {
+        if (Kind != ClientKind.Professional) return;
+        _companyCancellation?.Cancel();
+        _addressCancellation?.Cancel();
+        _applyingSuggestion = true;
+        try { ClientName = suggestion.Name; Siret = suggestion.Siret ?? string.Empty; if (!string.IsNullOrWhiteSpace(suggestion.Address)) Address = suggestion.Address; }
+        finally { _applyingSuggestion = false; }
+        CompanySuggestions = [];
+        AddressSuggestions = [];
+    }
+
+    public void ApplyAddressSuggestion(AddressSuggestion suggestion)
+    {
+        _addressCancellation?.Cancel();
+        _applyingSuggestion = true;
+        try { Address = suggestion.Label; } finally { _applyingSuggestion = false; }
+        AddressSuggestions = [];
+    }
+
+    public void Dispose() { _disposed = true; _companyCancellation?.Cancel(); _addressCancellation?.Cancel(); }
     public string Notes { get; set; } = string.Empty;
     public string ContactFirstName { get; set; } = string.Empty;
     public string ContactLastName { get; set; } = string.Empty;
@@ -108,8 +199,8 @@ public sealed class CreateClientViewModel : ObservableObject
             Kind == ClientKind.Individual ? FirstName : null,
             Kind == ClientKind.Individual ? LastName : null,
             NullIfEmpty(Address), NullIfEmpty(Notes),
-            new PrimaryContact(NullIfEmpty(ContactFirstName), NullIfEmpty(ContactLastName), NullIfEmpty(ContactRole), NullIfEmpty(ContactPhone), NullIfEmpty(ContactEmail)),
-            now, now);
+            new PrimaryContact(Kind == ClientKind.Professional ? NullIfEmpty(ContactFirstName) : null, Kind == ClientKind.Professional ? NullIfEmpty(ContactLastName) : null, Kind == ClientKind.Professional ? NullIfEmpty(ContactRole) : null, NullIfEmpty(ContactPhone), NullIfEmpty(ContactEmail)),
+            now, now, Kind == ClientKind.Professional ? NullIfEmpty(Siret) : null);
     }
 
     private static string? NullIfEmpty(string value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

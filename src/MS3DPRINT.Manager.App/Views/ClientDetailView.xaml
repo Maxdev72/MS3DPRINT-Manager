@@ -7,6 +7,7 @@
         <StackPanel>
             <StackPanel.Style><Style TargetType="StackPanel"><Style.Triggers><DataTrigger Binding="{Binding IsProfessional}" Value="False"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers></Style></StackPanel.Style>
             <TextBlock Text="Raison sociale" Margin="0,0,0,4" /><TextBox Text="{Binding CompanyName, UpdateSourceTrigger=PropertyChanged}" />
+            <TextBlock Text="SIRET (facultatif)" Margin="0,12,0,4" /><TextBox Text="{Binding Siret, UpdateSourceTrigger=PropertyChanged}" />
         </StackPanel>
         <StackPanel>
             <StackPanel.Style><Style TargetType="StackPanel"><Style.Triggers><DataTrigger Binding="{Binding IsIndividual}" Value="False"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers></Style></StackPanel.Style>
@@ -15,9 +16,12 @@
         </StackPanel>
         <TextBlock Text="Adresse" Margin="0,16,0,4" /><TextBox Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="58" />
         <TextBlock Text="Contact principal" FontSize="16" FontWeight="SemiBold" Margin="0,22,0,8" />
+        <StackPanel>
+            <StackPanel.Style><Style TargetType="StackPanel"><Style.Triggers><DataTrigger Binding="{Binding IsProfessional}" Value="False"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers></Style></StackPanel.Style>
         <TextBlock Text="Prénom" Margin="0,0,0,4" /><TextBox Text="{Binding ContactFirstName, UpdateSourceTrigger=PropertyChanged}" />
         <TextBlock Text="Nom" Margin="0,12,0,4" /><TextBox Text="{Binding ContactLastName, UpdateSourceTrigger=PropertyChanged}" />
         <TextBlock Text="Fonction" Margin="0,12,0,4" /><TextBox Text="{Binding ContactRole, UpdateSourceTrigger=PropertyChanged}" />
+        </StackPanel>
         <TextBlock Text="Téléphone" Margin="0,12,0,4" /><TextBox Text="{Binding ContactPhone, UpdateSourceTrigger=PropertyChanged}" />
         <TextBlock Text="E-mail" Margin="0,12,0,4" /><TextBox Text="{Binding ContactEmail, UpdateSourceTrigger=PropertyChanged}" />
         <DockPanel Margin="0,22,0,6"><TextBlock Text="Projets client" FontSize="16" FontWeight="SemiBold" DockPanel.Dock="Left" /><TextBlock x:Name="ProjectsLoadingText" Text="Chargement…" Visibility="Collapsed" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Right" /></DockPanel>
