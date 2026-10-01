@@ -375,6 +375,22 @@ public sealed class AppMarkupTests
     }
 
     [Fact]
+    public void FileDetailViews_ProvideAThreeDimensionalPreviewAction()
+    {
+        foreach (var fileName in new[] { "ProjectDetailView.xaml", "CollectionDetailView.xaml" })
+        {
+            var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", fileName);
+            Assert.Contains(document.Descendants(), element =>
+                element.Name.LocalName == "Button" &&
+                element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "Preview3DButton") &&
+                (string?)element.Attribute("Click") == "Preview3D_Click");
+        }
+
+        var viewer = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "ModelPreviewWindow.xaml");
+        Assert.Contains(viewer.Descendants(), element => element.Name.LocalName == "HelixViewport3D");
+    }
+
+    [Fact]
     public void ClientForm_ConnectsItsTypeSelectorOnlyAfterTheNamedPanelsExist()
     {
         var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "CreateClientWindow.xaml");

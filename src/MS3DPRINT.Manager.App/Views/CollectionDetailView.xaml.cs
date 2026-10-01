@@ -9,6 +9,7 @@ public partial class CollectionDetailView : UserControl
 {
     private readonly CollectionDetailViewModel _viewModel;
     private int _fileLoadVersion;
+    private ProjectFileEntry? _selectedPreviewFile;
 
     public CollectionDetailView(CollectionDetailViewModel viewModel)
     {
@@ -27,17 +28,40 @@ public partial class CollectionDetailView : UserControl
     {
         if (FilesList.SelectedItem is not ProjectFileEntry entry) return;
         FilesList.SelectedItem = null;
-        if (entry.IsDirectory) _ = LoadFilesAsync(() => _viewModel.ReadFilesForDirectory(entry));
+        if (entry.IsDirectory)
+        {
+            _selectedPreviewFile = null;
+            Preview3DButton.IsEnabled = false;
+            _ = LoadFilesAsync(() => _viewModel.ReadFilesForDirectory(entry));
+        }
+        else if (ThreeDFileSupport.IsPreviewable(entry.FullPath))
+        {
+            _selectedPreviewFile = entry;
+            Preview3DButton.IsEnabled = true;
+            MessageText.Text = "Fichier 3D sélectionné. Utilisez « Visualiser en 3D » pour l’ouvrir.";
+        }
         else
         {
+            _selectedPreviewFile = null;
+            Preview3DButton.IsEnabled = false;
             try { ExplorerService.Open(entry.FullPath); }
             catch (Exception exception) { MessageText.Text = UiErrorMessages.For(exception); }
         }
     }
 
+    private void Preview3D_Click(object sender, RoutedEventArgs e)
+    {
+        if (_selectedPreviewFile is null) return;
+        var preview = new ModelPreviewWindow(_selectedPreviewFile.FullPath);
+        if (Window.GetWindow(this) is Window owner) preview.Owner = owner;
+        preview.ShowDialog();
+    }
+
     private async Task LoadFilesAsync(Func<CollectionFileListing> read)
     {
         var loadVersion = ++_fileLoadVersion;
+        _selectedPreviewFile = null;
+        Preview3DButton.IsEnabled = false;
         MessageText.Text = "Chargement des fichiers…";
         try
         {
