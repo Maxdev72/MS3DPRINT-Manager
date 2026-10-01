@@ -24,10 +24,10 @@ public sealed class ProjectFileTransferService
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            throw new ProjectFileTransferException("File.GetAttributes (source)", source, target, exception);
+            throw new ProjectFileTransferException("File.GetAttributes (source)", source, target, exception, source);
         }
-        if (!Directory.Exists(project)) throw new DirectoryNotFoundException("Le dossier projet est introuvable.");
-        if (!Directory.Exists(targetDirectory)) throw new DirectoryNotFoundException("Le dossier projet cible est introuvable.");
+        InspectDirectory(project, "File.GetAttributes (project)", source, target);
+        InspectDirectory(targetDirectory, "File.GetAttributes (destination directory)", source, target);
         if (File.Exists(target) || Directory.Exists(target))
         {
             throw new FolderConflictException($"Un fichier ou dossier existe déjà à cet emplacement : {target}");
@@ -42,6 +42,19 @@ public sealed class ProjectFileTransferService
             throw new ProjectFileTransferException("File.Move", source, target, exception);
         }
         return target;
+    }
+
+    private static void InspectDirectory(string path, string operation, string source, string target)
+    {
+        try
+        {
+            if ((File.GetAttributes(path) & FileAttributes.Directory) == 0)
+                throw new DirectoryNotFoundException($"Le chemin requis n'est pas un dossier : {path}");
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            throw new ProjectFileTransferException(operation, source, target, exception, path);
+        }
     }
 
     private static string ResolveInsideProject(string projectPath, string relativeDirectory)

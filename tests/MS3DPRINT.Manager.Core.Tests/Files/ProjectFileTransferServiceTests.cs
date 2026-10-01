@@ -81,6 +81,36 @@ public sealed class ProjectFileTransferServiceTests : IDisposable
     }
 
     [Fact]
+    public void Move_MissingSourceReportsSourceInspectionAndNativeCause()
+    {
+        Directory.CreateDirectory(Path.Combine(_projectPath, "01_DEVIS_FACTURES"));
+        var error = Assert.Throws<ProjectFileTransferException>(() => new ProjectFileTransferService().Move(_sourcePath, _projectPath, _destination));
+        Assert.Equal("File.GetAttributes (source)", error.Operation);
+        Assert.Equal(_sourcePath, error.SourcePath);
+        Assert.Equal(_sourcePath, error.FailedPath);
+        Assert.Equal(2, error.Win32ErrorCode);
+        Assert.IsType<FileNotFoundException>(error.InnerException);
+        Assert.False(File.Exists(error.DestinationPath));
+    }
+
+    [Theory]
+    [InlineData(false, "File.GetAttributes (project)")]
+    [InlineData(true, "File.GetAttributes (destination directory)")]
+    public void Move_MissingDirectoryReportsInspectionAndNativeCauseAndKeepsSource(bool createProject, string operation)
+    {
+        File.WriteAllText(_sourcePath, "source");
+        if (createProject) Directory.CreateDirectory(_projectPath);
+        var error = Assert.Throws<ProjectFileTransferException>(() => new ProjectFileTransferService().Move(_sourcePath, _projectPath, _destination));
+        Assert.Equal(operation, error.Operation);
+        Assert.Equal(createProject ? Path.Combine(_projectPath, "01_DEVIS_FACTURES") : _projectPath, error.FailedPath);
+        Assert.Contains(createProject ? Path.Combine(_projectPath, "01_DEVIS_FACTURES") : _projectPath, error.Message);
+        Assert.Equal(error.InnerException!.HResult, error.HResult);
+        Assert.True(error.Win32ErrorCode is 2 or 3);
+        Assert.Equal("source", File.ReadAllText(_sourcePath));
+        Assert.False(File.Exists(error.DestinationPath));
+    }
+
+    [Fact]
     public void Move_RejectsExistingDestinationAndKeepsSource()
     {
         File.WriteAllText(_sourcePath, "source");
