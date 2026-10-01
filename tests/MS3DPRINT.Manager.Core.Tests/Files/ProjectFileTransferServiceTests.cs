@@ -1,5 +1,7 @@
 using MS3DPRINT.Manager.Core.Files;
 using MS3DPRINT.Manager.Core.Storage;
+using System.Security.AccessControl;
+using System.Security.Principal;
 
 namespace MS3DPRINT.Manager.Core.Tests.Files;
 
@@ -28,6 +30,54 @@ public sealed class ProjectFileTransferServiceTests : IDisposable
         Assert.False(File.Exists(_sourcePath));
         Assert.Equal("indy document", File.ReadAllText(result));
         Assert.Equal(Path.Combine(_projectPath, "01_DEVIS_FACTURES", "DEV2026-05__MPO-2026-001.pdf"), result);
+    }
+
+    [Fact]
+    public void Move_LockedSourceReportsOperationPathsAndNativeErrorAndKeepsSource()
+    {
+        File.WriteAllText(_sourcePath, "source");
+        Directory.CreateDirectory(Path.Combine(_projectPath, "01_DEVIS_FACTURES"));
+        using var locked = new FileStream(_sourcePath, FileMode.Open, FileAccess.Read, FileShare.None);
+
+        var error = Assert.ThrowsAny<IOException>(() => new ProjectFileTransferService().Move(_sourcePath, _projectPath, _destination));
+
+        Assert.Equal("ProjectFileTransferException", error.GetType().Name);
+        var diagnostic = Assert.IsType<ProjectFileTransferException>(error);
+        Assert.Equal("File.Move", diagnostic.Operation);
+        Assert.Equal(_sourcePath, diagnostic.SourcePath);
+        Assert.Equal(32, diagnostic.Win32ErrorCode);
+        Assert.Equal(diagnostic.InnerException!.HResult, diagnostic.HResult);
+        Assert.Contains(_sourcePath, error.Message);
+        Assert.Contains(Path.Combine(_projectPath, "01_DEVIS_FACTURES", _destination.FileName), error.Message);
+        Assert.Contains("File.Move", error.Message);
+        Assert.Contains("0x80070020", error.Message);
+        Assert.True(File.Exists(_sourcePath));
+        Assert.False(File.Exists(Path.Combine(_projectPath, "01_DEVIS_FACTURES", _destination.FileName)));
+    }
+
+    [Fact]
+    public void Move_DestinationWriteDeniedReportsNativeErrorAndKeepsSource()
+    {
+        File.WriteAllText(_sourcePath, "source");
+        var directory = new DirectoryInfo(Path.Combine(_projectPath, "01_DEVIS_FACTURES"));
+        directory.Create();
+        var original = directory.GetAccessControl();
+        var denied = directory.GetAccessControl();
+        denied.AddAccessRule(new FileSystemAccessRule(WindowsIdentity.GetCurrent().User!, FileSystemRights.CreateFiles, AccessControlType.Deny));
+        try
+        {
+            directory.SetAccessControl(denied);
+            var error = Assert.Throws<ProjectFileTransferException>(() => new ProjectFileTransferService().Move(_sourcePath, _projectPath, _destination));
+            Assert.Equal("File.Move", error.Operation);
+            Assert.Equal(5, error.Win32ErrorCode);
+            Assert.Equal(Path.Combine(directory.FullName, _destination.FileName), error.DestinationPath);
+            Assert.Equal("source", File.ReadAllText(_sourcePath));
+            Assert.False(File.Exists(error.DestinationPath));
+        }
+        finally
+        {
+            directory.SetAccessControl(original);
+        }
     }
 
     [Fact]

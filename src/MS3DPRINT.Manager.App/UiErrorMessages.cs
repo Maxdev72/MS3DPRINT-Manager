@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using MS3DPRINT.Manager.Core.Storage;
+using MS3DPRINT.Manager.Core.Files;
 
 namespace MS3DPRINT.Manager.App;
 
@@ -8,6 +9,7 @@ internal static class UiErrorMessages
 {
     public static string For(Exception exception) => exception switch
     {
+        ProjectFileTransferException => exception.Message,
         ExplorerOpenException => "Impossible d’ouvrir le dossier dans l’Explorateur Windows. Vérifiez que le chemin existe et que l’Explorateur est disponible.",
         FolderConflictException => "Un dossier ou un code existe déjà. " + exception.Message,
         UnauthorizedAccessException => "Accès refusé. Vérifiez vos droits sur le dossier de stockage.",

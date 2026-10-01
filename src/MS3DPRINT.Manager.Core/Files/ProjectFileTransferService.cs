@@ -15,7 +15,17 @@ public sealed class ProjectFileTransferService
         var targetDirectory = ResolveInsideProject(project, destination.RelativeDirectory);
         var target = ResolveFileInsideDirectory(targetDirectory, destination.FileName);
 
-        if (!File.Exists(source)) throw new FileNotFoundException("Le fichier source est introuvable.", source);
+        // Exists hides access and cloud-provider errors; retain the actual OS failure.
+        try
+        {
+            var attributes = File.GetAttributes(source);
+            if ((attributes & FileAttributes.Directory) != 0)
+                throw new FileNotFoundException("Le fichier source est introuvable.", source);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            throw new ProjectFileTransferException("File.GetAttributes (source)", source, target, exception);
+        }
         if (!Directory.Exists(project)) throw new DirectoryNotFoundException("Le dossier projet est introuvable.");
         if (!Directory.Exists(targetDirectory)) throw new DirectoryNotFoundException("Le dossier projet cible est introuvable.");
         if (File.Exists(target) || Directory.Exists(target))
@@ -23,7 +33,14 @@ public sealed class ProjectFileTransferService
             throw new FolderConflictException($"Un fichier ou dossier existe déjà à cet emplacement : {target}");
         }
 
-        File.Move(source, target, overwrite: false);
+        try
+        {
+            File.Move(source, target, overwrite: false);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            throw new ProjectFileTransferException("File.Move", source, target, exception);
+        }
         return target;
     }
 
