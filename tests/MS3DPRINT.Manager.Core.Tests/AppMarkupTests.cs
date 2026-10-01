@@ -40,6 +40,18 @@ public sealed class AppMarkupTests
     }
 
     [Fact]
+    public void MainWindow_CentersEveryPageWithinTheDashboardWidth()
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "MainWindow.xaml");
+        var pageHost = Assert.Single(document.Descendants().Where(element =>
+            element.Name.LocalName == "ContentControl" &&
+            element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "PageHost")));
+
+        Assert.Equal("Center", (string?)pageHost.Attribute("HorizontalAlignment"));
+        Assert.InRange(double.Parse(Assert.IsType<string>((string?)pageHost.Attribute("MaxWidth"))), 1200, 1260);
+    }
+
+    [Fact]
     public void NamedItemDialog_KeepsItsContentScrollable()
     {
         var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "CreateNamedItemWindow.xaml");
