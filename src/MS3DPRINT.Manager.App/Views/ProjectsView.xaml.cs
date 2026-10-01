@@ -15,16 +15,14 @@ public partial class ProjectsView : UserControl
         DataContext = _viewModel;
         Loaded += (_, _) =>
         {
-            _viewModel.Refresh();
-            PopulateFilters();
+            RefreshSafely();
         };
     }
     public event EventHandler? CreateRequested;
     public event Action<ProjectSummary>? ProjectSelected;
     private void Refresh_Click(object sender, RoutedEventArgs e)
     {
-        _viewModel.Refresh();
-        PopulateFilters();
+        RefreshSafely();
     }
     private void Create_Click(object sender, RoutedEventArgs e) => CreateRequested?.Invoke(this, EventArgs.Empty);
     private void Status_SelectionChanged(object sender, SelectionChangedEventArgs e) => _viewModel.SelectedStatus = StatusFilterBox.SelectedIndex switch { 1 => ProjectStatus.Quote, 2 => ProjectStatus.InProgress, 3 => ProjectStatus.Completed, _ => null };
@@ -43,5 +41,21 @@ public partial class ProjectsView : UserControl
         ClientFilterBox.SelectedIndex = 0;
         YearFilterBox.ItemsSource = new object[] { "Toutes années" }.Concat(_viewModel.AvailableYears.Cast<object>()).ToArray();
         YearFilterBox.SelectedIndex = 0;
+    }
+
+    private void RefreshSafely()
+    {
+        try
+        {
+            _viewModel.Refresh();
+            PopulateFilters();
+            LoadErrorText.Text = string.Empty;
+            LoadErrorText.Visibility = Visibility.Collapsed;
+        }
+        catch (Exception exception)
+        {
+            LoadErrorText.Text = UiErrorMessages.For(exception);
+            LoadErrorText.Visibility = Visibility.Visible;
+        }
     }
 }

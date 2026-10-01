@@ -19,6 +19,17 @@ public sealed class ProjectProfileStoreTests : IDisposable
     }
 
     [Fact]
+    public void Create_RejectsASecondProfileForTheSameProjectFolder()
+    {
+        var store = new ProjectProfileStore(new WorkspaceMetadataPaths(_root));
+        var profile = CreateProfile();
+        store.Create(profile);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            store.Create(profile with { Id = Guid.NewGuid() }));
+    }
+
+    [Fact]
     public void Update_ArchivesThePriorProfile()
     {
         var paths = new WorkspaceMetadataPaths(_root);

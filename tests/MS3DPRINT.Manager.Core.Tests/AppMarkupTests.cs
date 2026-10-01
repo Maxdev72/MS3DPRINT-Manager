@@ -198,6 +198,20 @@ public sealed class AppMarkupTests
     }
 
     [Fact]
+    public void CatalogViews_ExposeAnInPageLoadErrorArea()
+    {
+        var clients = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "ClientsView.xaml");
+        var projects = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "ProjectsView.xaml");
+
+        foreach (var document in new[] { clients, projects })
+        {
+            Assert.Contains(document.Descendants(), element =>
+                element.Name.LocalName == "TextBlock" &&
+                element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "LoadErrorText"));
+        }
+    }
+
+    [Fact]
     public void ProjectDetailView_ProvidesOnDemandFileNavigation()
     {
         var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "ProjectDetailView.xaml");

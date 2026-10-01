@@ -14,13 +14,13 @@ public partial class ClientsView : UserControl
         _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
         InitializeComponent();
         DataContext = _viewModel;
-        Loaded += (_, _) => _viewModel.Refresh();
+        Loaded += (_, _) => RefreshSafely();
     }
 
     public event EventHandler? CreateRequested;
     public event Action<ClientSummary>? ClientSelected;
 
-    private void Refresh_Click(object sender, RoutedEventArgs e) => _viewModel.Refresh();
+    private void Refresh_Click(object sender, RoutedEventArgs e) => RefreshSafely();
     private void Create_Click(object sender, RoutedEventArgs e) => CreateRequested?.Invoke(this, EventArgs.Empty);
 
     private void ClientsList_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -38,5 +38,20 @@ public partial class ClientsView : UserControl
             2 => ClientKind.Individual,
             _ => null
         };
+    }
+
+    private void RefreshSafely()
+    {
+        try
+        {
+            _viewModel.Refresh();
+            LoadErrorText.Text = string.Empty;
+            LoadErrorText.Visibility = Visibility.Collapsed;
+        }
+        catch (Exception exception)
+        {
+            LoadErrorText.Text = UiErrorMessages.For(exception);
+            LoadErrorText.Visibility = Visibility.Visible;
+        }
     }
 }

@@ -21,7 +21,13 @@ public sealed class ProjectProfileStore
     {
         Validate(profile);
         _paths.EnsureMetadataDirectories();
-        if (File.Exists(Path(profile.Id))) throw new InvalidOperationException("Une fiche projet existe déjà.");
+        if (File.Exists(Path(profile.Id)) || LoadAll().Any(existing =>
+                string.Equals(existing.FolderName, profile.FolderName, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(existing.Reference, profile.Reference, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new InvalidOperationException("Une fiche projet existe déjà pour ce dossier.");
+        }
+
         Write(Path(profile.Id), profile);
     }
 
