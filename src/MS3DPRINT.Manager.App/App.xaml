@@ -16,6 +16,9 @@
         <SolidColorBrush x:Key="HeaderBrush" Color="#183153" />
         <SolidColorBrush x:Key="HeaderTextBrush" Color="#FFFFFF" />
         <SolidColorBrush x:Key="HeaderMutedBrush" Color="#D7E5F0" />
+        <SolidColorBrush x:Key="DisabledButtonBrush" Color="#63778A" />
+        <SolidColorBrush x:Key="DisabledButtonTextBrush" Color="#F4F8FC" />
+        <SolidColorBrush x:Key="NavigationHoverBrush" Color="#29415C" />
         <Style TargetType="Button">
             <Setter Property="Height" Value="36" />
             <Setter Property="Padding" Value="14,5" />
@@ -28,6 +31,11 @@
                 <Trigger Property="IsKeyboardFocused" Value="True">
                     <Setter Property="BorderBrush" Value="#F3AF35" />
                     <Setter Property="BorderThickness" Value="3" />
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="{DynamicResource DisabledButtonBrush}" />
+                    <Setter Property="Foreground" Value="{DynamicResource DisabledButtonTextBrush}" />
+                    <Setter Property="Opacity" Value="1" />
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -114,7 +122,8 @@
                     <ControlTemplate TargetType="{x:Type ComboBoxItem}">
                         <Border x:Name="ItemBorder" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
                             <ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
-                                              ContentTemplateSelector="{TemplateBinding ContentTemplateSelector}" VerticalAlignment="Center" />
+                                              ContentTemplateSelector="{TemplateBinding ContentTemplateSelector}" VerticalAlignment="Center"
+                                              TextElement.Foreground="{TemplateBinding Foreground}" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsSelected" Value="True">
@@ -124,6 +133,14 @@
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource CardHoverBrush}" />
                             </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsSelected" Value="True" />
+                                    <Condition Property="IsMouseOver" Value="True" />
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource AccentBrush}" />
+                                <Setter Property="Foreground" Value="White" />
+                            </MultiTrigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
                             </Trigger>

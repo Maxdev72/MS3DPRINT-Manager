@@ -10,8 +10,8 @@ public partial class ProjectsView : UserControl
     private readonly ProjectsViewModel _viewModel;
     public ProjectsView(ProjectsViewModel viewModel)
     {
+        _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
         InitializeComponent();
-        _viewModel = viewModel;
         DataContext = _viewModel;
         Loaded += (_, _) =>
         {

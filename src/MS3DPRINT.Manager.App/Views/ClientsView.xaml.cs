@@ -11,8 +11,8 @@ public partial class ClientsView : UserControl
 
     public ClientsView(ClientsViewModel viewModel)
     {
-        InitializeComponent();
         _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
+        InitializeComponent();
         DataContext = _viewModel;
         Loaded += (_, _) => _viewModel.Refresh();
     }

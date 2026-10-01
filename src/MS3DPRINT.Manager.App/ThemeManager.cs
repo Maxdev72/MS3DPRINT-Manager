@@ -23,6 +23,9 @@ public static class ThemeManager
         SetBrush("HeaderBrush", dark ? "#101923" : "#183153");
         SetBrush("HeaderTextBrush", "#FFFFFF");
         SetBrush("HeaderMutedBrush", dark ? "#B2C5D7" : "#D7E5F0");
+        SetBrush("DisabledButtonBrush", dark ? "#52677A" : "#63778A");
+        SetBrush("DisabledButtonTextBrush", "#F4F8FC");
+        SetBrush("NavigationHoverBrush", dark ? "#22303D" : "#29415C");
     }
 
     private static bool WindowsUsesDarkTheme()

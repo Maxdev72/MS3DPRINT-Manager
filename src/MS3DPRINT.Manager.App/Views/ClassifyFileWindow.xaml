@@ -26,7 +26,7 @@
                 <TextBlock Text="Dossier de destination" FontWeight="SemiBold" />
                 <ComboBox x:Name="DestinationBox" ItemsSource="{Binding DestinationDirectories}" SelectedItem="{Binding SelectedRelativeDirectory}" Margin="0,6,0,16" />
                 <TextBlock Text="Nom final" FontWeight="SemiBold" />
-                <TextBox Text="{Binding FinalFileName}" IsReadOnly="True" Background="{DynamicResource ReadOnlyInputBrush}" Margin="0,6,0,8" />
+                <TextBox Text="{Binding FinalFileName, Mode=OneWay}" IsReadOnly="True" Background="{DynamicResource ReadOnlyInputBrush}" Margin="0,6,0,8" />
                 <TextBlock Text="{Binding DestinationPath}" FontSize="12" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" />
             </StackPanel>
         </ScrollViewer>

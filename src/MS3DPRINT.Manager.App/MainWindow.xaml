@@ -72,6 +72,15 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <Style x:Key="NavigationButton" TargetType="Button">
+            <Setter Property="Height" Value="36" />
+            <Setter Property="Padding" Value="10,5" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource HeaderTextBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button"><Border x:Name="NavigationBorder" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}"><ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center" TextElement.Foreground="{TemplateBinding Foreground}" /></Border><ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="NavigationBorder" Property="Background" Value="{DynamicResource NavigationHoverBrush}" /></Trigger><Trigger Property="IsEnabled" Value="False"><Setter Property="Foreground" Value="{DynamicResource HeaderMutedBrush}" /><Setter Property="Opacity" Value="0.72" /></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+        </Style>
     </Window.Resources>
     <Grid>
         <Grid.ColumnDefinitions>
@@ -81,12 +90,12 @@
         <Border Grid.Column="0" Background="{DynamicResource HeaderBrush}" Padding="12,22">
             <StackPanel>
                 <TextBlock Text="MS3DPRINT" Foreground="{DynamicResource HeaderTextBrush}" FontWeight="SemiBold" FontSize="17" Margin="10,0,0,22" />
-                <Button Content="Tableau de bord" Click="Dashboard_Click" Background="Transparent" Foreground="{DynamicResource HeaderTextBrush}" HorizontalContentAlignment="Left" />
-                <Button Content="Clients" Click="Clients_Click" Background="Transparent" Foreground="{DynamicResource HeaderTextBrush}" HorizontalContentAlignment="Left" Margin="0,5,0,0" />
-                <Button Content="Projets" Click="Projects_Click" Background="Transparent" Foreground="{DynamicResource HeaderTextBrush}" HorizontalContentAlignment="Left" Margin="0,5,0,0" />
-                <Button Content="Modèles 3D" IsEnabled="False" Background="Transparent" Foreground="{DynamicResource HeaderMutedBrush}" HorizontalContentAlignment="Left" Margin="0,5,0,0" />
-                <Button Content="Produits" IsEnabled="False" Background="Transparent" Foreground="{DynamicResource HeaderMutedBrush}" HorizontalContentAlignment="Left" Margin="0,5,0,0" />
-                <Button Content="Fournisseurs" IsEnabled="False" Background="Transparent" Foreground="{DynamicResource HeaderMutedBrush}" HorizontalContentAlignment="Left" Margin="0,5,0,0" />
+                <Button Style="{StaticResource NavigationButton}" Content="Tableau de bord" Click="Dashboard_Click" />
+                <Button Style="{StaticResource NavigationButton}" Content="Clients" Click="Clients_Click" Margin="0,5,0,0" />
+                <Button Style="{StaticResource NavigationButton}" Content="Projets" Click="Projects_Click" Margin="0,5,0,0" />
+                <Button Style="{StaticResource NavigationButton}" Content="Modèles 3D" IsEnabled="False" Margin="0,5,0,0" />
+                <Button Style="{StaticResource NavigationButton}" Content="Produits" IsEnabled="False" Margin="0,5,0,0" />
+                <Button Style="{StaticResource NavigationButton}" Content="Fournisseurs" IsEnabled="False" Margin="0,5,0,0" />
             </StackPanel>
         </Border>
         <DockPanel Grid.Column="1">

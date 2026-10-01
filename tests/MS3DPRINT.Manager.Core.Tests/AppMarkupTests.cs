@@ -164,6 +164,41 @@ public sealed class AppMarkupTests
     }
 
     [Fact]
+    public void FilterViews_AssignTheirViewModelsBeforeLoadingXamlEvents()
+    {
+        foreach (var fileName in new[] { "ClientsView.xaml.cs", "ProjectsView.xaml.cs" })
+        {
+            var source = LoadSource("src", "MS3DPRINT.Manager.App", "Views", fileName);
+            Assert.True(source.IndexOf("_viewModel = viewModel", StringComparison.Ordinal) < source.IndexOf("InitializeComponent();", StringComparison.Ordinal));
+        }
+    }
+
+    [Fact]
+    public void ClassifyFileWindow_UsesOneWayBindingForItsGeneratedFileName()
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "ClassifyFileWindow.xaml");
+        var fileNameBox = Assert.Single(document.Descendants().Where(element =>
+            element.Name.LocalName == "TextBox" &&
+            ((string?)element.Attribute("Text") ?? string.Empty).Contains("FinalFileName")));
+
+        Assert.Contains("Mode=OneWay", (string?)fileNameBox.Attribute("Text"));
+    }
+
+    [Fact]
+    public void ApplicationStyles_PreserveContrastForDisabledButtonsAndSelectedComboItems()
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "App.xaml");
+        var buttonStyle = document.Descendants().Single(element => element.Name.LocalName == "Style" && (string?)element.Attribute("TargetType") == "Button");
+        Assert.Contains(buttonStyle.Descendants(), element =>
+            element.Name.LocalName == "Trigger" &&
+            (string?)element.Attribute("Property") == "IsEnabled" &&
+            (string?)element.Attribute("Value") == "False");
+
+        var comboItemStyle = document.Descendants().Single(element => element.Name.LocalName == "Style" && (string?)element.Attribute("TargetType") == "ComboBoxItem");
+        Assert.Contains(comboItemStyle.Descendants(), element => element.Name.LocalName == "MultiTrigger");
+    }
+
+    [Fact]
     public void ClassifyFileWindow_ProvidesSourceProjectDestinationAndMoveControls()
     {
         var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "ClassifyFileWindow.xaml");
