@@ -5,12 +5,22 @@ namespace MS3DPRINT.Manager.App.ViewModels;
 
 public sealed class CreateClientViewModel : ObservableObject
 {
+    private readonly string? _existingFolderName;
     private string _clientName = string.Empty;
     private string _clientCode = string.Empty;
     private bool _codeEdited;
     private ClientKind _kind = ClientKind.Professional;
     private string _firstName = string.Empty;
     private string _lastName = string.Empty;
+
+    public CreateClientViewModel() { }
+
+    public CreateClientViewModel(string existingFolderName, string? existingClientCode)
+    {
+        _existingFolderName = existingFolderName ?? throw new ArgumentNullException(nameof(existingFolderName));
+        _clientCode = string.IsNullOrWhiteSpace(existingClientCode) ? existingFolderName : existingClientCode;
+        _codeEdited = true;
+    }
 
     public string ClientName
     {
@@ -78,7 +88,7 @@ public sealed class CreateClientViewModel : ObservableObject
         ? ClientName
         : string.Join(" ", new[] { FirstName, LastName }.Where(value => !string.IsNullOrWhiteSpace(value)));
 
-    public string NormalizedName => NameNormalizer.Normalize(IdentityName);
+    public string NormalizedName => _existingFolderName ?? NameNormalizer.Normalize(IdentityName);
 
     private void RefreshIdentity()
     {

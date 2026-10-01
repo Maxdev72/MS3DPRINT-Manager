@@ -68,7 +68,11 @@ public partial class MainWindow : Window
     {
         if (client.Profile is null)
         {
-            _viewModel.Status = "Ce client existe déjà, mais sa fiche reste à compléter.";
+            Run(() =>
+            {
+                ShowDialog(new CreateClientWindow(_viewModel.StorageRoot, _folders, _codes, _clientProfiles, client) { Owner = this });
+                ShowClients();
+            });
             return;
         }
         var page = new ClientDetailView(new ClientDetailViewModel(client.Profile, _clientProfiles));

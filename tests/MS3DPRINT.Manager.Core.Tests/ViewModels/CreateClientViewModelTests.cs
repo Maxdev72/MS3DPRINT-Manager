@@ -38,4 +38,16 @@ public sealed class CreateClientViewModelTests
         Assert.Equal("Marie", profile.PrimaryContact.FirstName);
         Assert.Equal("Contact par e-mail", profile.Notes);
     }
+
+    [Fact]
+    public void ExistingFolder_KeepsItsFolderAndCodeWhenCreatingTheProfile()
+    {
+        var viewModel = new CreateClientViewModel("MPO", "MPO") { ClientName = "MPO Industrie" };
+
+        var profile = viewModel.CreateProfile();
+
+        Assert.Equal("MPO", profile.FolderName);
+        Assert.Equal("MPO", profile.ClientCode);
+        Assert.Equal("MPO Industrie", profile.CompanyName);
+    }
 }

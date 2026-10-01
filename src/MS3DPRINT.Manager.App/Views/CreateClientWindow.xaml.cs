@@ -10,16 +10,31 @@ public partial class CreateClientWindow : Window, ICreatedFolderDialog
 {
     private readonly string _storageRoot;
     private readonly ClientCreationService _clients;
-    private readonly CreateClientViewModel _viewModel = new();
+    private readonly ClientProfileStore _profiles;
+    private readonly ClientSummary? _existingClient;
+    private readonly CreateClientViewModel _viewModel;
 
-    public CreateClientWindow(string storageRoot, FolderTreeService folders, ClientCodeRegistry registry, ClientProfileStore profiles)
+    public CreateClientWindow(string storageRoot, FolderTreeService folders, ClientCodeRegistry registry, ClientProfileStore profiles, ClientSummary? existingClient = null)
     {
+        _existingClient = existingClient;
+        _viewModel = existingClient is null
+            ? new CreateClientViewModel()
+            : new CreateClientViewModel(existingClient.FolderName, existingClient.ClientCode);
+        if (existingClient is not null) _viewModel.ClientName = existingClient.DisplayName;
         InitializeComponent();
         _storageRoot = Path.GetFullPath(storageRoot);
         _clients = new ClientCreationService(_storageRoot, folders, profiles, registry);
+        _profiles = profiles;
         DataContext = _viewModel;
         MaxHeight = SystemParameters.WorkArea.Height * 0.9;
         MaxWidth = SystemParameters.WorkArea.Width * 0.9;
+        if (existingClient is not null)
+        {
+            Title = "Compléter la fiche client";
+            Heading.Text = "Compléter la fiche client";
+            IntroText.Text = $"Le dossier {existingClient.FolderName} et ses fichiers existants ne seront pas modifiés.";
+            FolderHint.Text = "Ce dossier existant est conservé tel quel.";
+        }
         Loaded += (_, _) => CompanyBox.Focus();
     }
 
@@ -40,8 +55,19 @@ public partial class CreateClientWindow : Window, ICreatedFolderDialog
         ErrorText.Text = string.Empty;
         try
         {
-            var profile = _clients.Create(_viewModel.CreateProfile());
-            CreatedPath = Path.Combine(_storageRoot, "01_CLIENTS", profile.FolderName);
+            ClientProfile profile;
+            if (_existingClient is null)
+            {
+                profile = _clients.Create(_viewModel.CreateProfile());
+                CreatedPath = Path.Combine(_storageRoot, "01_CLIENTS", profile.FolderName);
+            }
+            else
+            {
+                if (!Directory.Exists(_existingClient.ClientPath)) throw new DirectoryNotFoundException("Le dossier client à compléter est introuvable.");
+                profile = _viewModel.CreateProfile();
+                _profiles.Create(profile);
+                CreatedPath = _existingClient.ClientPath;
+            }
             DialogResult = true;
         }
         catch (Exception exception) { ErrorText.Text = UiErrorMessages.For(exception); }
