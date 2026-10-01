@@ -39,4 +39,12 @@ registre local nécessaire pour retrouver ces codes.
   recherche s’exécute à la demande, sans indexation en arrière-plan. Les 200
   premiers résultats sont affichés ; affinez le terme si nécessaire.
 - Un résultat client ou projet ouvre sa fiche. Un fichier STL ou OBJ ouvre
-  le visualiseur 3D ; les autres fichiers s’ouvrent via Windows.
+  le visualiseur 3D. Les images PNG, JPEG, BMP, GIF et TIFF ainsi que les PDF
+  s’affichent en lecture seule dans l’application ; les autres formats
+  s’ouvrent via Windows.
+- Le visualiseur 3D peut s’ouvrir sans projet : déposez un seul STL ou OBJ
+  dans sa fenêtre, ou utilisez « Choisir un fichier… ». Il affiche les
+  dimensions X/Y/Z en unités du modèle, sans présumer qu’il s’agit de mm.
+
+L’aperçu PDF utilise le moteur intégré à Windows 10 version 2004 ou plus
+récent. Aucun runtime de navigateur séparé n’est nécessaire.

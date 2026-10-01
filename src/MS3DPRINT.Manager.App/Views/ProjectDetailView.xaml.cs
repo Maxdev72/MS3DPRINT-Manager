@@ -54,6 +54,18 @@ public partial class ProjectDetailView : UserControl
             Preview3DButton.IsEnabled = true;
             MessageText.Text = "Fichier 3D sélectionné. Utilisez « Visualiser en 3D » pour l’ouvrir.";
         }
+        else if (PreviewFileSupport.GetKind(entry.FullPath) != PreviewFileKind.None)
+        {
+            _selectedPreviewFile = null;
+            Preview3DButton.IsEnabled = false;
+            try
+            {
+                var preview = new DocumentPreviewWindow(entry.FullPath);
+                if (Window.GetWindow(this) is Window owner) preview.Owner = owner;
+                preview.ShowDialog();
+            }
+            catch (Exception exception) { MessageText.Text = UiErrorMessages.For(exception); }
+        }
         else
         {
             _selectedPreviewFile = null;

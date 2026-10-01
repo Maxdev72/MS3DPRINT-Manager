@@ -1,5 +1,4 @@
 using System.Windows;
-using Microsoft.Win32;
 using MS3DPRINT.Manager.App.ViewModels;
 using MS3DPRINT.Manager.App.Views;
 using MS3DPRINT.Manager.Core.Clients;
@@ -84,10 +83,18 @@ public partial class MainWindow : Window
                     ShowProjectDetail(result.Project, ReturnToSearch);
                     break;
                 case GlobalSearchResultKind.File:
-                    if (ThreeDFileSupport.IsPreviewable(result.Path))
-                        new ModelPreviewWindow(result.Path) { Owner = this }.ShowDialog();
-                    else
-                        ExplorerService.Open(result.Path);
+                    switch (FileOpenRouting.Decide(result.Path))
+                    {
+                        case FileOpenTarget.ThreeD:
+                            new ModelPreviewWindow(result.Path) { Owner = this }.ShowDialog();
+                            break;
+                        case FileOpenTarget.Document:
+                            new DocumentPreviewWindow(result.Path) { Owner = this }.ShowDialog();
+                            break;
+                        default:
+                            ExplorerService.Open(result.Path);
+                            break;
+                    }
                     break;
             }
         });
@@ -211,18 +218,7 @@ public partial class MainWindow : Window
 
     private void Open3DViewer_Click(object sender, RoutedEventArgs e) => Run(() =>
     {
-        var filePicker = new OpenFileDialog
-        {
-            Title = "Choisir un fichier 3D à visualiser",
-            Filter = "Modèles 3D (*.stl;*.obj)|*.stl;*.obj|Fichiers STL (*.stl)|*.stl|Fichiers OBJ (*.obj)|*.obj",
-            CheckFileExists = true,
-            Multiselect = false
-        };
-        if (filePicker.ShowDialog(this) != true) return;
-        if (!ThreeDFileSupport.IsPreviewable(filePicker.FileName))
-            throw new NotSupportedException("Le visualisateur accepte les fichiers STL et OBJ.");
-
-        new ModelPreviewWindow(filePicker.FileName) { Owner = this }.ShowDialog();
+        new ModelPreviewWindow { Owner = this }.ShowDialog();
     });
 
     private void Settings_Click(object sender, RoutedEventArgs e) => Run(() =>
