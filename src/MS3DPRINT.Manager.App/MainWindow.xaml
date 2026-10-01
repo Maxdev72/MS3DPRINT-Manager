@@ -112,7 +112,7 @@
         </Border>
         <ContentControl x:Name="PageHost">
         <ScrollViewer x:Name="DashboardPage" VerticalScrollBarVisibility="Auto">
-            <StackPanel Margin="28,23">
+            <StackPanel Margin="28,23" MaxWidth="1200" HorizontalAlignment="Center">
                 <Grid Margin="0,0,0,22">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -127,7 +127,7 @@
                 </Grid>
                 <DockPanel Margin="0,0,0,12"><TextBlock Text="Vue d’ensemble" Foreground="{DynamicResource InkBrush}" FontWeight="SemiBold" FontSize="17" DockPanel.Dock="Left" /><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><TextBlock x:Name="DashboardLoadingText" Text="Actualisation…" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Visibility="Collapsed" Margin="0,0,10,0" /><Button Content="Actualiser" Style="{StaticResource SecondaryActionButton}" Click="DashboardRefresh_Click" /></StackPanel></DockPanel>
                 <TextBlock x:Name="DashboardErrorText" Visibility="Collapsed" Foreground="IndianRed" TextWrapping="Wrap" Margin="0,0,0,10" />
-                <controls:ResponsiveCardPanel MaxColumns="5" MinimumItemWidth="125" ItemHeightRatio="0.62" Gap="10" Margin="0,0,0,24">
+                <controls:ResponsiveCardPanel MaxColumns="5" MinimumItemWidth="125" MinimumItemHeight="92" ItemHeightRatio="0" Gap="10" Margin="0,0,0,24">
                     <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="14"><StackPanel><TextBlock Text="CLIENTS" Foreground="{DynamicResource MutedBrush}" FontSize="11" /><TextBlock x:Name="DashboardClientsCount" Text="{Binding DashboardClientsCount}" FontSize="24" FontWeight="SemiBold" Margin="0,6,0,0" /></StackPanel></Border>
                     <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="14"><StackPanel><TextBlock Text="PROJETS" Foreground="{DynamicResource MutedBrush}" FontSize="11" /><TextBlock x:Name="DashboardProjectsCount" Text="{Binding DashboardProjectsCount}" FontSize="24" FontWeight="SemiBold" Margin="0,6,0,0" /></StackPanel></Border>
                     <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="14"><StackPanel><TextBlock Text="DEVIS" Foreground="{DynamicResource MutedBrush}" FontSize="11" /><TextBlock x:Name="DashboardQuotesCount" Text="{Binding DashboardQuotesCount}" FontSize="24" FontWeight="SemiBold" Margin="0,6,0,0" /></StackPanel></Border>
@@ -135,7 +135,7 @@
                     <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="14"><StackPanel><TextBlock Text="TERMINÉS" Foreground="{DynamicResource MutedBrush}" FontSize="11" /><TextBlock x:Name="DashboardCompletedCount" Text="{Binding DashboardCompletedCount}" FontSize="24" FontWeight="SemiBold" Margin="0,6,0,0" /></StackPanel></Border>
                 </controls:ResponsiveCardPanel>
                 <TextBlock Text="Actions rapides" Foreground="{DynamicResource InkBrush}" FontWeight="SemiBold" FontSize="17" Margin="0,0,0,14" />
-                <controls:ResponsiveCardPanel MaxColumns="4" MinimumItemWidth="240" ItemHeightRatio="0.42" Gap="14">
+                <controls:ResponsiveCardPanel MaxColumns="4" MinimumItemWidth="210" MinimumItemHeight="148" ItemHeightRatio="0" Gap="14">
                     <Button Style="{StaticResource ActionCardButton}" Click="NewClient_Click">
                         <StackPanel><TextBlock Text="&#xE77B;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Nouveau client" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Créer le dossier et le code client." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
                     </Button>

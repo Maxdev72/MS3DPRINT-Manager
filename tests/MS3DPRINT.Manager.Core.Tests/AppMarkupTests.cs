@@ -12,11 +12,31 @@ public sealed class AppMarkupTests
         Assert.Contains(document.Descendants(), element =>
             element.Name.LocalName == "ResponsiveCardPanel" &&
             (string?)element.Attribute("MaxColumns") == "4" &&
-            (string?)element.Attribute("ItemHeightRatio") == "0.42");
+            (string?)element.Attribute("ItemHeightRatio") == "0" &&
+            (string?)element.Attribute("MinimumItemWidth") == "210");
         Assert.Contains(document.Descendants().Where(element => element.Name.LocalName == "Button"),
             element => (string?)element.Attribute("Style") == "{StaticResource ActionCardButton}" &&
                        element.Attribute("Height") is null &&
                        element.Attribute("Width") is null);
+    }
+
+    [Fact]
+    public void Dashboard_KeepsCardsCompactInAWideWindow()
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "MainWindow.xaml");
+        var dashboard = Assert.Single(document.Descendants().Where(element =>
+            element.Name.LocalName == "ScrollViewer" &&
+            element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "DashboardPage")));
+        var content = Assert.Single(dashboard.Elements().Where(element => element.Name.LocalName == "StackPanel"));
+
+        Assert.Equal("Center", (string?)content.Attribute("HorizontalAlignment"));
+        Assert.InRange(double.Parse(Assert.IsType<string>((string?)content.Attribute("MaxWidth"))), 1100, 1250);
+
+        var panels = content.Descendants().Where(element => element.Name.LocalName == "ResponsiveCardPanel").ToArray();
+        Assert.Equal(2, panels.Length);
+        Assert.All(panels, panel => Assert.Equal("0", (string?)panel.Attribute("ItemHeightRatio")));
+        Assert.InRange(double.Parse(Assert.IsType<string>((string?)panels[0].Attribute("MinimumItemHeight"))), 80, 100);
+        Assert.InRange(double.Parse(Assert.IsType<string>((string?)panels[1].Attribute("MinimumItemHeight"))), 130, 160);
     }
 
     [Fact]
