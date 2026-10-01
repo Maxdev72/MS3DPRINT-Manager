@@ -353,6 +353,28 @@ public sealed class AppMarkupTests
     }
 
     [Fact]
+    public void MainWindow_ActivatesTheThreePlannedFolderCatalogs()
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "MainWindow.xaml");
+        foreach (var content in new[] { "Modèles 3D", "Produits", "Fournisseurs" })
+        {
+            var button = Assert.Single(document.Descendants().Where(element =>
+                element.Name.LocalName == "Button" && (string?)element.Attribute("Content") == content));
+            Assert.NotEqual("False", (string?)button.Attribute("IsEnabled"));
+            Assert.NotNull(button.Attribute("Click"));
+        }
+
+        var view = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "CollectionView.xaml");
+        Assert.Contains(view.Descendants(), element => element.Name.LocalName == "ListView" &&
+            element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "ItemsList") &&
+            (string?)element.Attribute("SelectionChanged") == "Item_SelectionChanged");
+
+        var detail = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "CollectionDetailView.xaml");
+        Assert.Contains(detail.Descendants(), element => element.Name.LocalName == "ListView" &&
+            element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "FilesList"));
+    }
+
+    [Fact]
     public void ClientForm_ConnectsItsTypeSelectorOnlyAfterTheNamedPanelsExist()
     {
         var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "CreateClientWindow.xaml");

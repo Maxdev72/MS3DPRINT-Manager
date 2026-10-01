@@ -6,6 +6,7 @@ using MS3DPRINT.Manager.Core.Storage;
 using MS3DPRINT.Manager.Core.Templates;
 using MS3DPRINT.Manager.Core.Workspace;
 using MS3DPRINT.Manager.Core.Projects;
+using MS3DPRINT.Manager.Core.Collections;
 
 namespace MS3DPRINT.Manager.App;
 
@@ -19,6 +20,7 @@ public partial class MainWindow : Window
     private readonly ClientCatalog _clientCatalog;
     private readonly ProjectProfileStore _projectProfiles;
     private readonly ProjectCatalog _projectCatalog;
+    private readonly CollectionCatalog _collectionCatalog = new();
     private int _dashboardRefreshVersion;
 
     public MainWindow()
@@ -59,6 +61,9 @@ public partial class MainWindow : Window
 
     private void Clients_Click(object sender, RoutedEventArgs e) => ShowClients();
     private void Projects_Click(object sender, RoutedEventArgs e) => ShowProjects();
+    private void Models_Click(object sender, RoutedEventArgs e) => ShowCollection("Modèles 3D", "Retrouver vos modèles et leurs fichiers de conception.", "02_MODELES_3D", FolderTemplates.Model, "Nouveau modèle 3D");
+    private void Products_Click(object sender, RoutedEventArgs e) => ShowCollection("Produits", "Suivre les produits et leur documentation de fabrication.", "03_PRODUITS_MS3DPRINT", FolderTemplates.Product, "Nouveau produit MS3DPRINT");
+    private void Suppliers_Click(object sender, RoutedEventArgs e) => ShowCollection("Fournisseurs", "Centraliser les dossiers fournisseurs, tarifs et commandes.", "06_FOURNISSEURS", FolderTemplates.Supplier, "Nouveau fournisseur");
 
     private void ShowClients()
     {
@@ -103,6 +108,26 @@ public partial class MainWindow : Window
             ShowProjects();
         });
         page.ProjectSelected += project => ShowProjectDetail(project);
+        PageHost.Content = page;
+    }
+
+    private void ShowCollection(string title, string subtitle, string parentFolder, IReadOnlyList<string> template, string createTitle)
+    {
+        var page = new CollectionView(new CollectionViewModel(_collectionCatalog, _viewModel.StorageRoot, parentFolder, title, subtitle));
+        page.BackRequested += (_, _) => PageHost.Content = DashboardPage;
+        page.CreateRequested += (_, _) => Run(() =>
+        {
+            ShowDialog(new CreateNamedItemWindow(createTitle, Path.Combine(_viewModel.StorageRoot, parentFolder), template, _folders) { Owner = this });
+            ShowCollection(title, subtitle, parentFolder, template, createTitle);
+        });
+        page.ItemSelected += item => ShowCollectionDetail(item, () => ShowCollection(title, subtitle, parentFolder, template, createTitle));
+        PageHost.Content = page;
+    }
+
+    private void ShowCollectionDetail(CollectionItemSummary item, Action backRequested)
+    {
+        var page = new CollectionDetailView(new CollectionDetailViewModel(item));
+        page.BackRequested += (_, _) => backRequested();
         PageHost.Content = page;
     }
 

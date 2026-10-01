@@ -93,9 +93,9 @@
                 <Button Style="{StaticResource NavigationButton}" Content="Tableau de bord" Click="Dashboard_Click" />
                 <Button Style="{StaticResource NavigationButton}" Content="Clients" Click="Clients_Click" Margin="0,5,0,0" />
                 <Button Style="{StaticResource NavigationButton}" Content="Projets" Click="Projects_Click" Margin="0,5,0,0" />
-                <Button Style="{StaticResource NavigationButton}" Content="Modèles 3D" IsEnabled="False" Margin="0,5,0,0" />
-                <Button Style="{StaticResource NavigationButton}" Content="Produits" IsEnabled="False" Margin="0,5,0,0" />
-                <Button Style="{StaticResource NavigationButton}" Content="Fournisseurs" IsEnabled="False" Margin="0,5,0,0" />
+                <Button Style="{StaticResource NavigationButton}" Content="Modèles 3D" Click="Models_Click" Margin="0,5,0,0" />
+                <Button Style="{StaticResource NavigationButton}" Content="Produits" Click="Products_Click" Margin="0,5,0,0" />
+                <Button Style="{StaticResource NavigationButton}" Content="Fournisseurs" Click="Suppliers_Click" Margin="0,5,0,0" />
             </StackPanel>
         </Border>
         <DockPanel Grid.Column="1">
