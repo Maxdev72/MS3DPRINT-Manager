@@ -67,6 +67,8 @@ public partial class CollectionDetailView : UserControl
         ModelPreviewLauncher.Show(_selectedPreviewFile.FullPath, Window.GetWindow(this));
     }
 
+    public Task RefreshAsync() => LoadFilesAsync(_viewModel.ReadFiles);
+
     private async Task LoadFilesAsync(Func<CollectionFileListing> read)
     {
         var loadVersion = ++_fileLoadVersion;

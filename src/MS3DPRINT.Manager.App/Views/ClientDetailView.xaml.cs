@@ -34,6 +34,8 @@ public partial class ClientDetailView : UserControl
         catch (Exception exception) { MessageText.Text = UiErrorMessages.For(exception); }
     }
 
+    public Task RefreshAsync() => RefreshProjectsSafelyAsync();
+
     private async Task RefreshProjectsSafelyAsync()
     {
         var refreshVersion = ++_projectsRefreshVersion;

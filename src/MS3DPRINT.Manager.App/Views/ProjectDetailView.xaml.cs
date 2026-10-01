@@ -81,6 +81,8 @@ public partial class ProjectDetailView : UserControl
         ModelPreviewLauncher.Show(_selectedPreviewFile.FullPath, Window.GetWindow(this));
     }
 
+    public Task RefreshAsync() => LoadFilesAsync(_viewModel.ReadFiles);
+
     private async Task LoadFilesAsync(Func<ProjectFileListing> read)
     {
         var loadVersion = ++_fileLoadVersion;

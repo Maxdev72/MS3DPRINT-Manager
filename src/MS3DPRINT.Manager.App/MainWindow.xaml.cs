@@ -24,6 +24,8 @@ public partial class MainWindow : Window
     private readonly ProjectCatalog _projectCatalog;
     private readonly CollectionCatalog _collectionCatalog = new();
     private int _dashboardRefreshVersion;
+    private StorageChangeWatcher? _storageWatcher;
+    private bool _closed;
 
     public MainWindow()
     {
@@ -37,7 +39,12 @@ public partial class MainWindow : Window
         _projectProfiles = new ProjectProfileStore(new WorkspaceMetadataPaths(_viewModel.StorageRoot));
         _projectCatalog = new ProjectCatalog(_projectProfiles);
         DataContext = _viewModel;
-        Loaded += async (_, _) => await RefreshDashboardSafelyAsync();
+        Loaded += async (_, _) =>
+        {
+            StartStorageWatcher();
+            await RefreshDashboardSafelyAsync();
+        };
+        Closed += (_, _) => { _closed = true; _storageWatcher?.Dispose(); _storageWatcher = null; ++_dashboardRefreshVersion; };
         Width = Math.Min(1200, SystemParameters.WorkArea.Width * 0.84);
         Height = Math.Min(850, SystemParameters.WorkArea.Height * 0.85);
     }
@@ -107,7 +114,6 @@ public partial class MainWindow : Window
         page.CreateRequested += (_, _) => Run(() =>
         {
             ShowDialog(new CreateClientWindow(_viewModel.StorageRoot, _folders, _codes, _clientProfiles) { Owner = this });
-            ShowClients();
         });
         page.ClientSelected += client => ShowClientDetail(client);
         PageHost.Content = page;
@@ -141,7 +147,6 @@ public partial class MainWindow : Window
         page.CreateProjectRequested += (_, _) => Run(() =>
         {
             ShowDialog(new CreateTrackedProjectWindow(_viewModel.StorageRoot, _folders, _clientCatalog, _projectProfiles, preselectedClient: client) { Owner = this });
-            ShowClientDetail(client, navigateBack);
         });
         page.ProjectSelected += project => ShowProjectDetail(project, () => ShowClientDetail(client, navigateBack));
         PageHost.Content = page;
@@ -153,7 +158,6 @@ public partial class MainWindow : Window
         page.CreateRequested += (_, _) => Run(() =>
         {
             ShowDialog(new CreateTrackedProjectWindow(_viewModel.StorageRoot, _folders, _clientCatalog, _projectProfiles) { Owner = this });
-            ShowProjects();
         });
         page.ProjectSelected += project => ShowProjectDetail(project);
         PageHost.Content = page;
@@ -166,7 +170,6 @@ public partial class MainWindow : Window
         page.CreateRequested += (_, _) => Run(() =>
         {
             ShowDialog(new CreateNamedItemWindow(createTitle, Path.Combine(_viewModel.StorageRoot, parentFolder), template, _folders) { Owner = this });
-            ShowCollection(title, subtitle, parentFolder, template, createTitle);
         });
         page.ItemSelected += item => ShowCollectionDetail(item, () => ShowCollection(title, subtitle, parentFolder, template, createTitle));
         PageHost.Content = page;
@@ -229,12 +232,56 @@ public partial class MainWindow : Window
 
     private void ShowDialog(Window dialog)
     {
-        if (dialog.ShowDialog() == true) _viewModel.Status = "Élément traité : " + ((ICreatedFolderDialog)dialog).CreatedPath;
+        if (dialog.ShowDialog() == true)
+        {
+            _viewModel.Status = "Élément traité : " + ((ICreatedFolderDialog)dialog).CreatedPath;
+            _ = RefreshVisibleAsync();
+        }
+    }
+
+    private void StartStorageWatcher()
+    {
+        if (_closed || _storageWatcher is not null || !Directory.Exists(_viewModel.StorageRoot)) return;
+        try
+        {
+            _storageWatcher = new StorageChangeWatcher(_viewModel.StorageRoot,
+                () => Dispatcher.BeginInvoke(new Action(() => _ = RefreshVisibleAsync())),
+                exception => Dispatcher.BeginInvoke(new Action(() => _viewModel.Status = "Actualisation automatique indisponible : " + UiErrorMessages.For(exception))));
+        }
+        catch (Exception exception) { _viewModel.Status = "Actualisation automatique indisponible : " + UiErrorMessages.For(exception); }
+    }
+
+    private async Task RefreshVisibleAsync()
+    {
+        if (_closed) return;
+        StartStorageWatcher();
+        var page = PageHost.Content;
+        var scrollPositions = page is DependencyObject visual ? FindScrollViewers(visual).Select(scroll => (Scroll: scroll, Offset: scroll.VerticalOffset)).ToArray() : [];
+        var refresh = page switch
+        {
+            ClientsView view => view.RefreshAsync(), ProjectsView view => view.RefreshAsync(),
+            CollectionView view => view.RefreshAsync(), ClientDetailView view => view.RefreshAsync(),
+            ProjectDetailView view => view.RefreshAsync(), CollectionDetailView view => view.RefreshAsync(),
+            _ => Task.CompletedTask
+        };
+        await Task.WhenAll(refresh, RefreshDashboardSafelyAsync());
+        if (ReferenceEquals(page, PageHost.Content))
+            foreach (var position in scrollPositions) position.Scroll.ScrollToVerticalOffset(position.Offset);
+    }
+
+    private static IEnumerable<System.Windows.Controls.ScrollViewer> FindScrollViewers(DependencyObject root)
+    {
+        for (var i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(root); i++)
+        {
+            var child = System.Windows.Media.VisualTreeHelper.GetChild(root, i);
+            if (child is System.Windows.Controls.ScrollViewer scroll) yield return scroll;
+            foreach (var descendant in FindScrollViewers(child)) yield return descendant;
+        }
     }
 
     private void Run(Action action)
     {
-        try { action(); }
+        try { action(); StartStorageWatcher(); }
         catch (Exception exception)
         {
             _viewModel.Status = UiErrorMessages.For(exception);

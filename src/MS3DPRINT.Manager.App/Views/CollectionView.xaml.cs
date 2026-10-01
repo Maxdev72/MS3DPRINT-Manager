@@ -32,6 +32,8 @@ public partial class CollectionView : UserControl
         ItemSelected?.Invoke(item);
     }
 
+    public Task RefreshAsync() => RefreshSafelyAsync();
+
     private async Task RefreshSafelyAsync()
     {
         var refreshVersion = ++_refreshVersion;

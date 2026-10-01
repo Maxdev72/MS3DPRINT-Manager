@@ -41,6 +41,8 @@ public partial class ClientsView : UserControl
         };
     }
 
+    public Task RefreshAsync() => RefreshSafelyAsync();
+
     private async Task RefreshSafelyAsync()
     {
         var refreshVersion = ++_refreshVersion;

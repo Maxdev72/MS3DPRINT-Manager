@@ -32,11 +32,15 @@ public partial class ProjectsView : UserControl
 
     private void PopulateFilters()
     {
+        var client = _viewModel.SelectedClient;
+        var year = _viewModel.SelectedYear;
         ClientFilterBox.ItemsSource = new[] { "Tous les clients" }.Concat(_viewModel.AvailableClients).ToArray();
-        ClientFilterBox.SelectedIndex = 0;
+        ClientFilterBox.SelectedItem = client is not null && _viewModel.AvailableClients.Contains(client) ? client : "Tous les clients";
         YearFilterBox.ItemsSource = new object[] { "Toutes années" }.Concat(_viewModel.AvailableYears.Cast<object>()).ToArray();
-        YearFilterBox.SelectedIndex = 0;
+        YearFilterBox.SelectedItem = year is not null && _viewModel.AvailableYears.Contains(year.Value) ? (object)year.Value : "Toutes années";
     }
+
+    public Task RefreshAsync() => RefreshSafelyAsync();
 
     private async Task RefreshSafelyAsync()
     {
