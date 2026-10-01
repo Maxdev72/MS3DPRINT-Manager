@@ -96,6 +96,7 @@
                 <Button Style="{StaticResource NavigationButton}" Content="Modèles 3D" Click="Models_Click" Margin="0,5,0,0" />
                 <Button Style="{StaticResource NavigationButton}" Content="Produits" Click="Products_Click" Margin="0,5,0,0" />
                 <Button Style="{StaticResource NavigationButton}" Content="Fournisseurs" Click="Suppliers_Click" Margin="0,5,0,0" />
+                <Button Style="{StaticResource NavigationButton}" Content="Visualiseur 3D" Click="Open3DViewer_Click" Margin="0,16,0,0" />
             </StackPanel>
         </Border>
         <DockPanel Grid.Column="1">
@@ -155,6 +156,9 @@
                     </Button>
                     <Button Style="{StaticResource ActionCardButton}" Click="ClassifyFile_Click">
                         <StackPanel><TextBlock Text="&#xE8A5;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Classer un fichier" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Déplacer et rattacher un fichier à un projet." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource ActionCardButton}" Click="Open3DViewer_Click">
+                        <StackPanel><TextBlock Text="&#xE71E;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Visualiser un fichier 3D" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Choisir un STL ou un OBJ sur l’ordinateur." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
                     </Button>
                 </controls:ResponsiveCardPanel>
             </StackPanel>

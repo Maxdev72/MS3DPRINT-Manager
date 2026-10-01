@@ -1,4 +1,5 @@
 using System.Windows;
+using Microsoft.Win32;
 using MS3DPRINT.Manager.App.ViewModels;
 using MS3DPRINT.Manager.App.Views;
 using MS3DPRINT.Manager.Core.Clients;
@@ -7,6 +8,7 @@ using MS3DPRINT.Manager.Core.Templates;
 using MS3DPRINT.Manager.Core.Workspace;
 using MS3DPRINT.Manager.Core.Projects;
 using MS3DPRINT.Manager.Core.Collections;
+using MS3DPRINT.Manager.Core.Files;
 
 namespace MS3DPRINT.Manager.App;
 
@@ -167,6 +169,22 @@ public partial class MainWindow : Window
 
     private void ClassifyFile_Click(object sender, RoutedEventArgs e) => Run(() =>
         ShowDialog(new ClassifyFileWindow(_viewModel.StorageRoot) { Owner = this }));
+
+    private void Open3DViewer_Click(object sender, RoutedEventArgs e) => Run(() =>
+    {
+        var filePicker = new OpenFileDialog
+        {
+            Title = "Choisir un fichier 3D à visualiser",
+            Filter = "Modèles 3D (*.stl;*.obj)|*.stl;*.obj|Fichiers STL (*.stl)|*.stl|Fichiers OBJ (*.obj)|*.obj",
+            CheckFileExists = true,
+            Multiselect = false
+        };
+        if (filePicker.ShowDialog(this) != true) return;
+        if (!ThreeDFileSupport.IsPreviewable(filePicker.FileName))
+            throw new NotSupportedException("Le visualisateur accepte les fichiers STL et OBJ.");
+
+        new ModelPreviewWindow(filePicker.FileName) { Owner = this }.ShowDialog();
+    });
 
     private void Settings_Click(object sender, RoutedEventArgs e) => Run(() =>
         new SettingsWindow(_themeSettings, _viewModel.StorageRoot) { Owner = this }.ShowDialog());

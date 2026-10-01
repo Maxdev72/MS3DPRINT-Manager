@@ -391,6 +391,20 @@ public sealed class AppMarkupTests
     }
 
     [Fact]
+    public void MainWindow_OffersTheThreeDimensionalViewerOutsideProjects()
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "MainWindow.xaml");
+        var entryPoints = document.Descendants().Where(element =>
+            element.Name.LocalName == "Button" &&
+            (string?)element.Attribute("Click") == "Open3DViewer_Click").ToArray();
+
+        Assert.Equal(2, entryPoints.Length);
+        Assert.Contains(entryPoints, element => (string?)element.Attribute("Content") == "Visualiseur 3D");
+        Assert.Contains(entryPoints, element => element.Descendants().Any(child =>
+            child.Name.LocalName == "TextBlock" && (string?)child.Attribute("Text") == "Visualiser un fichier 3D"));
+    }
+
+    [Fact]
     public void ClientForm_ConnectsItsTypeSelectorOnlyAfterTheNamedPanelsExist()
     {
         var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "CreateClientWindow.xaml");
