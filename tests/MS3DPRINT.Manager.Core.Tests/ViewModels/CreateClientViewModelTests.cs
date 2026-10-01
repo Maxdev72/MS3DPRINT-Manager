@@ -10,7 +10,7 @@ public sealed class CreateClientViewModelTests
     {
         using var model = new CreateClientViewModel(new TimeoutLookup());
         model.CompanyQuery = "Atelier";
-        await Task.Delay(500);
+        await WaitUntilAsync(() => model.LookupStatus.Contains("saisie manuelle"));
         Assert.Contains("saisie manuelle", model.LookupStatus);
     }
 
@@ -64,7 +64,7 @@ public sealed class CreateClientViewModelTests
     [Fact]
     public void Individual_OmitsProfessionalContactIdentityButKeepsCommunication()
     {
-        var model = new CreateClientViewModel { Kind = ClientKind.Individual, FirstName = "Alice", LastName = "Martin", ContactFirstName = "Other", ContactLastName = "Person", ContactRole = "Director", ContactPhone = "0123456789", ContactEmail = "alice@example.test" };
+        using var model = new CreateClientViewModel(new OfflineLookup()) { Kind = ClientKind.Individual, FirstName = "Alice", LastName = "Martin", ContactFirstName = "Other", ContactLastName = "Person", ContactRole = "Director", ContactPhone = "0123456789", ContactEmail = "alice@example.test" };
         var profile = model.CreateProfile();
         Assert.Null(profile.CompanyName);
         Assert.Null(profile.PrimaryContact.FirstName);
@@ -77,7 +77,8 @@ public sealed class CreateClientViewModelTests
     [Fact]
     public void Profile_HasOptionalBackwardCompatibleSiret()
     {
-        var profile = new CreateClientViewModel { ClientName = "Atelier" }.CreateProfile();
+        using var model = new CreateClientViewModel(new OfflineLookup()) { ClientName = "Atelier" };
+        var profile = model.CreateProfile();
         var node = System.Text.Json.Nodes.JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(profile))!;
         node.AsObject().Remove("Siret");
         var json = node.ToJsonString();
@@ -93,14 +94,13 @@ public sealed class CreateClientViewModelTests
         var lookup = new OfflineLookup();
         var constructor = typeof(CreateClientViewModel).GetConstructor([typeof(MS3DPRINT.Manager.App.Clients.IClientLookup)]);
         Assert.NotNull(constructor);
-        var model = (CreateClientViewModel)constructor.Invoke([lookup]);
+        using var model = (CreateClientViewModel)constructor.Invoke([lookup]);
         model.Kind = ClientKind.Individual;
         model.ClientName = "Manual company";
-        await Task.Delay(500);
         Assert.Equal(0, lookup.CompanyCalls);
         model.Kind = ClientKind.Professional;
         model.ClientName = "Atelier manuel";
-        await Task.Delay(600);
+        await WaitUntilAsync(() => !string.IsNullOrEmpty(model.LookupStatus));
         Assert.Equal("Atelier manuel", model.ClientName);
         Assert.Equal(1, lookup.CompanyCalls);
     }
@@ -118,7 +118,7 @@ public sealed class CreateClientViewModelTests
     [Fact]
     public void Individual_UsesFirstAndLastNameForTheFolderPreview()
     {
-        var viewModel = new CreateClientViewModel
+        using var viewModel = new CreateClientViewModel(new OfflineLookup())
         {
             Kind = ClientKind.Individual,
             FirstName = "Élodie",
@@ -131,7 +131,7 @@ public sealed class CreateClientViewModelTests
     [Fact]
     public void CreateProfile_CopiesAProfessionalPrimaryContact()
     {
-        var viewModel = new CreateClientViewModel
+        using var viewModel = new CreateClientViewModel(new OfflineLookup())
         {
             ClientName = "MPO",
             ClientCode = "MPO",
@@ -152,12 +152,19 @@ public sealed class CreateClientViewModelTests
     [Fact]
     public void ExistingFolder_KeepsItsFolderAndCodeWhenCreatingTheProfile()
     {
-        var viewModel = new CreateClientViewModel("MPO", "MPO") { ClientName = "MPO Industrie" };
+        using var viewModel = new CreateClientViewModel("MPO", "MPO") { Kind = ClientKind.Individual, ClientName = "MPO Industrie" };
+        viewModel.Kind = ClientKind.Professional;
 
         var profile = viewModel.CreateProfile();
 
         Assert.Equal("MPO", profile.FolderName);
         Assert.Equal("MPO", profile.ClientCode);
         Assert.Equal("MPO Industrie", profile.CompanyName);
+    }
+
+    private static async Task WaitUntilAsync(Func<bool> condition)
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        while (!condition()) await Task.Delay(10, timeout.Token);
     }
 }
