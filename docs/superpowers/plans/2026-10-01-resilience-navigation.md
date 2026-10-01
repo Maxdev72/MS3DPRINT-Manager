@@ -166,7 +166,7 @@ Run: `dotnet publish src\MS3DPRINT.Manager.App\MS3DPRINT.Manager.App.csproj -c R
 
 Expected: `outputs\MS3DPRINT-Manager\MS3DPRINT.Manager.App.exe` exists.
 
-- [ ] **Step 4: Commit audit records**
+- [x] **Step 4: Commit audit records**
 
 ```powershell
 git add docs/superpowers/specs/2026-10-01-global-audit-design.md docs/superpowers/plans/2026-10-01-resilience-navigation.md
