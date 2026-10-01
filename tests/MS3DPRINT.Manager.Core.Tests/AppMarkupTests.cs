@@ -222,6 +222,14 @@ public sealed class AppMarkupTests
     }
 
     [Fact]
+    public void MainWindow_OpensTheCompletionFormForExistingProjectsWithoutProfiles()
+    {
+        var source = LoadSource("src", "MS3DPRINT.Manager.App", "MainWindow.xaml.cs");
+
+        Assert.Contains("new CreateTrackedProjectWindow(_viewModel.StorageRoot, _folders, _clientCatalog, _projectProfiles, project)", source);
+    }
+
+    [Fact]
     public void ClassifyFileWindow_ProvidesSourceProjectDestinationAndMoveControls()
     {
         var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "ClassifyFileWindow.xaml");

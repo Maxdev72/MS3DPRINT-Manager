@@ -34,6 +34,7 @@ public partial class CreateClientWindow : Window, ICreatedFolderDialog
             Heading.Text = "Compléter la fiche client";
             IntroText.Text = $"Le dossier {existingClient.FolderName} et ses fichiers existants ne seront pas modifiés.";
             FolderHint.Text = "Ce dossier existant est conservé tel quel.";
+            CreateButton.Content = "Enregistrer la fiche";
         }
         Loaded += (_, _) => CompanyBox.Focus();
     }

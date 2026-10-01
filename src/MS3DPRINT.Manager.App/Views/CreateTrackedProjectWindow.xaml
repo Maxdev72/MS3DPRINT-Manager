@@ -8,13 +8,13 @@
             <TextBlock x:Name="ErrorText" Foreground="#C73A3A" TextWrapping="Wrap" Margin="0,0,0,12" />
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="Annuler" Click="Cancel_Click" Background="#64748B" Margin="0,0,10,0" />
-                <Button Content="Créer le projet" IsDefault="True" Click="Create_Click" />
+                <Button x:Name="CreateButton" Content="Créer le projet" IsDefault="True" Click="Create_Click" />
             </StackPanel>
         </StackPanel>
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel>
-                <TextBlock Text="Créer un projet" FontSize="21" FontWeight="SemiBold" Foreground="{DynamicResource InkBrush}" />
-                <TextBlock Text="Le projet est rattaché à une fiche client et reçoit le statut initial DEVIS." Margin="0,7,0,18" TextWrapping="Wrap" />
+                <TextBlock x:Name="Heading" Text="Créer un projet" FontSize="21" FontWeight="SemiBold" Foreground="{DynamicResource InkBrush}" />
+                <TextBlock x:Name="IntroText" Text="Le projet est rattaché à une fiche client et reçoit le statut initial DEVIS." Margin="0,7,0,18" TextWrapping="Wrap" />
                 <TextBlock Text="Client" FontWeight="SemiBold" />
                 <ComboBox x:Name="ClientBox" Margin="0,6,0,6" DisplayMemberPath="DisplayName" />
                 <TextBlock x:Name="NoClientText" Text="Créez d’abord un client avec sa fiche complète pour pouvoir créer un projet suivi." Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,0,0,14" Visibility="Collapsed" />

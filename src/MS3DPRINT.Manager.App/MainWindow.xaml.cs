@@ -96,7 +96,11 @@ public partial class MainWindow : Window
     {
         if (project.Profile is null)
         {
-            _viewModel.Status = "Ce projet existe déjà, mais sa fiche reste à compléter.";
+            Run(() =>
+            {
+                ShowDialog(new CreateTrackedProjectWindow(_viewModel.StorageRoot, _folders, _clientCatalog, _projectProfiles, project) { Owner = this });
+                ShowProjects();
+            });
             return;
         }
         var page = new ProjectDetailView(new ProjectDetailViewModel(project, _projectProfiles));
