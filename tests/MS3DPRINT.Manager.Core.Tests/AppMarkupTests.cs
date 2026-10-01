@@ -230,6 +230,20 @@ public sealed class AppMarkupTests
     }
 
     [Fact]
+    public void ClientForm_ConnectsItsTypeSelectorOnlyAfterTheNamedPanelsExist()
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "CreateClientWindow.xaml");
+        var selector = Assert.Single(document.Descendants().Where(element =>
+            element.Name.LocalName == "ComboBox" &&
+            element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "KindBox")));
+
+        Assert.Null(selector.Attribute("SelectionChanged"));
+
+        var source = LoadSource("src", "MS3DPRINT.Manager.App", "Views", "CreateClientWindow.xaml.cs");
+        Assert.True(source.IndexOf("InitializeComponent();", StringComparison.Ordinal) < source.IndexOf("KindBox.SelectionChanged +=", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void ClassifyFileWindow_ProvidesSourceProjectDestinationAndMoveControls()
     {
         var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "ClassifyFileWindow.xaml");

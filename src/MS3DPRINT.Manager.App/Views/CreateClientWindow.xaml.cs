@@ -22,6 +22,7 @@ public partial class CreateClientWindow : Window, ICreatedFolderDialog
             : new CreateClientViewModel(existingClient.FolderName, existingClient.ClientCode);
         if (existingClient is not null) _viewModel.ClientName = existingClient.DisplayName;
         InitializeComponent();
+        KindBox.SelectionChanged += Kind_SelectionChanged;
         _storageRoot = Path.GetFullPath(storageRoot);
         _clients = new ClientCreationService(_storageRoot, folders, profiles, registry);
         _profiles = profiles;
