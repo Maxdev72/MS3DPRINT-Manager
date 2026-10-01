@@ -19,6 +19,7 @@ public partial class MainWindow : Window
     private readonly ClientCatalog _clientCatalog;
     private readonly ProjectProfileStore _projectProfiles;
     private readonly ProjectCatalog _projectCatalog;
+    private int _dashboardRefreshVersion;
 
     public MainWindow()
     {
@@ -32,6 +33,7 @@ public partial class MainWindow : Window
         _projectProfiles = new ProjectProfileStore(new WorkspaceMetadataPaths(_viewModel.StorageRoot));
         _projectCatalog = new ProjectCatalog(_projectProfiles);
         DataContext = _viewModel;
+        Loaded += async (_, _) => await RefreshDashboardSafelyAsync();
         Width = Math.Min(1200, SystemParameters.WorkArea.Width * 0.84);
         Height = Math.Min(850, SystemParameters.WorkArea.Height * 0.85);
     }
@@ -47,7 +49,13 @@ public partial class MainWindow : Window
     private void NewClient_Click(object sender, RoutedEventArgs e) => Run(() =>
         ShowDialog(new CreateClientWindow(_viewModel.StorageRoot, _folders, _codes, _clientProfiles) { Owner = this }));
 
-    private void Dashboard_Click(object sender, RoutedEventArgs e) => PageHost.Content = DashboardPage;
+    private async void Dashboard_Click(object sender, RoutedEventArgs e)
+    {
+        PageHost.Content = DashboardPage;
+        await RefreshDashboardSafelyAsync();
+    }
+
+    private async void DashboardRefresh_Click(object sender, RoutedEventArgs e) => await RefreshDashboardSafelyAsync();
 
     private void Clients_Click(object sender, RoutedEventArgs e) => ShowClients();
     private void Projects_Click(object sender, RoutedEventArgs e) => ShowProjects();
@@ -75,13 +83,14 @@ public partial class MainWindow : Window
             });
             return;
         }
-        var page = new ClientDetailView(new ClientDetailViewModel(client.Profile, _clientProfiles));
+        var page = new ClientDetailView(new ClientDetailViewModel(client.Profile, _clientProfiles, _projectCatalog, _viewModel.StorageRoot));
         page.BackRequested += (_, _) => ShowClients();
         page.CreateProjectRequested += (_, _) => Run(() =>
         {
             ShowDialog(new CreateTrackedProjectWindow(_viewModel.StorageRoot, _folders, _clientCatalog, _projectProfiles, preselectedClient: client) { Owner = this });
             ShowClientDetail(client);
         });
+        page.ProjectSelected += project => ShowProjectDetail(project, () => ShowClientDetail(client));
         PageHost.Content = page;
     }
 
@@ -93,23 +102,24 @@ public partial class MainWindow : Window
             ShowDialog(new CreateTrackedProjectWindow(_viewModel.StorageRoot, _folders, _clientCatalog, _projectProfiles) { Owner = this });
             ShowProjects();
         });
-        page.ProjectSelected += ShowProjectDetail;
+        page.ProjectSelected += project => ShowProjectDetail(project);
         PageHost.Content = page;
     }
 
-    private void ShowProjectDetail(ProjectSummary project)
+    private void ShowProjectDetail(ProjectSummary project, Action? backRequested = null)
     {
+        var navigateBack = backRequested ?? ShowProjects;
         if (project.Profile is null)
         {
             Run(() =>
             {
                 ShowDialog(new CreateTrackedProjectWindow(_viewModel.StorageRoot, _folders, _clientCatalog, _projectProfiles, project) { Owner = this });
-                ShowProjects();
+                navigateBack();
             });
             return;
         }
         var page = new ProjectDetailView(new ProjectDetailViewModel(project, _projectProfiles));
-        page.BackRequested += (_, _) => ShowProjects();
+        page.BackRequested += (_, _) => navigateBack();
         page.ClassifyRequested += (_, _) => Run(() => ShowDialog(new ClassifyFileWindow(_viewModel.StorageRoot, project.ProjectPath) { Owner = this }));
         PageHost.Content = page;
     }
@@ -153,4 +163,31 @@ public partial class MainWindow : Window
             MessageBox.Show(this, _viewModel.Status, "MS3DPRINT — erreur", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
+
+    private async Task RefreshDashboardSafelyAsync()
+    {
+        var refreshVersion = ++_dashboardRefreshVersion;
+        DashboardLoadingText.Visibility = Visibility.Visible;
+        DashboardErrorText.Visibility = Visibility.Collapsed;
+        try
+        {
+            var snapshot = await Task.Run(LoadDashboardSnapshot);
+            if (refreshVersion != _dashboardRefreshVersion) return;
+            _viewModel.ApplyDashboard(snapshot);
+            DashboardErrorText.Text = string.Empty;
+        }
+        catch (Exception exception)
+        {
+            if (refreshVersion != _dashboardRefreshVersion) return;
+            DashboardErrorText.Text = UiErrorMessages.For(exception);
+            DashboardErrorText.Visibility = Visibility.Visible;
+        }
+        finally
+        {
+            if (refreshVersion == _dashboardRefreshVersion) DashboardLoadingText.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private DashboardSnapshot LoadDashboardSnapshot()
+        => DashboardSnapshot.Create(_clientCatalog.Load(_viewModel.StorageRoot), _projectCatalog.Load(_viewModel.StorageRoot));
 }

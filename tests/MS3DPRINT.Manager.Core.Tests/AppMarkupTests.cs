@@ -316,6 +316,43 @@ public sealed class AppMarkupTests
     }
 
     [Fact]
+    public void Dashboard_ProvidesBusinessCountersLoadedOutsideTheUiThread()
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "MainWindow.xaml");
+        foreach (var name in new[] { "DashboardClientsCount", "DashboardProjectsCount", "DashboardQuotesCount", "DashboardInProgressCount", "DashboardCompletedCount" })
+        {
+            Assert.Contains(document.Descendants(), element =>
+                element.Name.LocalName == "TextBlock" &&
+                element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == name));
+        }
+
+        var source = LoadSource("src", "MS3DPRINT.Manager.App", "MainWindow.xaml.cs");
+        Assert.Contains("Task.Run(LoadDashboardSnapshot)", source);
+    }
+
+    [Fact]
+    public void ClientDetailView_ListsAndOpensItsTrackedProjectsWithoutBlockingTheUi()
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "ClientDetailView.xaml");
+        Assert.Contains(document.Descendants(), element =>
+            element.Name.LocalName == "ListBox" &&
+            element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "ProjectsList"));
+        Assert.Contains(document.Descendants(), element =>
+            element.Name.LocalName == "TextBlock" &&
+            element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "ProjectsLoadingText"));
+        var projectItemStyle = Assert.Single(document.Descendants().Where(element =>
+            element.Name.LocalName == "Style" && (string?)element.Attribute("TargetType") == "ListBoxItem"));
+        Assert.Contains(projectItemStyle.Elements(), element =>
+            element.Name.LocalName == "Setter" &&
+            (string?)element.Attribute("Property") == "Foreground" &&
+            (string?)element.Attribute("Value") == "{DynamicResource TextBrush}");
+
+        var source = LoadSource("src", "MS3DPRINT.Manager.App", "Views", "ClientDetailView.xaml.cs");
+        Assert.Contains("Task.Run(_viewModel.LoadProjects)", source);
+        Assert.Contains("ProjectSelected", source);
+    }
+
+    [Fact]
     public void ClientForm_ConnectsItsTypeSelectorOnlyAfterTheNamedPanelsExist()
     {
         var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "CreateClientWindow.xaml");
