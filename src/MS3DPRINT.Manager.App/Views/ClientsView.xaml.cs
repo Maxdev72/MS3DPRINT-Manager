@@ -8,19 +8,20 @@ namespace MS3DPRINT.Manager.App.Views;
 public partial class ClientsView : UserControl
 {
     private readonly ClientsViewModel _viewModel;
+    private int _refreshVersion;
 
     public ClientsView(ClientsViewModel viewModel)
     {
         _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
         InitializeComponent();
         DataContext = _viewModel;
-        Loaded += (_, _) => RefreshSafely();
+        Loaded += async (_, _) => await RefreshSafelyAsync();
     }
 
     public event EventHandler? CreateRequested;
     public event Action<ClientSummary>? ClientSelected;
 
-    private void Refresh_Click(object sender, RoutedEventArgs e) => RefreshSafely();
+    private async void Refresh_Click(object sender, RoutedEventArgs e) => await RefreshSafelyAsync();
     private void Create_Click(object sender, RoutedEventArgs e) => CreateRequested?.Invoke(this, EventArgs.Empty);
 
     private void ClientsList_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -40,18 +41,28 @@ public partial class ClientsView : UserControl
         };
     }
 
-    private void RefreshSafely()
+    private async Task RefreshSafelyAsync()
     {
+        var refreshVersion = ++_refreshVersion;
+        LoadingText.Visibility = Visibility.Visible;
+        LoadErrorText.Visibility = Visibility.Collapsed;
         try
         {
-            _viewModel.Refresh();
+            var clients = await Task.Run(_viewModel.LoadCatalog);
+            if (refreshVersion != _refreshVersion) return;
+            _viewModel.ApplyCatalog(clients);
             LoadErrorText.Text = string.Empty;
             LoadErrorText.Visibility = Visibility.Collapsed;
         }
         catch (Exception exception)
         {
+            if (refreshVersion != _refreshVersion) return;
             LoadErrorText.Text = UiErrorMessages.For(exception);
             LoadErrorText.Visibility = Visibility.Visible;
+        }
+        finally
+        {
+            if (refreshVersion == _refreshVersion) LoadingText.Visibility = Visibility.Collapsed;
         }
     }
 }

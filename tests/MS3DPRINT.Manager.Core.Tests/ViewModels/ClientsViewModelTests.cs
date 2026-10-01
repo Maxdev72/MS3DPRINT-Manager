@@ -28,6 +28,20 @@ public sealed class ClientsViewModelTests : IDisposable
         Assert.Equal("MPO", Assert.Single(viewModel.VisibleClients).ClientCode);
     }
 
+    [Fact]
+    public void LoadCatalog_DefersVisibleClientChangesUntilTheResultIsApplied()
+    {
+        var store = new ClientProfileStore(new WorkspaceMetadataPaths(_root));
+        Directory.CreateDirectory(Path.Combine(_root, "01_CLIENTS", "MPO"));
+        var viewModel = new ClientsViewModel(new ClientCatalog(store), _root);
+
+        var catalog = viewModel.LoadCatalog();
+
+        Assert.Empty(viewModel.VisibleClients);
+        viewModel.ApplyCatalog(catalog);
+        Assert.Equal("MPO", Assert.Single(viewModel.VisibleClients).FolderName);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);

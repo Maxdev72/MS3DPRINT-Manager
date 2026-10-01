@@ -45,7 +45,15 @@ public sealed class ClientsViewModel : ObservableObject
 
     public void Refresh()
     {
-        _allClients = _catalog.Load(_workspaceRoot);
+        ApplyCatalog(LoadCatalog());
+    }
+
+    public IReadOnlyList<ClientSummary> LoadCatalog() => _catalog.Load(_workspaceRoot);
+
+    public void ApplyCatalog(IReadOnlyList<ClientSummary> clients)
+    {
+        ArgumentNullException.ThrowIfNull(clients);
+        _allClients = clients;
         ApplyFilter();
     }
 

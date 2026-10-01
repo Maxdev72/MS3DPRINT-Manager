@@ -212,6 +212,21 @@ public sealed class AppMarkupTests
     }
 
     [Fact]
+    public void CatalogViews_ShowLoadingStateAndRefreshOutsideTheUiThread()
+    {
+        foreach (var fileName in new[] { "ClientsView", "ProjectsView" })
+        {
+            var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", fileName + ".xaml");
+            Assert.Contains(document.Descendants(), element =>
+                element.Name.LocalName == "TextBlock" &&
+                element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "LoadingText"));
+
+            var source = LoadSource("src", "MS3DPRINT.Manager.App", "Views", fileName + ".xaml.cs");
+            Assert.Contains("Task.Run(_viewModel.LoadCatalog)", source);
+        }
+    }
+
+    [Fact]
     public void ProjectDetailView_ProvidesOnDemandFileNavigation()
     {
         var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "ProjectDetailView.xaml");

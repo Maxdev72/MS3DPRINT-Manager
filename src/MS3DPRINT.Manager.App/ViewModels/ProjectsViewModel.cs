@@ -54,7 +54,15 @@ public sealed class ProjectsViewModel : ObservableObject
 
     public void Refresh()
     {
-        _allProjects = _catalog.Load(_workspaceRoot);
+        ApplyCatalog(LoadCatalog());
+    }
+
+    public IReadOnlyList<ProjectSummary> LoadCatalog() => _catalog.Load(_workspaceRoot);
+
+    public void ApplyCatalog(IReadOnlyList<ProjectSummary> projects)
+    {
+        ArgumentNullException.ThrowIfNull(projects);
+        _allProjects = projects;
         AvailableClients = _allProjects.Select(project => project.ClientFolderName).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(client => client, StringComparer.OrdinalIgnoreCase).ToArray();
         AvailableYears = _allProjects.Select(project => TryGetYear(project.Reference)).Where(year => year.HasValue).Select(year => year!.Value).Distinct().OrderByDescending(year => year).ToArray();
         ApplyFilter();
