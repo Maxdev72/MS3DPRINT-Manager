@@ -89,6 +89,25 @@ public sealed class AppMarkupTests
     }
 
     [Fact]
+    public void ApplicationStyles_UseDiscreetThemeAwareScrollBars()
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "App.xaml");
+        var scrollBarStyle = Assert.Single(document.Descendants().Where(element =>
+            element.Name.LocalName == "Style" &&
+            (string?)element.Attribute("TargetType") == "ScrollBar"));
+
+        Assert.Contains(scrollBarStyle.Elements(), element =>
+            (string?)element.Attribute("Property") == "Width" &&
+            (string?)element.Attribute("Value") == "10");
+        Assert.Contains(scrollBarStyle.Descendants(), element =>
+            element.Name.LocalName == "Track" &&
+            element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "PART_Track"));
+        Assert.Contains(scrollBarStyle.Descendants(), element =>
+            element.Name.LocalName == "Thumb" &&
+            element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "ScrollThumb"));
+    }
+
+    [Fact]
     public void MainWindow_UsesThemeResourcesForHeaderAndStatusBar()
     {
         var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "MainWindow.xaml");
