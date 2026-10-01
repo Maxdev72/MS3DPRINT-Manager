@@ -5,6 +5,7 @@
     <Application.Resources>
         <SolidColorBrush x:Key="InkBrush" Color="#183153" />
         <SolidColorBrush x:Key="AccentBrush" Color="#1769AA" />
+        <SolidColorBrush x:Key="CalendarSelectedTextBrush" Color="#FFFFFF" />
         <SolidColorBrush x:Key="BackgroundBrush" Color="#F5F7FA" />
         <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
         <SolidColorBrush x:Key="CardHoverBrush" Color="#E8F3FC" />
@@ -108,7 +109,7 @@
                 </Trigger>
                 <Trigger Property="IsSelected" Value="True">
                     <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
-                    <Setter Property="Foreground" Value="White" />
+                    <Setter Property="Foreground" Value="{DynamicResource CalendarSelectedTextBrush}" />
                 </Trigger>
                 <MultiTrigger>
                     <MultiTrigger.Conditions>
@@ -116,7 +117,7 @@
                         <Condition Property="IsSelected" Value="True" />
                     </MultiTrigger.Conditions>
                     <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
-                    <Setter Property="Foreground" Value="White" />
+                    <Setter Property="Foreground" Value="{DynamicResource CalendarSelectedTextBrush}" />
                 </MultiTrigger>
                 <MultiTrigger>
                     <MultiTrigger.Conditions><Condition Property="IsInactive" Value="True" /><Condition Property="IsSelected" Value="False" /></MultiTrigger.Conditions>
@@ -135,7 +136,7 @@
                     <Setter Property="Background" Value="{DynamicResource CardHoverBrush}" />
                 </Trigger>
                 <Trigger Property="IsInactive" Value="True"><Setter Property="Foreground" Value="{DynamicResource MutedBrush}" /></Trigger>
-                <Trigger Property="HasSelectedDays" Value="True"><Setter Property="Background" Value="{DynamicResource AccentBrush}" /><Setter Property="Foreground" Value="White" /></Trigger>
+                <Trigger Property="HasSelectedDays" Value="True"><Setter Property="Background" Value="{DynamicResource AccentBrush}" /><Setter Property="Foreground" Value="{DynamicResource CalendarSelectedTextBrush}" /></Trigger>
             </Style.Triggers>
         </Style>
         <Style TargetType="ScrollBar">

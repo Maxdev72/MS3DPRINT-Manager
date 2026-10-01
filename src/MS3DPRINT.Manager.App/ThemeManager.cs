@@ -8,10 +8,16 @@ namespace MS3DPRINT.Manager.App;
 public static class ThemeManager
 {
     public static void Apply(ThemePreference preference)
+        => Apply(preference, Application.Current.Resources);
+
+    public static void Apply(ThemePreference preference, ResourceDictionary resources)
     {
+        ArgumentNullException.ThrowIfNull(resources);
+        void SetBrush(string key, string color) => resources[key] = new SolidColorBrush((Color)ColorConverter.ConvertFromString(color)!);
         var dark = preference == ThemePreference.Dark || (preference == ThemePreference.Automatic && WindowsUsesDarkTheme());
         SetBrush("InkBrush", dark ? "#DCEBFA" : "#183153");
         SetBrush("AccentBrush", dark ? "#58A6FF" : "#1769AA");
+        SetBrush("CalendarSelectedTextBrush", dark ? "#111A22" : "#FFFFFF");
         SetBrush("BackgroundBrush", dark ? "#17212B" : "#F5F7FA");
         SetBrush("SurfaceBrush", dark ? "#22303D" : "#FFFFFF");
         SetBrush("CardHoverBrush", dark ? "#2C4052" : "#E8F3FC");
@@ -31,8 +37,4 @@ public static class ThemeManager
     private static bool WindowsUsesDarkTheme()
         => Registry.GetValue(@"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize", "AppsUseLightTheme", 1) is int value && value == 0;
 
-    private static void SetBrush(string key, string color)
-    {
-        Application.Current.Resources[key] = new SolidColorBrush((Color)ColorConverter.ConvertFromString(color)!);
-    }
 }

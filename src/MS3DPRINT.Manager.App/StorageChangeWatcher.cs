@@ -10,20 +10,31 @@ public sealed class StorageChangeWatcher : IDisposable
     public StorageChangeWatcher(string root, Action changed, Action<Exception> error, TimeSpan? delay = null)
     {
         var interval = delay ?? TimeSpan.FromMilliseconds(650);
-        _debounce = new Timer(_ => { lock (_gate) { if (!_disposed) changed(); } }, null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
         _watcher = new FileSystemWatcher(root) { IncludeSubdirectories = true, NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite | NotifyFilters.Size };
+        try { _debounce = new Timer(_ => { lock (_gate) { if (!_disposed) changed(); } }, null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan); }
+        catch { _watcher.Dispose(); throw; }
+        bool Relevant(string path, WatcherChangeTypes change)
+        {
+            var relative = Path.GetRelativePath(root, path);
+            var metadata = ".ms3dprint-manager";
+            if (!relative.Equals(metadata, StringComparison.OrdinalIgnoreCase) && !relative.StartsWith(metadata + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) return true;
+            foreach (var folder in new[] { "clients", "projects" })
+            {
+                var catalog = Path.Combine(metadata, folder);
+                if (relative.Equals(catalog, StringComparison.OrdinalIgnoreCase)) return change is WatcherChangeTypes.Deleted or WatcherChangeTypes.Renamed;
+                if (relative.StartsWith(catalog + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) return relative.EndsWith(".json", StringComparison.OrdinalIgnoreCase);
+            }
+            return relative.Equals(metadata, StringComparison.OrdinalIgnoreCase) && change is WatcherChangeTypes.Deleted or WatcherChangeTypes.Renamed;
+        }
         void Schedule(object? sender, FileSystemEventArgs args)
         {
-            var relative = Path.GetRelativePath(root, args.FullPath);
-            if (relative.StartsWith(".ms3dprint-manager", StringComparison.OrdinalIgnoreCase)
-                && !(relative.StartsWith(Path.Combine(".ms3dprint-manager", "clients") + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
-                    || relative.StartsWith(Path.Combine(".ms3dprint-manager", "projects") + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))) return;
-            if (relative.StartsWith(".ms3dprint-manager", StringComparison.OrdinalIgnoreCase) && !relative.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) return;
+            if (!Relevant(args.FullPath, args.ChangeType) && !(args is RenamedEventArgs renamed && Relevant(renamed.OldFullPath, args.ChangeType))) return;
             lock (_gate) { if (!_disposed) _debounce.Change(interval, Timeout.InfiniteTimeSpan); }
         }
         _watcher.Changed += Schedule; _watcher.Created += Schedule; _watcher.Deleted += Schedule; _watcher.Renamed += Schedule;
-        _watcher.Error += (_, args) => error(args.GetException());
-        _watcher.EnableRaisingEvents = true;
+        _watcher.Error += (_, args) => { lock (_gate) { if (!_disposed) error(args.GetException()); } };
+        try { _watcher.EnableRaisingEvents = true; }
+        catch { Dispose(); throw; }
     }
     public void Dispose()
     {

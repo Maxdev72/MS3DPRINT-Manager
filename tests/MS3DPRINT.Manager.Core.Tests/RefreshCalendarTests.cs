@@ -9,6 +9,36 @@ namespace MS3DPRINT.Manager.Core.Tests;
 
 public sealed class RefreshCalendarTests
 {
+    [Theory]
+    [InlineData("file-rename", "clients")]
+    [InlineData("directory-rename", "clients")]
+    [InlineData("directory-delete", "clients")]
+    [InlineData("file-rename", "projects")]
+    [InlineData("directory-rename", "projects")]
+    [InlineData("directory-delete", "projects")]
+    public async Task Watcher_ObservesRemovalOfRelevantMetadata(string operation, string folder)
+    {
+        var root = Path.Combine(Path.GetTempPath(), "ms3d-refresh-removal-" + Guid.NewGuid().ToString("N"));
+        var clients = Path.Combine(root, ".ms3dprint-manager", folder);
+        Directory.CreateDirectory(clients);
+        var file = Path.Combine(clients, "client.json");
+        File.WriteAllText(file, "{}");
+        if (operation == "directory-delete") File.Delete(file);
+        try
+        {
+            var signal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            using var watcher = new StorageChangeWatcher(root, () => signal.TrySetResult(), _ => { }, TimeSpan.FromMilliseconds(100));
+            switch (operation)
+            {
+                case "file-rename": File.Move(file, Path.Combine(clients, "client.tmp")); break;
+                case "directory-rename": Directory.Move(clients, Path.Combine(root, ".ms3dprint-manager", "archive")); break;
+                default: Directory.Delete(clients, true); break;
+            }
+            var completed = await Task.WhenAny(signal.Task, Task.Delay(1500));
+            Assert.Same(signal.Task, completed);
+        }
+        finally { Directory.Delete(root, true); }
+    }
     [Fact]
     public async Task Watcher_DebouncesWritesAndStopsAfterDispose()
     {
@@ -62,8 +92,9 @@ public sealed class RefreshCalendarTests
                 var resources = (ResourceDictionary)System.Windows.Markup.XamlReader.Parse(dictionary.ToString());
                 foreach (var dark in new[] { false, true })
                 {
-                    resources["TextBrush"] = new SolidColorBrush(dark ? Colors.White : Colors.Black);
-                    resources["SurfaceBrush"] = new SolidColorBrush(dark ? Colors.Black : Colors.White);
+                    var apply = typeof(ThemeManager).GetMethod("Apply", new[] { typeof(MS3DPRINT.Manager.Core.Storage.ThemePreference), typeof(ResourceDictionary) });
+                    Assert.NotNull(apply);
+                    apply.Invoke(null, new object[] { dark ? MS3DPRINT.Manager.Core.Storage.ThemePreference.Dark : MS3DPRINT.Manager.Core.Storage.ThemePreference.Light, resources });
                     var calendar = new Calendar { Resources = resources, DisplayDate = new DateTime(2026, 10, 1) };
                     calendar.Style = (Style)resources[typeof(Calendar)];
                     var host = new Window { Content = calendar, Width = 350, Height = 350, ShowInTaskbar = false, WindowStyle = WindowStyle.None };
@@ -78,7 +109,7 @@ public sealed class RefreshCalendarTests
                     calendar.SelectedDate = new DateTime(2026, 10, 15);
                     calendar.UpdateLayout();
                     var selected = days.Single(day => day.IsSelected);
-                    Assert.Equal(Colors.White, ((SolidColorBrush)selected.Foreground).Color);
+                    Assert.True(Contrast(selected.Foreground, selected.Background) >= 4.5);
                     Assert.Equal(resources["AccentBrush"], selected.Background);
                     var disabled = days.First(day => !day.IsSelected && !day.IsInactive);
                     disabled.IsEnabled = false;
@@ -88,6 +119,10 @@ public sealed class RefreshCalendarTests
                         var cell = Assert.IsType<Border>(day.Template.FindName("CalendarCell", day));
                         Assert.Equal(day.Foreground, TextElementForeground(cell.Child));
                     }
+                    calendar.DisplayMode = CalendarMode.Year;
+                    calendar.UpdateLayout();
+                    var selectedMonth = Descendants(calendar).OfType<CalendarButton>().Single(month => month.HasSelectedDays);
+                    Assert.True(Contrast(selectedMonth.Foreground, selectedMonth.Background) >= 4.5);
                     host.Close();
                     foreach (var button in new Button[] { new CalendarDayButton { Content = "15" }, new CalendarButton { Content = "octobre" } })
                     {
@@ -108,6 +143,17 @@ public sealed class RefreshCalendarTests
     }
 
     private static Brush TextElementForeground(UIElement child) => System.Windows.Documents.TextElement.GetForeground(child);
+    private static double Contrast(Brush foreground, Brush background)
+    {
+        static double Luminance(Brush brush)
+        {
+            var color = ((SolidColorBrush)brush).Color;
+            static double Linear(byte channel) { var value = channel / 255.0; return value <= .04045 ? value / 12.92 : Math.Pow((value + .055) / 1.055, 2.4); }
+            return .2126 * Linear(color.R) + .7152 * Linear(color.G) + .0722 * Linear(color.B);
+        }
+        var first = Luminance(foreground); var second = Luminance(background);
+        return (Math.Max(first, second) + .05) / (Math.Min(first, second) + .05);
+    }
     private static IEnumerable<DependencyObject> Descendants(DependencyObject root)
     {
         for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)

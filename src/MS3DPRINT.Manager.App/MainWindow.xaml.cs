@@ -246,7 +246,7 @@ public partial class MainWindow : Window
         {
             _storageWatcher = new StorageChangeWatcher(_viewModel.StorageRoot,
                 () => Dispatcher.BeginInvoke(new Action(() => _ = RefreshVisibleAsync())),
-                exception => Dispatcher.BeginInvoke(new Action(() => _viewModel.Status = "Actualisation automatique indisponible : " + UiErrorMessages.For(exception))));
+                exception => Dispatcher.BeginInvoke(new Action(() => { if (!_closed) _viewModel.Status = "Actualisation automatique indisponible : " + UiErrorMessages.For(exception); })));
         }
         catch (Exception exception) { _viewModel.Status = "Actualisation automatique indisponible : " + UiErrorMessages.For(exception); }
     }
