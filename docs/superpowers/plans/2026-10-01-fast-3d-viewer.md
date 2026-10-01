@@ -10,6 +10,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-01-fast-3d-viewer-design.md`
 
+**État au 2026-10-01 :** application GPU, filaire/couleur, accès depuis toutes les vues, repli WPF et publication portable réalisés. L'import STL binaire utilise le lecteur SharpDX directement ; STL texte/OBJ conservent l'importeur WPF compatible suivi d'une conversion GPU. Les benchmarks automatisés ont couvert 10 000 et 100 000 triangles, avec rotation GPU sur 100 000 triangles. La comparaison chiffrée avec l'ancien rendu sur un fichier client représentatif, ainsi que le mode rapide optionnel, restent à faire si la navigation demeure lente. Les cases ci-dessous décrivent le plan initial et ne sont pas un relevé exhaustif de réalisation.
+
 ## Global Constraints
 
 - Windows x64 single-file self-contained portable executable; no paid dependencies.

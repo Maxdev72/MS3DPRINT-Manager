@@ -64,9 +64,7 @@ public partial class CollectionDetailView : UserControl
     private void Preview3D_Click(object sender, RoutedEventArgs e)
     {
         if (_selectedPreviewFile is null) return;
-        var preview = new ModelPreviewWindow(_selectedPreviewFile.FullPath);
-        if (Window.GetWindow(this) is Window owner) preview.Owner = owner;
-        preview.ShowDialog();
+        ModelPreviewLauncher.Show(_selectedPreviewFile.FullPath, Window.GetWindow(this));
     }
 
     private async Task LoadFilesAsync(Func<CollectionFileListing> read)

@@ -86,7 +86,7 @@ public partial class MainWindow : Window
                     switch (FileOpenRouting.Decide(result.Path))
                     {
                         case FileOpenTarget.ThreeD:
-                            new ModelPreviewWindow(result.Path) { Owner = this }.ShowDialog();
+                            ModelPreviewLauncher.Show(result.Path, this);
                             break;
                         case FileOpenTarget.Document:
                             new DocumentPreviewWindow(result.Path) { Owner = this }.ShowDialog();
@@ -218,7 +218,7 @@ public partial class MainWindow : Window
 
     private void Open3DViewer_Click(object sender, RoutedEventArgs e) => Run(() =>
     {
-        new ModelPreviewWindow { Owner = this }.ShowDialog();
+        ModelPreviewLauncher.Show(null, this);
     });
 
     private void Settings_Click(object sender, RoutedEventArgs e) => Run(() =>

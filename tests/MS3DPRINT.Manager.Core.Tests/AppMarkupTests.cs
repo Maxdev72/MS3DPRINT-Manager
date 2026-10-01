@@ -48,7 +48,7 @@ public sealed class AppMarkupTests
             element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "PageHost")));
 
         Assert.Equal("Center", (string?)pageHost.Attribute("HorizontalAlignment"));
-        Assert.InRange(double.Parse(Assert.IsType<string>((string?)pageHost.Attribute("MaxWidth"))), 1200, 1260);
+        Assert.Equal("1200", (string?)pageHost.Attribute("MaxWidth"));
     }
 
     [Fact]
@@ -420,6 +420,17 @@ public sealed class AppMarkupTests
 
         var viewer = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "ModelPreviewWindow.xaml");
         Assert.Contains(viewer.Descendants(), element => element.Name.LocalName == "HelixViewport3D");
+    }
+
+    [Fact]
+    public void GpuViewer_ProvidesBoundedViewportAndDisplayControls()
+    {
+        var viewer = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "GpuModelPreviewWindow.xaml");
+        Assert.Contains(viewer.Descendants(), element => element.Name.LocalName == "Viewport3DX");
+        Assert.Contains(viewer.Descendants(), element => element.Name.LocalName == "ComboBox" &&
+            element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "RenderModeBox"));
+        Assert.Contains(viewer.Descendants(), element => element.Name.LocalName == "TextBox" &&
+            element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "ColorHexBox"));
     }
 
     [Fact]
