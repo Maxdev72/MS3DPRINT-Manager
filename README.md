@@ -28,3 +28,15 @@ l'emplacement de livraison et lancez l'exécutable depuis ce dossier.
 Si l'application a déjà enregistré des codes clients, conservez également
 `data\client-codes.json` dans le dossier livré. Ce fichier contient le
 registre local nécessaire pour retrouver ces codes.
+
+## Utilisation
+
+- **Clients** : ouvrez une fiche pour modifier la raison sociale ou le nom du
+  particulier, l’adresse, le contact principal et les notes. Le code client
+  et le nom du dossier restent inchangés pour préserver les projets existants.
+- **Rechercher** : saisissez un nom, un code client, une référence de projet
+  ou un nom de fichier, puis appuyez sur Entrée ou sur « Rechercher ». La
+  recherche s’exécute à la demande, sans indexation en arrière-plan. Les 200
+  premiers résultats sont affichés ; affinez le terme si nécessaire.
+- Un résultat client ou projet ouvre sa fiche. Un fichier STL ou OBJ ouvre
+  le visualiseur 3D ; les autres fichiers s’ouvrent via Windows.

@@ -35,6 +35,17 @@ public sealed class ClientProfileStoreTests : IDisposable
     }
 
     [Fact]
+    public void Load_ReturnsLatestProfileAfterAnUpdate()
+    {
+        var store = new ClientProfileStore(_paths);
+        var profile = CreateProfessionalProfile();
+        store.Create(profile);
+        store.Update(profile with { CompanyName = "MPO Industrie" });
+
+        Assert.Equal("MPO Industrie", store.Load(profile.Id).CompanyName);
+    }
+
+    [Fact]
     public void Create_RejectsTwoProfilesForTheSameFolder()
     {
         var store = new ClientProfileStore(_paths);

@@ -6,7 +6,7 @@ namespace MS3DPRINT.Manager.App.ViewModels;
 public sealed class ClientDetailViewModel : ObservableObject
 {
     private readonly ClientProfileStore _store;
-    private readonly ClientProfile _profile;
+    private ClientProfile _profile;
     private readonly ProjectCatalog? _projectCatalog;
     private readonly string? _workspaceRoot;
     private string? _notes;
@@ -16,6 +16,15 @@ public sealed class ClientDetailViewModel : ObservableObject
     {
         _profile = profile ?? throw new ArgumentNullException(nameof(profile));
         _store = store ?? throw new ArgumentNullException(nameof(store));
+        CompanyName = profile.CompanyName ?? string.Empty;
+        FirstName = profile.FirstName ?? string.Empty;
+        LastName = profile.LastName ?? string.Empty;
+        Address = profile.Address ?? string.Empty;
+        ContactFirstName = profile.PrimaryContact.FirstName ?? string.Empty;
+        ContactLastName = profile.PrimaryContact.LastName ?? string.Empty;
+        ContactRole = profile.PrimaryContact.Role ?? string.Empty;
+        ContactPhone = profile.PrimaryContact.Phone ?? string.Empty;
+        ContactEmail = profile.PrimaryContact.Email ?? string.Empty;
         _notes = profile.Notes;
     }
 
@@ -27,11 +36,20 @@ public sealed class ClientDetailViewModel : ObservableObject
     }
 
     public string DisplayName => _profile.Kind == ClientKind.Professional
-        ? _profile.CompanyName!
-        : string.Join(" ", new[] { _profile.FirstName, _profile.LastName }.Where(value => !string.IsNullOrWhiteSpace(value)));
+        ? CompanyName
+        : string.Join(" ", new[] { FirstName, LastName }.Where(value => !string.IsNullOrWhiteSpace(value)));
     public string ClientCode => _profile.ClientCode;
-    public string? Address => _profile.Address;
-    public PrimaryContact PrimaryContact => _profile.PrimaryContact;
+    public bool IsProfessional => _profile.Kind == ClientKind.Professional;
+    public bool IsIndividual => _profile.Kind == ClientKind.Individual;
+    public string CompanyName { get; set; }
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+    public string Address { get; set; }
+    public string ContactFirstName { get; set; }
+    public string ContactLastName { get; set; }
+    public string ContactRole { get; set; }
+    public string ContactPhone { get; set; }
+    public string ContactEmail { get; set; }
 
     public IReadOnlyList<ProjectSummary> Projects
     {
@@ -47,8 +65,22 @@ public sealed class ClientDetailViewModel : ObservableObject
 
     public void Save()
     {
-        _store.Update(_profile with { Notes = string.IsNullOrWhiteSpace(Notes) ? null : Notes.Trim(), UpdatedAt = DateTimeOffset.UtcNow });
+        var updated = _profile with
+        {
+            CompanyName = IsProfessional ? NullIfEmpty(CompanyName) : null,
+            FirstName = IsIndividual ? NullIfEmpty(FirstName) : null,
+            LastName = IsIndividual ? NullIfEmpty(LastName) : null,
+            Address = NullIfEmpty(Address),
+            Notes = NullIfEmpty(Notes),
+            PrimaryContact = new PrimaryContact(NullIfEmpty(ContactFirstName), NullIfEmpty(ContactLastName), NullIfEmpty(ContactRole), NullIfEmpty(ContactPhone), NullIfEmpty(ContactEmail)),
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
+        _store.Update(updated);
+        _profile = updated;
+        OnPropertyChanged(nameof(DisplayName));
     }
+
+    private static string? NullIfEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     public IReadOnlyList<ProjectSummary> LoadProjects()
     {

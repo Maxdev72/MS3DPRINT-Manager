@@ -21,6 +21,14 @@ public sealed class ClientProfileStore
             .ToArray();
     }
 
+    public ClientProfile Load(Guid id)
+    {
+        if (id == Guid.Empty) throw new ArgumentException("L’identifiant du client est requis.", nameof(id));
+        var path = ProfilePath(id);
+        if (!File.Exists(path)) throw new InvalidOperationException("La fiche client est introuvable.");
+        return ReadProfile(path);
+    }
+
     public void Create(ClientProfile profile)
     {
         Validate(profile);

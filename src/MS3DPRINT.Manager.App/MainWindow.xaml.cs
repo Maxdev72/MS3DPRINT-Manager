@@ -9,6 +9,7 @@ using MS3DPRINT.Manager.Core.Workspace;
 using MS3DPRINT.Manager.Core.Projects;
 using MS3DPRINT.Manager.Core.Collections;
 using MS3DPRINT.Manager.Core.Files;
+using MS3DPRINT.Manager.Core.Search;
 
 namespace MS3DPRINT.Manager.App;
 
@@ -62,10 +63,36 @@ public partial class MainWindow : Window
     private async void DashboardRefresh_Click(object sender, RoutedEventArgs e) => await RefreshDashboardSafelyAsync();
 
     private void Clients_Click(object sender, RoutedEventArgs e) => ShowClients();
+    private void Search_Click(object sender, RoutedEventArgs e) => ShowSearch();
     private void Projects_Click(object sender, RoutedEventArgs e) => ShowProjects();
     private void Models_Click(object sender, RoutedEventArgs e) => ShowCollection("Modèles 3D", "Retrouver vos modèles et leurs fichiers de conception.", "02_MODELES_3D", FolderTemplates.Model, "Nouveau modèle 3D");
     private void Products_Click(object sender, RoutedEventArgs e) => ShowCollection("Produits", "Suivre les produits et leur documentation de fabrication.", "03_PRODUITS_MS3DPRINT", FolderTemplates.Product, "Nouveau produit MS3DPRINT");
     private void Suppliers_Click(object sender, RoutedEventArgs e) => ShowCollection("Fournisseurs", "Centraliser les dossiers fournisseurs, tarifs et commandes.", "06_FOURNISSEURS", FolderTemplates.Supplier, "Nouveau fournisseur");
+
+    private void ShowSearch()
+    {
+        var page = new SearchView(new GlobalSearchService(_clientCatalog, _projectCatalog), _viewModel.StorageRoot);
+        void ReturnToSearch() => PageHost.Content = page;
+        page.ResultSelected += result => Run(() =>
+        {
+            switch (result.Kind)
+            {
+                case GlobalSearchResultKind.Client when result.Client is not null:
+                    ShowClientDetail(result.Client, ReturnToSearch);
+                    break;
+                case GlobalSearchResultKind.Project when result.Project is not null:
+                    ShowProjectDetail(result.Project, ReturnToSearch);
+                    break;
+                case GlobalSearchResultKind.File:
+                    if (ThreeDFileSupport.IsPreviewable(result.Path))
+                        new ModelPreviewWindow(result.Path) { Owner = this }.ShowDialog();
+                    else
+                        ExplorerService.Open(result.Path);
+                    break;
+            }
+        });
+        PageHost.Content = page;
+    }
 
     private void ShowClients()
     {
@@ -75,29 +102,41 @@ public partial class MainWindow : Window
             ShowDialog(new CreateClientWindow(_viewModel.StorageRoot, _folders, _codes, _clientProfiles) { Owner = this });
             ShowClients();
         });
-        page.ClientSelected += ShowClientDetail;
+        page.ClientSelected += client => ShowClientDetail(client);
         PageHost.Content = page;
     }
 
-    private void ShowClientDetail(ClientSummary client)
+    private void ShowClientDetail(ClientSummary client, Action? backRequested = null)
+        => Run(() => ShowClientDetailCore(client, backRequested));
+
+    private void ShowClientDetailCore(ClientSummary client, Action? backRequested)
     {
+        var navigateBack = backRequested ?? ShowClients;
         if (client.Profile is null)
         {
             Run(() =>
             {
                 ShowDialog(new CreateClientWindow(_viewModel.StorageRoot, _folders, _codes, _clientProfiles, client) { Owner = this });
-                ShowClients();
+                navigateBack();
             });
             return;
         }
-        var page = new ClientDetailView(new ClientDetailViewModel(client.Profile, _clientProfiles, _projectCatalog, _viewModel.StorageRoot));
-        page.BackRequested += (_, _) => ShowClients();
+        var profile = _clientProfiles.Load(client.Profile.Id);
+        client = client with
+        {
+            Profile = profile,
+            DisplayName = profile.Kind == ClientKind.Professional
+                ? profile.CompanyName!
+                : string.Join(" ", new[] { profile.FirstName, profile.LastName }.Where(value => !string.IsNullOrWhiteSpace(value)))
+        };
+        var page = new ClientDetailView(new ClientDetailViewModel(profile, _clientProfiles, _projectCatalog, _viewModel.StorageRoot));
+        page.BackRequested += (_, _) => navigateBack();
         page.CreateProjectRequested += (_, _) => Run(() =>
         {
             ShowDialog(new CreateTrackedProjectWindow(_viewModel.StorageRoot, _folders, _clientCatalog, _projectProfiles, preselectedClient: client) { Owner = this });
-            ShowClientDetail(client);
+            ShowClientDetail(client, navigateBack);
         });
-        page.ProjectSelected += project => ShowProjectDetail(project, () => ShowClientDetail(client));
+        page.ProjectSelected += project => ShowProjectDetail(project, () => ShowClientDetail(client, navigateBack));
         PageHost.Content = page;
     }
 

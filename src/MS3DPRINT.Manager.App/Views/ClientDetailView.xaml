@@ -1,11 +1,25 @@
 <UserControl x:Class="MS3DPRINT.Manager.App.Views.ClientDetailView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="28,23">
+    <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="28,23" MaxWidth="760">
         <Button Content="← Clients" Click="Back_Click" HorizontalAlignment="Left" Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource AccentBrush}" />
         <TextBlock Text="{Binding DisplayName}" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource InkBrush}" Margin="0,18,0,4" />
-        <TextBlock Text="{Binding ClientCode}" Foreground="{DynamicResource MutedBrush}" />
-        <TextBlock Text="Contact principal" FontSize="16" FontWeight="SemiBold" Margin="0,22,0,6" />
-        <TextBlock Text="{Binding PrimaryContact.FirstName}" /><TextBlock Text="{Binding PrimaryContact.LastName}" /><TextBlock Text="{Binding PrimaryContact.Role}" /><TextBlock Text="{Binding PrimaryContact.Phone}" /><TextBlock Text="{Binding PrimaryContact.Email}" />
-        <TextBlock Text="Adresse" FontSize="16" FontWeight="SemiBold" Margin="0,20,0,6" /><TextBlock Text="{Binding Address}" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding ClientCode, StringFormat=Code client : {0}}" Foreground="{DynamicResource MutedBrush}" />
+        <TextBlock Text="Identité" FontSize="16" FontWeight="SemiBold" Margin="0,22,0,8" />
+        <StackPanel>
+            <StackPanel.Style><Style TargetType="StackPanel"><Style.Triggers><DataTrigger Binding="{Binding IsProfessional}" Value="False"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+            <TextBlock Text="Raison sociale" Margin="0,0,0,4" /><TextBox Text="{Binding CompanyName, UpdateSourceTrigger=PropertyChanged}" />
+        </StackPanel>
+        <StackPanel>
+            <StackPanel.Style><Style TargetType="StackPanel"><Style.Triggers><DataTrigger Binding="{Binding IsIndividual}" Value="False"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+            <TextBlock Text="Prénom" Margin="0,0,0,4" /><TextBox Text="{Binding FirstName, UpdateSourceTrigger=PropertyChanged}" />
+            <TextBlock Text="Nom" Margin="0,12,0,4" /><TextBox Text="{Binding LastName, UpdateSourceTrigger=PropertyChanged}" />
+        </StackPanel>
+        <TextBlock Text="Adresse" Margin="0,16,0,4" /><TextBox Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="58" />
+        <TextBlock Text="Contact principal" FontSize="16" FontWeight="SemiBold" Margin="0,22,0,8" />
+        <TextBlock Text="Prénom" Margin="0,0,0,4" /><TextBox Text="{Binding ContactFirstName, UpdateSourceTrigger=PropertyChanged}" />
+        <TextBlock Text="Nom" Margin="0,12,0,4" /><TextBox Text="{Binding ContactLastName, UpdateSourceTrigger=PropertyChanged}" />
+        <TextBlock Text="Fonction" Margin="0,12,0,4" /><TextBox Text="{Binding ContactRole, UpdateSourceTrigger=PropertyChanged}" />
+        <TextBlock Text="Téléphone" Margin="0,12,0,4" /><TextBox Text="{Binding ContactPhone, UpdateSourceTrigger=PropertyChanged}" />
+        <TextBlock Text="E-mail" Margin="0,12,0,4" /><TextBox Text="{Binding ContactEmail, UpdateSourceTrigger=PropertyChanged}" />
         <DockPanel Margin="0,22,0,6"><TextBlock Text="Projets client" FontSize="16" FontWeight="SemiBold" DockPanel.Dock="Left" /><TextBlock x:Name="ProjectsLoadingText" Text="Chargement…" Visibility="Collapsed" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Right" /></DockPanel>
         <TextBlock x:Name="ProjectsErrorText" Visibility="Collapsed" Foreground="IndianRed" TextWrapping="Wrap" Margin="0,0,0,6" />
         <ListBox x:Name="ProjectsList" ItemsSource="{Binding Projects}" SelectionChanged="Project_SelectionChanged" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Background="{DynamicResource SurfaceBrush}" MinHeight="78">
