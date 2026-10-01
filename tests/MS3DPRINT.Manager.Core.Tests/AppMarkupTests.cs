@@ -64,6 +64,31 @@ public sealed class AppMarkupTests
     }
 
     [Fact]
+    public void ApplicationStyles_KeepDatePickersAndCalendarsReadableInTheDarkTheme()
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "App.xaml");
+        var styles = document.Descendants().Where(element => element.Name.LocalName == "Style").ToList();
+
+        var datePickerStyle = Assert.Single(styles.Where(element => (string?)element.Attribute("TargetType") == "DatePicker"));
+        var calendarStyle = Assert.Single(styles.Where(element => (string?)element.Attribute("TargetType") == "Calendar"));
+        var dayButtonStyle = Assert.Single(styles.Where(element => (string?)element.Attribute("TargetType") == "CalendarDayButton"));
+
+        Assert.Contains(datePickerStyle.Elements(), element =>
+            (string?)element.Attribute("Property") == "Foreground" &&
+            (string?)element.Attribute("Value") == "{DynamicResource TextBrush}");
+        Assert.Contains(datePickerStyle.Elements(), element =>
+            (string?)element.Attribute("Property") == "Background" &&
+            (string?)element.Attribute("Value") == "{DynamicResource InputBrush}");
+        Assert.Contains(calendarStyle.Elements(), element =>
+            (string?)element.Attribute("Property") == "Background" &&
+            (string?)element.Attribute("Value") == "{DynamicResource SurfaceBrush}");
+        Assert.Contains(dayButtonStyle.Descendants(), element =>
+            element.Name.LocalName == "Trigger" &&
+            (string?)element.Attribute("Property") == "IsSelected" &&
+            (string?)element.Attribute("Value") == "True");
+    }
+
+    [Fact]
     public void MainWindow_UsesThemeResourcesForHeaderAndStatusBar()
     {
         var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "MainWindow.xaml");
