@@ -29,6 +29,7 @@ public static class WallThicknessAnalyzer
             throw new ArgumentOutOfRangeException(nameof(minimumThicknessMm));
         if (input.Count > 2_000_000) throw new ArgumentException("Analyse limitée à 2 millions de triangles.");
         var vertices = new Dictionary<Vector3, int>();
+        var triangleVertices = new int[input.Count * 3];
         var edges = new Dictionary<(int, int), (int Count, int Direction)>();
         var valid = new List<int>(input.Count);
         int invalid = 0;
@@ -39,6 +40,9 @@ public static class WallThicknessAnalyzer
             if (!Finite(t.A) || !Finite(t.B) || !Finite(t.C) || !Finite(t.Normal)) { invalid++; continue; }
             valid.Add(i);
             var a = Vertex(t.A); var b = Vertex(t.B); var c = Vertex(t.C);
+            triangleVertices[i * 3] = a;
+            triangleVertices[i * 3 + 1] = b;
+            triangleVertices[i * 3 + 2] = c;
             Edge(a, b); Edge(b, c); Edge(c, a);
         }
         int boundary = edges.Values.Count(e => e.Count == 1);
@@ -143,27 +147,39 @@ public static class WallThicknessAnalyzer
         }
         int MaterialCrossings(Node node, Vector3 origin, Vector3 direction, int source)
         {
-            var distances = new List<float>();
+            var hits = new List<(float Distance, int TriangleIndex)>();
             Visit(node);
             if (work >= WorkLimit) return 0;
-            distances.Sort();
+            hits.Sort((a,b) => a.Distance.CompareTo(b.Distance));
             int crossings = 0;
             float previous = 0;
-            foreach (float distance in distances)
+            int previousTriangle = -1;
+            foreach (var hit in hits)
             {
                 if (work >= WorkLimit) return 0;
                 work++;
                 if ((work & 255) == 0) cancellationToken.ThrowIfCancellationRequested();
+                float distance = hit.Distance;
                 float tolerance = crossings == 0 ? 0 : 8f * Math.Max(
                     MathF.BitIncrement(previous) - previous,
                     MathF.BitIncrement(distance) - distance);
-                if (crossings == 0 || distance - previous > tolerance)
-                {
+                // Near-equal distances are one crossing only if the hit faces
+                // actually share an edge. Different solids may be very close.
+                if (crossings == 0 || distance - previous > tolerance || !SharesEdge(previousTriangle, hit.TriangleIndex))
                     crossings++;
-                    previous = distance;
-                }
+                previous = distance;
+                previousTriangle = hit.TriangleIndex;
             }
             return crossings;
+
+            bool SharesEdge(int first, int second)
+            {
+                int common = 0;
+                for (int a = 0; a < 3; a++)
+                    for (int b = 0; b < 3; b++)
+                        if (triangleVertices[first * 3 + a] == triangleVertices[second * 3 + b]) common++;
+                return common >= 2;
+            }
 
             void Visit(Node current)
             {
@@ -182,8 +198,8 @@ public static class WallThicknessAnalyzer
                     work++;
                     int index = ids[j];
                     if (index == source || !RayDistance(input[index], origin, direction, out float distance) || distance <= 1e-7f) continue;
-                    distances.Add(distance);
-                    if (distances.Count >= MaxParityHits) { work = WorkLimit; return; }
+                    hits.Add((distance, index));
+                    if (hits.Count >= MaxParityHits) { work = WorkLimit; return; }
                 }
             }
         }

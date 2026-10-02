@@ -54,6 +54,18 @@ public class WallThicknessAnalyzerTests
     }
 
     [Fact]
+    public void DistantClosedPart_DoesNotChangeNearbyAirGapParity()
+    {
+        var lower = Box(4);
+        var upper = Box(4).Select(t => Translate(t, new Vector3(0, 0, 4.4f)));
+        var distant = Box(4).Select(t => Translate(t, new Vector3(0, 0, 10_000_000)));
+        var result = WallThicknessAnalyzer.Analyze(lower.Concat(upper).Concat(distant).ToArray(), 1, 1);
+
+        Assert.Equal(0, result.BoundaryEdges);
+        Assert.Empty(result.ThinSamples);
+    }
+
+    [Fact]
     public void ReversedWindingStillDetectsThinSolid()
     {
         var inward = Box(0.4f).Select(t => new WallTriangle(t.A, t.C, t.B)).ToArray();
@@ -112,6 +124,9 @@ public class WallThicknessAnalyzerTests
         int[] ix = [0,2,1, 0,3,2, 4,5,6, 4,6,7, 0,1,5, 0,5,4, 1,2,6, 1,6,5, 2,3,7, 2,7,6, 3,0,4, 3,4,7];
         return Enumerable.Range(0, 12).Select(i => new WallTriangle(v[ix[i*3]],v[ix[i*3+1]],v[ix[i*3+2]])).ToArray();
     }
+
+    private static WallTriangle Translate(WallTriangle t, Vector3 offset) =>
+        new(t.A + offset, t.B + offset, t.C + offset);
 
     private sealed class CancelDuringSortList(WallTriangle[] triangles, CancellationTokenSource cancellation)
         : IReadOnlyList<WallTriangle>
