@@ -34,6 +34,12 @@ registre local nécessaire pour retrouver ces codes.
 - **Clients** : ouvrez une fiche pour modifier la raison sociale ou le nom du
   particulier, l’adresse, le contact principal et les notes. Le code client
   et le nom du dossier restent inchangés pour préserver les projets existants.
+- Pour un client professionnel, la recherche d'entreprise propose une aide à
+  la saisie du nom et du SIRET ; l'adresse peut ensuite être complétée. Un
+  particulier n'a pas de champ SIRET. La connexion Internet n'est nécessaire
+  que pour ces suggestions.
+- Les listes de clients et de projets se rafraîchissent lorsque leurs données
+  changent sur le disque, sans recherche ou indexation permanente.
 - **Rechercher** : saisissez un nom, un code client, une référence de projet
   ou un nom de fichier, puis appuyez sur Entrée ou sur « Rechercher ». La
   recherche s’exécute à la demande, sans indexation en arrière-plan. Les 200
@@ -45,6 +51,11 @@ registre local nécessaire pour retrouver ces codes.
 - Le visualiseur 3D peut s’ouvrir sans projet : déposez un seul STL ou OBJ
   dans sa fenêtre, ou utilisez « Choisir un fichier… ». Il affiche les
   dimensions X/Y/Z en unités du modèle, sans présumer qu’il s’agit de mm.
+- Son test de parois est facultatif : indiquez explicitement l'échelle en
+  millimètres et le seuil voulu. Il signale des zones potentiellement fines,
+  pas une garantie d'imprimabilité. La mesure est suspendue si le maillage est
+  ouvert, non-manifold ou incohérent ; vérifiez toujours le modèle dans le
+  trancheur.
 
 L’aperçu PDF utilise le moteur intégré à Windows 10 version 2004 ou plus
 récent. Aucun runtime de navigateur séparé n’est nécessaire.

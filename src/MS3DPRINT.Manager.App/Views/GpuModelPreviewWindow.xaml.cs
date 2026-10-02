@@ -160,10 +160,13 @@ public partial class GpuModelPreviewWindow : Window
                     DepthBias = -100
                 });
             }
+            bool topologyBlocksAnalysis = result.BoundaryEdges != 0 || result.NonManifoldEdges != 0 ||
+                result.InconsistentEdges != 0 || result.InvalidTriangles != 0;
             AnalysisText.Text = $"Seuil {threshold:G} mm · échelle {scale:G} mm/unité : {result.ThinSamples.Count} zones potentiellement fines (orange), {result.SampleCount:N0}/{result.TriangleCount:N0} centres de faces sondés. " +
                 $"Arêtes ouvertes : {result.BoundaryEdges:N0} ; non-manifold : {result.NonManifoldEdges:N0} ; orientations incohérentes : {result.InconsistentEdges:N0} ; triangles invalides : {result.InvalidTriangles:N0}. " +
+                (topologyBlocksAnalysis ? "Mesure de paroi non effectuée : corrigez d’abord le maillage pour distinguer matière et vide. " : "") +
                 (result.BudgetExhausted ? "Budget atteint : analyse partielle. " : "") +
-                "Sondage non exhaustif selon les normales : détails fins et parois obliques peuvent être manqués. Soudures exactes ; auto-intersections et défauts aux sommets non vérifiés. Un maillage ouvert/incohérent rend les distances ambiguës. L’absence d’alerte ne garantit pas l’imprimabilité ; vérifier dans le trancheur.";
+                "Sondage non exhaustif selon les normales : détails fins et parois obliques peuvent être manqués. Soudures exactes ; auto-intersections et défauts aux sommets non vérifiés. L’absence d’alerte ne garantit pas l’imprimabilité ; vérifier dans le trancheur.";
         }
         catch (OperationCanceledException) { if (version == _loadVersion) AnalysisText.Text = "Analyse annulée."; }
         catch (Exception exception) { if (version == _loadVersion) AnalysisText.Text = "Analyse indisponible : " + exception.Message; }

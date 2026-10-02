@@ -24,6 +24,28 @@ public class WallThicknessAnalyzerTests
     }
 
     [Fact]
+    public void NarrowAirGapBetweenThickClosedParts_IsNotAThinWall()
+    {
+        var lower = Box(4);
+        var upper = Box(4).Select(t => new WallTriangle(
+            t.A + new Vector3(0, 0, 4.4f),
+            t.B + new Vector3(0, 0, 4.4f),
+            t.C + new Vector3(0, 0, 4.4f)));
+        var result = WallThicknessAnalyzer.Analyze(lower.Concat(upper).ToArray(), 1, 1);
+
+        Assert.Equal(0, result.BoundaryEdges);
+        Assert.Empty(result.ThinSamples);
+    }
+
+    [Fact]
+    public void ReversedWindingStillDetectsThinSolid()
+    {
+        var inward = Box(0.4f).Select(t => new WallTriangle(t.A, t.C, t.B)).ToArray();
+        var result = WallThicknessAnalyzer.Analyze(inward, 1, 1);
+        Assert.NotEmpty(result.ThinSamples);
+    }
+
+    [Fact]
     public void OpenMesh_ReportsBoundary()
     {
         var result = WallThicknessAnalyzer.Analyze(Box(1).Take(10).ToArray(), 1, 1);

@@ -43,6 +43,9 @@ public static class WallThicknessAnalyzer
         int boundary = edges.Values.Count(e => e.Count == 1);
         int nonmanifold = edges.Values.Count(e => e.Count > 2);
         int inconsistent = edges.Values.Count(e => e.Count == 2 && e.Direction != 0);
+        // Parity is meaningful only for a closed, consistently oriented triangle surface.
+        if (boundary != 0 || nonmanifold != 0 || inconsistent != 0 || invalid != 0)
+            return new(input.Count, 0, boundary, nonmanifold, inconsistent, invalid, 0, false, []);
         var ids = valid.ToArray();
         var root = ids.Length == 0 ? null : Build(0, ids.Length);
         var samples = new List<ThinWallSample>();
@@ -54,14 +57,26 @@ public static class WallThicknessAnalyzer
             cancellationToken.ThrowIfCancellationRequested();
             int index = valid[(int)((long)s * valid.Count / count)];
             var t = input[index];
-            float closest = (float)Math.Min(maximum, float.MaxValue);
-            bool hit = false;
-            Trace(root!, t.Center, t.Normal, index, ref closest, ref hit);
-            Trace(root!, t.Center, -t.Normal, index, ref closest, ref hit);
+            bool thin = false;
+            float closestThin = float.MaxValue;
+            foreach (var direction in new[] { t.Normal, -t.Normal })
+            {
+                float closest = (float)Math.Min(maximum, float.MaxValue);
+                bool hit = false;
+                Trace(root!, t.Center, direction, index, ref closest, ref hit);
+                if (!hit || work >= WorkLimit) continue;
+                // An odd number of forward surface crossings means this ray enters solid
+                // material. An even number means an air gap / exterior path.
+                if (MaterialCrossings(root!, t.Center, direction, index) % 2 == 1 && work < WorkLimit)
+                {
+                    thin = true;
+                    closestThin = Math.Min(closestThin, closest);
+                }
+            }
             if (work >= WorkLimit) break;
             completed++;
-            if (hit && closest * millimetersPerUnit < minimumThicknessMm)
-                samples.Add(new(index, t.Center, closest * millimetersPerUnit));
+            if (thin && closestThin * millimetersPerUnit < minimumThicknessMm)
+                samples.Add(new(index, t.Center, closestThin * millimetersPerUnit));
         }
         return new(input.Count, completed, boundary, nonmanifold, inconsistent, invalid, work, work >= WorkLimit, samples);
 
@@ -87,7 +102,12 @@ public static class WallThicknessAnalyzer
             if (length <= 8) return node;
             var size = max - min;
             int axis = size.X >= size.Y && size.X >= size.Z ? 0 : size.Y >= size.Z ? 1 : 2;
-            Array.Sort(ids, start, length, Comparer<int>.Create((a,b) => Component(input[a].Center,axis).CompareTo(Component(input[b].Center,axis))));
+            int comparisons = 0;
+            Array.Sort(ids, start, length, Comparer<int>.Create((a,b) =>
+            {
+                if ((++comparisons & 8191) == 0) cancellationToken.ThrowIfCancellationRequested();
+                return Component(input[a].Center,axis).CompareTo(Component(input[b].Center,axis));
+            }));
             int half = length / 2;
             node.Left = Build(start, half); node.Right = Build(start + half, length - half);
             return node;
@@ -111,21 +131,56 @@ public static class WallThicknessAnalyzer
                 var t = input[index];
                 // Opposing surfaces only; either winding direction can be globally reversed.
                 if (Vector3.Dot(input[source].Normal, t.Normal) > -0.25f) continue;
-                var e1 = t.B - t.A; var e2 = t.C - t.A;
-                var p = Vector3.Cross(direction,e2); var det = Vector3.Dot(e1,p);
-                if (Math.Abs(det) < 1e-20f) continue;
-                var delta = origin - t.A; var u = Vector3.Dot(delta,p) / det;
-                if (u < -1e-5 || u > 1.00001) continue;
-                var q = Vector3.Cross(delta,e1); var v = Vector3.Dot(direction,q) / det;
-                if (v < -1e-5 || u + v > 1.00001) continue;
-                float distance = Vector3.Dot(e2,q) / det;
+                if (!RayDistance(t, origin, direction, out float distance)) continue;
                 if (distance > 1e-7f && distance < closest) { closest = distance; hit = true; }
+            }
+        }
+        int MaterialCrossings(Node node, Vector3 origin, Vector3 direction, int source)
+        {
+            var distances = new List<float>();
+            Visit(node);
+            return distances.Count;
+
+            void Visit(Node current)
+            {
+                if (work >= WorkLimit) return;
+                work++;
+                if ((work & 255) == 0) cancellationToken.ThrowIfCancellationRequested();
+                if (!IntersectsBox(current, origin, direction, float.MaxValue)) return;
+                if (current.Left is not null)
+                {
+                    Visit(current.Left);
+                    Visit(current.Right!);
+                    return;
+                }
+                for (int j = current.Start; j < current.Start + current.Length && work < WorkLimit; j++)
+                {
+                    work++;
+                    int index = ids[j];
+                    if (index == source || !RayDistance(input[index], origin, direction, out float distance) || distance <= 1e-7f) continue;
+                    // Adjacent coplanar triangles can share one ray crossing.
+                    if (distances.Any(d => Math.Abs(d - distance) <= Math.Max(1e-5f, distance * 1e-6f))) continue;
+                    distances.Add(distance);
+                }
             }
         }
     }
 
     private static bool Finite(Vector3 v) => float.IsFinite(v.X) && float.IsFinite(v.Y) && float.IsFinite(v.Z);
     private static float Component(Vector3 v, int axis) => axis == 0 ? v.X : axis == 1 ? v.Y : v.Z;
+    private static bool RayDistance(WallTriangle t, Vector3 origin, Vector3 direction, out float distance)
+    {
+        distance = 0;
+        var e1 = t.B - t.A; var e2 = t.C - t.A;
+        var p = Vector3.Cross(direction, e2); var det = Vector3.Dot(e1, p);
+        if (Math.Abs(det) < 1e-20f) return false;
+        var delta = origin - t.A; var u = Vector3.Dot(delta, p) / det;
+        if (u < -1e-5 || u > 1.00001) return false;
+        var q = Vector3.Cross(delta, e1); var v = Vector3.Dot(direction, q) / det;
+        if (v < -1e-5 || u + v > 1.00001) return false;
+        distance = Vector3.Dot(e2, q) / det;
+        return true;
+    }
     private static bool IntersectsBox(Node node, Vector3 origin, Vector3 direction, float maximum)
     {
         float near = 0, far = maximum;
