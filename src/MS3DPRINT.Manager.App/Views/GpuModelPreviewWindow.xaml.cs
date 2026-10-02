@@ -18,6 +18,7 @@ public partial class GpuModelPreviewWindow : Window
     private readonly DefaultEffectsManager _effectsManager;
     private readonly List<MeshGeometryModel3D> _models = [];
     private CancellationTokenSource? _activeLoad;
+    private CancellationTokenSource? _activeAnalysis;
     private GpuPreviewScene? _scene;
     private string? _requestedPath;
     private int _loadVersion;
@@ -45,6 +46,8 @@ public partial class GpuModelPreviewWindow : Window
         {
             ++_loadVersion;
             _activeLoad?.Cancel();
+            _activeAnalysis?.Cancel();
+            AnalysisGroup.Children.Clear();
             ModelsGroup.Children.Clear();
             _effectsManager.Dispose();
         };
@@ -53,6 +56,11 @@ public partial class GpuModelPreviewWindow : Window
     private async Task LoadModelAsync(string path)
     {
         var version = ++_loadVersion;
+        _activeAnalysis?.Cancel();
+        AnalysisGroup.Children.Clear();
+        AnalyzeButton.IsEnabled = false;
+        ConfirmUnitsBox.IsChecked = false;
+        AnalysisText.Text = "Confirmez l’échelle du nouveau modèle avant l’analyse.";
         _activeLoad?.Cancel();
         using var load = new CancellationTokenSource();
         _activeLoad = load;
@@ -66,6 +74,7 @@ public partial class GpuModelPreviewWindow : Window
             ModelsGroup.Children.Clear();
             _models.Clear();
             _scene = scene;
+            AnalyzeButton.IsEnabled = _activeAnalysis is null;
             foreach (var mesh in scene.Parts)
             {
                 var model = new MeshGeometryModel3D { Geometry = mesh };
@@ -90,6 +99,83 @@ public partial class GpuModelPreviewWindow : Window
             if (ReferenceEquals(_activeLoad, load)) _activeLoad = null;
         }
     }
+
+    private async void Analyze_Click(object sender, RoutedEventArgs e)
+    {
+        if (_scene is null || _activeAnalysis is not null) return;
+        if (ConfirmUnitsBox.IsChecked != true ||
+            !double.TryParse(UnitScaleBox.Text.Replace(',', '.'), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var scale) ||
+            !double.TryParse(ThicknessBox.Text.Replace(',', '.'), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var threshold) ||
+            !double.IsFinite(scale) || scale <= 0 || !double.IsFinite(threshold) || threshold <= 0)
+        {
+            AnalysisText.Text = "Saisissez une échelle et un seuil positifs, puis confirmez l’échelle (ex. 1 pour mm, 25,4 pour pouces).";
+            return;
+        }
+        var scene = _scene;
+        int version = _loadVersion;
+        using var cancellation = new CancellationTokenSource();
+        _activeAnalysis = cancellation;
+        AnalyzeButton.IsEnabled = false;
+        CancelAnalysisButton.IsEnabled = true;
+        AnalysisGroup.Children.Clear();
+        AnalysisText.Text = "Analyse en cours… La navigation reste disponible.";
+        try
+        {
+            var result = await Task.Run(() =>
+            {
+                if (scene.TriangleCount > 2_000_000) throw new ArgumentException("Analyse limitée à 2 millions de triangles.");
+                var triangles = new List<WallTriangle>(scene.TriangleCount);
+                foreach (var part in scene.Parts)
+                    for (int i = 0; i + 2 < part.Indices!.Count; i += 3)
+                    {
+                        if ((i & 1023) == 0) cancellation.Token.ThrowIfCancellationRequested();
+                        triangles.Add(new(part.Positions![part.Indices[i]], part.Positions[part.Indices[i+1]], part.Positions[part.Indices[i+2]]));
+                    }
+                return WallThicknessAnalyzer.Analyze(triangles, scale, threshold, cancellation.Token);
+            }, cancellation.Token);
+            if (version != _loadVersion || cancellation.IsCancellationRequested) return;
+            var selected = result.ThinSamples.Select(s => s.TriangleIndex).ToHashSet();
+            int offset = 0;
+            foreach (var part in scene.Parts)
+            {
+                var indices = new HelixToolkit.IntCollection();
+                var positions = new HelixToolkit.Vector3Collection();
+                foreach (int triangle in selected.Where(i => i >= offset && i < offset + part.Indices!.Count / 3))
+                {
+                    int i = (triangle - offset) * 3;
+                    for (int j = 0; j < 3; j++)
+                    {
+                        indices.Add(positions.Count);
+                        positions.Add(part.Positions![part.Indices![i+j]]);
+                    }
+                }
+                offset += part.Indices!.Count / 3;
+                if (indices.Count == 0) continue;
+                AnalysisGroup.Children.Add(new MeshGeometryModel3D
+                {
+                    Geometry = new HelixToolkit.SharpDX.MeshGeometry3D { Positions = positions, Indices = indices },
+                    Material = new PhongMaterial { DiffuseColor = new Color4(1, 0.35f, 0, 1) },
+                    FillMode = SharpDX.Direct3D11.FillMode.Wireframe,
+                    CullMode = SharpDX.Direct3D11.CullMode.None,
+                    DepthBias = -100
+                });
+            }
+            AnalysisText.Text = $"Seuil {threshold:G} mm · échelle {scale:G} mm/unité : {result.ThinSamples.Count} zones potentiellement fines (orange), {result.SampleCount:N0}/{result.TriangleCount:N0} centres de faces sondés. " +
+                $"Arêtes ouvertes : {result.BoundaryEdges:N0} ; non-manifold : {result.NonManifoldEdges:N0} ; orientations incohérentes : {result.InconsistentEdges:N0} ; triangles invalides : {result.InvalidTriangles:N0}. " +
+                (result.BudgetExhausted ? "Budget atteint : analyse partielle. " : "") +
+                "Sondage non exhaustif selon les normales : détails fins et parois obliques peuvent être manqués. Soudures exactes ; auto-intersections et défauts aux sommets non vérifiés. Un maillage ouvert/incohérent rend les distances ambiguës. L’absence d’alerte ne garantit pas l’imprimabilité ; vérifier dans le trancheur.";
+        }
+        catch (OperationCanceledException) { if (version == _loadVersion) AnalysisText.Text = "Analyse annulée."; }
+        catch (Exception exception) { if (version == _loadVersion) AnalysisText.Text = "Analyse indisponible : " + exception.Message; }
+        finally
+        {
+            if (ReferenceEquals(_activeAnalysis, cancellation)) _activeAnalysis = null;
+            CancelAnalysisButton.IsEnabled = false;
+            AnalyzeButton.IsEnabled = _scene is not null && _activeLoad is null;
+        }
+    }
+
+    private void CancelAnalysis_Click(object sender, RoutedEventArgs e) => _activeAnalysis?.Cancel();
 
     private void SetCamera(Rect3D bounds)
     {
