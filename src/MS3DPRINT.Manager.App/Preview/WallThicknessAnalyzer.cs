@@ -17,6 +17,7 @@ public sealed record WallAnalysisResult(int TriangleCount, int SampleCount, int 
 public static class WallThicknessAnalyzer
 {
     private const int MaxSamples = 2048;
+    private const int MaxParityHits = 8192;
     private const long WorkLimit = 2_000_000;
 
     public static WallAnalysisResult Analyze(IReadOnlyList<WallTriangle> input, double millimetersPerUnit,
@@ -103,11 +104,16 @@ public static class WallThicknessAnalyzer
             var size = max - min;
             int axis = size.X >= size.Y && size.X >= size.Z ? 0 : size.Y >= size.Z ? 1 : 2;
             int comparisons = 0;
-            Array.Sort(ids, start, length, Comparer<int>.Create((a,b) =>
+            try { Array.Sort(ids, start, length, Comparer<int>.Create((a,b) =>
             {
                 if ((++comparisons & 8191) == 0) cancellationToken.ThrowIfCancellationRequested();
                 return Component(input[a].Center,axis).CompareTo(Component(input[b].Center,axis));
-            }));
+            })); }
+            catch (InvalidOperationException exception) when (cancellationToken.IsCancellationRequested)
+            {
+                // Array.Sort wraps exceptions thrown by its comparer.
+                throw new OperationCanceledException("Analyse annulée pendant le tri du maillage.", exception, cancellationToken);
+            }
             int half = length / 2;
             node.Left = Build(start, half); node.Right = Build(start + half, length - half);
             return node;
@@ -139,7 +145,25 @@ public static class WallThicknessAnalyzer
         {
             var distances = new List<float>();
             Visit(node);
-            return distances.Count;
+            if (work >= WorkLimit) return 0;
+            distances.Sort();
+            int crossings = 0;
+            float previous = 0;
+            foreach (float distance in distances)
+            {
+                if (work >= WorkLimit) return 0;
+                work++;
+                if ((work & 255) == 0) cancellationToken.ThrowIfCancellationRequested();
+                float tolerance = crossings == 0 ? 0 : 8f * Math.Max(
+                    MathF.BitIncrement(previous) - previous,
+                    MathF.BitIncrement(distance) - distance);
+                if (crossings == 0 || distance - previous > tolerance)
+                {
+                    crossings++;
+                    previous = distance;
+                }
+            }
+            return crossings;
 
             void Visit(Node current)
             {
@@ -158,9 +182,8 @@ public static class WallThicknessAnalyzer
                     work++;
                     int index = ids[j];
                     if (index == source || !RayDistance(input[index], origin, direction, out float distance) || distance <= 1e-7f) continue;
-                    // Adjacent coplanar triangles can share one ray crossing.
-                    if (distances.Any(d => Math.Abs(d - distance) <= Math.Max(1e-5f, distance * 1e-6f))) continue;
                     distances.Add(distance);
+                    if (distances.Count >= MaxParityHits) { work = WorkLimit; return; }
                 }
             }
         }

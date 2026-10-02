@@ -38,6 +38,22 @@ public class WallThicknessAnalyzerTests
     }
 
     [Fact]
+    public void SmallModelUnits_DoNotMergeSeparateEntryAndExitCrossings()
+    {
+        const float height = 0.000004f; // 4 mm at the explicitly selected scale.
+        const float gap = 0.0000004f; // 0.4 mm of air, not a wall.
+        var lower = Box(height);
+        var upper = Box(height).Select(t => new WallTriangle(
+            t.A + new Vector3(0, 0, height + gap),
+            t.B + new Vector3(0, 0, height + gap),
+            t.C + new Vector3(0, 0, height + gap)));
+        var result = WallThicknessAnalyzer.Analyze(lower.Concat(upper).ToArray(), 1_000_000, 1);
+
+        Assert.Equal(0, result.BoundaryEdges);
+        Assert.Empty(result.ThinSamples);
+    }
+
+    [Fact]
     public void ReversedWindingStillDetectsThinSolid()
     {
         var inward = Box(0.4f).Select(t => new WallTriangle(t.A, t.C, t.B)).ToArray();
@@ -68,6 +84,18 @@ public class WallThicknessAnalyzerTests
     }
 
     [Fact]
+    public void CancellationDuringBvhSort_IsReportedAsCancellation()
+    {
+        var triangles = Enumerable.Range(0, 1000).SelectMany(i => Box(4).Select(t =>
+            new WallTriangle(t.A + new Vector3(i * 20, 0, 0), t.B + new Vector3(i * 20, 0, 0), t.C + new Vector3(i * 20, 0, 0)))).ToArray();
+        using var source = new CancellationTokenSource();
+        var input = new CancelDuringSortList(triangles, source);
+
+        Assert.Throws<OperationCanceledException>(() => WallThicknessAnalyzer.Analyze(input, 1, 1, source.Token));
+        Assert.True(input.CancelledDuringSort);
+    }
+
+    [Fact]
     public void LargeMesh_UsesBoundedSamplesAndWork()
     {
         var triangles = Enumerable.Range(0, 10000).SelectMany(i => Box(0.4f).Select(t =>
@@ -83,5 +111,27 @@ public class WallThicknessAnalyzerTests
         Vector3[] v = [new(0,0,0), new(10,0,0), new(10,10,0), new(0,10,0), new(0,0,h), new(10,0,h), new(10,10,h), new(0,10,h)];
         int[] ix = [0,2,1, 0,3,2, 4,5,6, 4,6,7, 0,1,5, 0,5,4, 1,2,6, 1,6,5, 2,3,7, 2,7,6, 3,0,4, 3,4,7];
         return Enumerable.Range(0, 12).Select(i => new WallTriangle(v[ix[i*3]],v[ix[i*3+1]],v[ix[i*3+2]])).ToArray();
+    }
+
+    private sealed class CancelDuringSortList(WallTriangle[] triangles, CancellationTokenSource cancellation)
+        : IReadOnlyList<WallTriangle>
+    {
+        private int _reads;
+        public int Count => triangles.Length;
+        public bool CancelledDuringSort { get; private set; }
+        public WallTriangle this[int index]
+        {
+            get
+            {
+                if (++_reads == 2 * triangles.Length + 1000)
+                {
+                    CancelledDuringSort = true;
+                    cancellation.Cancel();
+                }
+                return triangles[index];
+            }
+        }
+        public IEnumerator<WallTriangle> GetEnumerator() => ((IEnumerable<WallTriangle>)triangles).GetEnumerator();
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }
