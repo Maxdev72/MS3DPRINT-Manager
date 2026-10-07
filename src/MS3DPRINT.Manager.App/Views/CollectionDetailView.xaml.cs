@@ -15,6 +15,7 @@ public partial class CollectionDetailView : UserControl
     {
         _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
         InitializeComponent();
+        Controls.FileManagement.StretchFileRows(FilesList);
         DataContext = _viewModel;
         Loaded += async (_, _) => await LoadFilesAsync(_viewModel.ReadFiles);
     }
@@ -28,6 +29,11 @@ public partial class CollectionDetailView : UserControl
     {
         if (FilesList.SelectedItem is not ProjectFileEntry entry) return;
         FilesList.SelectedItem = null;
+        OpenEntry(entry);
+    }
+
+    public void OpenEntry(ProjectFileEntry entry)
+    {
         if (entry.IsDirectory)
         {
             _selectedPreviewFile = null;
@@ -66,6 +72,10 @@ public partial class CollectionDetailView : UserControl
         if (_selectedPreviewFile is null) return;
         ModelPreviewLauncher.Show(_selectedPreviewFile.FullPath, Window.GetWindow(this));
     }
+
+    public void ConfigureFileManagement(string root, Window owner)
+        => Controls.FileManagement.Attach(FileActionsHost, FilesList, root,
+            () => string.IsNullOrWhiteSpace(_viewModel.CurrentDirectory) ? _viewModel.RootPath : _viewModel.CurrentDirectory, RefreshAsync, OpenEntry, owner);
 
     public Task RefreshAsync() => LoadFilesAsync(_viewModel.ReadFiles);
 

@@ -12,6 +12,7 @@ public sealed class ProjectProfileStore
 
     public IReadOnlyList<ProjectProfile> LoadAll()
     {
+        WorkspacePathSafety.EnsureNoLinks(_paths.ProjectsDirectory);
         if (!Directory.Exists(_paths.ProjectsDirectory)) return [];
         return Directory.EnumerateFiles(_paths.ProjectsDirectory, "*.json")
             .Select(Read)
@@ -21,6 +22,7 @@ public sealed class ProjectProfileStore
 
     public IReadOnlyList<ProjectProfile> LoadReadable()
     {
+        WorkspacePathSafety.EnsureNoLinks(_paths.ProjectsDirectory);
         if (!Directory.Exists(_paths.ProjectsDirectory)) return [];
         return Directory.EnumerateFiles(_paths.ProjectsDirectory, "*.json")
             .Select(TryRead)
@@ -33,7 +35,7 @@ public sealed class ProjectProfileStore
     public void Create(ProjectProfile profile)
     {
         Validate(profile);
-        _paths.EnsureMetadataDirectories();
+        EnsureSafeDirectories();
         if (File.Exists(Path(profile.Id)) || LoadAll().Any(existing =>
                 string.Equals(existing.FolderName, profile.FolderName, StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(existing.Reference, profile.Reference, StringComparison.OrdinalIgnoreCase)))
@@ -41,20 +43,24 @@ public sealed class ProjectProfileStore
             throw new InvalidOperationException("Une fiche projet existe déjà pour ce dossier.");
         }
 
+        new ProjectReferenceReservations(_paths.RootPath).Reserve(profile.Reference);
         Write(Path(profile.Id), profile);
     }
 
     public void Update(ProjectProfile profile)
     {
         Validate(profile);
-        _paths.EnsureMetadataDirectories();
+        EnsureSafeDirectories();
         var active = Path(profile.Id);
+        WorkspacePathSafety.EnsureNoLinks(active);
         if (!File.Exists(active)) throw new InvalidOperationException("La fiche projet est introuvable.");
         var temporary = active + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
             Write(temporary, profile);
+            WorkspacePathSafety.EnsureNoLinks(active);
             File.Copy(active, System.IO.Path.Combine(_paths.HistoryDirectory, profile.Id + "-" + DateTimeOffset.UtcNow.Ticks + ".json"), false);
+            WorkspacePathSafety.EnsureNoLinks(active);
             File.Replace(temporary, active, null);
         }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
@@ -62,6 +68,7 @@ public sealed class ProjectProfileStore
 
     private ProjectProfile Read(string path)
     {
+        WorkspacePathSafety.EnsureNoLinks(path);
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         return JsonSerializer.Deserialize<ProjectProfile>(stream) ?? throw new JsonException("La fiche projet est vide.");
     }
@@ -77,9 +84,18 @@ public sealed class ProjectProfileStore
 
     private static void Write(string path, ProjectProfile profile)
     {
+        WorkspacePathSafety.EnsureNoLinks(path);
         using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
         JsonSerializer.Serialize(stream, profile, JsonOptions);
         stream.Flush(true);
+    }
+
+    private void EnsureSafeDirectories()
+    {
+        WorkspacePathSafety.EnsureNoLinks(_paths.ClientsDirectory);
+        WorkspacePathSafety.EnsureNoLinks(_paths.ProjectsDirectory);
+        WorkspacePathSafety.EnsureNoLinks(_paths.HistoryDirectory);
+        _paths.EnsureMetadataDirectories();
     }
 
     private string Path(Guid id) => System.IO.Path.Combine(_paths.ProjectsDirectory, id + ".json");

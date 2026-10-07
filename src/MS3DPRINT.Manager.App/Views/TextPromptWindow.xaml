@@ -1,0 +1,11 @@
+<Window x:Class="MS3DPRINT.Manager.App.Views.TextPromptWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Width="520" SizeToContent="Height" WindowStartupLocation="CenterOwner" Style="{DynamicResource MaterialDesignWindow}" Background="{DynamicResource BackgroundBrush}">
+    <StackPanel Margin="24">
+        <TextBlock x:Name="DescriptionText" TextWrapping="Wrap" Margin="0,0,0,16" />
+        <TextBox x:Name="ValueBox" AutomationProperties.Name="Nom" />
+        <TextBlock x:Name="ErrorText" Foreground="{DynamicResource ErrorBrush}" TextWrapping="Wrap" Margin="0,10,0,0" />
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+            <Button Content="Annuler" IsCancel="True" Style="{DynamicResource SecondaryButton}" Margin="0,0,10,0" />
+            <Button Content="Valider" IsDefault="True" Click="Accept_Click" />
+        </StackPanel>
+    </StackPanel>
+</Window>

@@ -100,8 +100,10 @@ public sealed class ClientDetailViewModel : ObservableObject
     {
         if (_projectCatalog is null || _workspaceRoot is null) return [];
 
+        var clientPath = Path.GetFullPath(Path.Combine(_workspaceRoot,
+            _profile.RelativePath ?? Path.Combine("01_CLIENTS", _profile.FolderName)));
         return _projectCatalog.Load(_workspaceRoot)
-            .Where(project => string.Equals(project.ClientFolderName, _profile.FolderName, StringComparison.OrdinalIgnoreCase))
+            .Where(project => string.Equals(project.ClientPath, clientPath, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(project => project.Reference, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }

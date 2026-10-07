@@ -1,0 +1,29 @@
+<Window x:Class="MS3DPRINT.Manager.App.Views.FilamentEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Fiche filament" Width="500" Height="560" MinWidth="360" MinHeight="420"
+        Style="{DynamicResource MaterialDesignWindow}" Background="{DynamicResource BackgroundBrush}"
+        Foreground="{DynamicResource TextBrush}" WindowStartupLocation="CenterOwner">
+    <DockPanel Margin="24">
+        <StackPanel DockPanel.Dock="Bottom" Margin="0,18,0,0">
+            <TextBlock x:Name="ErrorText" Foreground="{DynamicResource ErrorBrush}" TextWrapping="Wrap" Margin="0,0,0,12" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Annuler" IsCancel="True" Style="{DynamicResource SecondaryButton}" Margin="0,0,12,0" />
+                <Button x:Name="SaveButton" Content="Enregistrer" IsDefault="True" Click="Save_Click" />
+            </StackPanel>
+        </StackPanel>
+        <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
+            <TextBlock Text="Fiche filament" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource InkBrush}" Margin="0,0,0,18" />
+            <TextBlock Text="Marque" /><TextBox x:Name="BrandBox" Margin="0,5,0,14" />
+            <TextBlock Text="Nom" /><TextBox x:Name="NameBox" Margin="0,5,0,14" />
+            <TextBlock Text="Matière / type" /><ComboBox x:Name="MaterialBox" IsEditable="True" Margin="0,5,0,14">
+                <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" Foreground="{DynamicResource TextBrush}" /></DataTemplate></ComboBox.ItemTemplate>
+            </ComboBox>
+            <TextBlock Text="Prix (€/kg)" /><TextBox x:Name="PriceBox" Margin="0,5,0,5" />
+            <TextBlock Text="Exemple : 24,90" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,14" />
+            <TextBlock Text="Abrasif" /><ComboBox x:Name="AbrasiveBox" Margin="0,5,0,0">
+                <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" Foreground="{DynamicResource TextBrush}" /></DataTemplate></ComboBox.ItemTemplate>
+            </ComboBox>
+        </StackPanel></ScrollViewer>
+    </DockPanel>
+</Window>

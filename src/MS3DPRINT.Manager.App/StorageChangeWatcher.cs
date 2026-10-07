@@ -18,7 +18,7 @@ public sealed class StorageChangeWatcher : IDisposable
             var relative = Path.GetRelativePath(root, path);
             var metadata = ".ms3dprint-manager";
             if (!relative.Equals(metadata, StringComparison.OrdinalIgnoreCase) && !relative.StartsWith(metadata + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) return true;
-            foreach (var folder in new[] { "clients", "projects" })
+            foreach (var folder in new[] { "clients", "projects", "collections", "filaments", "trash" })
             {
                 var catalog = Path.Combine(metadata, folder);
                 if (relative.Equals(catalog, StringComparison.OrdinalIgnoreCase)) return change is WatcherChangeTypes.Deleted or WatcherChangeTypes.Renamed;

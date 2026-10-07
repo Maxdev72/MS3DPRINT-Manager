@@ -15,6 +15,14 @@ public sealed class CollectionDetailViewModel : ObservableObject
     }
 
     public string Name => _item.Name;
+    public string? Description => _item.Profile?.Description;
+    public string? Contact => _item.Profile?.Contact;
+    public string? Address => _item.Profile?.Address;
+    public string? Phone => _item.Profile?.Phone;
+    public string? Email => _item.Profile?.Email;
+    public string? Website => _item.Profile?.Website;
+    public string? Notes => _item.Profile?.Notes;
+    public bool IsSupplier => _item.Path.Split(Path.DirectorySeparatorChar).Contains("06_FOURNISSEURS", StringComparer.OrdinalIgnoreCase);
     public string RootPath => _item.Path;
     public string CurrentDirectory { get; private set; } = string.Empty;
     public IReadOnlyList<ProjectFileEntry> FileEntries { get; private set; } = [];

@@ -13,4 +13,5 @@ public sealed record ClientProfile(
     PrimaryContact PrimaryContact,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
-    string? Siret = null);
+    string? Siret = null,
+    string? RelativePath = null);

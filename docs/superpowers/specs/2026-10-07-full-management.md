@@ -23,7 +23,7 @@ Architecture validée par l’utilisateur dans ce chat le 7 octobre 2026.
   abrasif oui/non. Ajouter, consulter, modifier, dupliquer, filtrer et restaurer.
   Pas de gestion de stock inventée dans cette version.
 - Services communs : refuser les chemins hors espace, collisions et déplacements
-  dans soi-même ; ne pas suivre les liens/reparse points ; préserver les données
+  dans soi-même ; refuser les liens et jonctions (les placeholders Windows Cloud Files sont autorisés) ; préserver les données
   lorsqu’une opération échoue. Tester uniquement dans des dossiers temporaires.
 - Interface Material Design et tous les thèmes conservés. Pas de perte d’une
   fiche non enregistrée pendant une navigation ou une opération de gestion.

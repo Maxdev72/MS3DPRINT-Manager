@@ -113,6 +113,7 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
         <Border Grid.Column="0" Background="{DynamicResource HeaderBrush}" Padding="12,22">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel>
                 <TextBlock Text="MS3DPRINT" Foreground="{DynamicResource HeaderTextBrush}" FontWeight="SemiBold" FontSize="17" Margin="10,0,0,22" />
                 <Button Style="{StaticResource NavigationButton}" Click="Dashboard_Click" Content="Tableau de bord" Tag="ViewDashboard" />
@@ -122,8 +123,11 @@
                 <Button Style="{StaticResource NavigationButton}" Click="Models_Click" Margin="0,5,0,0" Content="Modèles 3D" Tag="CubeOutline" />
                 <Button Style="{StaticResource NavigationButton}" Click="Products_Click" Margin="0,5,0,0" Content="Produits" Tag="PackageVariant" />
                 <Button Style="{StaticResource NavigationButton}" Click="Suppliers_Click" Margin="0,5,0,0" Content="Fournisseurs" Tag="Truck" />
+                <Button Style="{StaticResource NavigationButton}" Click="Filaments_Click" Margin="0,5,0,0" Content="Filaments" Tag="Layers" />
+                <Button Style="{StaticResource NavigationButton}" Click="Trash_Click" Margin="0,5,0,0" Content="Corbeille" Tag="DeleteRestore" />
                 <Button Style="{StaticResource NavigationButton}" Click="Open3DViewer_Click" Margin="0,16,0,0" Content="Visualiseur 3D" Tag="CubeScan" />
             </StackPanel>
+            </ScrollViewer>
         </Border>
         <DockPanel Grid.Column="1">
         <Border DockPanel.Dock="Top" Background="{DynamicResource HeaderBrush}" Padding="28,24">

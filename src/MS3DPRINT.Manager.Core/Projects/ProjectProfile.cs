@@ -12,4 +12,5 @@ public sealed record ProjectProfile(
     DateOnly? DueDate,
     string? Description,
     string? Notes,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    string? RelativePath = null);

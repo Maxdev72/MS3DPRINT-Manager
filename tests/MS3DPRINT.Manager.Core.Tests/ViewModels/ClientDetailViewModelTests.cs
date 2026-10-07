@@ -1,6 +1,7 @@
 using MS3DPRINT.Manager.App.ViewModels;
 using MS3DPRINT.Manager.Core.Clients;
 using MS3DPRINT.Manager.Core.Workspace;
+using MS3DPRINT.Manager.Core.Projects;
 
 namespace MS3DPRINT.Manager.Core.Tests.ViewModels;
 
@@ -114,6 +115,36 @@ public sealed class ClientDetailViewModelTests : IDisposable
 
         Assert.Throws<ArgumentException>(() => viewModel.Save());
         Assert.Equal("Dupont", store.LoadAll().Single().LastName);
+    }
+
+    [Fact]
+    public void ClassifiedClientsWithSameFolderName_ShowOnlyTheirOwnProjectsAndKeepPathOnSave()
+    {
+        var store = new ClientProfileStore(new(_root));
+        var projects = new ProjectProfileStore(new(_root));
+        var now = DateTimeOffset.UtcNow;
+        ClientProfile? selected = null;
+        foreach (var code in new[] { "AAA", "BBB" })
+        {
+            var relative = Path.Combine("01_CLIENTS", code, "ATELIER");
+            var path = Directory.CreateDirectory(Path.Combine(_root, relative)).FullName;
+            var client = new ClientProfile(Guid.NewGuid(), ClientKind.Professional, code, code, code, null, null, null, null,
+                new(null, null, null, null, null), now, now);
+            store.Create(client);
+            client = client with { FolderName = "ATELIER", RelativePath = relative };
+            store.Update(client);
+            var reference = code + "-2026-001";
+            var folder = reference + "_TEST";
+            Directory.CreateDirectory(Path.Combine(path, folder));
+            projects.Create(new(Guid.NewGuid(), client.Id, code, reference, folder, "TEST", ProjectStatus.Quote, now, null, null, null, now,
+                RelativePath: Path.Combine(relative, folder)));
+            selected ??= client;
+        }
+        var model = new ClientDetailViewModel(selected!, store, new ProjectCatalog(projects), _root);
+        Assert.Equal("AAA-2026-001", Assert.Single(model.LoadProjects()).Reference);
+        model.Notes = "Adresse de classement conservée";
+        model.Save();
+        Assert.Equal(selected!.RelativePath, store.Load(selected.Id).RelativePath);
     }
 
     public void Dispose()

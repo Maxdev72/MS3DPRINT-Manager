@@ -15,6 +15,7 @@ public partial class ProjectDetailView : UserControl, IUnsavedChangesPage
     public ProjectDetailView(ProjectDetailViewModel viewModel)
     {
         InitializeComponent();
+        Controls.FileManagement.StretchFileRows(FilesList);
         _viewModel = viewModel;
         DataContext = _viewModel;
         Loaded += async (_, _) =>
@@ -46,6 +47,11 @@ public partial class ProjectDetailView : UserControl, IUnsavedChangesPage
     {
         if (FilesList.SelectedItem is not ProjectFileEntry entry) return;
         FilesList.SelectedItem = null;
+        OpenEntry(entry);
+    }
+
+    public void OpenEntry(ProjectFileEntry entry)
+    {
         if (entry.IsDirectory)
         {
             _selectedPreviewFile = null;
@@ -84,6 +90,10 @@ public partial class ProjectDetailView : UserControl, IUnsavedChangesPage
         if (_selectedPreviewFile is null) return;
         ModelPreviewLauncher.Show(_selectedPreviewFile.FullPath, Window.GetWindow(this));
     }
+
+    public void ConfigureFileManagement(string root, Window owner)
+        => Controls.FileManagement.Attach(FileActionsHost, FilesList, root,
+            () => string.IsNullOrWhiteSpace(_viewModel.CurrentDirectory) ? _viewModel.ProjectPath : _viewModel.CurrentDirectory, RefreshAsync, OpenEntry, owner);
 
     public Task RefreshAsync() => LoadFilesAsync(_viewModel.ReadFiles);
 

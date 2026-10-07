@@ -3,6 +3,7 @@ using System.Text;
 using MS3DPRINT.Manager.Core.Storage;
 using MS3DPRINT.Manager.Core.Templates;
 using MS3DPRINT.Manager.Core.Clients;
+using MS3DPRINT.Manager.Core.Workspace;
 
 namespace MS3DPRINT.Manager.Core.Projects;
 
@@ -19,7 +20,8 @@ public sealed class ProjectCreationService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(clientPath);
         var fullClientPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(clientPath));
-        using var mutex = new Mutex(false, LockName(fullClientPath));
+        var reservations = new ProjectReferenceReservations(WorkspaceRoot(fullClientPath));
+        using var mutex = new Mutex(false, LockName(reservations.DirectoryPath));
         var acquired = false;
         try
         {
@@ -37,9 +39,12 @@ public sealed class ProjectCreationService
                 throw new DirectoryNotFoundException("Le dossier du client sélectionné est introuvable.");
             }
 
+            WorkspacePathSafety.EnsureNoLinks(fullClientPath);
+
             var existingNames = Directory.EnumerateDirectories(fullClientPath, "*", SearchOption.TopDirectoryOnly)
-                .Select(Path.GetFileName).OfType<string>().ToArray();
+                .Select(Path.GetFileName).OfType<string>().Concat(reservations.ExistingNames()).ToArray();
             var reference = ProjectReferenceGenerator.Create(clientCode, year, existingNames, projectName);
+            reservations.Reserve($"{reference.ClientCode}-{reference.Year:D4}-{reference.Sequence:D3}");
             _folders.CreateTree(Path.Combine(fullClientPath, reference.FolderName), FolderTemplates.Project);
             return reference;
         }
@@ -47,6 +52,14 @@ public sealed class ProjectCreationService
         {
             if (acquired) mutex.ReleaseMutex();
         }
+    }
+
+    private static string WorkspaceRoot(string clientPath)
+    {
+        for (string? current = clientPath; current is not null; current = Path.GetDirectoryName(current))
+            if (Path.GetFileName(current).Equals("01_CLIENTS", StringComparison.OrdinalIgnoreCase))
+                return Path.GetDirectoryName(current)!;
+        return clientPath;
     }
 
     public (ProjectReference Reference, ProjectProfile Profile) CreateWithProfile(
@@ -60,7 +73,8 @@ public sealed class ProjectCreationService
         var now = DateTimeOffset.UtcNow;
         var profile = new ProjectProfile(Guid.NewGuid(), client.Profile.Id, client.ClientCode,
             $"{reference.ClientCode}-{reference.Year:D4}-{reference.Sequence:D3}", reference.FolderName,
-            reference.NormalizedProjectName, ProjectStatus.Quote, now, dueDate, description, null, now);
+            reference.NormalizedProjectName, ProjectStatus.Quote, now, dueDate, description, null, now,
+            Path.GetRelativePath(WorkspaceRoot(client.ClientPath), Path.Combine(client.ClientPath, reference.FolderName)).Replace('\\', '/'));
         profiles.Create(profile);
         return (reference, profile);
     }

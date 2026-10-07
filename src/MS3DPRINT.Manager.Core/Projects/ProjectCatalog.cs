@@ -1,4 +1,6 @@
 using System.Text.RegularExpressions;
+using MS3DPRINT.Manager.Core.Clients;
+using MS3DPRINT.Manager.Core.Workspace;
 
 namespace MS3DPRINT.Manager.Core.Projects;
 
@@ -12,13 +14,27 @@ public sealed class ProjectCatalog
     public IReadOnlyList<ProjectSummary> Load(string workspaceRoot)
     {
         var clientsRoot = Path.Combine(Path.GetFullPath(workspaceRoot), "01_CLIENTS");
+        WorkspacePathSafety.EnsureNoLinks(clientsRoot);
         if (!Directory.Exists(clientsRoot)) return [];
         var profiles = _profiles.LoadReadable().ToDictionary(profile => profile.FolderName, StringComparer.OrdinalIgnoreCase);
-        return Directory.EnumerateDirectories(clientsRoot, "*", SearchOption.TopDirectoryOnly)
-            .SelectMany(clientPath => Directory.EnumerateDirectories(clientPath, "*", SearchOption.TopDirectoryOnly)
-                .Select(projectPath => CreateSummary(clientPath, projectPath, profiles)))
-            .Where(project => project is not null)
-            .Cast<ProjectSummary>()
+        var clients = new ClientCatalog(new ClientProfileStore(new WorkspaceMetadataPaths(workspaceRoot))).Load(workspaceRoot);
+        var discovered = clients
+            .SelectMany(client => Directory.EnumerateDirectories(client.ClientPath, "*", SearchOption.TopDirectoryOnly)
+                .Where(IsSafe)
+                .Select(projectPath => CreateSummary(client.ClientPath, projectPath, profiles)))
+            .Where(project => project is not null).Cast<ProjectSummary>();
+        var indexed = new List<ProjectSummary>();
+        foreach (var profile in profiles.Values.Where(profile => profile.RelativePath is not null))
+        {
+            try
+            {
+                var path = WorkspaceEntityPaths.Resolve(workspaceRoot, profile.RelativePath!, "01_CLIENTS");
+                if (IsSafe(path) && Directory.Exists(path)) indexed.Add(new(Path.GetFileName(Path.GetDirectoryName(path)!), Path.GetDirectoryName(path)!, path, profile.Reference, profile.FolderName, profile));
+            }
+            catch (ArgumentException) { }
+        }
+        return discovered.Concat(indexed)
+            .GroupBy(project => project.ProjectPath, StringComparer.OrdinalIgnoreCase).Select(group => group.Last())
             .OrderByDescending(project => project.Reference, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
@@ -31,4 +47,6 @@ public sealed class ProjectCatalog
         profiles.TryGetValue(folderName, out var profile);
         return new ProjectSummary(Path.GetFileName(clientPath), clientPath, projectPath, match.Groups["reference"].Value, folderName, profile);
     }
+    private static bool IsSafe(string path)
+    { try { WorkspacePathSafety.EnsureNoLinks(path); return true; } catch (IOException) { return false; } catch (UnauthorizedAccessException) { return false; } }
 }

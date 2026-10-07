@@ -1,0 +1,49 @@
+<UserControl x:Class="MS3DPRINT.Manager.App.Views.FilamentsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Foreground="{DynamicResource TextBrush}">
+    <Grid Margin="28,23">
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+        <StackPanel>
+            <TextBlock Text="Filaments" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource InkBrush}" />
+            <TextBlock Text="Votre bibliothèque de matières et de prix par kilogramme." Foreground="{DynamicResource MutedBrush}" Margin="0,5,0,14" TextWrapping="Wrap" />
+            <WrapPanel>
+                <Button Content="Ajouter" Click="Add_Click" Margin="0,0,10,8" />
+                <Button Content="Modifier" Click="Edit_Click" IsEnabled="{Binding HasSelection}" Margin="0,0,10,8" />
+                <Button Content="Dupliquer" Click="Duplicate_Click" IsEnabled="{Binding HasSelection}" Margin="0,0,10,8" />
+                <Button Content="Supprimer" Click="Trash_Click" IsEnabled="{Binding HasSelection}" Style="{DynamicResource SecondaryButton}" Margin="0,0,10,8" />
+                <Button Content="Actualiser" Click="Refresh_Click" Style="{DynamicResource SecondaryButton}" Margin="0,0,0,8" />
+            </WrapPanel>
+        </StackPanel>
+        <TextBlock x:Name="ErrorText" Grid.Row="1" Foreground="{DynamicResource ErrorBrush}" TextWrapping="Wrap" Margin="0,6,0,8" />
+        <WrapPanel Grid.Row="2" Margin="0,6,0,14">
+            <StackPanel Margin="0,0,12,8"><TextBlock Text="Rechercher" /><TextBox x:Name="SearchBox" Width="200" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Margin="0,5,0,0" /></StackPanel>
+            <StackPanel Margin="0,0,12,8"><TextBlock Text="Marque" /><ComboBox Width="170" ItemsSource="{Binding Brands}" SelectedItem="{Binding BrandFilter}" Margin="0,5,0,0"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" Foreground="{DynamicResource TextBrush}" /></DataTemplate></ComboBox.ItemTemplate></ComboBox></StackPanel>
+            <StackPanel Margin="0,0,12,8"><TextBlock Text="Matière / type" /><ComboBox Width="150" ItemsSource="{Binding Materials}" SelectedItem="{Binding MaterialFilter}" Margin="0,5,0,0"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" Foreground="{DynamicResource TextBrush}" /></DataTemplate></ComboBox.ItemTemplate></ComboBox></StackPanel>
+            <StackPanel Margin="0,0,0,8"><TextBlock Text="Abrasif" /><ComboBox x:Name="AbrasiveFilterBox" Width="140" SelectionChanged="AbrasiveFilter_SelectionChanged" Margin="0,5,0,0"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" Foreground="{DynamicResource TextBrush}" /></DataTemplate></ComboBox.ItemTemplate></ComboBox></StackPanel>
+        </WrapPanel>
+        <ListView x:Name="FilamentsList" Grid.Row="3" ItemsSource="{Binding VisibleFilaments}" SelectedItem="{Binding SelectedFilament}" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}">
+            <ListView.ItemContainerStyle><Style TargetType="ListViewItem">
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+                <Style.Triggers><Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource CardHoverBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                    <Setter Property="BorderThickness" Value="2" />
+                </Trigger></Style.Triggers>
+            </Style></ListView.ItemContainerStyle>
+            <ListView.ItemTemplate><DataTemplate>
+                <Border Padding="12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+                    <StackPanel>
+                        <WrapPanel><TextBlock Text="{Binding Brand}" FontWeight="SemiBold" Margin="0,0,8,0" /><TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" /></WrapPanel>
+                        <WrapPanel Margin="0,6,0,0">
+                            <TextBlock Text="{Binding Material}" Margin="0,0,20,0" />
+                            <TextBlock Text="{Binding PricePerKg, StringFormat={}{0:N2} €/kg}" Language="fr-FR" Margin="0,0,20,0" />
+                            <TextBlock><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Text" Value="Abrasif : non" /><Style.Triggers><DataTrigger Binding="{Binding IsAbrasive}" Value="True"><Setter Property="Text" Value="Abrasif : oui" /></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
+            </DataTemplate></ListView.ItemTemplate>
+        </ListView>
+    </Grid>
+</UserControl>

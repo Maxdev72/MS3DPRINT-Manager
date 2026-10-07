@@ -43,6 +43,8 @@ public partial class MainWindow : Window
         DataContext = _viewModel;
         Loaded += async (_, _) =>
         {
+            try { Management.RecoverPendingOperations(); }
+            catch (Exception exception) { MessageBox.Show(this, UiErrorMessages.For(exception), "Opération interrompue", MessageBoxButton.OK, MessageBoxImage.Warning); }
             StartStorageWatcher();
             await RefreshDashboardSafelyAsync();
         };
@@ -153,6 +155,7 @@ public partial class MainWindow : Window
                 : string.Join(" ", new[] { profile.FirstName, profile.LastName }.Where(value => !string.IsNullOrWhiteSpace(value)))
         };
         var page = new ClientDetailView(new ClientDetailViewModel(profile, _clientProfiles, _projectCatalog, _viewModel.StorageRoot));
+        WireClientActions(page, client);
         page.BackRequested += (_, _) => navigateBack();
         page.CreateProjectRequested += (_, _) => Run(() =>
         {
@@ -179,7 +182,7 @@ public partial class MainWindow : Window
         page.BackRequested += (_, _) => TryShowPage(DashboardPage);
         page.CreateRequested += (_, _) => Run(() =>
         {
-            ShowDialog(new CreateNamedItemWindow(createTitle, Path.Combine(_viewModel.StorageRoot, parentFolder), template, _folders) { Owner = this });
+            CreateCollection(createTitle, parentFolder, template, () => ShowCategory(parentFolder));
         });
         page.ItemSelected += item => ShowCollectionDetail(item, () => ShowCollection(title, subtitle, parentFolder, template, createTitle));
         TryShowPage(page);
@@ -188,6 +191,7 @@ public partial class MainWindow : Window
     private void ShowCollectionDetail(CollectionItemSummary item, Action backRequested)
     {
         var page = new CollectionDetailView(new CollectionDetailViewModel(item));
+        WireCollectionActions(page, item, backRequested);
         page.BackRequested += (_, _) => backRequested();
         TryShowPage(page);
     }
@@ -205,6 +209,7 @@ public partial class MainWindow : Window
             return;
         }
         var page = new ProjectDetailView(new ProjectDetailViewModel(project, _projectProfiles));
+        WireProjectActions(page, project);
         page.BackRequested += (_, _) => navigateBack();
         page.ClassifyRequested += (_, _) => Run(() => ShowDialog(new ClassifyFileWindow(_viewModel.StorageRoot, project.ProjectPath) { Owner = this }));
         TryShowPage(page);
@@ -238,7 +243,7 @@ public partial class MainWindow : Window
         new SettingsWindow(_themeSettings, _viewModel.StorageRoot) { Owner = this }.ShowDialog());
 
     private void ShowNamedItem(string title, string parentFolder, IReadOnlyList<string> template)
-        => Run(() => ShowDialog(new CreateNamedItemWindow(title, Path.Combine(_viewModel.StorageRoot, parentFolder), template, _folders) { Owner = this }));
+        => Run(() => CreateCollection(title, parentFolder, template));
 
     private void ShowDialog(Window dialog)
     {
@@ -259,6 +264,7 @@ public partial class MainWindow : Window
 
     private bool CanLeaveCurrentPage()
     {
+        if (_managementNavigation) return true;
         if (PageHost.Content is not IUnsavedChangesPage editable) return true;
         return NavigationGuard.TryLeave(editable.HasUnsavedChanges,
             () => MessageBox.Show(this,
@@ -290,6 +296,7 @@ public partial class MainWindow : Window
             ClientsView view => view.RefreshAsync(), ProjectsView view => view.RefreshAsync(),
             CollectionView view => view.RefreshAsync(), ClientDetailView view => view.RefreshAsync(),
             ProjectDetailView view => view.RefreshAsync(), CollectionDetailView view => view.RefreshAsync(),
+            FilamentsView view => view.RefreshAsync(), TrashView view => view.RefreshAsync(),
             _ => Task.CompletedTask
         };
         await Task.WhenAll(refresh, RefreshDashboardSafelyAsync());

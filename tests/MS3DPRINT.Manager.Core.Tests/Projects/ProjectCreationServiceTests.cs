@@ -27,6 +27,36 @@ public sealed class ProjectCreationServiceTests : IDisposable
         Assert.True(Directory.Exists(Path.Combine(clientPath, second.FolderName)));
     }
 
+    [Fact]
+    public void Create_NeverReusesReferencesAfterMoveOrTrashAndAllowsRestore()
+    {
+        var client = Directory.CreateDirectory(Path.Combine(_root, "01_CLIENTS", "MPO")).FullName;
+        var service = new ProjectCreationService(new FolderTreeService());
+        var first = service.Create(client, "MPO", 2026, "Premier");
+        var moved = Path.Combine(client, "Group", "Renomme");
+        Directory.CreateDirectory(Path.GetDirectoryName(moved)!);
+        Directory.Move(Path.Combine(client, first.FolderName), moved);
+        var second = service.Create(client, "MPO", 2026, "Deuxieme");
+        Assert.Equal(2, second.Sequence);
+        var files = new MS3DPRINT.Manager.Core.Workspace.ManagedFileService(_root);
+        var trash = files.Trash(Path.Combine(client, second.FolderName));
+        var third = new ProjectCreationService(new FolderTreeService()).Create(client, "MPO", 2026, "Troisieme");
+        Assert.Equal(3, third.Sequence);
+        files.Restore(trash.Id);
+        Assert.True(Directory.Exists(Path.Combine(client, second.FolderName)));
+    }
+
+    [Fact]
+    public void Create_SeedsLegacyReferencesFromNestedFoldersAndTrash()
+    {
+        var client = Directory.CreateDirectory(Path.Combine(_root, "01_CLIENTS", "MPO")).FullName;
+        Directory.CreateDirectory(Path.Combine(client, "Group", "MPO-2026-008_LEGACY"));
+        var old = Directory.CreateDirectory(Path.Combine(client, "MPO-2026-010_ANCIEN")).FullName;
+        new MS3DPRINT.Manager.Core.Workspace.ManagedFileService(_root).Trash(old);
+        var created = new ProjectCreationService(new FolderTreeService()).Create(client, "MPO", 2026, "Suivant");
+        Assert.Equal(11, created.Sequence);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
@@ -38,7 +68,7 @@ public sealed class ProjectCreationServiceTests : IDisposable
         var root = Path.Combine(Path.GetTempPath(), "MS3DPRINT-project-profile-create-" + Guid.NewGuid().ToString("N"));
         try
         {
-            var clientPath = Path.Combine(root, "01_CLIENTS", "MPO");
+            var clientPath = Path.Combine(root, "01_CLIENTS", "Group", "MPO");
             Directory.CreateDirectory(clientPath);
             var clientProfile = new MS3DPRINT.Manager.Core.Clients.ClientProfile(Guid.NewGuid(), MS3DPRINT.Manager.Core.Clients.ClientKind.Professional, "MPO", "MPO", "MPO", null, null, null, null, new MS3DPRINT.Manager.Core.Clients.PrimaryContact(null, null, null, null, null), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
             var client = new MS3DPRINT.Manager.Core.Clients.ClientSummary(clientPath, "MPO", "MPO", "MPO", MS3DPRINT.Manager.Core.Clients.ClientKind.Professional, clientProfile, 0);
@@ -49,6 +79,8 @@ public sealed class ProjectCreationServiceTests : IDisposable
 
             Assert.Equal(ProjectStatus.Quote, result.Profile.Status);
             Assert.True(Directory.Exists(Path.Combine(clientPath, result.Reference.FolderName)));
+            Assert.Equal("01_CLIENTS/Group/MPO/MPO-2026-001_OUTILLAGE", result.Profile.RelativePath?.Replace('\\', '/'));
+            Assert.Equal(Path.Combine(clientPath, result.Reference.FolderName), Assert.Single(new ProjectCatalog(profiles).Load(root)).ProjectPath);
         }
         finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
     }

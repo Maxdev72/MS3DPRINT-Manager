@@ -42,7 +42,28 @@ registre local nécessaire pour retrouver ces codes.
   pour les pages, cartes et menus ; les bordures et survols restent visibles.
 - **Clients** : ouvrez une fiche pour modifier la raison sociale ou le nom du
   particulier, l’adresse, le contact principal et les notes. Le code client
-  et le nom du dossier restent inchangés pour préserver les projets existants.
+  reste inchangé. Les actions **Renommer**, **Déplacer** et **Supprimer**
+  gèrent le dossier avec ses projets, documents et fiches. Un client peut être
+  déplacé dans un dossier de classement sous `01_CLIENTS`.
+- **Projets** : modifiez la fiche, renommez le projet ou déplacez-le vers un
+  autre client. Sa référence et son identifiant restent conservés.
+- **Fournisseurs, modèles et produits** : chaque dossier peut recevoir une
+  fiche avec nom, description et notes. Les fournisseurs proposent également
+  contact, adresse, téléphone, courriel et site web. Les fiches restent
+  accessibles après déplacement dans leur catégorie.
+- Dans les documents d’une fiche, utilisez **Nouveau dossier**, **Importer**
+  ou le clic droit pour ouvrir, renommer, déplacer ou supprimer un élément.
+  Les destinations doivent rester dans l’espace géré. Un élément existant
+  à destination n’est jamais écrasé.
+- **Corbeille** : les suppressions conservent les documents et leurs fiches.
+  Sélectionnez un élément puis **Restaurer** pour le remettre à son emplacement
+  d’origine. Si cet emplacement est occupé, libérez-le avant de restaurer.
+  Les références des projets restent réservées après une suppression.
+- **Filaments** : ajoutez, modifiez, dupliquez ou supprimez vos références.
+  Chaque fiche contient la marque, le nom, le type de matière, le prix au
+  kilogramme et le caractère abrasif. Le type accepte aussi une saisie libre
+  (par exemple PA-CF). Les filtres portent sur marque, matière et abrasivité.
+  Les fiches supprimées sont restaurables depuis la corbeille.
 - Pour un client professionnel, la recherche d'entreprise propose une aide à
   la saisie du nom et du SIRET ; l'adresse peut ensuite être complétée. Un
   particulier n'a pas de champ SIRET. La connexion Internet n'est nécessaire

@@ -1,0 +1,8 @@
+<UserControl x:Class="MS3DPRINT.Manager.App.Controls.EntityActions" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <WrapPanel Margin="0,12,0,4">
+        <Button x:Name="EditButton" Content="Modifier la fiche" Click="Edit_Click" Style="{DynamicResource SecondaryButton}" Margin="0,0,8,8" Visibility="Collapsed" />
+        <Button Content="Renommer…" Click="Rename_Click" Style="{DynamicResource SecondaryButton}" Margin="0,0,8,8" />
+        <Button Content="Déplacer…" Click="Move_Click" Style="{DynamicResource SecondaryButton}" Margin="0,0,8,8" />
+        <Button Content="Supprimer…" Click="Trash_Click" Style="{DynamicResource SecondaryButton}" Foreground="{DynamicResource ErrorBrush}" BorderBrush="{DynamicResource ErrorBrush}" Margin="0,0,8,8" />
+    </WrapPanel>
+</UserControl>

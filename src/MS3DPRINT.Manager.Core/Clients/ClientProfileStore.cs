@@ -13,6 +13,7 @@ public sealed class ClientProfileStore
 
     public IReadOnlyList<ClientProfile> LoadAll()
     {
+        WorkspacePathSafety.EnsureNoLinks(_paths.ClientsDirectory);
         if (!Directory.Exists(_paths.ClientsDirectory)) return [];
 
         return Directory.EnumerateFiles(_paths.ClientsDirectory, "*.json", SearchOption.TopDirectoryOnly)
@@ -23,6 +24,7 @@ public sealed class ClientProfileStore
 
     public IReadOnlyList<ClientProfile> LoadReadable()
     {
+        WorkspacePathSafety.EnsureNoLinks(_paths.ClientsDirectory);
         if (!Directory.Exists(_paths.ClientsDirectory)) return [];
 
         return Directory.EnumerateFiles(_paths.ClientsDirectory, "*.json", SearchOption.TopDirectoryOnly)
@@ -44,7 +46,7 @@ public sealed class ClientProfileStore
     public void Create(ClientProfile profile)
     {
         Validate(profile);
-        _paths.EnsureMetadataDirectories();
+        EnsureSafeDirectories();
         if (File.Exists(ProfilePath(profile.Id)) || LoadAll().Any(existing => string.Equals(existing.FolderName, profile.FolderName, StringComparison.OrdinalIgnoreCase)))
             throw new InvalidOperationException("Une fiche client existe déjà pour ce dossier.");
 
@@ -55,14 +57,17 @@ public sealed class ClientProfileStore
     {
         Validate(profile);
         var activePath = ProfilePath(profile.Id);
+        WorkspacePathSafety.EnsureNoLinks(activePath);
         if (!File.Exists(activePath)) throw new InvalidOperationException("La fiche client à modifier est introuvable.");
 
-        _paths.EnsureMetadataDirectories();
+        EnsureSafeDirectories();
         var temporaryPath = activePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
             WriteNew(temporaryPath, profile);
+            WorkspacePathSafety.EnsureNoLinks(activePath);
             File.Copy(activePath, Path.Combine(_paths.HistoryDirectory, profile.Id + "-" + DateTimeOffset.UtcNow.Ticks + ".json"), overwrite: false);
+            WorkspacePathSafety.EnsureNoLinks(activePath);
             File.Replace(temporaryPath, activePath, destinationBackupFileName: null);
         }
         finally
@@ -73,6 +78,7 @@ public sealed class ClientProfileStore
 
     private ClientProfile ReadProfile(string path)
     {
+        WorkspacePathSafety.EnsureNoLinks(path);
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         return JsonSerializer.Deserialize<ClientProfile>(stream) ?? throw new JsonException("La fiche client est vide.");
     }
@@ -88,9 +94,18 @@ public sealed class ClientProfileStore
 
     private void WriteNew(string path, ClientProfile profile)
     {
+        WorkspacePathSafety.EnsureNoLinks(path);
         using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
         JsonSerializer.Serialize(stream, profile, JsonOptions);
         stream.Flush(flushToDisk: true);
+    }
+
+    private void EnsureSafeDirectories()
+    {
+        WorkspacePathSafety.EnsureNoLinks(_paths.ClientsDirectory);
+        WorkspacePathSafety.EnsureNoLinks(_paths.ProjectsDirectory);
+        WorkspacePathSafety.EnsureNoLinks(_paths.HistoryDirectory);
+        _paths.EnsureMetadataDirectories();
     }
 
     private string ProfilePath(Guid id) => Path.Combine(_paths.ClientsDirectory, id + ".json");
