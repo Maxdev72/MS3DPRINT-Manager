@@ -45,6 +45,22 @@ public static class FileManagement
             var button = new Button { Content = label, Margin = new Thickness(0, 0, 10, 8) };
             button.SetResourceReference(FrameworkElement.StyleProperty, "SecondaryButton"); toolbar.Children.Add(button); return button;
         }
+        async Task Rename(string path, bool isDirectory)
+        {
+            await Run(() =>
+            {
+                var project = isDirectory ? projects.Load(root).FirstOrDefault(p =>
+                    string.Equals(p.ProjectPath, path, StringComparison.OrdinalIgnoreCase)) : null;
+                var extension = Path.GetExtension(path);
+                var description = project is not null
+                    ? "Modifiez le nom du projet. Sa référence restera inchangée."
+                    : isDirectory ? "Le nom du dossier sera modifié."
+                    : "Saisissez le nouveau nom du fichier" + (extension.Length == 0 ? "." : $" en conservant son extension {extension}.");
+                var prompt = new TextPromptWindow("Renommer", description,
+                    project?.ProjectName ?? Path.GetFileName(path)) { Owner = owner };
+                if (prompt.ShowDialog() == true) entities.RenamePath(path, prompt.Value);
+            });
+        }
         AddButton("Nouveau dossier…").Click += async (_, _) =>
         {
             var prompt = new TextPromptWindow("Nouveau dossier", "Nom du sous-dossier à créer") { Owner = owner };
@@ -62,6 +78,15 @@ public static class FileManagement
                 if (failures.Count > 0) throw new IOException(string.Join(Environment.NewLine, failures));
             });
         };
+        AddButton("Renommer un fichier…").Click += async (_, _) =>
+        {
+            var picker = new OpenFileDialog
+            {
+                Title = "Choisissez le fichier à renommer", InitialDirectory = currentDirectory(),
+                CheckFileExists = true, Multiselect = false
+            };
+            if (picker.ShowDialog(owner) == true) await Rename(picker.FileName, isDirectory: false);
+        };
         var help = new TextBlock { Text = "Clic droit : ouvrir, renommer, déplacer, supprimer.", Margin = new Thickness(0, 10, 0, 8), TextWrapping = TextWrapping.Wrap };
         help.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush"); toolbar.Children.Add(help);
 
@@ -74,15 +99,7 @@ public static class FileManagement
         {
             if (selected is null) return;
             var entry = selected;
-            await Run(() =>
-            {
-                var project = entry.IsDirectory ? projects.Load(root).FirstOrDefault(p =>
-                    string.Equals(p.ProjectPath, entry.FullPath, StringComparison.OrdinalIgnoreCase)) : null;
-                var prompt = new TextPromptWindow("Renommer", project is null
-                    ? "Le nom du fichier ou du dossier sera modifié."
-                    : "Modifiez le nom du projet. Sa référence restera inchangée.", project?.ProjectName ?? entry.Name) { Owner = owner };
-                if (prompt.ShowDialog() == true) entities.RenamePath(entry.FullPath, prompt.Value);
-            });
+            await Rename(entry.FullPath, entry.IsDirectory);
         };
         AddItem("Déplacer…").Click += async (_, _) =>
         {

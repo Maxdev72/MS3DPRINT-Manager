@@ -52,7 +52,10 @@ registre local nécessaire pour retrouver ces codes.
   contact, adresse, téléphone, courriel et site web. Les fiches restent
   accessibles après déplacement dans leur catégorie.
 - Dans les documents d’une fiche, utilisez **Nouveau dossier**, **Importer**
-  ou le clic droit pour ouvrir, renommer, déplacer ou supprimer un élément.
+  et **Renommer un fichier…**. Le bouton de renommage ouvre le dossier courant
+  pour choisir un fichier déjà importé, puis demande son nouveau nom complet
+  (avec son extension). Le clic droit permet aussi d’ouvrir, renommer,
+  déplacer ou supprimer un élément.
   Les destinations doivent rester dans l’espace géré. Un élément existant
   à destination n’est jamais écrasé.
 - **Corbeille** : les suppressions conservent les documents et leurs fiches.
