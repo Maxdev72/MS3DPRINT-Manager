@@ -14,7 +14,20 @@ public sealed class ProjectProfileStore
     {
         if (!Directory.Exists(_paths.ProjectsDirectory)) return [];
         return Directory.EnumerateFiles(_paths.ProjectsDirectory, "*.json")
-            .Select(Read).OrderBy(profile => profile.Reference, StringComparer.OrdinalIgnoreCase).ToArray();
+            .Select(Read)
+            .OrderBy(profile => profile.Reference, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    public IReadOnlyList<ProjectProfile> LoadReadable()
+    {
+        if (!Directory.Exists(_paths.ProjectsDirectory)) return [];
+        return Directory.EnumerateFiles(_paths.ProjectsDirectory, "*.json")
+            .Select(TryRead)
+            .Where(profile => profile is not null)
+            .Cast<ProjectProfile>()
+            .OrderBy(profile => profile.Reference, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     public void Create(ProjectProfile profile)
@@ -51,6 +64,15 @@ public sealed class ProjectProfileStore
     {
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         return JsonSerializer.Deserialize<ProjectProfile>(stream) ?? throw new JsonException("La fiche projet est vide.");
+    }
+
+    private ProjectProfile? TryRead(string path)
+    {
+        try { return Read(path); }
+        catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
     }
 
     private static void Write(string path, ProjectProfile profile)

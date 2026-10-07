@@ -16,9 +16,16 @@ public sealed class ThemeSettingsStore
     public ThemePreference Load()
     {
         if (!File.Exists(_path)) return ThemePreference.Automatic;
-        using var stream = new FileStream(_path, FileMode.Open, FileAccess.Read, FileShare.Read);
-        var settings = JsonSerializer.Deserialize<ThemeSettings>(stream);
-        return settings?.Theme ?? ThemePreference.Automatic;
+        try
+        {
+            using var stream = new FileStream(_path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var settings = JsonSerializer.Deserialize<ThemeSettings>(stream);
+            return settings?.Theme ?? ThemePreference.Automatic;
+        }
+        catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
+        {
+            return ThemePreference.Automatic;
+        }
     }
 
     public void Save(ThemePreference preference)

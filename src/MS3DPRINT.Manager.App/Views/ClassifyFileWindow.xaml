@@ -5,10 +5,10 @@
         WindowStartupLocation="CenterOwner" Background="{DynamicResource BackgroundBrush}">
     <DockPanel Margin="24">
         <StackPanel DockPanel.Dock="Bottom" Margin="0,18,0,0">
-            <TextBlock x:Name="ErrorText" Foreground="#A92828" TextWrapping="Wrap" Margin="0,0,0,12" />
+            <TextBlock x:Name="ErrorText" Foreground="{DynamicResource ErrorBrush}" TextWrapping="Wrap" Margin="0,0,0,12" />
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="Annuler" Click="Cancel_Click" Background="#64748B" Margin="0,0,10,0" />
-                <Button x:Name="MoveButton" Content="Déplacer le fichier" IsDefault="True" Click="Move_Click" />
+                <Button x:Name="MoveButton" Content="Déplacer le fichier" IsEnabled="{Binding IsReady}" IsDefault="True" Click="Move_Click" />
             </StackPanel>
         </StackPanel>
         <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -16,15 +16,30 @@
                 <TextBlock Text="Classer un fichier" FontSize="21" FontWeight="SemiBold" Foreground="{DynamicResource InkBrush}" />
                 <TextBlock Text="Le fichier sera déplacé une seule fois dans le projet choisi." Margin="0,7,0,22" TextWrapping="Wrap" />
                 <TextBlock Text="Fichier source" FontWeight="SemiBold" />
-                <Grid Margin="0,6,0,16">
+                <Grid Margin="0,6,0,4">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                     <TextBox Text="{Binding SourcePath, Mode=OneWay}" IsReadOnly="True" Background="{DynamicResource ReadOnlyInputBrush}" />
                     <Button Grid.Column="1" Content="Parcourir…" Click="Browse_Click" Margin="10,0,0,0" />
                 </Grid>
+                <TextBlock x:Name="SourceIssueText" Text="{Binding SourceIssue}" Foreground="{DynamicResource ErrorBrush}" TextWrapping="Wrap" Margin="0,0,0,16">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Visible" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SourceIssue}" Value="">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
                 <TextBlock Text="Projet" FontWeight="SemiBold" />
-                <ComboBox x:Name="ProjectBox" ItemsSource="{Binding Projects}" SelectedItem="{Binding SelectedProject}" Margin="0,6,0,16" />
+                <TextBlock x:Name="ProjectLoadingText" Text="Chargement des projets…" Foreground="{DynamicResource MutedBrush}" Margin="0,6,0,0" />
+                <TextBlock x:Name="ProjectLoadErrorText" Foreground="{DynamicResource ErrorBrush}" TextWrapping="Wrap" Visibility="Collapsed" Margin="0,6,0,0" />
+                <Button x:Name="RetryProjectsButton" Content="Réessayer" Click="RetryProjects_Click" Visibility="Collapsed" HorizontalAlignment="Left" Margin="0,8,0,0" />
+                <ComboBox x:Name="ProjectBox" ItemsSource="{Binding Projects}" SelectedItem="{Binding SelectedProject}" IsEnabled="False" Margin="0,6,0,16" />
                 <TextBlock Text="Dossier de destination" FontWeight="SemiBold" />
-                <ComboBox x:Name="DestinationBox" ItemsSource="{Binding DestinationDirectories}" SelectedItem="{Binding SelectedRelativeDirectory}" Margin="0,6,0,16" />
+                <ComboBox x:Name="DestinationBox" ItemsSource="{Binding DestinationDirectories}" SelectedItem="{Binding SelectedRelativeDirectory}" IsEnabled="False" Margin="0,6,0,16" />
                 <TextBlock Text="Nom final" FontWeight="SemiBold" />
                 <TextBox Text="{Binding FinalFileName, Mode=OneWay}" IsReadOnly="True" Background="{DynamicResource ReadOnlyInputBrush}" Margin="0,6,0,8" />
                 <TextBlock Text="{Binding DestinationPath}" FontSize="12" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" />

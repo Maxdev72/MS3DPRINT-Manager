@@ -6,13 +6,14 @@ namespace MS3DPRINT.Manager.App.ViewModels;
 public sealed class ProjectDetailViewModel : ObservableObject
 {
     private readonly ProjectProfileStore _store;
-    private readonly ProjectProfile _profile;
+    private ProjectProfile _profile;
     private readonly ProjectFileBrowser _files;
     private readonly string _projectPath;
     private ProjectStatus _status;
     private DateTime? _dueDate;
     private string? _description;
     private string? _notes;
+    private ProjectDraft _savedDraft;
 
     public ProjectDetailViewModel(ProjectProfile profile, ProjectProfileStore store)
         : this(profile, store, string.Empty, new ProjectFileBrowser()) { }
@@ -30,6 +31,7 @@ public sealed class ProjectDetailViewModel : ObservableObject
         _dueDate = profile.DueDate?.ToDateTime(TimeOnly.MinValue);
         _description = profile.Description;
         _notes = profile.Notes;
+        _savedDraft = CaptureDraft();
     }
 
     public string Reference => _profile.Reference;
@@ -64,24 +66,40 @@ public sealed class ProjectDetailViewModel : ObservableObject
         set => SetProperty(ref _notes, value);
     }
 
+    public bool HasUnsavedChanges => CaptureDraft() != _savedDraft;
+
     public void Save()
     {
-        _store.Update(_profile with
+        var updated = _profile with
         {
             Status = Status,
             DueDate = DueDate is { } date ? DateOnly.FromDateTime(date) : null,
             Description = TrimOrNull(Description),
             Notes = TrimOrNull(Notes),
             UpdatedAt = DateTimeOffset.UtcNow
-        });
+        };
+        _store.Update(updated);
+        _profile = updated;
+        _savedDraft = CaptureDraft();
     }
+
+    private ProjectDraft CaptureDraft() => new(Status, DueDate, Description, Notes);
+
+    private sealed record ProjectDraft(ProjectStatus Status, DateTime? DueDate, string? Description, string? Notes);
 
     public ProjectFileListing ReadFiles()
     {
         var current = string.IsNullOrWhiteSpace(CurrentDirectory) ? ProjectPath : CurrentDirectory;
-        return string.IsNullOrWhiteSpace(current)
-            ? new ProjectFileListing(string.Empty, [])
-            : new ProjectFileListing(current, _files.List(ProjectPath, current));
+        if (string.IsNullOrWhiteSpace(current)) return new ProjectFileListing(string.Empty, []);
+
+        try
+        {
+            return new ProjectFileListing(current, _files.List(ProjectPath, current));
+        }
+        catch (DirectoryNotFoundException) when (!string.Equals(ProjectPath, current, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal) && Directory.Exists(ProjectPath))
+        {
+            return new ProjectFileListing(ProjectPath, _files.List(ProjectPath, ProjectPath));
+        }
     }
 
     public ProjectFileListing ReadFilesForDirectory(ProjectFileEntry entry)

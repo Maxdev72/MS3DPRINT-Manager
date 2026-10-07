@@ -23,7 +23,14 @@ public sealed class CollectionDetailViewModel : ObservableObject
     public CollectionFileListing ReadFiles()
     {
         var current = string.IsNullOrWhiteSpace(CurrentDirectory) ? RootPath : CurrentDirectory;
-        return new CollectionFileListing(current, _files.List(RootPath, current));
+        try
+        {
+            return new CollectionFileListing(current, _files.List(RootPath, current));
+        }
+        catch (DirectoryNotFoundException) when (!string.Equals(RootPath, current, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal) && Directory.Exists(RootPath))
+        {
+            return new CollectionFileListing(RootPath, _files.List(RootPath, RootPath));
+        }
     }
 
     public CollectionFileListing ReadFilesForDirectory(ProjectFileEntry entry)

@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using MS3DPRINT.Manager.Core.Clients;
 using MS3DPRINT.Manager.Core.Projects;
 using MS3DPRINT.Manager.Core.Storage;
+using MS3DPRINT.Manager.Core.Naming;
 
 namespace MS3DPRINT.Manager.App.Views;
 
@@ -26,8 +27,10 @@ public partial class CreateTrackedProjectWindow : Window, ICreatedFolderDialog
         _preselectedClient = preselectedClient;
         MaxHeight = SystemParameters.WorkArea.Height * 0.9;
         MaxWidth = SystemParameters.WorkArea.Width * 0.9;
-        Loaded += OnLoaded;
+        Loaded += (_, _) => LoadClientsSafely();
         ClientBox.SelectionChanged += Client_SelectionChanged;
+        YearBox.TextChanged += (_, _) => UpdateCreateState();
+        ProjectNameBox.TextChanged += (_, _) => UpdateCreateState();
         if (existingProject is not null)
         {
             Title = "Compléter la fiche projet";
@@ -39,32 +42,59 @@ public partial class CreateTrackedProjectWindow : Window, ICreatedFolderDialog
 
     public string? CreatedPath { get; private set; }
 
-    private void OnLoaded(object sender, RoutedEventArgs e)
+    private void Retry_Click(object sender, RoutedEventArgs e) => LoadClientsSafely();
+
+    private void LoadClientsSafely()
     {
-        var clients = _clients.Load(_storageRoot).Where(client => client.Profile is not null);
-        if (_existingProject is not null) clients = clients.Where(client => string.Equals(client.FolderName, _existingProject.ClientFolderName, StringComparison.OrdinalIgnoreCase));
-        ClientBox.ItemsSource = clients.ToArray();
-        NoClientText.Visibility = ClientBox.Items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        YearBox.Text = _existingProject is null ? DateTime.Today.Year.ToString(System.Globalization.CultureInfo.InvariantCulture) : GetYear(_existingProject.Reference).ToString(System.Globalization.CultureInfo.InvariantCulture);
-        if (_existingProject is not null)
+        ErrorText.Text = string.Empty;
+        RetryButton.Visibility = Visibility.Collapsed;
+        ClientBox.IsEnabled = true;
+        try
         {
-            ProjectNameBox.Text = _existingProject.ProjectName;
-            YearBox.IsReadOnly = true;
-            ProjectNameBox.IsReadOnly = true;
+            var clients = _clients.Load(_storageRoot).Where(client => client.Profile is not null);
+            if (_existingProject is not null) clients = clients.Where(client => string.Equals(client.FolderName, _existingProject.ClientFolderName, StringComparison.OrdinalIgnoreCase));
+            ClientBox.ItemsSource = clients.ToArray();
+            NoClientText.Visibility = ClientBox.Items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            YearBox.Text = _existingProject is null ? DateTime.Today.Year.ToString(System.Globalization.CultureInfo.InvariantCulture) : GetYear(_existingProject.Reference).ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (_existingProject is not null)
+            {
+                ProjectNameBox.Text = _existingProject.ProjectName;
+                YearBox.IsReadOnly = true;
+                ProjectNameBox.IsReadOnly = true;
+            }
+            if (ClientBox.Items.Count > 0 && (_preselectedClient is not null || _existingProject is not null))
+            {
+                ClientBox.SelectedItem = _preselectedClient is null
+                    ? ClientBox.Items[0]
+                    : clients.FirstOrDefault(client => string.Equals(client.FolderName, _preselectedClient.FolderName, StringComparison.OrdinalIgnoreCase));
+            }
+            else if (ClientBox.Items.Count == 0) ClientBox.IsEnabled = false;
+            UpdateCreateState();
+            if (ClientBox.SelectedItem is null && ClientBox.IsEnabled) ClientBox.Focus();
+            else ProjectNameBox.Focus();
         }
-        if (ClientBox.Items.Count > 0)
+        catch (Exception exception)
         {
-            ClientBox.SelectedItem = _preselectedClient is null
-                ? ClientBox.Items[0]
-                : clients.FirstOrDefault(client => string.Equals(client.FolderName, _preselectedClient.FolderName, StringComparison.OrdinalIgnoreCase)) ?? ClientBox.Items[0];
+            ClientBox.ItemsSource = Array.Empty<ClientSummary>();
+            ClientBox.IsEnabled = false;
+            NoClientText.Visibility = Visibility.Collapsed;
+            CreateButton.IsEnabled = false;
+            ErrorText.Text = UiErrorMessages.For(exception);
+            RetryButton.Visibility = Visibility.Visible;
         }
-        else ClientBox.IsEnabled = false;
-        ProjectNameBox.Focus();
     }
 
     private void Client_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         ClientCodeBox.Text = (ClientBox.SelectedItem as ClientSummary)?.ClientCode ?? string.Empty;
+        UpdateCreateState();
+    }
+
+    private void UpdateCreateState()
+    {
+        CreateButton.IsEnabled = ClientBox.SelectedItem is ClientSummary &&
+            int.TryParse(YearBox.Text, out var year) && year is >= 2000 and <= 9999 &&
+            NameNormalizer.Normalize(ProjectNameBox.Text ?? string.Empty).Length > 0;
     }
 
     private void Cancel_Click(object sender, RoutedEventArgs e) => Close();

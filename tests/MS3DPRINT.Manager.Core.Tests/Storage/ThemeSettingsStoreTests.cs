@@ -20,6 +20,19 @@ public sealed class ThemeSettingsStoreTests : IDisposable
         Assert.Equal(ThemePreference.Dark, new ThemeSettingsStore(_dataDirectory).Load());
     }
 
+    [Fact]
+    public void Load_ReturnsAutomaticAndPreservesTheFileWhenSavedSettingsAreInvalid()
+    {
+        Directory.CreateDirectory(_dataDirectory);
+        var settingsPath = Path.Combine(_dataDirectory, "settings.json");
+        File.WriteAllText(settingsPath, "{");
+
+        var theme = new ThemeSettingsStore(_dataDirectory).Load();
+
+        Assert.Equal(ThemePreference.Automatic, theme);
+        Assert.Equal("{", File.ReadAllText(settingsPath));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_dataDirectory)) Directory.Delete(_dataDirectory, recursive: true);

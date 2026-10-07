@@ -9,6 +9,49 @@ namespace MS3DPRINT.Manager.Core.Tests;
 
 public sealed class RefreshCalendarTests
 {
+    [Fact]
+    public void DatePickerPopup_UsesReadableDarkCalendarColors()
+    {
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            Window? host = null;
+            try
+            {
+                var directory = new DirectoryInfo(AppContext.BaseDirectory);
+                while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "src", "MS3DPRINT.Manager.App", "App.xaml"))) directory = directory.Parent;
+                var source = System.Xml.Linq.XDocument.Load(Path.Combine(directory!.FullName, "src", "MS3DPRINT.Manager.App", "App.xaml"));
+                var ns = source.Root!.Name.Namespace;
+                var dictionary = new System.Xml.Linq.XElement(ns + "ResourceDictionary",
+                    new System.Xml.Linq.XAttribute(System.Xml.Linq.XNamespace.Xmlns + "x", "http://schemas.microsoft.com/winfx/2006/xaml"),
+                    source.Root.Element(ns + "Application.Resources")!.Elements());
+                var resources = (ResourceDictionary)System.Windows.Markup.XamlReader.Parse(dictionary.ToString());
+                ThemeManager.Apply(MS3DPRINT.Manager.Core.Storage.ThemePreference.Dark, resources);
+                var picker = new DatePicker { Resources = resources, DisplayDate = new DateTime(2026, 10, 1) };
+                picker.Style = (Style)resources[typeof(DatePicker)];
+                host = new Window { Content = picker, Width = 350, Height = 100, ShowInTaskbar = false, ShowActivated = false };
+                host.Show();
+                picker.IsDropDownOpen = true;
+                picker.UpdateLayout();
+                var popup = Assert.IsType<Popup>(picker.Template.FindName("PART_Popup", picker));
+                Assert.NotNull(popup.Child);
+                var calendar = new[] { popup.Child }.Concat(Descendants(popup.Child)).OfType<Calendar>().Single();
+                calendar.UpdateLayout();
+                var item = Descendants(calendar).OfType<CalendarItem>().Single();
+                var surface = ((SolidColorBrush)resources["SurfaceBrush"]).Color;
+                Assert.Equal(surface, ((SolidColorBrush)Descendants(item).OfType<Border>().First().Background).Color);
+                var day = Descendants(calendar).OfType<CalendarDayButton>().First(button => !button.IsInactive && !button.IsSelected);
+                Assert.True(Contrast(day.Foreground, (Brush)resources["SurfaceBrush"]) >= 4.5);
+            }
+            catch (Exception exception) { failure = new InvalidOperationException(exception.ToString(), exception); }
+            finally { host?.Close(); }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        Assert.True(thread.Join(TimeSpan.FromSeconds(15)));
+        if (failure is not null) throw failure;
+    }
+
     [Theory]
     [InlineData("file-rename", "clients")]
     [InlineData("directory-rename", "clients")]

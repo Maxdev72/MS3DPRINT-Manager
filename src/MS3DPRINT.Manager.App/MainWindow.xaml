@@ -110,7 +110,8 @@
         <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="28,14" Background="{DynamicResource SurfaceBrush}">
             <TextBlock Text="{Binding Status}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
         </Border>
-        <ContentControl x:Name="PageHost" MaxWidth="1200" HorizontalAlignment="Center">
+        <ContentControl x:Name="PageHost" MaxWidth="1200" HorizontalAlignment="Center"
+                        Width="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=DockPanel}}">
         <ScrollViewer x:Name="DashboardPage" VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="28,23" MaxWidth="1200" HorizontalAlignment="Center">
                 <Grid Margin="0,0,0,22">
@@ -126,7 +127,7 @@
                             VerticalAlignment="Center" Margin="24,0,0,0" Click="VerifyStructure_Click" />
                 </Grid>
                 <DockPanel Margin="0,0,0,12"><TextBlock Text="Vue d’ensemble" Foreground="{DynamicResource InkBrush}" FontWeight="SemiBold" FontSize="17" DockPanel.Dock="Left" /><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><TextBlock x:Name="DashboardLoadingText" Text="Actualisation…" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Visibility="Collapsed" Margin="0,0,10,0" /><Button Content="Actualiser" Style="{StaticResource SecondaryActionButton}" Click="DashboardRefresh_Click" /></StackPanel></DockPanel>
-                <TextBlock x:Name="DashboardErrorText" Visibility="Collapsed" Foreground="IndianRed" TextWrapping="Wrap" Margin="0,0,0,10" />
+                <TextBlock x:Name="DashboardErrorText" Visibility="Collapsed" Foreground="{DynamicResource ErrorBrush}" TextWrapping="Wrap" Margin="0,0,0,10" />
                 <controls:ResponsiveCardPanel MaxColumns="5" MinimumItemWidth="125" MinimumItemHeight="92" ItemHeightRatio="0" Gap="10" Margin="0,0,0,24">
                     <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="14"><StackPanel><TextBlock Text="CLIENTS" Foreground="{DynamicResource MutedBrush}" FontSize="11" /><TextBlock x:Name="DashboardClientsCount" Text="{Binding DashboardClientsCount}" FontSize="24" FontWeight="SemiBold" Margin="0,6,0,0" /></StackPanel></Border>
                     <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="14"><StackPanel><TextBlock Text="PROJETS" Foreground="{DynamicResource MutedBrush}" FontSize="11" /><TextBlock x:Name="DashboardProjectsCount" Text="{Binding DashboardProjectsCount}" FontSize="24" FontWeight="SemiBold" Margin="0,6,0,0" /></StackPanel></Border>

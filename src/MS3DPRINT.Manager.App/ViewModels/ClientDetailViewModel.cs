@@ -11,6 +11,7 @@ public sealed class ClientDetailViewModel : ObservableObject
     private readonly string? _workspaceRoot;
     private string? _notes;
     private IReadOnlyList<ProjectSummary> _projects = [];
+    private ClientDraft _savedDraft;
 
     public ClientDetailViewModel(ClientProfile profile, ClientProfileStore store)
     {
@@ -27,6 +28,7 @@ public sealed class ClientDetailViewModel : ObservableObject
         ContactPhone = profile.PrimaryContact.Phone ?? string.Empty;
         ContactEmail = profile.PrimaryContact.Email ?? string.Empty;
         _notes = profile.Notes;
+        _savedDraft = CaptureDraft();
     }
 
     public ClientDetailViewModel(ClientProfile profile, ClientProfileStore store, ProjectCatalog projectCatalog, string workspaceRoot)
@@ -65,6 +67,8 @@ public sealed class ClientDetailViewModel : ObservableObject
         set => SetProperty(ref _notes, value);
     }
 
+    public bool HasUnsavedChanges => CaptureDraft() != _savedDraft;
+
     public void Save()
     {
         var updated = _profile with
@@ -80,8 +84,15 @@ public sealed class ClientDetailViewModel : ObservableObject
         };
         _store.Update(updated);
         _profile = updated;
+        _savedDraft = CaptureDraft();
         OnPropertyChanged(nameof(DisplayName));
     }
+
+    private ClientDraft CaptureDraft() => new(CompanyName, Siret, FirstName, LastName, Address,
+        ContactFirstName, ContactLastName, ContactRole, ContactPhone, ContactEmail, Notes);
+
+    private sealed record ClientDraft(string CompanyName, string Siret, string FirstName, string LastName, string Address,
+        string ContactFirstName, string ContactLastName, string ContactRole, string ContactPhone, string ContactEmail, string? Notes);
 
     private static string? NullIfEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 

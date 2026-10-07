@@ -18,6 +18,7 @@ public partial class MainWindow : Window
     private readonly FolderTreeService _folders = new();
     private readonly ClientCodeRegistry _codes;
     private readonly ThemeSettingsStore _themeSettings;
+    private readonly WindowPlacementStore _windowPlacement;
     private readonly ClientProfileStore _clientProfiles;
     private readonly ClientCatalog _clientCatalog;
     private readonly ProjectProfileStore _projectProfiles;
@@ -34,6 +35,7 @@ public partial class MainWindow : Window
         var dataDirectory = Environment.GetEnvironmentVariable("MS3DPRINT_DATA_DIRECTORY");
         _codes = new ClientCodeRegistry(string.IsNullOrWhiteSpace(dataDirectory) ? null : dataDirectory);
         _themeSettings = new ThemeSettingsStore(string.IsNullOrWhiteSpace(dataDirectory) ? null : dataDirectory);
+        _windowPlacement = new WindowPlacementStore(string.IsNullOrWhiteSpace(dataDirectory) ? null : dataDirectory);
         _clientProfiles = new ClientProfileStore(new WorkspaceMetadataPaths(_viewModel.StorageRoot));
         _clientCatalog = new ClientCatalog(_clientProfiles, _codes);
         _projectProfiles = new ProjectProfileStore(new WorkspaceMetadataPaths(_viewModel.StorageRoot));
@@ -44,9 +46,18 @@ public partial class MainWindow : Window
             StartStorageWatcher();
             await RefreshDashboardSafelyAsync();
         };
+        Closing += (_, args) =>
+        {
+            if (!CanLeaveCurrentPage()) { args.Cancel = true; return; }
+            SaveWindowPlacement();
+        };
         Closed += (_, _) => { _closed = true; _storageWatcher?.Dispose(); _storageWatcher = null; ++_dashboardRefreshVersion; };
-        Width = Math.Min(1200, SystemParameters.WorkArea.Width * 0.84);
-        Height = Math.Min(850, SystemParameters.WorkArea.Height * 0.85);
+        var placement = _windowPlacement.Load();
+        Size? savedSize = placement is null ? null : new Size(placement.Width, placement.Height);
+        var initialSize = WindowLaunchSize.ForMainWindow(SystemParameters.WorkArea.Size, savedSize);
+        Width = initialSize.Width;
+        Height = initialSize.Height;
+        WindowState = WindowState.Normal;
     }
 
     private void VerifyStructure_Click(object sender, RoutedEventArgs e) => Run(() =>
@@ -62,8 +73,7 @@ public partial class MainWindow : Window
 
     private async void Dashboard_Click(object sender, RoutedEventArgs e)
     {
-        PageHost.Content = DashboardPage;
-        await RefreshDashboardSafelyAsync();
+        if (TryShowPage(DashboardPage)) await RefreshDashboardSafelyAsync();
     }
 
     private async void DashboardRefresh_Click(object sender, RoutedEventArgs e) => await RefreshDashboardSafelyAsync();
@@ -78,7 +88,7 @@ public partial class MainWindow : Window
     private void ShowSearch()
     {
         var page = new SearchView(new GlobalSearchService(_clientCatalog, _projectCatalog), _viewModel.StorageRoot);
-        void ReturnToSearch() => PageHost.Content = page;
+        void ReturnToSearch() => TryShowPage(page);
         page.ResultSelected += result => Run(() =>
         {
             switch (result.Kind)
@@ -105,7 +115,7 @@ public partial class MainWindow : Window
                     break;
             }
         });
-        PageHost.Content = page;
+        TryShowPage(page);
     }
 
     private void ShowClients()
@@ -116,7 +126,7 @@ public partial class MainWindow : Window
             ShowDialog(new CreateClientWindow(_viewModel.StorageRoot, _folders, _codes, _clientProfiles) { Owner = this });
         });
         page.ClientSelected += client => ShowClientDetail(client);
-        PageHost.Content = page;
+        TryShowPage(page);
     }
 
     private void ShowClientDetail(ClientSummary client, Action? backRequested = null)
@@ -149,7 +159,7 @@ public partial class MainWindow : Window
             ShowDialog(new CreateTrackedProjectWindow(_viewModel.StorageRoot, _folders, _clientCatalog, _projectProfiles, preselectedClient: client) { Owner = this });
         });
         page.ProjectSelected += project => ShowProjectDetail(project, () => ShowClientDetail(client, navigateBack));
-        PageHost.Content = page;
+        TryShowPage(page);
     }
 
     private void ShowProjects()
@@ -160,26 +170,26 @@ public partial class MainWindow : Window
             ShowDialog(new CreateTrackedProjectWindow(_viewModel.StorageRoot, _folders, _clientCatalog, _projectProfiles) { Owner = this });
         });
         page.ProjectSelected += project => ShowProjectDetail(project);
-        PageHost.Content = page;
+        TryShowPage(page);
     }
 
     private void ShowCollection(string title, string subtitle, string parentFolder, IReadOnlyList<string> template, string createTitle)
     {
         var page = new CollectionView(new CollectionViewModel(_collectionCatalog, _viewModel.StorageRoot, parentFolder, title, subtitle));
-        page.BackRequested += (_, _) => PageHost.Content = DashboardPage;
+        page.BackRequested += (_, _) => TryShowPage(DashboardPage);
         page.CreateRequested += (_, _) => Run(() =>
         {
             ShowDialog(new CreateNamedItemWindow(createTitle, Path.Combine(_viewModel.StorageRoot, parentFolder), template, _folders) { Owner = this });
         });
         page.ItemSelected += item => ShowCollectionDetail(item, () => ShowCollection(title, subtitle, parentFolder, template, createTitle));
-        PageHost.Content = page;
+        TryShowPage(page);
     }
 
     private void ShowCollectionDetail(CollectionItemSummary item, Action backRequested)
     {
         var page = new CollectionDetailView(new CollectionDetailViewModel(item));
         page.BackRequested += (_, _) => backRequested();
-        PageHost.Content = page;
+        TryShowPage(page);
     }
 
     private void ShowProjectDetail(ProjectSummary project, Action? backRequested = null)
@@ -197,7 +207,7 @@ public partial class MainWindow : Window
         var page = new ProjectDetailView(new ProjectDetailViewModel(project, _projectProfiles));
         page.BackRequested += (_, _) => navigateBack();
         page.ClassifyRequested += (_, _) => Run(() => ShowDialog(new ClassifyFileWindow(_viewModel.StorageRoot, project.ProjectPath) { Owner = this }));
-        PageHost.Content = page;
+        TryShowPage(page);
     }
 
     private void NewProject_Click(object sender, RoutedEventArgs e) => Run(() =>
@@ -237,6 +247,24 @@ public partial class MainWindow : Window
             _viewModel.Status = "Élément traité : " + ((ICreatedFolderDialog)dialog).CreatedPath;
             _ = RefreshVisibleAsync();
         }
+    }
+
+    private bool TryShowPage(object page)
+    {
+        if (ReferenceEquals(PageHost.Content, page)) return true;
+        if (!CanLeaveCurrentPage()) return false;
+        PageHost.Content = page;
+        return true;
+    }
+
+    private bool CanLeaveCurrentPage()
+    {
+        if (PageHost.Content is not IUnsavedChangesPage editable) return true;
+        return NavigationGuard.TryLeave(editable.HasUnsavedChanges,
+            () => MessageBox.Show(this,
+                "Des modifications ne sont pas enregistrées. Voulez-vous les enregistrer avant de quitter cette fiche ?",
+                "Modifications non enregistrées", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning),
+            editable.TrySaveChanges);
     }
 
     private void StartStorageWatcher()
@@ -287,6 +315,13 @@ public partial class MainWindow : Window
             _viewModel.Status = UiErrorMessages.For(exception);
             MessageBox.Show(this, _viewModel.Status, "MS3DPRINT — erreur", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    private void SaveWindowPlacement()
+    {
+        if (WindowState != WindowState.Normal) return;
+        try { _windowPlacement.Save(Width, Height); }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { }
     }
 
     private async Task RefreshDashboardSafelyAsync()

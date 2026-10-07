@@ -23,6 +23,7 @@ public static class ThemeManager
         SetBrush("CardHoverBrush", dark ? "#2C4052" : "#E8F3FC");
         SetBrush("TextBrush", dark ? "#EAF2FA" : "#183153");
         SetBrush("MutedBrush", dark ? "#B2C5D7" : "#52657A");
+        SetBrush("ErrorBrush", dark ? "#FF8A8A" : "#B42332");
         SetBrush("InputBrush", dark ? "#111A22" : "#FFFFFF");
         SetBrush("ReadOnlyInputBrush", dark ? "#1C2935" : "#E9EEF3");
         SetBrush("BorderBrush", dark ? "#405263" : "#D8E2EC");

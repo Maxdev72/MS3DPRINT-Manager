@@ -15,7 +15,7 @@ internal static class UiErrorMessages
         UnauthorizedAccessException => "Accès refusé. Vérifiez vos droits sur le dossier de stockage.",
         DirectoryNotFoundException => "Un dossier requis est introuvable. " + exception.Message,
         IOException => "Impossible d’écrire ou de lire le dossier. Vérifiez le disque et la synchronisation Nextcloud. " + exception.Message,
-        JsonException => "Le registre local des codes clients est illisible. " + exception.Message,
+        JsonException => "Les données de l’application sont illisibles. " + exception.Message,
         ArgumentOutOfRangeException outOfRange when outOfRange.ParamName == "existingNames"
             => "Aucun numéro de projet n’est disponible pour ce client et cette année (limite : 999).",
         Win32Exception => "Impossible de créer le dossier. Vérifiez vos droits et l’état du disque.",

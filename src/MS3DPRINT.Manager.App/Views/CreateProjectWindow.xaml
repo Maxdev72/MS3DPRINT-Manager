@@ -5,7 +5,7 @@
         WindowStartupLocation="CenterOwner" Background="{DynamicResource BackgroundBrush}" Closing="Window_Closing">
     <DockPanel Margin="24">
         <StackPanel DockPanel.Dock="Bottom" Margin="0,16,0,0">
-            <TextBlock x:Name="ErrorText" Foreground="#A92828" TextWrapping="Wrap" Margin="0,0,0,14" />
+            <TextBlock x:Name="ErrorText" Foreground="{DynamicResource ErrorBrush}" TextWrapping="Wrap" Margin="0,0,0,14" />
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="Annuler" Click="Cancel_Click" Background="#64748B" Margin="0,0,10,0" />
                 <Button Content="Créer le projet" IsDefault="True" Click="Create_Click" />
@@ -19,7 +19,7 @@
                 <ComboBox x:Name="ClientBox" ItemsSource="{Binding Clients}" SelectedItem="{Binding SelectedClient}" Margin="0,6,0,14" />
                 <TextBlock Text="Code client" FontWeight="SemiBold" />
                 <TextBox x:Name="CodeBox" Text="{Binding ClientCode, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="{Binding CodeIsReadOnly}" Margin="0,6,0,5" />
-                <TextBlock Text="{Binding CodeLoadError}" Foreground="#A92828" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding CodeLoadError}" Foreground="{DynamicResource ErrorBrush}" TextWrapping="Wrap" />
                 <TextBlock Text="Si aucun code n’est enregistré, saisissez-le. Sa sauvegarde sera confirmée avant création."
                            FontSize="12" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,0,0,14" />
                 <TextBlock Text="Année" FontWeight="SemiBold" />

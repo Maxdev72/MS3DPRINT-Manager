@@ -6,7 +6,7 @@ using MS3DPRINT.Manager.Core.Files;
 
 namespace MS3DPRINT.Manager.App.Views;
 
-public partial class ProjectDetailView : UserControl
+public partial class ProjectDetailView : UserControl, IUnsavedChangesPage
 {
     private readonly ProjectDetailViewModel _viewModel;
     private int _fileLoadVersion;
@@ -31,10 +31,14 @@ public partial class ProjectDetailView : UserControl
     {
         if (StatusBox.SelectedIndex >= 0) _viewModel.Status = (ProjectStatus)StatusBox.SelectedIndex;
     }
-    private void Save_Click(object sender, RoutedEventArgs e)
+    public bool HasUnsavedChanges => _viewModel.HasUnsavedChanges;
+
+    private void Save_Click(object sender, RoutedEventArgs e) => TrySaveChanges();
+
+    public bool TrySaveChanges()
     {
-        try { _viewModel.Save(); MessageText.Text = "Projet enregistré."; }
-        catch (Exception exception) { MessageText.Text = UiErrorMessages.For(exception); }
+        try { _viewModel.Save(); MessageText.Text = "Projet enregistré."; return true; }
+        catch (Exception exception) { MessageText.Text = UiErrorMessages.For(exception); return false; }
     }
     private async void Up_Click(object sender, RoutedEventArgs e) => await LoadFilesAsync(_viewModel.ReadParentFiles);
     private void Classify_Click(object sender, RoutedEventArgs e) => ClassifyRequested?.Invoke(this, EventArgs.Empty);

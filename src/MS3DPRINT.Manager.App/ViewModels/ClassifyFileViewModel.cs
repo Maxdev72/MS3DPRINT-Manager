@@ -20,17 +20,21 @@ public sealed class ClassifyFileViewModel : ObservableObject
     ];
 
     private readonly Dictionary<string, string> _projectPaths = new(StringComparer.Ordinal);
+    private readonly string _clientsRoot;
+    private readonly string? _initialProjectPath;
     private string _sourcePath = string.Empty;
+    private string _sourceIssue = string.Empty;
     private string? _selectedProject;
     private string? _selectedRelativeDirectory;
     private string _finalFileName = string.Empty;
     private ProjectFileCategory _category = ProjectFileCategory.ClientFiles;
 
-    public ClassifyFileViewModel(string storageRoot, string? initialProjectPath = null)
+    public ClassifyFileViewModel(string storageRoot, string? initialProjectPath = null, bool loadProjects = true)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(storageRoot);
-        LoadProjects(Path.Combine(Path.GetFullPath(storageRoot), "01_CLIENTS"));
-        if (!string.IsNullOrWhiteSpace(initialProjectPath)) SelectProject(initialProjectPath);
+        _clientsRoot = Path.Combine(Path.GetFullPath(storageRoot), "01_CLIENTS");
+        _initialProjectPath = initialProjectPath;
+        if (loadProjects) ApplyProjectChoices(ReadProjectChoices());
     }
 
     public ObservableCollection<string> Projects { get; } = new();
@@ -42,6 +46,7 @@ public sealed class ClassifyFileViewModel : ObservableObject
         set
         {
             if (!SetProperty(ref _sourcePath, value ?? string.Empty)) return;
+            UpdateSourceIssue();
             UpdateSuggestion();
             OnPropertyChanged(nameof(DestinationPath));
             OnPropertyChanged(nameof(IsReady));
@@ -78,6 +83,12 @@ public sealed class ClassifyFileViewModel : ObservableObject
         private set => SetProperty(ref _finalFileName, value);
     }
 
+    public string SourceIssue
+    {
+        get => _sourceIssue;
+        private set => SetProperty(ref _sourceIssue, value);
+    }
+
     public string ProjectPath => SelectedProject is not null && _projectPaths.TryGetValue(SelectedProject, out var path)
         ? path
         : throw new InvalidOperationException("Sélectionnez un projet.");
@@ -86,7 +97,7 @@ public sealed class ClassifyFileViewModel : ObservableObject
         ? string.Empty
         : Path.Combine(ProjectPath, SelectedRelativeDirectory, FinalFileName);
 
-    public bool IsReady => File.Exists(SourcePath) && !string.IsNullOrWhiteSpace(SelectedProject) &&
+    public bool IsReady => SourceIssue.Length == 0 && !string.IsNullOrWhiteSpace(SourcePath) && !string.IsNullOrWhiteSpace(SelectedProject) &&
                            !string.IsNullOrWhiteSpace(SelectedRelativeDirectory) && FinalFileName.Length > 0;
 
     public ProjectFileDestination CreateDestination()
@@ -96,24 +107,37 @@ public sealed class ClassifyFileViewModel : ObservableObject
         return new ProjectFileDestination(_category, SelectedRelativeDirectory, FinalFileName);
     }
 
-    private void LoadProjects(string clientsRoot)
+    public IReadOnlyList<ClassifyProjectChoice> ReadProjectChoices()
     {
-        if (!Directory.Exists(clientsRoot)) return;
-        foreach (var clientPath in Directory.EnumerateDirectories(clientsRoot, "*", SearchOption.TopDirectoryOnly)
+        if (!Directory.Exists(_clientsRoot)) return [];
+        return Directory.EnumerateDirectories(_clientsRoot, "*", SearchOption.TopDirectoryOnly)
                      .Where(path => (File.GetAttributes(path) & FileAttributes.Hidden) == 0)
-                     .OrderBy(path => Path.GetFileName(path), StringComparer.CurrentCultureIgnoreCase))
-        {
-            var clientName = Path.GetFileName(clientPath);
-            foreach (var projectPath in Directory.EnumerateDirectories(clientPath, "*", SearchOption.TopDirectoryOnly)
-                         .Where(path => (File.GetAttributes(path) & FileAttributes.Hidden) == 0)
-                         .Where(path => ProjectFolderPattern.IsMatch(Path.GetFileName(path)))
-                         .OrderBy(path => Path.GetFileName(path), StringComparer.CurrentCultureIgnoreCase))
+                     .OrderBy(path => Path.GetFileName(path), StringComparer.CurrentCultureIgnoreCase)
+            .SelectMany(clientPath =>
             {
-                var label = clientName + " — " + Path.GetFileName(projectPath);
-                _projectPaths.Add(label, projectPath);
-                Projects.Add(label);
-            }
+                var clientName = Path.GetFileName(clientPath);
+                return Directory.EnumerateDirectories(clientPath, "*", SearchOption.TopDirectoryOnly)
+                    .Where(path => (File.GetAttributes(path) & FileAttributes.Hidden) == 0)
+                    .Where(path => ProjectFolderPattern.IsMatch(Path.GetFileName(path)))
+                    .OrderBy(path => Path.GetFileName(path), StringComparer.CurrentCultureIgnoreCase)
+                    .Select(projectPath => new ClassifyProjectChoice(clientName + " — " + Path.GetFileName(projectPath), projectPath));
+            })
+            .ToArray();
+    }
+
+    public void ApplyProjectChoices(IReadOnlyList<ClassifyProjectChoice> choices)
+    {
+        ArgumentNullException.ThrowIfNull(choices);
+        _projectPaths.Clear();
+        Projects.Clear();
+        DestinationDirectories.Clear();
+        SelectedProject = null;
+        foreach (var choice in choices)
+        {
+            _projectPaths.Add(choice.Label, choice.Path);
+            Projects.Add(choice.Label);
         }
+        if (!string.IsNullOrWhiteSpace(_initialProjectPath)) SelectProject(_initialProjectPath);
     }
 
     private void SelectProject(string projectPath)
@@ -150,4 +174,43 @@ public sealed class ClassifyFileViewModel : ObservableObject
             ? suggestion.RelativeDirectory
             : DestinationDirectories.FirstOrDefault();
     }
+
+    private void UpdateSourceIssue()
+    {
+        if (string.IsNullOrWhiteSpace(SourcePath))
+        {
+            SourceIssue = string.Empty;
+            return;
+        }
+
+        try
+        {
+            var attributes = File.GetAttributes(SourcePath);
+            SourceIssue = (attributes & FileAttributes.Directory) != 0
+                ? "Le chemin sélectionné est un dossier. Sélectionnez un fichier."
+                : string.Empty;
+        }
+        catch (FileNotFoundException)
+        {
+            SourceIssue = "Le fichier source est introuvable. Sélectionnez-le à nouveau.";
+        }
+        catch (DirectoryNotFoundException)
+        {
+            SourceIssue = "Le fichier source est introuvable. Sélectionnez-le à nouveau.";
+        }
+        catch (UnauthorizedAccessException)
+        {
+            SourceIssue = "Accès refusé au fichier source. Vérifiez vos droits ou fermez l’application qui l’utilise.";
+        }
+        catch (IOException)
+        {
+            SourceIssue = "Le fichier source ne peut pas être utilisé. Sélectionnez-le à nouveau.";
+        }
+        catch (ArgumentException)
+        {
+            SourceIssue = "Le chemin du fichier source est invalide. Sélectionnez-le à nouveau.";
+        }
+    }
 }
+
+public sealed record ClassifyProjectChoice(string Label, string Path);

@@ -21,6 +21,18 @@ public sealed class ClientProfileStore
             .ToArray();
     }
 
+    public IReadOnlyList<ClientProfile> LoadReadable()
+    {
+        if (!Directory.Exists(_paths.ClientsDirectory)) return [];
+
+        return Directory.EnumerateFiles(_paths.ClientsDirectory, "*.json", SearchOption.TopDirectoryOnly)
+            .Select(TryReadProfile)
+            .Where(profile => profile is not null)
+            .Cast<ClientProfile>()
+            .OrderBy(profile => profile.FolderName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
     public ClientProfile Load(Guid id)
     {
         if (id == Guid.Empty) throw new ArgumentException("L’identifiant du client est requis.", nameof(id));
@@ -63,6 +75,15 @@ public sealed class ClientProfileStore
     {
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         return JsonSerializer.Deserialize<ClientProfile>(stream) ?? throw new JsonException("La fiche client est vide.");
+    }
+
+    private ClientProfile? TryReadProfile(string path)
+    {
+        try { return ReadProfile(path); }
+        catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
     }
 
     private void WriteNew(string path, ClientProfile profile)

@@ -20,6 +20,20 @@ public sealed class ProjectCatalogTests : IDisposable
         Assert.True(project.IsProfileMissing);
     }
 
+    [Fact]
+    public void Load_StillShowsProjectFoldersWhenAnUnrelatedProfileIsMalformed()
+    {
+        var paths = new WorkspaceMetadataPaths(_root);
+        Directory.CreateDirectory(Path.Combine(_root, "01_CLIENTS", "MPO", "MPO-2026-001_OUTILLAGE"));
+        Directory.CreateDirectory(paths.ProjectsDirectory);
+        File.WriteAllText(Path.Combine(paths.ProjectsDirectory, "broken.json"), "{");
+        var catalog = new ProjectCatalog(new ProjectProfileStore(paths));
+
+        var projects = catalog.Load(_root);
+
+        Assert.Equal("MPO-2026-001", Assert.Single(projects).Reference);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);

@@ -42,6 +42,19 @@ public sealed class ClientCatalogTests : IDisposable
         Assert.Equal("Fiche à compléter", client.ProfileLabel);
     }
 
+    [Fact]
+    public void Load_StillShowsClientFoldersWhenAnUnrelatedProfileIsMalformed()
+    {
+        var paths = new WorkspaceMetadataPaths(_root);
+        Directory.CreateDirectory(Path.Combine(_root, "01_CLIENTS", "MPO"));
+        Directory.CreateDirectory(paths.ClientsDirectory);
+        File.WriteAllText(Path.Combine(paths.ClientsDirectory, "broken.json"), "{");
+
+        var clients = _catalog.Load(_root);
+
+        Assert.Equal("MPO", Assert.Single(clients).FolderName);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);

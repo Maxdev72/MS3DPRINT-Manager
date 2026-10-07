@@ -50,6 +50,7 @@ public sealed class CreateClientViewModel : ObservableObject, IDisposable
                 _clientCode = ClientCodeSuggester.Suggest(value);
                 OnPropertyChanged(nameof(ClientCode));
             }
+            OnPropertyChanged(nameof(IsReady));
             if (!_applyingSuggestion) CompanyQuery = value;
         }
     }
@@ -91,7 +92,11 @@ public sealed class CreateClientViewModel : ObservableObject, IDisposable
         get => _clientCode;
         set
         {
-            if (SetProperty(ref _clientCode, value)) _codeEdited = true;
+            if (SetProperty(ref _clientCode, value))
+            {
+                _codeEdited = true;
+                OnPropertyChanged(nameof(IsReady));
+            }
         }
     }
 
@@ -180,14 +185,25 @@ public sealed class CreateClientViewModel : ObservableObject, IDisposable
         : string.Join(" ", new[] { FirstName, LastName }.Where(value => !string.IsNullOrWhiteSpace(value)));
 
     public string NormalizedName => _existingFolderName ?? NameNormalizer.Normalize(IdentityName);
+    public bool IsReady => Kind switch
+    {
+        ClientKind.Professional => NormalizedName.Length > 0 && NameNormalizer.Normalize(ClientCode).Length > 0,
+        ClientKind.Individual => NameNormalizer.Normalize(FirstName).Length > 0 &&
+                                 NameNormalizer.Normalize(LastName).Length > 0 &&
+                                 NameNormalizer.Normalize(ClientCode).Length > 0,
+        _ => false
+    };
 
     private void RefreshIdentity()
     {
         OnPropertyChanged(nameof(IdentityName));
         OnPropertyChanged(nameof(NormalizedName));
-        if (_codeEdited) return;
-        _clientCode = ClientCodeSuggester.Suggest(IdentityName);
-        OnPropertyChanged(nameof(ClientCode));
+        if (!_codeEdited)
+        {
+            _clientCode = ClientCodeSuggester.Suggest(IdentityName);
+            OnPropertyChanged(nameof(ClientCode));
+        }
+        OnPropertyChanged(nameof(IsReady));
     }
 
     public ClientProfile CreateProfile()

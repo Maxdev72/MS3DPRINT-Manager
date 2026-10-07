@@ -21,7 +21,7 @@ public sealed class ClientCatalog
         var clientsRoot = Path.Combine(Path.GetFullPath(workspaceRoot), "01_CLIENTS");
         if (!Directory.Exists(clientsRoot)) return [];
 
-        var profiles = _profiles.LoadAll().ToDictionary(profile => profile.FolderName, StringComparer.OrdinalIgnoreCase);
+        var profiles = _profiles.LoadReadable().ToDictionary(profile => profile.FolderName, StringComparer.OrdinalIgnoreCase);
         return Directory.EnumerateDirectories(clientsRoot, "*", SearchOption.TopDirectoryOnly)
             .Where(path => (File.GetAttributes(path) & FileAttributes.Hidden) == 0)
             .Select(path => CreateSummary(path, profiles))

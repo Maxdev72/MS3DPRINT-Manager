@@ -10,14 +10,18 @@ public partial class ClassifyFileWindow : Window, ICreatedFolderDialog
 {
     private readonly ClassifyFileViewModel _viewModel;
     private readonly ProjectFileTransferService _transfer = new();
+    private int _projectLoadVersion;
+    private bool _closed;
 
     public ClassifyFileWindow(string storageRoot, string? initialProjectPath = null)
     {
         InitializeComponent();
-        _viewModel = new ClassifyFileViewModel(storageRoot, initialProjectPath);
+        _viewModel = new ClassifyFileViewModel(storageRoot, initialProjectPath, loadProjects: false);
         DataContext = _viewModel;
         MaxHeight = SystemParameters.WorkArea.Height * 0.9;
         MaxWidth = SystemParameters.WorkArea.Width * 0.9;
+        Loaded += async (_, _) => await LoadProjectsSafelyAsync();
+        Closed += (_, _) => { _closed = true; ++_projectLoadVersion; };
     }
 
     public string? CreatedPath { get; private set; }
@@ -26,6 +30,37 @@ public partial class ClassifyFileWindow : Window, ICreatedFolderDialog
     {
         var dialog = new OpenFileDialog { Title = "Choisir le fichier à classer", CheckFileExists = true };
         if (dialog.ShowDialog(this) == true) _viewModel.SourcePath = dialog.FileName;
+    }
+
+    private async void RetryProjects_Click(object sender, RoutedEventArgs e) => await LoadProjectsSafelyAsync();
+
+    private async Task LoadProjectsSafelyAsync()
+    {
+        var loadVersion = ++_projectLoadVersion;
+        ProjectBox.IsEnabled = false;
+        DestinationBox.IsEnabled = false;
+        ProjectLoadingText.Visibility = Visibility.Visible;
+        ProjectLoadErrorText.Visibility = Visibility.Collapsed;
+        RetryProjectsButton.Visibility = Visibility.Collapsed;
+        try
+        {
+            var choices = await Task.Run(_viewModel.ReadProjectChoices);
+            if (_closed || loadVersion != _projectLoadVersion) return;
+            _viewModel.ApplyProjectChoices(choices);
+            ProjectBox.IsEnabled = true;
+            DestinationBox.IsEnabled = true;
+        }
+        catch (Exception exception)
+        {
+            if (_closed || loadVersion != _projectLoadVersion) return;
+            ProjectLoadErrorText.Text = UiErrorMessages.For(exception);
+            ProjectLoadErrorText.Visibility = Visibility.Visible;
+            RetryProjectsButton.Visibility = Visibility.Visible;
+        }
+        finally
+        {
+            if (!_closed && loadVersion == _projectLoadVersion) ProjectLoadingText.Visibility = Visibility.Collapsed;
+        }
     }
 
     private void Cancel_Click(object sender, RoutedEventArgs e) => DialogResult = false;

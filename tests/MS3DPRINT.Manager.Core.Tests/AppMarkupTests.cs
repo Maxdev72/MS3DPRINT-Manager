@@ -175,8 +175,8 @@ public sealed class AppMarkupTests
         Assert.NotEqual("Maximized", (string?)document.Root?.Attribute("WindowState"));
 
         var source = LoadSource("src", "MS3DPRINT.Manager.App", "MainWindow.xaml.cs");
-        Assert.Contains("Width = Math.Min(1200, SystemParameters.WorkArea.Width * 0.84);", source);
-        Assert.Contains("Height = Math.Min(850, SystemParameters.WorkArea.Height * 0.85);", source);
+        Assert.Contains("WindowLaunchSize.ForMainWindow", source);
+        Assert.Contains("WindowState = WindowState.Normal", source);
     }
 
     [Fact]

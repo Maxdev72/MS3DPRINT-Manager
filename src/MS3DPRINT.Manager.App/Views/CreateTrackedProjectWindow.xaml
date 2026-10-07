@@ -5,8 +5,9 @@
         WindowStartupLocation="CenterOwner" Background="{DynamicResource BackgroundBrush}">
     <DockPanel Margin="24">
         <StackPanel DockPanel.Dock="Bottom" Margin="0,16,0,0">
-            <TextBlock x:Name="ErrorText" Foreground="#C73A3A" TextWrapping="Wrap" Margin="0,0,0,12" />
+            <TextBlock x:Name="ErrorText" Foreground="{DynamicResource ErrorBrush}" TextWrapping="Wrap" Margin="0,0,0,12" />
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="RetryButton" Content="Réessayer" Click="Retry_Click" Visibility="Collapsed" Margin="0,0,10,0" />
                 <Button Content="Annuler" Click="Cancel_Click" Background="#64748B" Margin="0,0,10,0" />
                 <Button x:Name="CreateButton" Content="Créer le projet" IsDefault="True" Click="Create_Click" />
             </StackPanel>

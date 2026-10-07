@@ -13,7 +13,7 @@ public sealed class ProjectCatalog
     {
         var clientsRoot = Path.Combine(Path.GetFullPath(workspaceRoot), "01_CLIENTS");
         if (!Directory.Exists(clientsRoot)) return [];
-        var profiles = _profiles.LoadAll().ToDictionary(profile => profile.FolderName, StringComparer.OrdinalIgnoreCase);
+        var profiles = _profiles.LoadReadable().ToDictionary(profile => profile.FolderName, StringComparer.OrdinalIgnoreCase);
         return Directory.EnumerateDirectories(clientsRoot, "*", SearchOption.TopDirectoryOnly)
             .SelectMany(clientPath => Directory.EnumerateDirectories(clientPath, "*", SearchOption.TopDirectoryOnly)
                 .Select(projectPath => CreateSummary(clientPath, projectPath, profiles)))

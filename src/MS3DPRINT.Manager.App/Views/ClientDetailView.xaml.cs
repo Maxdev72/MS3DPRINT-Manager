@@ -5,7 +5,7 @@ using MS3DPRINT.Manager.Core.Projects;
 
 namespace MS3DPRINT.Manager.App.Views;
 
-public partial class ClientDetailView : UserControl
+public partial class ClientDetailView : UserControl, IUnsavedChangesPage
 {
     private readonly ClientDetailViewModel _viewModel;
     private int _projectsRefreshVersion;
@@ -28,10 +28,14 @@ public partial class ClientDetailView : UserControl
         ProjectsList.SelectedItem = null;
         ProjectSelected?.Invoke(project);
     }
-    private void Save_Click(object sender, RoutedEventArgs e)
+    public bool HasUnsavedChanges => _viewModel.HasUnsavedChanges;
+
+    private void Save_Click(object sender, RoutedEventArgs e) => TrySaveChanges();
+
+    public bool TrySaveChanges()
     {
-        try { _viewModel.Save(); MessageText.Text = "Fiche enregistrée."; }
-        catch (Exception exception) { MessageText.Text = UiErrorMessages.For(exception); }
+        try { _viewModel.Save(); MessageText.Text = "Fiche enregistrée."; return true; }
+        catch (Exception exception) { MessageText.Text = UiErrorMessages.For(exception); return false; }
     }
 
     public Task RefreshAsync() => RefreshProjectsSafelyAsync();

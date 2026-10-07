@@ -6,6 +6,29 @@ namespace MS3DPRINT.Manager.Core.Tests.ViewModels;
 public sealed class CreateClientViewModelTests
 {
     [Fact]
+    public void CreateAction_RequiresAUsableIdentityAndCode()
+    {
+        using var model = new CreateClientViewModel(new OfflineLookup());
+        var readiness = typeof(CreateClientViewModel).GetProperty("IsReady");
+        Assert.NotNull(readiness);
+        bool Ready() => (bool)readiness.GetValue(model)!;
+        Assert.False(Ready());
+
+        model.ClientName = "Atelier Test";
+        Assert.True(Ready());
+
+        model.ClientCode = "!!!";
+        Assert.False(Ready());
+
+        model.Kind = ClientKind.Individual;
+        model.FirstName = "Alice";
+        Assert.False(Ready());
+        model.LastName = "Martin";
+        model.ClientCode = "AM";
+        Assert.True(Ready());
+    }
+
+    [Fact]
     public async Task Lookup_TimeoutExplainsManualFallback()
     {
         using var model = new CreateClientViewModel(new TimeoutLookup());

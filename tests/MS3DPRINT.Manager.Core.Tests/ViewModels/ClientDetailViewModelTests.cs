@@ -9,6 +9,25 @@ public sealed class ClientDetailViewModelTests : IDisposable
     private readonly string _root = Path.Combine(Path.GetTempPath(), "MS3DPRINT-client-detail-tests-" + Guid.NewGuid().ToString("N"));
 
     [Fact]
+    public void UnsavedChanges_ClearsOnlyAfterSuccessfulSave()
+    {
+        var store = new ClientProfileStore(new WorkspaceMetadataPaths(_root));
+        var profile = new ClientProfile(Guid.NewGuid(), ClientKind.Professional, "ATELIER", "AT", "Atelier", null, null, null, null,
+            new PrimaryContact(null, null, null, null, null), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+        store.Create(profile);
+        var model = new ClientDetailViewModel(profile, store);
+        var property = typeof(ClientDetailViewModel).GetProperty("HasUnsavedChanges");
+        Assert.NotNull(property);
+        bool Dirty() => (bool)property.GetValue(model)!;
+
+        Assert.False(Dirty());
+        model.ContactEmail = "contact@example.test";
+        Assert.True(Dirty());
+        model.Save();
+        Assert.False(Dirty());
+    }
+
+    [Fact]
     public void Save_IndividualDropsProfessionalDataButKeepsPhoneEmail()
     {
         var store = new ClientProfileStore(new WorkspaceMetadataPaths(_root));

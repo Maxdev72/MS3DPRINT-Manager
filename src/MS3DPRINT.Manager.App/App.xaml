@@ -11,6 +11,7 @@
         <SolidColorBrush x:Key="CardHoverBrush" Color="#E8F3FC" />
         <SolidColorBrush x:Key="TextBrush" Color="#183153" />
         <SolidColorBrush x:Key="MutedBrush" Color="#52657A" />
+        <SolidColorBrush x:Key="ErrorBrush" Color="#B42332" />
         <SolidColorBrush x:Key="InputBrush" Color="#FFFFFF" />
         <SolidColorBrush x:Key="ReadOnlyInputBrush" Color="#E9EEF3" />
         <SolidColorBrush x:Key="BorderBrush" Color="#D8E2EC" />
@@ -70,6 +71,7 @@
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
             <Setter Property="Background" Value="{DynamicResource InputBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="CalendarStyle" Value="{DynamicResource {x:Type Calendar}}" />
         </Style>
         <Style TargetType="DatePickerTextBox">
             <Setter Property="Background" Value="{DynamicResource InputBrush}" />
