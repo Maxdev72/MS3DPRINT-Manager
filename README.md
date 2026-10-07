@@ -31,6 +31,9 @@ registre local nécessaire pour retrouver ces codes.
 
 ## Utilisation
 
+- L’interface utilise Material Design avec une palette bleu et gris. Dans
+  **Paramètres > Apparence**, choisissez le mode clair, sombre ou automatique
+  selon Windows. Le choix reste enregistré pour les prochaines ouvertures.
 - **Clients** : ouvrez une fiche pour modifier la raison sociale ou le nom du
   particulier, l’adresse, le contact principal et les notes. Le code client
   et le nom du dossier restent inchangés pour préserver les projets existants.

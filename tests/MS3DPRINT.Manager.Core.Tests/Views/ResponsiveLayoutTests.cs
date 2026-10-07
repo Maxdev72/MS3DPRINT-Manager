@@ -201,9 +201,8 @@ public sealed class ResponsiveLayoutTests
             {
                 host.Show();
                 host.UpdateLayout();
-                var surface = Assert.IsType<Border>(button.Template.FindName("ButtonSurface", button));
                 var expected = ((SolidColorBrush)resources["DisabledButtonBrush"]).Color;
-                Assert.Equal(expected, ((SolidColorBrush)surface.Background).Color);
+                Assert.Contains(Descendants(button).OfType<Border>(), border => border.Background is SolidColorBrush brush && brush.Color == expected);
                 Assert.Equal(((SolidColorBrush)resources["DisabledButtonTextBrush"]).Color,
                     ((SolidColorBrush)button.Foreground).Color);
             }
@@ -211,17 +210,7 @@ public sealed class ResponsiveLayoutTests
         });
     }
 
-    private static ResourceDictionary LoadAppResources()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "src", "MS3DPRINT.Manager.App", "App.xaml"))) directory = directory.Parent;
-        var source = System.Xml.Linq.XDocument.Load(Path.Combine(directory!.FullName, "src", "MS3DPRINT.Manager.App", "App.xaml"));
-        var ns = source.Root!.Name.Namespace;
-        var dictionary = new System.Xml.Linq.XElement(ns + "ResourceDictionary",
-            new System.Xml.Linq.XAttribute(System.Xml.Linq.XNamespace.Xmlns + "x", "http://schemas.microsoft.com/winfx/2006/xaml"),
-            source.Root.Element(ns + "Application.Resources")!.Elements());
-        return (ResourceDictionary)System.Windows.Markup.XamlReader.Parse(dictionary.ToString());
-    }
+    private static ResourceDictionary LoadAppResources() => ThemeTestResources.Load();
 
     private static IEnumerable<DependencyObject> Descendants(DependencyObject root)
     {

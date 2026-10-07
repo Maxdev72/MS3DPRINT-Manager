@@ -18,14 +18,7 @@ public sealed class RefreshCalendarTests
             Window? host = null;
             try
             {
-                var directory = new DirectoryInfo(AppContext.BaseDirectory);
-                while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "src", "MS3DPRINT.Manager.App", "App.xaml"))) directory = directory.Parent;
-                var source = System.Xml.Linq.XDocument.Load(Path.Combine(directory!.FullName, "src", "MS3DPRINT.Manager.App", "App.xaml"));
-                var ns = source.Root!.Name.Namespace;
-                var dictionary = new System.Xml.Linq.XElement(ns + "ResourceDictionary",
-                    new System.Xml.Linq.XAttribute(System.Xml.Linq.XNamespace.Xmlns + "x", "http://schemas.microsoft.com/winfx/2006/xaml"),
-                    source.Root.Element(ns + "Application.Resources")!.Elements());
-                var resources = (ResourceDictionary)System.Windows.Markup.XamlReader.Parse(dictionary.ToString());
+                var resources = ThemeTestResources.Load();
                 ThemeManager.Apply(MS3DPRINT.Manager.Core.Storage.ThemePreference.Dark, resources);
                 var picker = new DatePicker { Resources = resources, DisplayDate = new DateTime(2026, 10, 1) };
                 picker.Style = (Style)resources[typeof(DatePicker)];
@@ -125,14 +118,7 @@ public sealed class RefreshCalendarTests
         {
             try
             {
-                var directory = new DirectoryInfo(AppContext.BaseDirectory);
-                while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "src", "MS3DPRINT.Manager.App", "App.xaml"))) directory = directory.Parent;
-                var document = System.Xml.Linq.XDocument.Load(Path.Combine(directory!.FullName, "src", "MS3DPRINT.Manager.App", "App.xaml"));
-                var ns = document.Root!.Name.Namespace;
-                var dictionary = new System.Xml.Linq.XElement(ns + "ResourceDictionary",
-                    new System.Xml.Linq.XAttribute(System.Xml.Linq.XNamespace.Xmlns + "x", "http://schemas.microsoft.com/winfx/2006/xaml"),
-                    document.Root.Element(ns + "Application.Resources")!.Elements());
-                var resources = (ResourceDictionary)System.Windows.Markup.XamlReader.Parse(dictionary.ToString());
+                var resources = ThemeTestResources.Load();
                 foreach (var dark in new[] { false, true })
                 {
                     var apply = typeof(ThemeManager).GetMethod("Apply", new[] { typeof(MS3DPRINT.Manager.Core.Storage.ThemePreference), typeof(ResourceDictionary) });

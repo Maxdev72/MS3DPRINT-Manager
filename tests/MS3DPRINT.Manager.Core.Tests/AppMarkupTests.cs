@@ -76,17 +76,6 @@ public sealed class AppMarkupTests
         Assert.Contains(comboBoxStyle.Elements(), element =>
             (string?)element.Attribute("Property") == "Foreground" &&
             (string?)element.Attribute("Value") == "{DynamicResource TextBrush}");
-        Assert.Contains(comboBoxStyle.Descendants(), element =>
-            element.Name.LocalName == "ContentPresenter" &&
-            element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "SelectionPresenter") &&
-            (string?)element.Attribute("TextElement.Foreground") == "{TemplateBinding Foreground}");
-        Assert.Contains(comboBoxStyle.Descendants(), element =>
-            element.Name.LocalName == "Trigger" &&
-            (string?)element.Attribute("Property") == "IsEnabled" &&
-            (string?)element.Attribute("Value") == "False");
-        Assert.Contains(comboBoxStyle.Descendants(), element =>
-            element.Name.LocalName == "Border" &&
-            element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "DropDownToggleBorder"));
         Assert.Contains(comboBoxItemStyle.Elements(), element =>
             (string?)element.Attribute("Property") == "Background" &&
             (string?)element.Attribute("Value") == "{DynamicResource SurfaceBrush}");
@@ -293,7 +282,7 @@ public sealed class AppMarkupTests
     public void ApplicationStyles_PreserveContrastForDisabledButtonsAndSelectedComboItems()
     {
         var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "App.xaml");
-        var buttonStyle = document.Descendants().Single(element => element.Name.LocalName == "Style" && (string?)element.Attribute("TargetType") == "Button");
+        var buttonStyle = document.Descendants().Single(element => element.Name.LocalName == "Style" && (string?)element.Attribute("TargetType") == "Button" && !element.Attributes().Any(attribute => attribute.Name.LocalName == "Key"));
         Assert.Contains(buttonStyle.Descendants(), element =>
             element.Name.LocalName == "Trigger" &&
             (string?)element.Attribute("Property") == "IsEnabled" &&

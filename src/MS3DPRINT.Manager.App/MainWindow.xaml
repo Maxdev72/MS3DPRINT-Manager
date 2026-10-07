@@ -2,7 +2,9 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:MS3DPRINT.Manager.App.Controls"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         Title="Gestionnaire MS3DPRINT" Width="700" Height="760" MinWidth="390" MinHeight="500"
+        Style="{DynamicResource MaterialDesignWindow}"
         WindowStartupLocation="CenterScreen" Background="{DynamicResource BackgroundBrush}">
     <Window.Resources>
         <Style x:Key="ActionCardButton" TargetType="Button">
@@ -18,13 +20,15 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type Button}">
-                        <Border x:Name="CardBorder"
+                        <Border CornerRadius="12" x:Name="CardBorder"
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                            <materialDesign:Ripple Background="Transparent" Focusable="False">
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                            </materialDesign:Ripple>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -52,12 +56,14 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type Button}">
-                        <Border x:Name="SecondaryBorder"
+                        <Border CornerRadius="8" x:Name="SecondaryBorder"
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <materialDesign:Ripple Background="Transparent" Focusable="False">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </materialDesign:Ripple>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -79,7 +85,26 @@
             <Setter Property="Foreground" Value="{DynamicResource HeaderTextBrush}" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="HorizontalContentAlignment" Value="Left" />
-            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button"><Border x:Name="NavigationBorder" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}"><ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center" TextElement.Foreground="{TemplateBinding Foreground}" /></Border><ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="NavigationBorder" Property="Background" Value="{DynamicResource NavigationHoverBrush}" /></Trigger><Trigger Property="IsEnabled" Value="False"><Setter Property="Foreground" Value="{DynamicResource HeaderMutedBrush}" /><Setter Property="Opacity" Value="0.72" /></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border CornerRadius="8" x:Name="NavigationBorder" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}"
+                                                         Width="18" Height="18" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                <TextBlock Text="{TemplateBinding Content}" VerticalAlignment="Center"
+                                           FontSize="{TemplateBinding FontSize}" Foreground="{TemplateBinding Foreground}" />
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="NavigationBorder" Property="Background" Value="{DynamicResource NavigationHoverBrush}" /></Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="NavigationBorder" Property="BorderBrush" Value="#F3AF35" /><Setter TargetName="NavigationBorder" Property="BorderThickness" Value="2" /></Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter Property="Foreground" Value="{DynamicResource HeaderMutedBrush}" /><Setter Property="Opacity" Value="0.72" /></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </Window.Resources>
     <Grid>
@@ -90,14 +115,14 @@
         <Border Grid.Column="0" Background="{DynamicResource HeaderBrush}" Padding="12,22">
             <StackPanel>
                 <TextBlock Text="MS3DPRINT" Foreground="{DynamicResource HeaderTextBrush}" FontWeight="SemiBold" FontSize="17" Margin="10,0,0,22" />
-                <Button Style="{StaticResource NavigationButton}" Content="Tableau de bord" Click="Dashboard_Click" />
-                <Button Style="{StaticResource NavigationButton}" Content="Rechercher" Click="Search_Click" Margin="0,5,0,0" />
-                <Button Style="{StaticResource NavigationButton}" Content="Clients" Click="Clients_Click" Margin="0,5,0,0" />
-                <Button Style="{StaticResource NavigationButton}" Content="Projets" Click="Projects_Click" Margin="0,5,0,0" />
-                <Button Style="{StaticResource NavigationButton}" Content="Modèles 3D" Click="Models_Click" Margin="0,5,0,0" />
-                <Button Style="{StaticResource NavigationButton}" Content="Produits" Click="Products_Click" Margin="0,5,0,0" />
-                <Button Style="{StaticResource NavigationButton}" Content="Fournisseurs" Click="Suppliers_Click" Margin="0,5,0,0" />
-                <Button Style="{StaticResource NavigationButton}" Content="Visualiseur 3D" Click="Open3DViewer_Click" Margin="0,16,0,0" />
+                <Button Style="{StaticResource NavigationButton}" Click="Dashboard_Click" Content="Tableau de bord" Tag="ViewDashboard" />
+                <Button Style="{StaticResource NavigationButton}" Click="Search_Click" Margin="0,5,0,0" Content="Rechercher" Tag="Magnify" />
+                <Button Style="{StaticResource NavigationButton}" Click="Clients_Click" Margin="0,5,0,0" Content="Clients" Tag="AccountMultiple" />
+                <Button Style="{StaticResource NavigationButton}" Click="Projects_Click" Margin="0,5,0,0" Content="Projets" Tag="Folder" />
+                <Button Style="{StaticResource NavigationButton}" Click="Models_Click" Margin="0,5,0,0" Content="Modèles 3D" Tag="CubeOutline" />
+                <Button Style="{StaticResource NavigationButton}" Click="Products_Click" Margin="0,5,0,0" Content="Produits" Tag="PackageVariant" />
+                <Button Style="{StaticResource NavigationButton}" Click="Suppliers_Click" Margin="0,5,0,0" Content="Fournisseurs" Tag="Truck" />
+                <Button Style="{StaticResource NavigationButton}" Click="Open3DViewer_Click" Margin="0,16,0,0" Content="Visualiseur 3D" Tag="CubeScan" />
             </StackPanel>
         </Border>
         <DockPanel Grid.Column="1">
@@ -129,38 +154,38 @@
                 <DockPanel Margin="0,0,0,12"><TextBlock Text="Vue d’ensemble" Foreground="{DynamicResource InkBrush}" FontWeight="SemiBold" FontSize="17" DockPanel.Dock="Left" /><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><TextBlock x:Name="DashboardLoadingText" Text="Actualisation…" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Visibility="Collapsed" Margin="0,0,10,0" /><Button Content="Actualiser" Style="{StaticResource SecondaryActionButton}" Click="DashboardRefresh_Click" /></StackPanel></DockPanel>
                 <TextBlock x:Name="DashboardErrorText" Visibility="Collapsed" Foreground="{DynamicResource ErrorBrush}" TextWrapping="Wrap" Margin="0,0,0,10" />
                 <controls:ResponsiveCardPanel MaxColumns="5" MinimumItemWidth="125" MinimumItemHeight="92" ItemHeightRatio="0" Gap="10" Margin="0,0,0,24">
-                    <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="14"><StackPanel><TextBlock Text="CLIENTS" Foreground="{DynamicResource MutedBrush}" FontSize="11" /><TextBlock x:Name="DashboardClientsCount" Text="{Binding DashboardClientsCount}" FontSize="24" FontWeight="SemiBold" Margin="0,6,0,0" /></StackPanel></Border>
-                    <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="14"><StackPanel><TextBlock Text="PROJETS" Foreground="{DynamicResource MutedBrush}" FontSize="11" /><TextBlock x:Name="DashboardProjectsCount" Text="{Binding DashboardProjectsCount}" FontSize="24" FontWeight="SemiBold" Margin="0,6,0,0" /></StackPanel></Border>
-                    <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="14"><StackPanel><TextBlock Text="DEVIS" Foreground="{DynamicResource MutedBrush}" FontSize="11" /><TextBlock x:Name="DashboardQuotesCount" Text="{Binding DashboardQuotesCount}" FontSize="24" FontWeight="SemiBold" Margin="0,6,0,0" /></StackPanel></Border>
-                    <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="14"><StackPanel><TextBlock Text="EN COURS" Foreground="{DynamicResource MutedBrush}" FontSize="11" /><TextBlock x:Name="DashboardInProgressCount" Text="{Binding DashboardInProgressCount}" FontSize="24" FontWeight="SemiBold" Margin="0,6,0,0" /></StackPanel></Border>
-                    <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="14"><StackPanel><TextBlock Text="TERMINÉS" Foreground="{DynamicResource MutedBrush}" FontSize="11" /><TextBlock x:Name="DashboardCompletedCount" Text="{Binding DashboardCompletedCount}" FontSize="24" FontWeight="SemiBold" Margin="0,6,0,0" /></StackPanel></Border>
+                    <Border CornerRadius="12" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="14"><StackPanel><TextBlock Text="CLIENTS" Foreground="{DynamicResource MutedBrush}" FontSize="11" /><TextBlock x:Name="DashboardClientsCount" Text="{Binding DashboardClientsCount}" FontSize="24" FontWeight="SemiBold" Margin="0,6,0,0" /></StackPanel></Border>
+                    <Border CornerRadius="12" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="14"><StackPanel><TextBlock Text="PROJETS" Foreground="{DynamicResource MutedBrush}" FontSize="11" /><TextBlock x:Name="DashboardProjectsCount" Text="{Binding DashboardProjectsCount}" FontSize="24" FontWeight="SemiBold" Margin="0,6,0,0" /></StackPanel></Border>
+                    <Border CornerRadius="12" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="14"><StackPanel><TextBlock Text="DEVIS" Foreground="{DynamicResource MutedBrush}" FontSize="11" /><TextBlock x:Name="DashboardQuotesCount" Text="{Binding DashboardQuotesCount}" FontSize="24" FontWeight="SemiBold" Margin="0,6,0,0" /></StackPanel></Border>
+                    <Border CornerRadius="12" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="14"><StackPanel><TextBlock Text="EN COURS" Foreground="{DynamicResource MutedBrush}" FontSize="11" /><TextBlock x:Name="DashboardInProgressCount" Text="{Binding DashboardInProgressCount}" FontSize="24" FontWeight="SemiBold" Margin="0,6,0,0" /></StackPanel></Border>
+                    <Border CornerRadius="12" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="14"><StackPanel><TextBlock Text="TERMINÉS" Foreground="{DynamicResource MutedBrush}" FontSize="11" /><TextBlock x:Name="DashboardCompletedCount" Text="{Binding DashboardCompletedCount}" FontSize="24" FontWeight="SemiBold" Margin="0,6,0,0" /></StackPanel></Border>
                 </controls:ResponsiveCardPanel>
                 <TextBlock Text="Actions rapides" Foreground="{DynamicResource InkBrush}" FontWeight="SemiBold" FontSize="17" Margin="0,0,0,14" />
                 <controls:ResponsiveCardPanel MaxColumns="4" MinimumItemWidth="210" MinimumItemHeight="148" ItemHeightRatio="0" Gap="14">
                     <Button Style="{StaticResource ActionCardButton}" Click="NewClient_Click">
-                        <StackPanel><TextBlock Text="&#xE77B;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Nouveau client" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Créer le dossier et le code client." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
+                        <StackPanel><materialDesign:PackIcon Kind="AccountPlus" Width="28" Height="28" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Nouveau client" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Créer le dossier et le code client." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
                     </Button>
-                    <Button Style="{StaticResource ActionCardButton}" Click="Settings_Click"><StackPanel><TextBlock Text="&#xE713;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Paramètres" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Choisir le thème de l’application." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel></Button>
+                    <Button Style="{StaticResource ActionCardButton}" Click="Settings_Click"><StackPanel><materialDesign:PackIcon Kind="Cog" Width="28" Height="28" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Paramètres" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Choisir le thème de l’application." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel></Button>
                     <Button Style="{StaticResource ActionCardButton}" Click="NewProject_Click">
-                        <StackPanel><TextBlock Text="&#xE8F1;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Nouveau projet" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Créer une référence et son arborescence." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
+                        <StackPanel><materialDesign:PackIcon Kind="FolderPlus" Width="28" Height="28" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Nouveau projet" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Créer une référence et son arborescence." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
                     </Button>
                     <Button Style="{StaticResource ActionCardButton}" Click="NewModel_Click">
-                        <StackPanel><TextBlock Text="&#xF1C5;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Nouveau modèle 3D" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Organiser les sources, STEP et STL." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
+                        <StackPanel><materialDesign:PackIcon Kind="CubeOutline" Width="28" Height="28" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Nouveau modèle 3D" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Organiser les sources, STEP et STL." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
                     </Button>
                     <Button Style="{StaticResource ActionCardButton}" Click="NewProduct_Click">
-                        <StackPanel><TextBlock Text="&#xE719;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Nouveau produit" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Préparer un produit MS3DPRINT." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
+                        <StackPanel><materialDesign:PackIcon Kind="PackageVariant" Width="28" Height="28" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Nouveau produit" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Préparer un produit MS3DPRINT." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
                     </Button>
                     <Button Style="{StaticResource ActionCardButton}" Click="NewSupplier_Click">
-                        <StackPanel><TextBlock Text="&#xE716;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Nouveau fournisseur" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Centraliser les contacts et tarifs." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
+                        <StackPanel><materialDesign:PackIcon Kind="Truck" Width="28" Height="28" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Nouveau fournisseur" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Centraliser les contacts et tarifs." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
                     </Button>
                     <Button Style="{StaticResource ActionCardButton}" Click="OpenRoot_Click">
-                        <StackPanel><TextBlock Text="&#xE8B7;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Ouvrir les dossiers" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Afficher MS3DPRINT dans l’Explorateur." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
+                        <StackPanel><materialDesign:PackIcon Kind="FolderOpen" Width="28" Height="28" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Ouvrir les dossiers" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Afficher MS3DPRINT dans l’Explorateur." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
                     </Button>
                     <Button Style="{StaticResource ActionCardButton}" Click="ClassifyFile_Click">
-                        <StackPanel><TextBlock Text="&#xE8A5;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Classer un fichier" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Déplacer et rattacher un fichier à un projet." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
+                        <StackPanel><materialDesign:PackIcon Kind="FileMove" Width="28" Height="28" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Classer un fichier" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Déplacer et rattacher un fichier à un projet." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
                     </Button>
                     <Button Style="{StaticResource ActionCardButton}" Click="Open3DViewer_Click">
-                        <StackPanel><TextBlock Text="&#xE71E;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Visualiser un fichier 3D" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Déposer ou choisir un STL ou un OBJ." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
+                        <StackPanel><materialDesign:PackIcon Kind="CubeScan" Width="28" Height="28" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Visualiser un fichier 3D" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Déposer ou choisir un STL ou un OBJ." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
                     </Button>
                 </controls:ResponsiveCardPanel>
             </StackPanel>

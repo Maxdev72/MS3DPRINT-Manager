@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:hx="http://helix-toolkit.org/wpf/SharpDX"
         Title="Visualiseur 3D" Width="1000" Height="720" MinWidth="640" MinHeight="460"
+        Style="{DynamicResource MaterialDesignWindow}"
         WindowStartupLocation="CenterOwner" Background="{DynamicResource BackgroundBrush}"
         AllowDrop="True" PreviewDragOver="Window_PreviewDragOver" PreviewDrop="Window_PreviewDrop">
     <DockPanel>

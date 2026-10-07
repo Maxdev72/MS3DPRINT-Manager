@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:helix="http://helix-toolkit.org/wpf"
         Title="Aperçu 3D" Width="980" Height="680" MinWidth="620" MinHeight="440"
+        Style="{DynamicResource MaterialDesignWindow}"
         WindowStartupLocation="CenterOwner" Background="{DynamicResource BackgroundBrush}" AllowDrop="True"
         PreviewDragOver="Window_PreviewDragOver" PreviewDrop="Window_PreviewDrop">
     <DockPanel>

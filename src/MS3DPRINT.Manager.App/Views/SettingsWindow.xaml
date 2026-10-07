@@ -2,16 +2,17 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Paramètres" Width="660" SizeToContent="Height" MinHeight="250"
+        Style="{DynamicResource MaterialDesignWindow}"
         WindowStartupLocation="CenterOwner" Background="{DynamicResource BackgroundBrush}">
     <DockPanel Margin="24">
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,22,0,0">
-            <Button Content="Annuler" Click="Cancel_Click" Background="#64748B" Margin="0,0,10,0" />
+            <Button Content="Annuler" Click="Cancel_Click" Style="{DynamicResource SecondaryButton}" Margin="0,0,10,0" />
             <Button Content="Enregistrer" IsDefault="True" Click="Save_Click" />
         </StackPanel>
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel>
                 <TextBlock Text="Apparence" FontSize="21" FontWeight="SemiBold" />
-                <TextBlock Text="Choisissez le thème de l’application." Margin="0,7,0,22" Foreground="{DynamicResource MutedBrush}" />
+                <TextBlock Text="Material Design · palette bleu et gris" Margin="0,7,0,22" Foreground="{DynamicResource MutedBrush}" />
                 <TextBlock Text="Thème" FontWeight="SemiBold" />
                 <ComboBox x:Name="ThemeBox" Margin="0,7,0,24" SelectedIndex="0">
                     <ComboBoxItem Tag="Automatic">Automatique (Windows)</ComboBoxItem>
@@ -25,7 +26,7 @@
                     <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Width="190" MinHeight="120" Margin="0,0,12,12" Padding="14" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="3">
+                            <Border Width="190" MinHeight="120" Margin="0,0,12,12" Padding="14" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10">
                                 <Grid>
                                     <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
                                     <StackPanel Orientation="Horizontal">
