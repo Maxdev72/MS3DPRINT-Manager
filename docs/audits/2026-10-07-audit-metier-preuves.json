@@ -1,0 +1,74 @@
+[
+  {
+    "Id": "CLIENT-RECREATE",
+    "Scenario": "Create ACME, trash ACME, create ACME with new ID/code, restore old client",
+    "Observed": "creationError=FolderConflictException: Un code est déjà enregistré pour le client ACME.; activeProfiles=1; replacementPersisted=True; directoryExists=True; registryCode=ACM; restoreError=IOException: Un élément existe déjà à cet emplacement.",
+    "Confirmed": true
+  },
+  {
+    "Id": "PROJECT-DUPLICATE-PROFILE",
+    "Scenario": "Tracked project under A; same folder name imported under B without profile",
+    "Observed": "summaries=2; duplicateHasProfile=True; duplicateProfileId=0201b5b5-f014-4a1d-8f06-95d0dfed53ff; originalProfileId=0201b5b5-f014-4a1d-8f06-95d0dfed53ff; duplicateClientPath={FIXTURE}\\clients\\project-duplicate\\01_CLIENTS\\CLIENT_B; persistedProfileRelativePath=01_CLIENTS/CLIENT_A/AAA-2026-001_TEST; afterTrashingDuplicateOriginalFilesExist=True; originalProfileMissing=True; activeProfileCount=0",
+    "Confirmed": true
+  },
+  {
+    "Id": "LEGACY-CODE-SEPARATOR",
+    "Scenario": "Create legacy project using accepted client code ACME_FR",
+    "Observed": "createdFolder=ACME_FR-2026-001_TEST; folderExists=True; visibleProjects=0; clientProjectCount=0",
+    "Confirmed": true
+  },
+  {
+    "Id": "CLIENT-PRESELECT-FOLDERNAME",
+    "Scenario": "Move A under GROUP, rename B folder to A, open creation from B fiche",
+    "Observed": "clients=2; intendedId=35308d18-a609-44ee-9eeb-e3f3a83f0646; selectedId=eff4bed8-cc3b-4a28-ae47-5dfee77ca2ee; intendedPath={FIXTURE}\\clients\\client-name-duplicate\\01_CLIENTS\\A; selectedPath={FIXTURE}\\clients\\client-name-duplicate\\01_CLIENTS\\GROUP\\A; duplicateFolderNames=2",
+    "Confirmed": true
+  },
+  {
+    "Id": "F1",
+    "Scenario": "Classer vers une jonction externe",
+    "Observed": "SourceExists=False; OutsideFileExists=True; Returned={FIXTURE}\\files\\files-transfer-link\\workspace\\01_CLIENTS\\CLIENT\\ACM-2026-001_TEST\\02_FICHIERS_CLIENT\\moved.txt",
+    "Confirmed": true
+  },
+  {
+    "Id": "F2",
+    "Scenario": "Naviguer dans une jonction externe",
+    "Observed": "LinkedEntryIsDirectory=True; ExternalEntries=1; OutsideContentReadable=True",
+    "Confirmed": true
+  },
+  {
+    "Id": "F3",
+    "Scenario": "Classer après déplacement d'un client dans un groupe",
+    "Observed": "ChoicesBefore=1; CatalogProjectsAfter=1; ChoicesAfter=0; ProjectPath={FIXTURE}\\files\\files-grouped-client\\workspace\\01_CLIENTS\\GROUP\\ACME\\ACM-2026-001_TEST",
+    "Confirmed": true
+  },
+  {
+    "Id": "F4",
+    "Scenario": "Simulation de l'état persistant d'un renommage de casse interrompu (pas un crash réel)",
+    "Observed": "RecoveryError=Le dossier d’une opération interrompue est introuvable. Les sauvegardes sont conservées.; SourceExists=False; IntermediateDataRetained=True; JournalPending=True",
+    "Confirmed": true
+  },
+  {
+    "Id": "COLLECTION-LEGACY-SUBDOCUMENTS",
+    "Scenario": "Legacy supplier with 02_TARIFS/tarif.pdf; adopt nested LEGACY/MOVED",
+    "Observed": "Legacy visible before=True, after=False; nested visible=True; tariff intact=True",
+    "Confirmed": true
+  },
+  {
+    "Id": "FILAMENT-PRICE-ROUNDTRIP",
+    "Scenario": "Create 24.991 EUR/kg, initialize editor, change only NameBox, invoke SaveButton",
+    "Observed": "Original price=24,991; editor text=24,99; callback invoked=True; persisted price=24,99; persisted name=Edited name only. Nonshown STA window: save callback persists before DialogResult raises the modal-only exception handled by editor.",
+    "Confirmed": true
+  },
+  {
+    "Id": "STALE-EDIT",
+    "Scenario": "Deux fiches du même client ouvertes avant deux sauvegardes",
+    "Observed": "Nom après premier Save puis second Save : Acme initial; note : Note depuis une autre fiche ouverte",
+    "Confirmed": true
+  },
+  {
+    "Id": "CLOUD-SEARCH",
+    "Scenario": "Recherche d’un fichier source existant sous dossier Cloud Files accepté par WorkspacePathSafety",
+    "Observed": "Fichier existe : True; dossier src ReparsePoint : False; trouvé par recherche : True",
+    "Confirmed": false
+  }
+]
