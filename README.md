@@ -20,10 +20,13 @@ dotnet publish src/MS3DPRINT.Manager.App/MS3DPRINT.Manager.App.csproj -p:Publish
 
 ## Livraison
 
-Après publication, distribuez le dossier complet `outputs\MS3DPRINT-Manager`.
-L'exécutable `MS3DPRINT.Manager.App.exe` est autonome et fonctionne sur
-Windows x64 sans installation du runtime .NET. Copiez ce dossier entier vers
-l'emplacement de livraison et lancez l'exécutable depuis ce dossier.
+Après publication, le binaire interne `outputs\MS3DPRINT-Manager\MS3DPRINT.Manager.App.exe`
+est autonome et fonctionne sur Windows x64 sans installation du runtime .NET.
+Le nom destiné à l’utilisateur est toujours **MS3DPRINT Manager.exe**.
+Copiez le binaire publié sous ce nom dans le dossier de livraison et remplacez
+la version précédente. Gardez un seul exécutable dans ce dossier, sans suffixe
+Material, numéro de version ou date. Les éventuelles sauvegardes restent dans
+`outputs\backups`, séparées de la livraison.
 
 Si l'application a déjà enregistré des codes clients, conservez également
 `data\client-codes.json` dans le dossier livré. Ce fichier contient le
