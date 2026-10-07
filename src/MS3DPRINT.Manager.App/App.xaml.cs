@@ -9,6 +9,6 @@ public partial class App : Application
     {
         base.OnStartup(e);
         var dataDirectory = Environment.GetEnvironmentVariable("MS3DPRINT_DATA_DIRECTORY");
-        ThemeManager.Apply(new ThemeSettingsStore(string.IsNullOrWhiteSpace(dataDirectory) ? null : dataDirectory).Load());
+        ThemeManager.Apply(new ThemeSettingsStore(string.IsNullOrWhiteSpace(dataDirectory) ? null : dataDirectory).LoadAppearance());
     }
 }

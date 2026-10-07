@@ -48,7 +48,7 @@
             <Setter Property="Height" Value="42" />
             <Setter Property="Padding" Value="18,6" />
             <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
-            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="FontWeight" Value="SemiBold" />
@@ -163,29 +163,29 @@
                 <TextBlock Text="Actions rapides" Foreground="{DynamicResource InkBrush}" FontWeight="SemiBold" FontSize="17" Margin="0,0,0,14" />
                 <controls:ResponsiveCardPanel MaxColumns="4" MinimumItemWidth="210" MinimumItemHeight="148" ItemHeightRatio="0" Gap="14">
                     <Button Style="{StaticResource ActionCardButton}" Click="NewClient_Click">
-                        <StackPanel><materialDesign:PackIcon Kind="AccountPlus" Width="28" Height="28" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Nouveau client" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Créer le dossier et le code client." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
+                        <StackPanel><materialDesign:PackIcon Kind="AccountPlus" Width="28" Height="28" Foreground="{DynamicResource AccentForegroundBrush}" /><TextBlock Text="Nouveau client" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Créer le dossier et le code client." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
                     </Button>
-                    <Button Style="{StaticResource ActionCardButton}" Click="Settings_Click"><StackPanel><materialDesign:PackIcon Kind="Cog" Width="28" Height="28" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Paramètres" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Choisir le thème de l’application." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel></Button>
+                    <Button Style="{StaticResource ActionCardButton}" Click="Settings_Click"><StackPanel><materialDesign:PackIcon Kind="Cog" Width="28" Height="28" Foreground="{DynamicResource AccentForegroundBrush}" /><TextBlock Text="Paramètres" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Choisir le thème de l’application." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel></Button>
                     <Button Style="{StaticResource ActionCardButton}" Click="NewProject_Click">
-                        <StackPanel><materialDesign:PackIcon Kind="FolderPlus" Width="28" Height="28" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Nouveau projet" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Créer une référence et son arborescence." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
+                        <StackPanel><materialDesign:PackIcon Kind="FolderPlus" Width="28" Height="28" Foreground="{DynamicResource AccentForegroundBrush}" /><TextBlock Text="Nouveau projet" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Créer une référence et son arborescence." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
                     </Button>
                     <Button Style="{StaticResource ActionCardButton}" Click="NewModel_Click">
-                        <StackPanel><materialDesign:PackIcon Kind="CubeOutline" Width="28" Height="28" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Nouveau modèle 3D" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Organiser les sources, STEP et STL." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
+                        <StackPanel><materialDesign:PackIcon Kind="CubeOutline" Width="28" Height="28" Foreground="{DynamicResource AccentForegroundBrush}" /><TextBlock Text="Nouveau modèle 3D" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Organiser les sources, STEP et STL." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
                     </Button>
                     <Button Style="{StaticResource ActionCardButton}" Click="NewProduct_Click">
-                        <StackPanel><materialDesign:PackIcon Kind="PackageVariant" Width="28" Height="28" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Nouveau produit" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Préparer un produit MS3DPRINT." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
+                        <StackPanel><materialDesign:PackIcon Kind="PackageVariant" Width="28" Height="28" Foreground="{DynamicResource AccentForegroundBrush}" /><TextBlock Text="Nouveau produit" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Préparer un produit MS3DPRINT." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
                     </Button>
                     <Button Style="{StaticResource ActionCardButton}" Click="NewSupplier_Click">
-                        <StackPanel><materialDesign:PackIcon Kind="Truck" Width="28" Height="28" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Nouveau fournisseur" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Centraliser les contacts et tarifs." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
+                        <StackPanel><materialDesign:PackIcon Kind="Truck" Width="28" Height="28" Foreground="{DynamicResource AccentForegroundBrush}" /><TextBlock Text="Nouveau fournisseur" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Centraliser les contacts et tarifs." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
                     </Button>
                     <Button Style="{StaticResource ActionCardButton}" Click="OpenRoot_Click">
-                        <StackPanel><materialDesign:PackIcon Kind="FolderOpen" Width="28" Height="28" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Ouvrir les dossiers" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Afficher MS3DPRINT dans l’Explorateur." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
+                        <StackPanel><materialDesign:PackIcon Kind="FolderOpen" Width="28" Height="28" Foreground="{DynamicResource AccentForegroundBrush}" /><TextBlock Text="Ouvrir les dossiers" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Afficher MS3DPRINT dans l’Explorateur." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
                     </Button>
                     <Button Style="{StaticResource ActionCardButton}" Click="ClassifyFile_Click">
-                        <StackPanel><materialDesign:PackIcon Kind="FileMove" Width="28" Height="28" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Classer un fichier" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Déplacer et rattacher un fichier à un projet." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
+                        <StackPanel><materialDesign:PackIcon Kind="FileMove" Width="28" Height="28" Foreground="{DynamicResource AccentForegroundBrush}" /><TextBlock Text="Classer un fichier" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Déplacer et rattacher un fichier à un projet." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
                     </Button>
                     <Button Style="{StaticResource ActionCardButton}" Click="Open3DViewer_Click">
-                        <StackPanel><materialDesign:PackIcon Kind="CubeScan" Width="28" Height="28" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="Visualiser un fichier 3D" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Déposer ou choisir un STL ou un OBJ." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
+                        <StackPanel><materialDesign:PackIcon Kind="CubeScan" Width="28" Height="28" Foreground="{DynamicResource AccentForegroundBrush}" /><TextBlock Text="Visualiser un fichier 3D" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Déposer ou choisir un STL ou un OBJ." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
                     </Button>
                 </controls:ResponsiveCardPanel>
             </StackPanel>

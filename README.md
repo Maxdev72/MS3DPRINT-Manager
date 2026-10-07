@@ -31,9 +31,12 @@ registre local nécessaire pour retrouver ces codes.
 
 ## Utilisation
 
-- L’interface utilise Material Design avec une palette bleu et gris. Dans
-  **Paramètres > Apparence**, choisissez le mode clair, sombre ou automatique
-  selon Windows. Le choix reste enregistré pour les prochaines ouvertures.
+- L’interface utilise Material Design. Dans **Paramètres > Apparence**,
+  choisissez un fond blanc, gris, noir AMOLED ou papier crème, ou le mode
+  automatique selon Windows (blanc ou gris). La couleur d’accent est indépendante :
+  bleu, vert, violet, rouge, orange ou jaune. Les deux choix restent enregistrés
+  pour les prochaines ouvertures. Le mode noir AMOLED utilise des fonds noirs
+  pour les pages, cartes et menus ; les bordures et survols restent visibles.
 - **Clients** : ouvrez une fiche pour modifier la raison sociale ou le nom du
   particulier, l’adresse, le contact principal et les notes. Le code client
   et le nom du dossier restent inchangés pour préserver les projets existants.

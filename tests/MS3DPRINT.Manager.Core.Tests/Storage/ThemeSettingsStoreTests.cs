@@ -21,6 +21,57 @@ public sealed class ThemeSettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public void Save_RestoresTheThemeAndAccentTogetherForANewStore()
+    {
+        new ThemeSettingsStore(_dataDirectory).Save(new ThemeAppearance(ThemePreference.Paper, AccentPreference.Yellow));
+        var reloaded = new ThemeSettingsStore(_dataDirectory).LoadAppearance();
+        Assert.Equal(ThemePreference.Paper, reloaded.Theme);
+        Assert.Equal(AccentPreference.Yellow, reloaded.Accent);
+    }
+
+    [Fact]
+    public void LoadAppearance_OldSettingsKeepTheirThemeWithDefaultBlueAccent()
+    {
+        Directory.CreateDirectory(_dataDirectory);
+        File.WriteAllText(Path.Combine(_dataDirectory, "settings.json"), "{\"Theme\":2}");
+        var appearance = new ThemeSettingsStore(_dataDirectory).LoadAppearance();
+        Assert.Equal(ThemePreference.Dark, appearance.Theme);
+        Assert.Equal(AccentPreference.Blue, appearance.Accent);
+    }
+
+    [Fact]
+    public void LoadAppearance_UnknownAccentKeepsTheThemeWithDefaultBlueAccent()
+    {
+        Directory.CreateDirectory(_dataDirectory);
+        File.WriteAllText(Path.Combine(_dataDirectory, "settings.json"), "{\"Theme\":3,\"Accent\":999}");
+        var appearance = new ThemeSettingsStore(_dataDirectory).LoadAppearance();
+        Assert.Equal(ThemePreference.Amoled, appearance.Theme);
+        Assert.Equal(AccentPreference.Blue, appearance.Accent);
+    }
+
+    [Fact]
+    public void Save_ThemeOnlyPreservesThePreviouslySelectedAccent()
+    {
+        Directory.CreateDirectory(_dataDirectory);
+        var path = Path.Combine(_dataDirectory, "settings.json");
+        File.WriteAllText(path, "{\"Theme\":2,\"Accent\":3}");
+
+        new ThemeSettingsStore(_dataDirectory).Save(ThemePreference.Light);
+
+        using var saved = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
+        Assert.Equal(3, saved.RootElement.GetProperty("Accent").GetInt32());
+        Assert.Equal(ThemePreference.Light, new ThemeSettingsStore(_dataDirectory).Load());
+    }
+
+    [Fact]
+    public void Load_UnknownThemeFallsBackToAutomatic()
+    {
+        Directory.CreateDirectory(_dataDirectory);
+        File.WriteAllText(Path.Combine(_dataDirectory, "settings.json"), "{\"Theme\":999}");
+        Assert.Equal(ThemePreference.Automatic, new ThemeSettingsStore(_dataDirectory).Load());
+    }
+
+    [Fact]
     public void Load_ReturnsAutomaticAndPreservesTheFileWhenSavedSettingsAreInvalid()
     {
         Directory.CreateDirectory(_dataDirectory);

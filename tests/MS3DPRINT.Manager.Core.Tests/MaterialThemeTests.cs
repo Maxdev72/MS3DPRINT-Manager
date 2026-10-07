@@ -10,6 +10,136 @@ namespace MS3DPRINT.Manager.Core.Tests;
 [Collection("Responsive layout UI")]
 public sealed class MaterialThemeTests
 {
+    public static IEnumerable<object[]> AccentCombinations()
+    {
+        foreach (var theme in new[] { ThemePreference.Light, ThemePreference.Dark, ThemePreference.Amoled, ThemePreference.Paper })
+            foreach (var accent in Enum.GetValues<AccentPreference>())
+                yield return [theme, accent];
+    }
+
+    [Theory]
+    [MemberData(nameof(AccentCombinations))]
+    public void AccentColors_KeepActionsAndColoredTextReadable(ThemePreference preference, AccentPreference accent)
+    {
+        ThemeTestResources.RunSta(() =>
+        {
+            var resources = ThemeTestResources.Load();
+            ThemeManager.Apply(new ThemeAppearance(preference, accent), resources);
+            foreach (var key in new[] { "SurfaceBrush", "CardHoverBrush" })
+                Assert.True(Contrast((Brush)resources["AccentForegroundBrush"], (Brush)resources[key]) >= 4.5,
+                    $"L’accent {accent} se confond avec le fond {key} du thème {preference}.");
+            Assert.True(Contrast((Brush)resources["CalendarSelectedTextBrush"], (Brush)resources["AccentBrush"]) >= 4.5);
+
+            foreach (var style in new[] { (Style)resources[typeof(Button)], (Style)resources["SecondaryButton"] })
+            {
+                var button = new Button { Content = "Action", Resources = resources, Style = style };
+                button.Measure(new Size(180, 44));
+                button.Arrange(new Rect(0, 0, 180, 44));
+                button.UpdateLayout();
+                var label = Descendants(button).OfType<TextBlock>().Single(text => text.Text == "Action");
+                label.Style = (Style)resources[typeof(TextBlock)];
+                Assert.True(Contrast(label.Foreground, button.Background) >= 4.5,
+                    $"Le libellé du bouton manque de contraste : {preference}, {accent}.");
+            }
+        });
+    }
+
+    [Fact]
+    public void DarkMode_UsesNeutralGreyInsteadOfBlueGrey()
+    {
+        ThemeTestResources.RunSta(() =>
+        {
+            var resources = ThemeTestResources.Load();
+            ThemeManager.Apply(ThemePreference.Dark, resources);
+            foreach (var key in new[] { "BackgroundBrush", "SurfaceBrush", "HeaderBrush" })
+            {
+                var color = ((SolidColorBrush)resources[key]).Color;
+                Assert.Equal(color.R, color.G);
+                Assert.Equal(color.G, color.B);
+                Assert.True(color.R > 0, "Le mode gris doit rester distinct du noir AMOLED.");
+            }
+        });
+    }
+
+    [Theory]
+    [InlineData("Amoled")]
+    [InlineData("Paper")]
+    public void AdditionalThemes_ProvideBlackOrWarmPaperSurfaces(string name)
+    {
+        Assert.True(Enum.TryParse<ThemePreference>(name, out var preference), $"Thème absent : {name}.");
+        ThemeTestResources.RunSta(() =>
+        {
+            var resources = ThemeTestResources.Load();
+            ThemeManager.Apply(preference, resources);
+            var color = ((SolidColorBrush)resources["BackgroundBrush"]).Color;
+            if (name == "Amoled")
+            {
+                foreach (var key in new[] { "BackgroundBrush", "SurfaceBrush", "HeaderBrush" })
+                    Assert.Equal(Colors.Black, ((SolidColorBrush)resources[key]).Color);
+            }
+            else
+                Assert.True(color.R >= color.G && color.G > color.B && color.G > 230, "Le fond papier doit être clair et légèrement jaune.");
+        });
+    }
+
+    [Fact]
+    public void SettingsWindow_RestoresTheSelectedAccent()
+    {
+        ThemeTestResources.RunSta(() =>
+        {
+            var directory = Path.Combine(Path.GetTempPath(), "ms3d-appearance-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            try
+            {
+                File.WriteAllText(Path.Combine(directory, "settings.json"), "{\"Theme\":1,\"Accent\":5}");
+                var window = new SettingsWindow(new ThemeSettingsStore(directory), directory);
+                try
+                {
+                    var accents = Assert.IsType<ComboBox>(window.FindName("AccentBox"));
+                    Assert.Equal(AccentPreference.Yellow, accents.SelectedValue);
+                }
+                finally { window.Close(); }
+            }
+            finally { Directory.Delete(directory, recursive: true); }
+        });
+    }
+
+    [Theory]
+    [InlineData(ThemePreference.Light, AccentPreference.Blue)]
+    [InlineData(ThemePreference.Dark, AccentPreference.Violet)]
+    [InlineData(ThemePreference.Amoled, AccentPreference.Yellow)]
+    [InlineData(ThemePreference.Paper, AccentPreference.Blue)]
+    public void ClosedAccentSelector_KeepsTheSelectedLabelReadable(ThemePreference preference, AccentPreference accent)
+    {
+        ThemeTestResources.RunSta(() =>
+        {
+            var directory = Path.Combine(Path.GetTempPath(), "ms3d-selector-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                var store = new ThemeSettingsStore(directory);
+                store.Save(new ThemeAppearance(preference, accent));
+                var resources = ThemeTestResources.Load();
+                ThemeManager.Apply(store.LoadAppearance(), resources);
+                var window = new SettingsWindow(store, directory);
+                window.Resources.MergedDictionaries.Add(resources);
+                try
+                {
+                    var content = (FrameworkElement)window.Content;
+                    content.Measure(new Size(660, 780));
+                    content.Arrange(new Rect(0, 0, 660, 780));
+                    content.UpdateLayout();
+                    var selector = Assert.IsType<ComboBox>(window.FindName("AccentBox"));
+                    var labelRoot = selector.SelectionBoxItem is VisualBrush clone ? clone.Visual : selector;
+                    var label = Descendants(labelRoot).OfType<TextBlock>().First(text => !string.IsNullOrWhiteSpace(text.Text));
+                    Assert.True(Contrast(label.Foreground, selector.Background) >= 4.5,
+                        $"La couleur choisie est illisible dans le sélecteur fermé : {preference}, {accent}.");
+                }
+                finally { window.Close(); }
+            }
+            finally { if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true); }
+        });
+    }
+
     [Theory]
     [InlineData(ThemePreference.Light)]
     [InlineData(ThemePreference.Dark)]

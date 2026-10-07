@@ -39,7 +39,7 @@
                             <WrapPanel Margin="0,12,0,0">
                                 <StackPanel Orientation="Horizontal" Margin="0,0,20,7"><TextBlock Text="CODE" Foreground="{DynamicResource MutedBrush}" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0" /><TextBlock Text="{Binding ClientCode}" /></StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,20,7"><TextBlock Text="PROJETS" Foreground="{DynamicResource MutedBrush}" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0" /><TextBlock Text="{Binding ProjectCount, StringFormat={}{0} projet(s)}" /></StackPanel>
-                                <Border BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" Padding="9,4" Margin="0,0,0,7"><TextBlock Text="{Binding ProfileLabel}" Foreground="{DynamicResource AccentBrush}" /></Border>
+                                <Border BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" Padding="9,4" Margin="0,0,0,7"><TextBlock Text="{Binding ProfileLabel}" Foreground="{DynamicResource AccentForegroundBrush}" /></Border>
                             </WrapPanel>
                         </StackPanel>
                     </Border>

@@ -24,7 +24,18 @@ public partial class SettingsWindow : Window
         _hardwareInfoProvider = hardwareInfoProvider ?? throw new ArgumentNullException(nameof(hardwareInfoProvider));
         StorageProviderCards = new ObservableCollection<StorageProviderCard>(StorageProviderCatalog.Create(storageRoot).Select(definition => new StorageProviderCard(definition)));
         DataContext = this;
-        ThemeBox.SelectedIndex = (int)_settings.Load();
+        AccentBox.ItemsSource = new AccentOption[]
+        {
+            new(AccentPreference.Blue, "Bleu", "#1769AA"),
+            new(AccentPreference.Green, "Vert", "#237B4B"),
+            new(AccentPreference.Violet, "Violet", "#6F42B5"),
+            new(AccentPreference.Red, "Rouge", "#B42332"),
+            new(AccentPreference.Orange, "Orange", "#EF8A32"),
+            new(AccentPreference.Yellow, "Jaune", "#F6CD35")
+        };
+        var appearance = _settings.LoadAppearance();
+        ThemeBox.SelectedItem = ThemeBox.Items.Cast<ComboBoxItem>().Single(item => item.Tag.ToString() == appearance.Theme.ToString());
+        AccentBox.SelectedValue = appearance.Accent;
         MaxHeight = SystemParameters.WorkArea.Height * 0.9;
         MaxWidth = SystemParameters.WorkArea.Width * 0.9;
         Loaded += SettingsWindow_Loaded;
@@ -56,8 +67,10 @@ public partial class SettingsWindow : Window
     private void Save_Click(object sender, RoutedEventArgs e)
     {
         var preference = Enum.Parse<ThemePreference>(((ComboBoxItem)ThemeBox.SelectedItem).Tag.ToString()!);
-        _settings.Save(preference);
-        ThemeManager.Apply(preference);
+        var accent = (AccentPreference)AccentBox.SelectedValue;
+        var appearance = new ThemeAppearance(preference, accent);
+        _settings.Save(appearance);
+        ThemeManager.Apply(appearance);
         DialogResult = true;
     }
 }

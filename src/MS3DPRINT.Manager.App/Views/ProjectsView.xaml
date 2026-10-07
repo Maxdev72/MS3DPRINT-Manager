@@ -21,7 +21,7 @@
                         <TextBlock Text="{Binding ProjectName}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,3,0,0" />
                         <WrapPanel Margin="0,12,0,0">
                             <StackPanel Orientation="Horizontal" Margin="0,0,20,7"><TextBlock Text="CLIENT" Foreground="{DynamicResource MutedBrush}" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0" /><TextBlock Text="{Binding ClientFolderName}" TextTrimming="CharacterEllipsis" /></StackPanel>
-                            <Border BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" Padding="9,4" Margin="0,0,0,7"><TextBlock Text="{Binding StatusLabel}" Foreground="{DynamicResource AccentBrush}" /></Border>
+                            <Border BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" Padding="9,4" Margin="0,0,0,7"><TextBlock Text="{Binding StatusLabel}" Foreground="{DynamicResource AccentForegroundBrush}" /></Border>
                         </WrapPanel>
                     </StackPanel>
                 </Border>

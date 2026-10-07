@@ -11,6 +11,7 @@
         </ResourceDictionary.MergedDictionaries>
         <SolidColorBrush x:Key="InkBrush" Color="#183153" />
         <SolidColorBrush x:Key="AccentBrush" Color="#1769AA" />
+        <SolidColorBrush x:Key="AccentForegroundBrush" Color="#1769AA" />
         <SolidColorBrush x:Key="AccentTextBrush" Color="#FFFFFF" />
         <SolidColorBrush x:Key="CalendarSelectedTextBrush" Color="#FFFFFF" />
         <SolidColorBrush x:Key="BackgroundBrush" Color="#F5F7FA" />
@@ -50,7 +51,7 @@
             <Setter Property="Padding" Value="14,5" />
             <Setter Property="FontSize" Value="14" />
             <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
-            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
             <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="8" />
         </Style>

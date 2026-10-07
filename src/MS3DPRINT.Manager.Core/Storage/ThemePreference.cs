@@ -4,5 +4,7 @@ public enum ThemePreference
 {
     Automatic,
     Light,
-    Dark
+    Dark,
+    Amoled,
+    Paper
 }
