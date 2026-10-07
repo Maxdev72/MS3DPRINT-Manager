@@ -83,4 +83,4 @@ Assert.Equal(destinationClient.Id, profiles.LoadAll().Single().ClientId);
 - Publication autonome Windows x64 réussie avec PortableWinX64.
 - Données de tests exclusivement temporaires ou fixtures outputs ignorées.
 
-- Livraison en attente : remplacement bloqué par une instance utilisant le binaire. L’ancienne version est sauvegardée dans outputs/backups ; le binaire neuf est préparé et vérifié, fermeture normale demandée. Aucun arrêt forcé.
+- Livraison terminée après fermeture normale : ancien exécutable remplacé par MS3DPRINT Manager.exe. Unique exécutable dans le dossier livré ; SHA256 identique au binaire publié : AC7F52C3EC62946F41536489AB3B100469F2A04000D325CEDAC021595D3EBF01. Sauvegarde précédente dans outputs/backups ; données utilisateur conservées.
