@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using MS3DPRINT.Manager.App;
+using MS3DPRINT.Manager.App.ViewModels;
 using MS3DPRINT.Manager.App.Views;
 using MS3DPRINT.Manager.Core.Storage;
 
@@ -203,6 +204,33 @@ public sealed class MaterialThemeTests
                 // Application-level implicit TextBlock styles also reach generated button labels.
                 label.Style = (Style)resources[typeof(TextBlock)];
                 Assert.True(Contrast(label.Foreground, (Brush)resources["HeaderBrush"]) >= 4.5, "Le libellé de navigation se confond avec le fond.");
+            }
+            finally { window.Close(); }
+        });
+    }
+
+    [Fact]
+    public void RecentProjectRow_RemainsReadableOnTheDarkDashboard()
+    {
+        ThemeTestResources.RunSta(() =>
+        {
+            var resources = ThemeTestResources.Load();
+            ThemeManager.Apply(ThemePreference.Dark, resources);
+            var window = new MainWindow();
+            window.Resources.MergedDictionaries.Add(resources);
+            try
+            {
+                var dashboard = Assert.IsType<MainViewModel>(window.DataContext);
+                dashboard.ApplyDashboard(new DashboardSnapshot(0, 1, 1, 0, 0,
+                    [new DashboardProjectRow("MF-2026-001", "PLAQUE_EPW175S", "MF", "DEVIS")], []));
+                var content = Assert.IsAssignableFrom<FrameworkElement>(window.Content);
+                content.Measure(new Size(900, 720));
+                content.Arrange(new Rect(0, 0, 900, 720));
+                content.UpdateLayout();
+
+                var reference = Descendants(content).OfType<TextBlock>().Single(text => text.Text == "MF-2026-001");
+                Assert.True(Contrast(reference.Foreground, (Brush)resources["SurfaceBrush"]) >= 4.5,
+                    "La référence d’un projet récent doit rester lisible sur la carte sombre.");
             }
             finally { window.Close(); }
         });
