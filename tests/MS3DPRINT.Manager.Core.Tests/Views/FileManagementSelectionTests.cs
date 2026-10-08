@@ -25,10 +25,18 @@ public sealed class FileManagementSelectionTests
                 FileManagement.Attach(toolbar, list, root, () => root, () => Task.CompletedTask, opened.Add, null);
                 Button FindButton(string label) => Assert.Single(toolbar.Children.OfType<Button>().Where(button => Equals(button.Content, label)));
                 Assert.NotNull(FindButton("Importer et classer…"));
-                foreach (var label in new[] { "Ouvrir", "Renommer…", "Déplacer…", "Supprimer…" }) Assert.False(FindButton(label).IsEnabled);
+                foreach (var label in new[] { "Ouvrir", "Renommer…", "Déplacer…", "Supprimer…" })
+                {
+                    Assert.False(FindButton(label).IsEnabled);
+                    Assert.Equal(Visibility.Collapsed, FindButton(label).Visibility);
+                }
                 list.SelectedItem = entry;
                 Assert.Empty(opened);
-                foreach (var label in new[] { "Ouvrir", "Renommer…", "Déplacer…", "Supprimer…" }) Assert.True(FindButton(label).IsEnabled);
+                foreach (var label in new[] { "Ouvrir", "Renommer…", "Déplacer…", "Supprimer…" })
+                {
+                    Assert.True(FindButton(label).IsEnabled);
+                    Assert.Equal(Visibility.Visible, FindButton(label).Visibility);
+                }
                 FindButton("Ouvrir").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 Assert.Same(entry, Assert.Single(opened));
                 list.SelectedItem = null;

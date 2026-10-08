@@ -110,7 +110,11 @@ public static class FileManagement
         void UpdateSelectionActions()
         {
             var entry = list.SelectedItem as ProjectFileEntry;
-            foreach (var button in selectedButtons) button.IsEnabled = entry is not null;
+            foreach (var button in selectedButtons)
+            {
+                button.IsEnabled = entry is not null;
+                button.Visibility = entry is null ? Visibility.Collapsed : Visibility.Visible;
+            }
             string? explanation = null;
             if (entry?.IsDirectory == true)
             {
