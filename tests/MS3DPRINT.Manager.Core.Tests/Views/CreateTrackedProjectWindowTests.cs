@@ -163,6 +163,40 @@ public sealed class CreateTrackedProjectWindowTests
         });
     }
 
+    [Fact]
+    public void Wizard_ProvidesClientProjectAndConfirmationNavigation()
+    {
+        RunSta(() =>
+        {
+            var root = Path.Combine(Path.GetTempPath(), "ms3d-project-wizard-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                var paths = new WorkspaceMetadataPaths(root);
+                var store = new ClientProfileStore(paths);
+                store.Create(new ClientProfile(Guid.NewGuid(), ClientKind.Professional, "ATELIER", "AT", "Atelier", null, null, null, null,
+                    new PrimaryContact(null, null, null, null, null), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow));
+                Directory.CreateDirectory(Path.Combine(root, "01_CLIENTS", "ATELIER"));
+                var window = new CreateTrackedProjectWindow(root, new FolderTreeService(), new ClientCatalog(store), new ProjectProfileStore(paths));
+                try
+                {
+                    window.ShowInTaskbar = false;
+                    window.ShowActivated = false;
+                    window.Show();
+                    window.UpdateLayout();
+
+                    Assert.NotNull(window.FindName("ClientStepPanel"));
+                    Assert.NotNull(window.FindName("ProjectStepPanel"));
+                    Assert.NotNull(window.FindName("ConfirmationStepPanel"));
+                    Assert.NotNull(window.FindName("NextButton"));
+                    Assert.NotNull(window.FindName("PreviousButton"));
+                    Assert.NotNull(window.FindName("NewClientButton"));
+                }
+                finally { window.Close(); }
+            }
+            finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
+        });
+    }
+
     private static void RunSta(Action action)
     {
         Exception? failure = null;

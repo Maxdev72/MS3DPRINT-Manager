@@ -15,6 +15,7 @@ public partial class CreateTrackedProjectWindow : Window, ICreatedFolderDialog
     private readonly ProjectCreationService _projects;
     private readonly ProjectSummary? _existingProject;
     private readonly ClientSummary? _preselectedClient;
+    private int _step;
 
     public CreateTrackedProjectWindow(string storageRoot, FolderTreeService folders, ClientCatalog clients, ProjectProfileStore profiles, ProjectSummary? existingProject = null, ClientSummary? preselectedClient = null)
     {
@@ -41,6 +42,7 @@ public partial class CreateTrackedProjectWindow : Window, ICreatedFolderDialog
     }
 
     public string? CreatedPath { get; private set; }
+    public event EventHandler? CreateClientRequested;
 
     private void Retry_Click(object sender, RoutedEventArgs e) => LoadClientsSafely();
 
@@ -100,9 +102,51 @@ public partial class CreateTrackedProjectWindow : Window, ICreatedFolderDialog
 
     private void UpdateCreateState()
     {
-        CreateButton.IsEnabled = ClientBox.SelectedItem is ClientSummary &&
+        var validProject = ClientBox.SelectedItem is ClientSummary &&
             int.TryParse(YearBox.Text, out var year) && year is >= 2000 and <= 9999 &&
             NameNormalizer.Normalize(ProjectNameBox.Text ?? string.Empty).Length > 0;
+        CreateButton.IsEnabled = validProject;
+        NextButton.IsEnabled = _step == 0 ? ClientBox.SelectedItem is ClientSummary : validProject;
+    }
+
+    private void Next_Click(object sender, RoutedEventArgs e)
+    {
+        if (_step == 0)
+        {
+            if (ClientBox.SelectedItem is not ClientSummary) return;
+            SetStep(1);
+            ProjectNameBox.Focus();
+            return;
+        }
+        if (!CreateButton.IsEnabled) return;
+        var client = (ClientSummary)ClientBox.SelectedItem;
+        ConfirmationText.Text = $"Client : {client.DisplayName}\nProjet : {ProjectNameBox.Text}\nRéférence : {client.ClientCode}-{YearBox.Text}-…";
+        SetStep(2);
+    }
+
+    private void Previous_Click(object sender, RoutedEventArgs e)
+    {
+        if (_step > 0) SetStep(_step - 1);
+    }
+
+    private void NewClient_Click(object sender, RoutedEventArgs e) => CreateClientRequested?.Invoke(this, EventArgs.Empty);
+
+    private void SetStep(int step)
+    {
+        _step = step;
+        ClientStepPanel.Visibility = step == 0 ? Visibility.Visible : Visibility.Collapsed;
+        ProjectStepPanel.Visibility = step == 1 ? Visibility.Visible : Visibility.Collapsed;
+        ConfirmationStepPanel.Visibility = step == 2 ? Visibility.Visible : Visibility.Collapsed;
+        PreviousButton.Visibility = step == 0 ? Visibility.Collapsed : Visibility.Visible;
+        NextButton.Visibility = step == 2 ? Visibility.Collapsed : Visibility.Visible;
+        CreateButton.Visibility = step == 2 ? Visibility.Visible : Visibility.Collapsed;
+        IntroText.Text = step switch
+        {
+            0 => "Étape 1 sur 3 — choisissez le client.",
+            1 => "Étape 2 sur 3 — renseignez le projet.",
+            _ => "Étape 3 sur 3 — vérifiez avant de créer."
+        };
+        UpdateCreateState();
     }
 
     private void Cancel_Click(object sender, RoutedEventArgs e) => Close();
