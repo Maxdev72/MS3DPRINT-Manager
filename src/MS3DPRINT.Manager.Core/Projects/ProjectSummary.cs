@@ -11,5 +11,5 @@ public sealed record ProjectSummary(string ClientFolderName, string ClientPath, 
         ProjectStatus.Completed => "TERMINE",
         _ => "À compléter"
     };
-    public string ProjectName => Profile?.ProjectName ?? FolderName[(FolderName.IndexOf('_') + 1)..];
+    public string ProjectName => Profile?.ProjectName ?? (FolderName.StartsWith(Reference + "_", StringComparison.Ordinal) ? FolderName[(Reference.Length + 1)..] : FolderName);
 }

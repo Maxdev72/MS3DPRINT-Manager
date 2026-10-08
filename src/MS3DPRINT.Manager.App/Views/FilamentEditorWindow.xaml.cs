@@ -26,7 +26,7 @@ public partial class FilamentEditorWindow : Window
         NameBox.Text = original?.Name ?? "";
         MaterialBox.ItemsSource = new[] { "PLA", "PETG", "ABS", "ASA", "TPU", "PA", "PC", "PVA" };
         MaterialBox.Text = original?.Material ?? "PLA";
-        PriceBox.Text = (original?.PricePerKg ?? 0).ToString("0.00", CultureInfo.GetCultureInfo("fr-FR"));
+        PriceBox.Text = (original?.PricePerKg ?? 0).ToString("0.00##########################", CultureInfo.GetCultureInfo("fr-FR"));
         AbrasiveBox.ItemsSource = new[] { "Non", "Oui" };
         AbrasiveBox.SelectedIndex = original?.IsAbrasive == true ? 1 : 0;
     }

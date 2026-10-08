@@ -1,10 +1,28 @@
 using MS3DPRINT.Manager.App.ViewModels;
+using MS3DPRINT.Manager.Core.Clients;
+using MS3DPRINT.Manager.Core.Workspace;
 
 namespace MS3DPRINT.Manager.Core.Tests.ViewModels;
 
 public sealed class ClassifyFileViewModelTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "MS3DPRINT-classify-view-model-tests-" + Guid.NewGuid().ToString("N"));
+
+    [Fact]
+    public void Constructor_FindsProjectsOfClientMovedIntoGroupingAndPreselectsTheirPath()
+    {
+        var clientPath = Directory.CreateDirectory(Path.Combine(_root, "01_CLIENTS", "GROUP", "ACME")).FullName;
+        var now = DateTimeOffset.UtcNow;
+        new ClientProfileStore(new(_root)).Create(new(Guid.NewGuid(), ClientKind.Professional, "ACME", "ACME_FR", "ACME", null, null, null, null,
+            new(null, null, null, null, null), now, now, RelativePath: Path.GetRelativePath(_root, clientPath)));
+        var project = Directory.CreateDirectory(Path.Combine(clientPath, "ACME_FR-2026-001_TEST", "02_FICHIERS_CLIENT")).Parent!.FullName;
+        var source = Path.Combine(_root, "test.pdf");
+        File.WriteAllText(source, "test");
+        var viewModel = new ClassifyFileViewModel(_root, project) { SourcePath = source };
+        Assert.Single(viewModel.Projects);
+        Assert.Equal(project, viewModel.ProjectPath);
+        Assert.Equal("test__ACME_FR-2026-001.pdf", viewModel.FinalFileName);
+    }
 
     [Fact]
     public void SelectingPdfAndProject_ProposesInvoiceFolderAndReferencedName()

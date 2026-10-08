@@ -82,8 +82,7 @@ public sealed class ClientDetailViewModel : ObservableObject
             PrimaryContact = new PrimaryContact(IsProfessional ? NullIfEmpty(ContactFirstName) : null, IsProfessional ? NullIfEmpty(ContactLastName) : null, IsProfessional ? NullIfEmpty(ContactRole) : null, NullIfEmpty(ContactPhone), NullIfEmpty(ContactEmail)),
             UpdatedAt = DateTimeOffset.UtcNow
         };
-        _store.Update(updated);
-        _profile = updated;
+        _profile = _store.Update(updated, _profile.UpdatedAt);
         _savedDraft = CaptureDraft();
         OnPropertyChanged(nameof(DisplayName));
     }

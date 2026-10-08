@@ -28,6 +28,7 @@ public sealed class ManagedFileService
     {
         lock (_gate)
         {
+            RecoverPendingRenames();
             ValidateName(newName);
             var source = Source(path);
             var destination = Managed(Path.Combine(Path.GetDirectoryName(source)!, newName));
@@ -37,14 +38,104 @@ public sealed class ManagedFileService
             {
                 // Windows requires an intermediate name to update the directory entry casing.
                 var intermediate = Path.Combine(Path.GetDirectoryName(source)!, ".rename-" + Guid.NewGuid().ToString("N"));
-                MoveItem(source, intermediate);
-                try { MoveItem(intermediate, destination); }
-                catch { MoveItem(intermediate, source); throw; }
+                var journal = new RenameJournal(Path.GetRelativePath(_root, source), Path.GetRelativePath(_root, destination), Path.GetRelativePath(_root, intermediate));
+                var journals = Managed(Path.Combine(_metadata, "renames"));
+                Directory.CreateDirectory(journals);
+                var journalPath = Path.Combine(journals, Guid.NewGuid().ToString("N") + ".json");
+                SaveRenameJournal(journalPath, journal);
+                try
+                {
+                    Vacant(intermediate);
+                    MoveItem(source, intermediate);
+                    MoveItem(intermediate, destination);
+                    SaveRenameJournal(journalPath, journal with { Committed = true });
+                }
+                catch { RecoverRename(journalPath, journal); throw; }
+                TryDeleteRenameJournal(journalPath);
             }
             else { Vacant(destination); MoveItem(source, destination); }
             return destination;
         }
     }
+
+    /// <summary>Roll back incomplete case-only renames using their durable intermediate paths.</summary>
+    public void RecoverPendingRenames()
+    {
+        lock (_gate)
+        {
+            var directory = Managed(Path.Combine(_metadata, "renames"));
+            if (!Directory.Exists(directory)) return;
+            foreach (var path in Directory.EnumerateFiles(directory, "*.json"))
+            {
+                CheckLinks(path);
+                RenameJournal journal;
+                try { journal = JsonSerializer.Deserialize<RenameJournal>(File.ReadAllBytes(path)) ?? throw new IOException("Journal de renommage vide."); }
+                catch (JsonException exception) { throw new IOException("Journal de renommage illisible ; les documents sont conservés.", exception); }
+                RecoverRename(path, journal);
+            }
+        }
+    }
+
+    private void RecoverRename(string journalPath, RenameJournal journal)
+    {
+        var source = Managed(journal.Source);
+        var target = Managed(journal.Target);
+        var intermediate = Managed(journal.Intermediate);
+        ProtectMetadata(source);
+        ProtectMetadata(target);
+        if (Same(source, _root) || (Same(Path.GetDirectoryName(source)!, _root) && FolderTemplates.Main.Contains(Path.GetFileName(source), StringComparer.OrdinalIgnoreCase))
+            || !Same(source, target) || string.Equals(source, target, StringComparison.Ordinal)
+            || !Same(Path.GetDirectoryName(source)!, Path.GetDirectoryName(intermediate)!)
+            || !Path.GetFileName(intermediate).StartsWith(".rename-", StringComparison.Ordinal)
+            || !Guid.TryParseExact(Path.GetFileName(intermediate)[8..], "N", out var intermediateId) || intermediateId == Guid.Empty)
+            throw new IOException("Journal de renommage invalide ; les documents sont conservés.");
+        ValidateName(Path.GetFileName(source));
+        ValidateName(Path.GetFileName(target));
+        CheckTree(source);
+        CheckTree(intermediate);
+        if (journal.Committed)
+        {
+            if (Exists(intermediate)) throw new IOException("Un renommage finalisé contient encore un élément intermédiaire.");
+            TryDeleteRenameJournal(journalPath);
+            return;
+        }
+        if (Exists(intermediate))
+        {
+            Vacant(source);
+            MoveItem(intermediate, source);
+        }
+        else
+        {
+            if (!Exists(source)) throw new IOException("Le document d’un renommage interrompu est introuvable ; son journal est conservé.");
+            // A crash after the second move also needs to restore the original directory-entry casing.
+            var actual = Directory.EnumerateFileSystemEntries(Path.GetDirectoryName(source)!).First(path => Same(path, source));
+            if (!string.Equals(Path.GetFileName(actual), Path.GetFileName(source), StringComparison.Ordinal))
+            {
+                MoveItem(actual, intermediate);
+                MoveItem(intermediate, source);
+            }
+        }
+        SaveRenameJournal(journalPath, journal with { Committed = true });
+        TryDeleteRenameJournal(journalPath);
+    }
+
+    private static void SaveRenameJournal(string path, RenameJournal journal)
+    {
+        var temporary = path + ".tmp";
+        CheckLinks(path); CheckLinks(temporary);
+        using (var stream = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None))
+        { JsonSerializer.Serialize(stream, journal); stream.Flush(true); }
+        File.Move(temporary, path, true);
+    }
+
+    private static void TryDeleteRenameJournal(string path)
+    {
+        try { CheckLinks(path); File.Delete(path + ".tmp"); File.Delete(path); }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
+
+    private sealed record RenameJournal(string Source, string Target, string Intermediate, bool Committed = false);
 
     public string Move(string path, string destinationDirectory)
     {

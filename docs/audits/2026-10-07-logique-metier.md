@@ -1,5 +1,7 @@
 # Audit de logique métier — MS3DPRINT Manager
 
+Suivi : les onze constats confirmés ont été corrigés dans la [livraison du 8 octobre 2026](2026-10-08-corrections-metier.md). Ce document conserve l’état et les preuves de l’audit initial.
+
 Audit du 7 octobre 2026, version `01f565b4af72b1d73261a02d3f1b43084b859851`, branche `feat/full-management-filaments`.
 
 La gestion courante est couverte par les tests, mais certains parcours ne partagent pas les mêmes règles d’identité, de classement et de sécurité des chemins. **11 anomalies confirmées : 2 P1, 8 P2 et 1 P3.** Les deux P1 peuvent affecter des données et doivent être traitées avant d’étendre les fonctionnalités.

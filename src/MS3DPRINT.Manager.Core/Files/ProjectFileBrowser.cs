@@ -1,3 +1,5 @@
+using MS3DPRINT.Manager.Core.Workspace;
+
 namespace MS3DPRINT.Manager.Core.Files;
 
 public sealed class ProjectFileBrowser
@@ -14,6 +16,7 @@ public sealed class ProjectFileBrowser
         if (!Directory.Exists(current)) throw new DirectoryNotFoundException("Le dossier sélectionné est introuvable.");
 
         return Directory.EnumerateFileSystemEntries(current, "*", SearchOption.TopDirectoryOnly)
+            .Where(IsSafe)
             .Select(CreateEntry)
             .OrderByDescending(entry => entry.IsDirectory)
             .ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
@@ -42,6 +45,14 @@ public sealed class ProjectFileBrowser
         var relative = Path.GetRelativePath(root, current);
         if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) || Path.IsPathRooted(relative))
             throw new UnauthorizedAccessException("Le dossier sélectionné doit rester dans le projet.");
+        WorkspacePathSafety.EnsureNoLinks(root);
+        WorkspacePathSafety.EnsureNoLinks(current);
+    }
+
+    private static bool IsSafe(string path)
+    {
+        try { WorkspacePathSafety.EnsureNoLinks(path); return true; }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { return false; }
     }
 
     private static StringComparison PathComparison() => OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;

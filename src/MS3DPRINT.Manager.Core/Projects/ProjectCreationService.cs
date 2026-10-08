@@ -75,7 +75,12 @@ public sealed class ProjectCreationService
             $"{reference.ClientCode}-{reference.Year:D4}-{reference.Sequence:D3}", reference.FolderName,
             reference.NormalizedProjectName, ProjectStatus.Quote, now, dueDate, description, null, now,
             Path.GetRelativePath(WorkspaceRoot(client.ClientPath), Path.Combine(client.ClientPath, reference.FolderName)).Replace('\\', '/'));
-        profiles.Create(profile);
+        try { profiles.Create(profile); }
+        catch (Exception failure)
+        {
+            CreationRollback.Preserve(WorkspaceRoot(client.ClientPath), Path.Combine(client.ClientPath, reference.FolderName), [], failure);
+            throw;
+        }
         return (reference, profile);
     }
 

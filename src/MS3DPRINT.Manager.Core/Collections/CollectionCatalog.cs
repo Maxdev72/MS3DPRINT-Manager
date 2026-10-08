@@ -20,11 +20,12 @@ public sealed class CollectionCatalog
             .Where(p => Directory.Exists(p.Path)).ToArray();
         var indexed = profiles.Select(p => new CollectionItemSummary(p.Profile.Name, p.Path,
             new DateTimeOffset(Directory.GetLastWriteTimeUtc(p.Path), TimeSpan.Zero), p.Profile));
+        var indexedPaths = profiles.Select(profile => profile.Path).ToArray();
         var legacy = Directory.EnumerateDirectories(collectionPath, "*", SearchOption.TopDirectoryOnly)
             .Where(path => !CollectionProfileStore.IsReserved(Path.GetFileName(path)) && IsSafe(path))
             .Where(path => !profiles.Any(p => string.Equals(path, p.Path, StringComparison.OrdinalIgnoreCase)))
-            .Where(path => Directory.EnumerateFiles(path, "*", SearchOption.TopDirectoryOnly).Any()
-                || !profiles.Any(p => p.Path.StartsWith(path + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)))
+            .Where(path => !profiles.Any(p => p.Path.StartsWith(path + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                || HasOwnDocuments(path, indexedPaths))
             .Select(path => new CollectionItemSummary(Path.GetFileName(path), path, new DateTimeOffset(Directory.GetLastWriteTimeUtc(path), TimeSpan.Zero)));
         return indexed.Concat(legacy)
             .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
@@ -35,6 +36,16 @@ public sealed class CollectionCatalog
     {
         try { WorkspacePathSafety.EnsureNoLinks(path); return true; }
         catch (IOException) { return false; }
+        catch (UnauthorizedAccessException) { return false; }
+    }
+
+    private static bool HasOwnDocuments(string path, IReadOnlyList<string> indexedPaths)
+    {
+        if (!IsSafe(path) || indexedPaths.Any(indexed => WorkspaceEntityPaths.IsInside(indexed, path))) return false;
+        if (Directory.EnumerateFiles(path, "*", SearchOption.TopDirectoryOnly).Any(IsSafe)) return true;
+        foreach (var child in Directory.EnumerateDirectories(path, "*", SearchOption.TopDirectoryOnly))
+            if (!CollectionProfileStore.IsReserved(Path.GetFileName(child)) && HasOwnDocuments(child, indexedPaths)) return true;
+        return false;
     }
 }
 

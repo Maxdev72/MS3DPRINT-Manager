@@ -6,7 +6,7 @@ namespace MS3DPRINT.Manager.App.Views;
 public partial class CollectionEditorWindow : Window
 {
     private readonly CollectionProfileStore _store;
-    private readonly CollectionProfile _original;
+    private CollectionProfile _original;
     private readonly bool _isNew;
 
     public CollectionEditorWindow(string workspaceRoot, CollectionItemSummary item, string category)
@@ -44,7 +44,8 @@ public partial class CollectionEditorWindow : Window
             Contact = Optional(ContactBox.Text), Address = Optional(AddressBox.Text), Phone = Optional(PhoneBox.Text),
             Email = Optional(EmailBox.Text), Website = Optional(WebsiteBox.Text), UpdatedAt = DateTimeOffset.UtcNow
         };
-        SavedProfile = _isNew && SavedProfile is null ? _store.Create(profile) : _store.Update(profile);
+        SavedProfile = _isNew && SavedProfile is null ? _store.Create(profile) : _store.Update(profile, _original.UpdatedAt);
+        _original = SavedProfile;
         return SavedProfile;
     }
 

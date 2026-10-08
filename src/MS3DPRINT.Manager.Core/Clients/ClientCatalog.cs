@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+using MS3DPRINT.Manager.Core.Projects;
 using MS3DPRINT.Manager.Core.Storage;
 using MS3DPRINT.Manager.Core.Workspace;
 
@@ -6,7 +6,6 @@ namespace MS3DPRINT.Manager.Core.Clients;
 
 public sealed class ClientCatalog
 {
-    private static readonly Regex ProjectFolderPattern = new("^[A-Z0-9]+-[0-9]{4}-[0-9]{3}(?:_|$)", RegexOptions.CultureInvariant);
     private readonly ClientProfileStore _profiles;
     private readonly ClientCodeRegistry? _legacyCodes;
 
@@ -50,7 +49,7 @@ public sealed class ClientCatalog
         var projectCount = Directory.EnumerateDirectories(clientPath, "*", SearchOption.TopDirectoryOnly)
             .Select(Path.GetFileName)
             .OfType<string>()
-            .Count(name => ProjectFolderPattern.IsMatch(name));
+            .Count(name => ProjectReferenceFormat.TryParseFolderName(name, out _));
         return new ClientSummary(clientPath, folderName, displayName, clientCode, profile?.Kind, profile, projectCount);
     }
 

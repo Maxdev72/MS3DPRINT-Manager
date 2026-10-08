@@ -48,7 +48,7 @@ public partial class FilamentsView : UserControl
     private async void Edit_Click(object sender, RoutedEventArgs e)
     {
         if (_model.SelectedFilament is not { } selected) return;
-        var editor = new FilamentEditorWindow(selected, _store.Update) { Owner = Window.GetWindow(this) };
+        var editor = new FilamentEditorWindow(selected, profile => _store.Update(profile, selected.UpdatedAt)) { Owner = Window.GetWindow(this) };
         if (editor.ShowDialog() == true) await RefreshAsync();
     }
 

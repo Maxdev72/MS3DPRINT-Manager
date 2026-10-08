@@ -1,12 +1,10 @@
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using MS3DPRINT.Manager.Core.Workspace;
 
 namespace MS3DPRINT.Manager.Core.Projects;
 
 internal sealed class ProjectReferenceReservations(string workspaceRoot)
 {
-    private static readonly Regex ProjectFolderPattern = new("^[A-Z0-9_]+-[0-9]{4}-[0-9]{3}_", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private readonly string _root = System.IO.Path.GetFullPath(workspaceRoot);
     private string Metadata => Path.Combine(_root, ".ms3dprint-manager");
     public string DirectoryPath => Path.Combine(Metadata, "project-references");
@@ -36,7 +34,7 @@ internal sealed class ProjectReferenceReservations(string workspaceRoot)
                 WorkspacePathSafety.EnsureNoLinks(payload);
                 if (item.GetProperty("IsDirectory").GetBoolean())
                 {
-                    if (!ProjectFolderPattern.IsMatch(originalName))
+                    if (!ProjectReferenceFormat.TryParseFolderName(originalName.ToUpperInvariant(), out _))
                         foreach (var path in WalkDirectories(payload)) names.Add(Path.GetFileName(path));
                 }
                 else if (item.GetProperty("Original").GetString()!.Replace('\\', '/').StartsWith(".ms3dprint-manager/projects/", StringComparison.OrdinalIgnoreCase))
@@ -97,7 +95,7 @@ internal sealed class ProjectReferenceReservations(string workspaceRoot)
             WorkspacePathSafety.EnsureNoLinks(child);
             yield return child;
             // A project is a boundary: its classified document folders cannot reserve references.
-            if (ProjectFolderPattern.IsMatch(Path.GetFileName(child))) continue;
+            if (ProjectReferenceFormat.TryParseFolderName(Path.GetFileName(child).ToUpperInvariant(), out _)) continue;
             foreach (var descendant in WalkDirectories(child)) yield return descendant;
         }
     }

@@ -1,12 +1,12 @@
 using System.Collections.ObjectModel;
-using System.Text.RegularExpressions;
+using MS3DPRINT.Manager.Core.Projects;
+using MS3DPRINT.Manager.Core.Workspace;
 using MS3DPRINT.Manager.Core.Files;
 
 namespace MS3DPRINT.Manager.App.ViewModels;
 
 public sealed class ClassifyFileViewModel : ObservableObject
 {
-    private static readonly Regex ProjectFolderPattern = new("^[A-Z0-9]+-[0-9]{4}-[0-9]{3}(?:_|$)", RegexOptions.CultureInvariant);
     private static readonly string[] AllowedRelativeDirectories =
     [
         "01_DEVIS_FACTURES",
@@ -109,20 +109,19 @@ public sealed class ClassifyFileViewModel : ObservableObject
 
     public IReadOnlyList<ClassifyProjectChoice> ReadProjectChoices()
     {
-        if (!Directory.Exists(_clientsRoot)) return [];
-        return Directory.EnumerateDirectories(_clientsRoot, "*", SearchOption.TopDirectoryOnly)
-                     .Where(path => (File.GetAttributes(path) & FileAttributes.Hidden) == 0)
-                     .OrderBy(path => Path.GetFileName(path), StringComparer.CurrentCultureIgnoreCase)
-            .SelectMany(clientPath =>
-            {
-                var clientName = Path.GetFileName(clientPath);
-                return Directory.EnumerateDirectories(clientPath, "*", SearchOption.TopDirectoryOnly)
-                    .Where(path => (File.GetAttributes(path) & FileAttributes.Hidden) == 0)
-                    .Where(path => ProjectFolderPattern.IsMatch(Path.GetFileName(path)))
-                    .OrderBy(path => Path.GetFileName(path), StringComparer.CurrentCultureIgnoreCase)
-                    .Select(projectPath => new ClassifyProjectChoice(clientName + " — " + Path.GetFileName(projectPath), projectPath));
-            })
-            .ToArray();
+        var root = Path.GetDirectoryName(_clientsRoot)!;
+        var catalog = new ProjectCatalog(new ProjectProfileStore(new WorkspaceMetadataPaths(root)));
+        var projects = catalog.Load(root)
+            .Where(project => (File.GetAttributes(project.ProjectPath) & FileAttributes.Hidden) == 0)
+            .OrderBy(project => project.ClientFolderName, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(project => project.FolderName, StringComparer.CurrentCultureIgnoreCase).ToArray();
+        var labels = projects.GroupBy(project => project.ClientFolderName + " — " + project.FolderName)
+            .Where(group => group.Count() > 1).Select(group => group.Key).ToHashSet(StringComparer.Ordinal);
+        return projects.Select(project =>
+        {
+            var label = project.ClientFolderName + " — " + project.FolderName;
+            return new ClassifyProjectChoice(labels.Contains(label) ? label + " (" + Path.GetRelativePath(root, project.ProjectPath) + ")" : label, project.ProjectPath);
+        }).ToArray();
     }
 
     public void ApplyProjectChoices(IReadOnlyList<ClassifyProjectChoice> choices)

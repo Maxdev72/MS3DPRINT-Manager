@@ -1,4 +1,5 @@
 using MS3DPRINT.Manager.Core.Storage;
+using MS3DPRINT.Manager.Core.Workspace;
 
 namespace MS3DPRINT.Manager.Core.Files;
 
@@ -14,6 +15,10 @@ public sealed class ProjectFileTransferService
         var project = Path.TrimEndingDirectorySeparator(Path.GetFullPath(projectPath));
         var targetDirectory = ResolveInsideProject(project, destination.RelativeDirectory);
         var target = ResolveFileInsideDirectory(targetDirectory, destination.FileName);
+
+        InspectPathSafety(source, source, target);
+        InspectPathSafety(project, source, target);
+        InspectPathSafety(target, source, target);
 
         // Exists hides access and cloud-provider errors; retain the actual OS failure.
         try
@@ -42,6 +47,13 @@ public sealed class ProjectFileTransferService
             throw new ProjectFileTransferException("File.Move", source, target, exception);
         }
         return target;
+    }
+
+    private static void InspectPathSafety(string path, string source, string target)
+    {
+        try { WorkspacePathSafety.EnsureNoLinks(path); }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        { throw new ProjectFileTransferException("WorkspacePathSafety.EnsureNoLinks", source, target, exception, path); }
     }
 
     private static void InspectDirectory(string path, string operation, string source, string target)

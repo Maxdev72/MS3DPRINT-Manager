@@ -133,6 +133,7 @@ public sealed class ClientDetailViewModelTests : IDisposable
             store.Create(client);
             client = client with { FolderName = "ATELIER", RelativePath = relative };
             store.Update(client);
+            client = store.Load(client.Id);
             var reference = code + "-2026-001";
             var folder = reference + "_TEST";
             Directory.CreateDirectory(Path.Combine(path, folder));

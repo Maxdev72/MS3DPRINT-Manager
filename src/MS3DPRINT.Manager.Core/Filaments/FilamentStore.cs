@@ -28,14 +28,23 @@ public sealed class FilamentStore
     public void Create(FilamentProfile profile)
     {
         Validate(profile);
+        using var mutation = ProfileMutationLock.Acquire(ProfilePath(profile.Id));
         WriteAtomic(profile, replace: false);
     }
 
-    public void Update(FilamentProfile profile)
+    public void Update(FilamentProfile profile) => UpdateCore(profile, null);
+
+    public FilamentProfile Update(FilamentProfile profile, DateTimeOffset expectedUpdatedAt) => UpdateCore(profile, expectedUpdatedAt);
+
+    private FilamentProfile UpdateCore(FilamentProfile profile, DateTimeOffset? expectedUpdatedAt)
     {
         Validate(profile);
+        using var mutation = ProfileMutationLock.Acquire(ProfilePath(profile.Id));
         var existing = ReadRequired(profile.Id);
-        WriteAtomic(profile with { CreatedAt = existing.CreatedAt, UpdatedAt = DateTimeOffset.UtcNow }, replace: true);
+        ProfileMutationLock.CheckVersion(existing.UpdatedAt, expectedUpdatedAt);
+        profile = profile with { CreatedAt = existing.CreatedAt, UpdatedAt = ProfileMutationLock.NextVersion(existing.UpdatedAt, DateTimeOffset.UtcNow) };
+        WriteAtomic(profile, replace: true);
+        return profile;
     }
 
     public FilamentProfile Duplicate(Guid id)

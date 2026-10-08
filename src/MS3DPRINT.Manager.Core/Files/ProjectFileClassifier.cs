@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+using MS3DPRINT.Manager.Core.Projects;
 
 namespace MS3DPRINT.Manager.Core.Files;
 
@@ -13,8 +13,7 @@ public static partial class ProjectFileClassifier
         var stem = Path.GetFileNameWithoutExtension(fileName);
         if (stem.Length == 0) throw new ArgumentException("Le fichier source doit avoir un nom valide.", nameof(sourceFileName));
 
-        var reference = projectFolderName.Split('_', 2, StringSplitOptions.None)[0];
-        if (!ProjectReferencePattern().IsMatch(reference))
+        if (!ProjectReferenceFormat.TryParseFolderName(projectFolderName, out var reference))
         {
             throw new ArgumentException("La référence projet est invalide.", nameof(projectFolderName));
         }
@@ -42,6 +41,4 @@ public static partial class ProjectFileClassifier
         _ => "02_FICHIERS_CLIENT"
     };
 
-    [GeneratedRegex("^[A-Z0-9]+-[0-9]{4}-[0-9]{3}$", RegexOptions.CultureInvariant)]
-    private static partial Regex ProjectReferencePattern();
 }

@@ -45,20 +45,28 @@ public sealed class CollectionProfileStore
     public CollectionProfile Create(CollectionProfile profile)
     {
         Validate(profile, requireFolder: true);
+        using var mutation = ProfileMutationLock.Acquire(ProfilePath(profile.Id));
         if (File.Exists(ProfilePath(profile.Id)) || FindByPath(profile.RelativePath) is not null)
             throw new InvalidOperationException("Une fiche existe déjà pour ce dossier ou cet identifiant.");
         Write(profile, replace: false);
         return profile;
     }
 
-    public CollectionProfile Update(CollectionProfile profile)
+    public CollectionProfile Update(CollectionProfile profile) => UpdateCore(profile, null);
+
+    public CollectionProfile Update(CollectionProfile profile, DateTimeOffset expectedUpdatedAt) => UpdateCore(profile, expectedUpdatedAt);
+
+    private CollectionProfile UpdateCore(CollectionProfile profile, DateTimeOffset? expectedUpdatedAt)
     {
         Validate(profile, requireFolder: true);
+        using var mutation = ProfileMutationLock.Acquire(ProfilePath(profile.Id));
         var previous = Load(profile.Id) ?? throw new InvalidOperationException("La fiche à modifier est introuvable.");
+        ProfileMutationLock.CheckVersion(previous.UpdatedAt, expectedUpdatedAt);
         if (previous.Category != profile.Category || previous.CreatedAt != profile.CreatedAt)
             throw new ArgumentException("La catégorie et la date de création de la fiche ne peuvent pas changer.", nameof(profile));
         if (LoadAll().Any(p => p.Id != profile.Id && string.Equals(Path.GetFullPath(Path.Combine(_root, p.RelativePath)), Path.GetFullPath(Path.Combine(_root, profile.RelativePath)), StringComparison.OrdinalIgnoreCase)))
             throw new InvalidOperationException("Une autre fiche existe déjà pour ce dossier.");
+        profile = profile with { UpdatedAt = ProfileMutationLock.NextVersion(previous.UpdatedAt, profile.UpdatedAt) };
         Write(profile, replace: true);
         return profile;
     }

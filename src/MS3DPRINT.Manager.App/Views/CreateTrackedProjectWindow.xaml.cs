@@ -52,8 +52,14 @@ public partial class CreateTrackedProjectWindow : Window, ICreatedFolderDialog
         try
         {
             var clients = _clients.Load(_storageRoot).Where(client => client.Profile is not null);
-            if (_existingProject is not null) clients = clients.Where(client => string.Equals(client.FolderName, _existingProject.ClientFolderName, StringComparison.OrdinalIgnoreCase));
-            ClientBox.ItemsSource = clients.ToArray();
+            if (_existingProject is not null) clients = clients.Where(client =>
+                (_existingProject.Profile is null || client.Profile!.Id == _existingProject.Profile.ClientId) &&
+                string.Equals(Path.GetFullPath(client.ClientPath), Path.GetFullPath(_existingProject.ClientPath), StringComparison.OrdinalIgnoreCase));
+            var choices = clients.ToArray();
+            ClientBox.DisplayMemberPath = null;
+            ClientBox.ItemTemplate = new DataTemplate { VisualTree = new FrameworkElementFactory(typeof(TextBlock)) };
+            ClientBox.ItemTemplate.VisualTree.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding { Converter = new ClientChoiceLabelConverter(_storageRoot) });
+            ClientBox.ItemsSource = choices;
             NoClientText.Visibility = ClientBox.Items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             YearBox.Text = _existingProject is null ? DateTime.Today.Year.ToString(System.Globalization.CultureInfo.InvariantCulture) : GetYear(_existingProject.Reference).ToString(System.Globalization.CultureInfo.InvariantCulture);
             if (_existingProject is not null)
@@ -66,7 +72,9 @@ public partial class CreateTrackedProjectWindow : Window, ICreatedFolderDialog
             {
                 ClientBox.SelectedItem = _preselectedClient is null
                     ? ClientBox.Items[0]
-                    : clients.FirstOrDefault(client => string.Equals(client.FolderName, _preselectedClient.FolderName, StringComparison.OrdinalIgnoreCase));
+                    : choices.FirstOrDefault(client => _preselectedClient.Profile is not null
+                        ? client.Profile!.Id == _preselectedClient.Profile.Id
+                        : string.Equals(Path.GetFullPath(client.ClientPath), Path.GetFullPath(_preselectedClient.ClientPath), StringComparison.OrdinalIgnoreCase));
             }
             else if (ClientBox.Items.Count == 0) ClientBox.IsEnabled = false;
             UpdateCreateState();
@@ -125,7 +133,8 @@ public partial class CreateTrackedProjectWindow : Window, ICreatedFolderDialog
                 var projectCode = _existingProject.Reference.Split('-', 2)[0];
                 _profiles.Create(new ProjectProfile(Guid.NewGuid(), client.Profile.Id, projectCode, _existingProject.Reference,
                     _existingProject.FolderName, _existingProject.ProjectName, ProjectStatus.Quote, now, dueDate,
-                    string.IsNullOrWhiteSpace(DescriptionBox.Text) ? null : DescriptionBox.Text.Trim(), null, now));
+                    string.IsNullOrWhiteSpace(DescriptionBox.Text) ? null : DescriptionBox.Text.Trim(), null, now,
+                    Path.GetRelativePath(_storageRoot, _existingProject.ProjectPath)));
                 CreatedPath = _existingProject.ProjectPath;
             }
             DialogResult = true;
@@ -138,4 +147,11 @@ public partial class CreateTrackedProjectWindow : Window, ICreatedFolderDialog
         var parts = reference.Split('-', StringSplitOptions.RemoveEmptyEntries);
         return parts.Length >= 3 && int.TryParse(parts[1], out var year) ? year : DateTime.Today.Year;
     }
+}
+
+internal sealed class ClientChoiceLabelConverter(string storageRoot) : System.Windows.Data.IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) =>
+        value is ClientSummary client ? client.DisplayName + " — " + client.ClientCode + " (" + Path.GetRelativePath(storageRoot, client.ClientPath) + ")" : string.Empty;
+    public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => throw new NotSupportedException();
 }

@@ -35,6 +35,7 @@ public sealed class ProjectProfileStore
     public void Create(ProjectProfile profile)
     {
         Validate(profile);
+        using var mutation = ProfileMutationLock.Acquire(Path(profile.Id));
         EnsureSafeDirectories();
         if (File.Exists(Path(profile.Id)) || LoadAll().Any(existing =>
                 string.Equals(existing.FolderName, profile.FolderName, StringComparison.OrdinalIgnoreCase) ||
@@ -44,16 +45,27 @@ public sealed class ProjectProfileStore
         }
 
         new ProjectReferenceReservations(_paths.RootPath).Reserve(profile.Reference);
-        Write(Path(profile.Id), profile);
+        var active = Path(profile.Id);
+        var temporary = active + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try { Write(temporary, profile); File.Move(temporary, active, overwrite: false); }
+        finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }
 
-    public void Update(ProjectProfile profile)
+    public void Update(ProjectProfile profile) => UpdateCore(profile, null);
+
+    public ProjectProfile Update(ProjectProfile profile, DateTimeOffset expectedUpdatedAt) => UpdateCore(profile, expectedUpdatedAt);
+
+    private ProjectProfile UpdateCore(ProjectProfile profile, DateTimeOffset? expectedUpdatedAt)
     {
         Validate(profile);
-        EnsureSafeDirectories();
         var active = Path(profile.Id);
+        using var mutation = ProfileMutationLock.Acquire(active);
         WorkspacePathSafety.EnsureNoLinks(active);
         if (!File.Exists(active)) throw new InvalidOperationException("La fiche projet est introuvable.");
+        var previous = Read(active);
+        ProfileMutationLock.CheckVersion(previous.UpdatedAt, expectedUpdatedAt);
+        profile = profile with { UpdatedAt = ProfileMutationLock.NextVersion(previous.UpdatedAt, profile.UpdatedAt) };
+        EnsureSafeDirectories();
         var temporary = active + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
@@ -64,6 +76,7 @@ public sealed class ProjectProfileStore
             File.Replace(temporary, active, null);
         }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
+        return profile;
     }
 
     private ProjectProfile Read(string path)

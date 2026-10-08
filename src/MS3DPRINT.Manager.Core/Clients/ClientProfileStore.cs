@@ -46,19 +46,31 @@ public sealed class ClientProfileStore
     public void Create(ClientProfile profile)
     {
         Validate(profile);
+        using var mutation = ProfileMutationLock.Acquire(ProfilePath(profile.Id));
         EnsureSafeDirectories();
         if (File.Exists(ProfilePath(profile.Id)) || LoadAll().Any(existing => string.Equals(existing.FolderName, profile.FolderName, StringComparison.OrdinalIgnoreCase)))
             throw new InvalidOperationException("Une fiche client existe déjà pour ce dossier.");
 
-        WriteNew(ProfilePath(profile.Id), profile);
+        var active = ProfilePath(profile.Id);
+        var temporary = active + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try { WriteNew(temporary, profile); File.Move(temporary, active, overwrite: false); }
+        finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }
 
-    public void Update(ClientProfile profile)
+    public void Update(ClientProfile profile) => UpdateCore(profile, null);
+
+    public ClientProfile Update(ClientProfile profile, DateTimeOffset expectedUpdatedAt) => UpdateCore(profile, expectedUpdatedAt);
+
+    private ClientProfile UpdateCore(ClientProfile profile, DateTimeOffset? expectedUpdatedAt)
     {
         Validate(profile);
         var activePath = ProfilePath(profile.Id);
+        using var mutation = ProfileMutationLock.Acquire(activePath);
         WorkspacePathSafety.EnsureNoLinks(activePath);
         if (!File.Exists(activePath)) throw new InvalidOperationException("La fiche client à modifier est introuvable.");
+        var previous = ReadProfile(activePath);
+        ProfileMutationLock.CheckVersion(previous.UpdatedAt, expectedUpdatedAt);
+        profile = profile with { UpdatedAt = ProfileMutationLock.NextVersion(previous.UpdatedAt, profile.UpdatedAt) };
 
         EnsureSafeDirectories();
         var temporaryPath = activePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
@@ -74,6 +86,7 @@ public sealed class ClientProfileStore
         {
             if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
         }
+        return profile;
     }
 
     private ClientProfile ReadProfile(string path)

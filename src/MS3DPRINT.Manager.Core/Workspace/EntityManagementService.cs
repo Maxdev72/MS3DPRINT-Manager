@@ -73,6 +73,7 @@ public sealed class EntityManagementService
     {
         RecoverPendingOperations();
         var companions = RelatedProfiles(path).Select(change => change.Path).ToArray();
+        using var mutations = ProfileMutationLock.AcquireMany(companions);
         return _files.Trash(path, companions, label ?? Path.GetFileName(path));
     }
 
@@ -121,6 +122,7 @@ public sealed class EntityManagementService
         var operationDirectory = Path.Combine(_root, ".ms3dprint-manager", "operations", Guid.NewGuid().ToString("N"));
         WorkspacePathSafety.EnsureNoLinks(operationDirectory);
         Directory.CreateDirectory(operationDirectory);
+        using var mutations = ProfileMutationLock.AcquireMany(changes.Select(change => change.Path));
         var journal = new RelocationJournal(Path.GetRelativePath(_root, source), Path.GetRelativePath(_root, target), changes.Select(c => Path.GetRelativePath(_root, c.Path)).ToArray());
         var snapshots = changes.Select(change =>
         {
@@ -128,6 +130,8 @@ public sealed class EntityManagementService
             PreflightProfileDestination(path);
             var bytes = File.ReadAllBytes(path);
             ValidateSnapshot(path, bytes);
+            using var snapshot = JsonDocument.Parse(bytes);
+            ProfileMutationLock.CheckVersion(snapshot.RootElement.GetProperty("UpdatedAt").GetDateTimeOffset(), change.ExpectedUpdatedAt);
             return bytes;
         }).ToArray();
         for (var index = 0; index < changes.Count; index++) WriteDurable(Path.Combine(operationDirectory, index + ".json"), snapshots[index]);
@@ -168,7 +172,7 @@ public sealed class EntityManagementService
             var moved = NewPath(path);
             WorkspaceEntityPaths.Resolve(_root, Path.GetRelativePath(_root, moved), "01_CLIENTS");
             var updated = profile with { FolderName = Path.GetFileName(moved), RelativePath = Path.GetRelativePath(_root, moved), UpdatedAt = now };
-            changes.Add(new(Path.Combine(_root, ".ms3dprint-manager", "clients", profile.Id + ".json"), () => _clients.Update(updated)));
+            changes.Add(new(Path.Combine(_root, ".ms3dprint-manager", "clients", profile.Id + ".json"), () => _clients.Update(updated, profile.UpdatedAt), profile.UpdatedAt));
         }
         // A read-tolerant catalogue must not silently omit a locked/corrupt companion during a mutation.
         _ = _projects.LoadAll();
@@ -181,7 +185,7 @@ public sealed class EntityManagementService
             var updated = profile with { FolderName = Path.GetFileName(moved), RelativePath = Path.GetRelativePath(_root, moved), UpdatedAt = now,
                 ProjectName = Same(source, project.ProjectPath) && projectName is not null ? projectName : profile.ProjectName,
                 ClientId = destinationClient?.Id ?? profile.ClientId, ClientCode = destinationClient?.ClientCode ?? profile.ClientCode };
-            changes.Add(new(Path.Combine(_root, ".ms3dprint-manager", "projects", profile.Id + ".json"), () => _projects.Update(updated)));
+            changes.Add(new(Path.Combine(_root, ".ms3dprint-manager", "projects", profile.Id + ".json"), () => _projects.Update(updated, profile.UpdatedAt), profile.UpdatedAt));
         }
         foreach (var profile in _collections.LoadAll())
         {
@@ -190,7 +194,7 @@ public sealed class EntityManagementService
             WorkspaceEntityPaths.Resolve(_root, Path.GetRelativePath(_root, NewPath(path)), profile.Category);
             var updated = profile with { RelativePath = Path.GetRelativePath(_root, NewPath(path)), UpdatedAt = now,
                 Name = Same(source, path) && collectionName is not null ? collectionName : profile.Name };
-            changes.Add(new(_collections.ProfilePath(profile.Id), () => _collections.Update(updated)));
+            changes.Add(new(_collections.ProfilePath(profile.Id), () => _collections.Update(updated, profile.UpdatedAt), profile.UpdatedAt));
         }
         return changes;
     }
@@ -199,7 +203,7 @@ public sealed class EntityManagementService
     {
         var directory = Path.Combine(_root, ".ms3dprint-manager", "operations");
         WorkspacePathSafety.EnsureNoLinks(directory);
-        if (!Directory.Exists(directory)) return;
+        if (!Directory.Exists(directory)) { _files.RecoverPendingRenames(); return; }
         foreach (var operation in Directory.EnumerateDirectories(directory))
         {
             var journalPath = Path.Combine(operation, "journal.json");
@@ -210,6 +214,7 @@ public sealed class EntityManagementService
             catch (JsonException exception) { throw new IOException("Journal d’opération illisible ; les sauvegardes sont conservées.", exception); }
             RecoverOperation(operation, journal);
         }
+        _files.RecoverPendingRenames();
     }
     private void RecoverOperation(string directory, RelocationJournal journal)
     {
@@ -219,6 +224,7 @@ public sealed class EntityManagementService
         if (journal.Profiles is null || journal.Profiles.Distinct(StringComparer.OrdinalIgnoreCase).Count() != journal.Profiles.Length)
             throw new IOException("Liste de sauvegardes invalide.");
         var profiles = journal.Profiles.Select(ResolveProfilePath).ToArray();
+        using var mutations = ProfileMutationLock.AcquireMany(profiles);
         if (journal.Committed) { TryCleanup(directory, journal); return; }
         // Validate every backup and destination before moving a single document or replacing any JSON.
         var snapshots = profiles.Select((path, index) =>
@@ -232,6 +238,8 @@ public sealed class EntityManagementService
         }).ToArray();
         if (!Same(Path.GetDirectoryName(source)!, Path.GetDirectoryName(target)!) && !string.Equals(Path.GetFileName(source), Path.GetFileName(target), StringComparison.OrdinalIgnoreCase))
             throw new IOException("Journal de déplacement incohérent : aucune donnée n’a été modifiée.");
+        // Validate fiche backups first, then restore the intermediate case-only rename before document rollback.
+        _files.RecoverPendingRenames();
         if (Same(source, target) && (File.Exists(target) || Directory.Exists(target)))
             _files.Rename(target, Path.GetFileName(source));
         if (!File.Exists(source) && !Directory.Exists(source) && (File.Exists(target) || Directory.Exists(target)))
@@ -407,6 +415,6 @@ public sealed class EntityManagementService
         return path;
     }
     private static bool Same(string left, string right) => string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), StringComparison.OrdinalIgnoreCase);
-    private sealed record ProfileChange(string Path, Action Save);
+    private sealed record ProfileChange(string Path, Action Save, DateTimeOffset ExpectedUpdatedAt);
     private sealed record RelocationJournal(string Source, string Target, string[] Profiles, bool Committed = false);
 }

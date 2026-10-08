@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text.RegularExpressions;
 using MS3DPRINT.Manager.Core.Naming;
 
 namespace MS3DPRINT.Manager.Core.Projects;
@@ -28,8 +27,7 @@ public static class ProjectReferenceGenerator
             throw new ArgumentException("Project name must contain a letter or digit.", nameof(projectName));
         }
 
-        var prefix = $"^{Regex.Escape(normalizedCode)}-{year.ToString("D4", CultureInfo.InvariantCulture)}-([0-9]{{3}})_";
-        var pattern = new Regex(prefix, RegexOptions.CultureInvariant);
+        var prefix = normalizedCode + "-" + year.ToString("D4", CultureInfo.InvariantCulture) + "-";
         var highestSequence = 0;
 
         foreach (var existingName in existingNames)
@@ -39,10 +37,11 @@ public static class ProjectReferenceGenerator
                 continue;
             }
 
-            var match = pattern.Match(existingName);
-            if (match.Success)
+            if (ProjectReferenceFormat.TryParseFolderName(existingName, out var reference) &&
+                existingName.Length > reference.Length && existingName[reference.Length] == '_' &&
+                reference.StartsWith(prefix, StringComparison.Ordinal))
             {
-                highestSequence = Math.Max(highestSequence, int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture));
+                highestSequence = Math.Max(highestSequence, int.Parse(reference[^3..], CultureInfo.InvariantCulture));
             }
         }
 

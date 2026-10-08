@@ -78,8 +78,7 @@ public sealed class ProjectDetailViewModel : ObservableObject
             Notes = TrimOrNull(Notes),
             UpdatedAt = DateTimeOffset.UtcNow
         };
-        _store.Update(updated);
-        _profile = updated;
+        _profile = _store.Update(updated, _profile.UpdatedAt);
         _savedDraft = CaptureDraft();
     }
 

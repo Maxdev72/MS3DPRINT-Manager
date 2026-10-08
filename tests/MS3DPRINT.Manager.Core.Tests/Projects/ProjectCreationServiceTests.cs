@@ -71,6 +71,8 @@ public sealed class ProjectCreationServiceTests : IDisposable
             var clientPath = Path.Combine(root, "01_CLIENTS", "Group", "MPO");
             Directory.CreateDirectory(clientPath);
             var clientProfile = new MS3DPRINT.Manager.Core.Clients.ClientProfile(Guid.NewGuid(), MS3DPRINT.Manager.Core.Clients.ClientKind.Professional, "MPO", "MPO", "MPO", null, null, null, null, new MS3DPRINT.Manager.Core.Clients.PrimaryContact(null, null, null, null, null), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+            clientProfile = clientProfile with { RelativePath = Path.GetRelativePath(root, clientPath) };
+            new MS3DPRINT.Manager.Core.Clients.ClientProfileStore(new MS3DPRINT.Manager.Core.Workspace.WorkspaceMetadataPaths(root)).Create(clientProfile);
             var client = new MS3DPRINT.Manager.Core.Clients.ClientSummary(clientPath, "MPO", "MPO", "MPO", MS3DPRINT.Manager.Core.Clients.ClientKind.Professional, clientProfile, 0);
             var profiles = new ProjectProfileStore(new MS3DPRINT.Manager.Core.Workspace.WorkspaceMetadataPaths(root));
             var service = new ProjectCreationService(new FolderTreeService());
@@ -83,5 +85,23 @@ public sealed class ProjectCreationServiceTests : IDisposable
             Assert.Equal(Path.Combine(clientPath, result.Reference.FolderName), Assert.Single(new ProjectCatalog(profiles).Load(root)).ProjectPath);
         }
         finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
+    public void CreateWithProfile_ProfileWriteFailureLeavesNoActiveProject()
+    {
+        var clientPath = Directory.CreateDirectory(Path.Combine(_root, "01_CLIENTS", "MPO")).FullName;
+        var paths = new MS3DPRINT.Manager.Core.Workspace.WorkspaceMetadataPaths(_root);
+        Directory.CreateDirectory(paths.MetadataDirectory);
+        File.WriteAllText(paths.ProjectsDirectory, "blocked");
+        var now = DateTimeOffset.UtcNow;
+        var profile = new MS3DPRINT.Manager.Core.Clients.ClientProfile(Guid.NewGuid(), MS3DPRINT.Manager.Core.Clients.ClientKind.Professional,
+            "MPO", "MPO", "MPO", null, null, null, null, new MS3DPRINT.Manager.Core.Clients.PrimaryContact(null, null, null, null, null), now, now);
+        var client = new MS3DPRINT.Manager.Core.Clients.ClientSummary(clientPath, "MPO", "MPO", "MPO", profile.Kind, profile, 0);
+
+        Assert.ThrowsAny<IOException>(() => new ProjectCreationService(new FolderTreeService()).CreateWithProfile(client, 2026, "Prototype", new ProjectProfileStore(paths), null, null));
+
+        Assert.Empty(Directory.EnumerateDirectories(clientPath));
+        Assert.Single(new MS3DPRINT.Manager.Core.Workspace.ManagedFileService(_root).ListTrash());
     }
 }

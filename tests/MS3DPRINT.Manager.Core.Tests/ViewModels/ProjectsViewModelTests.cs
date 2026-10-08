@@ -14,6 +14,7 @@ public sealed class ProjectsViewModelTests : IDisposable
         var paths = new WorkspaceMetadataPaths(_root);
         var store = new ProjectProfileStore(paths);
         var profile = new ProjectProfile(Guid.NewGuid(), Guid.NewGuid(), "MPO", "MPO-2026-001", "MPO-2026-001_OUTILLAGE", "OUTILLAGE", ProjectStatus.Quote, DateTimeOffset.UtcNow, null, null, null, DateTimeOffset.UtcNow);
+        CreateClient(profile.ClientId);
         store.Create(profile);
         Directory.CreateDirectory(Path.Combine(_root, "01_CLIENTS", "MPO", profile.FolderName));
         var viewModel = new ProjectsViewModel(new ProjectCatalog(store), _root);
@@ -30,6 +31,7 @@ public sealed class ProjectsViewModelTests : IDisposable
     {
         var store = new ProjectProfileStore(new WorkspaceMetadataPaths(_root));
         var profile = new ProjectProfile(Guid.NewGuid(), Guid.NewGuid(), "MPO", "MPO-2026-001", "MPO-2026-001_OUTILLAGE", "OUTILLAGE", ProjectStatus.Quote, DateTimeOffset.UtcNow, null, null, null, DateTimeOffset.UtcNow);
+        CreateClient(profile.ClientId);
         store.Create(profile);
         Directory.CreateDirectory(Path.Combine(_root, "01_CLIENTS", "MPO", profile.FolderName));
         var viewModel = new ProjectsViewModel(new ProjectCatalog(store), _root);
@@ -46,6 +48,7 @@ public sealed class ProjectsViewModelTests : IDisposable
     {
         var store = new ProjectProfileStore(new WorkspaceMetadataPaths(_root));
         var profile = new ProjectProfile(Guid.NewGuid(), Guid.NewGuid(), "MPO", "MPO-2026-001", "MPO-2026-001_OUTILLAGE", "OUTILLAGE", ProjectStatus.Quote, DateTimeOffset.UtcNow, null, null, null, DateTimeOffset.UtcNow);
+        CreateClient(profile.ClientId);
         store.Create(profile);
         Directory.CreateDirectory(Path.Combine(_root, "01_CLIENTS", "MPO", profile.FolderName));
         var viewModel = new ProjectsViewModel(new ProjectCatalog(store), _root);
@@ -55,6 +58,14 @@ public sealed class ProjectsViewModelTests : IDisposable
         Assert.Empty(viewModel.VisibleProjects);
         viewModel.ApplyCatalog(catalog);
         Assert.Equal(profile.Reference, Assert.Single(viewModel.VisibleProjects).Reference);
+    }
+
+    private void CreateClient(Guid id)
+    {
+        var now = DateTimeOffset.UtcNow;
+        new MS3DPRINT.Manager.Core.Clients.ClientProfileStore(new(_root)).Create(new(id,
+            MS3DPRINT.Manager.Core.Clients.ClientKind.Professional, "MPO", "MPO", "MPO", null, null, null, null,
+            new(null, null, null, null, null), now, now));
     }
 
     public void Dispose()

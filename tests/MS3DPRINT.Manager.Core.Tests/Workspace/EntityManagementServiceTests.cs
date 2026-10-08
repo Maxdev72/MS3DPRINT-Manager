@@ -9,6 +9,42 @@ public sealed class EntityManagementServiceTests : IDisposable
     private readonly string _root = Path.Combine(Path.GetTempPath(), "ms3d-entities-" + Guid.NewGuid().ToString("N"));
 
     [Fact]
+    public void TrashingProjectCopyAndRestoringIt_PreservesOriginalProfileBytes()
+    {
+        var (_, original) = CreateFixture();
+        var otherClient = CreateClient("SECOND", "SEC");
+        var copyPath = Directory.CreateDirectory(Path.Combine(otherClient.ClientPath, original.FolderName)).FullName;
+        File.WriteAllText(Path.Combine(copyPath, "copy.txt"), "copy");
+        var profilePath = Path.Combine(_root, ".ms3dprint-manager", "projects", original.Profile!.Id + ".json");
+        var bytes = File.ReadAllBytes(profilePath);
+        var copy = Projects().Load(_root).Single(project => project.ProjectPath == copyPath);
+        var entry = new EntityManagementService(_root).TrashProject(copy);
+        Assert.Equal(bytes, File.ReadAllBytes(profilePath));
+        Assert.Equal(original.Profile.Id, Projects().Load(_root).Single().Profile!.Id);
+        new ManagedFileService(_root).Restore(entry.Id);
+        Assert.Equal(bytes, File.ReadAllBytes(profilePath));
+        Assert.Null(Projects().Load(_root).Single(project => project.ProjectPath == copyPath).Profile);
+    }
+
+    [Fact]
+    public void RenamingAndMovingProjectCopy_RequiresItsOwnProfileAndPreservesOriginal()
+    {
+        var (_, original) = CreateFixture();
+        var otherClient = CreateClient("SECOND", "SEC");
+        var copyPath = Directory.CreateDirectory(Path.Combine(otherClient.ClientPath, original.FolderName)).FullName;
+        var profilePath = Path.Combine(_root, ".ms3dprint-manager", "projects", original.Profile!.Id + ".json");
+        var bytes = File.ReadAllBytes(profilePath);
+        var service = new EntityManagementService(_root);
+        var copy = Projects().Load(_root).Single(p => p.ProjectPath == copyPath);
+        Assert.Throws<ArgumentException>(() => service.RenameProject(copy, "COPY"));
+        var thirdClient = CreateClient("THIRD", "THI");
+        Assert.Throws<ArgumentException>(() => service.MoveProject(copy, thirdClient));
+        Assert.True(Directory.Exists(copyPath));
+        Assert.Equal(bytes, File.ReadAllBytes(profilePath));
+        Assert.Single(Projects().Load(_root).Where(p => p.Profile is not null));
+    }
+
+    [Fact]
     public void RenamingAndMovingClient_KeepsProjectsAndIdentifiersDiscoverable()
     {
         var (client, project) = CreateFixture();

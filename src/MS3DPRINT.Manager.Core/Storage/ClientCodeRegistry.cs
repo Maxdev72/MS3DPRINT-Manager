@@ -28,8 +28,12 @@ public sealed class ClientCodeRegistry
         return codes.GetValueOrDefault(key);
     }
 
-    public void Add(string clientName, string code)
+    public void Add(string clientName, string code) => Add(clientName, code, () => { });
+
+    /// <summary>Checks the reserved name under the registry lock before creating its client.</summary>
+    public void Add(string clientName, string code, Action createClient)
     {
+        ArgumentNullException.ThrowIfNull(createClient);
         var key = NormalizeRequired(clientName, nameof(clientName));
         var normalizedCode = NormalizeRequired(code, nameof(code));
         Directory.CreateDirectory(_dataDirectory);
@@ -52,6 +56,7 @@ public sealed class ClientCodeRegistry
                 throw new FolderConflictException($"Un code est déjà enregistré pour le client {key}.");
             }
 
+            createClient();
             codes.Add(key, normalizedCode);
             var temporaryPath = Path.Combine(_dataDirectory, "client-codes." + Guid.NewGuid().ToString("N") + ".tmp");
             try
