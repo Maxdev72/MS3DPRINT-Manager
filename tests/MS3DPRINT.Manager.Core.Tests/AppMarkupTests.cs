@@ -4,6 +4,15 @@ namespace MS3DPRINT.Manager.Core.Tests;
 
 public sealed class AppMarkupTests
 {
+    [Theory]
+    [InlineData("CreateClientWindow.xaml")]
+    [InlineData("CreateTrackedProjectWindow.xaml")]
+    public void CreationDialogs_UseShortOpeningFade(string fileName)
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", fileName);
+        Assert.Contains(document.Descendants(), element => element.Name.LocalName == "DoubleAnimation" && (string?)element.Attribute("To") == "1");
+    }
+
     [Fact]
     public void MainWindow_PrioritizesClientAndProjectCreation()
     {

@@ -3,7 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Nouveau client" Width="560" Height="700" MinWidth="420" MinHeight="480"
         Style="{DynamicResource MaterialDesignWindow}"
-        WindowStartupLocation="CenterOwner" Background="{DynamicResource BackgroundBrush}">
+        WindowStartupLocation="CenterOwner" Background="{DynamicResource BackgroundBrush}" Opacity="0">
+    <Window.Triggers><EventTrigger RoutedEvent="Loaded"><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.16" /></Storyboard></BeginStoryboard></EventTrigger></Window.Triggers>
     <DockPanel Margin="24">
         <StackPanel DockPanel.Dock="Bottom" Margin="0,16,0,0">
             <TextBlock x:Name="ErrorText" Foreground="{DynamicResource ErrorBrush}" TextWrapping="Wrap" Margin="0,0,0,12" />
