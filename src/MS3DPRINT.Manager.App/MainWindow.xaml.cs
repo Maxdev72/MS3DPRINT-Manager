@@ -128,6 +128,14 @@ public partial class MainWindow : Window
             ShowDialog(new CreateClientWindow(_viewModel.StorageRoot, _folders, _codes, _clientProfiles) { Owner = this });
         });
         page.ClientSelected += client => ShowClientDetail(client);
+        page.EditRequested += client =>
+        {
+            if (client.Profile is null) CompleteClient(client, ShowClients);
+            else { ShowClientDetail(client); if (PageHost.Content is ClientDetailView detail) detail.ShowInformation(); }
+        };
+        page.RenameRequested += client => RenameClientFolder(client);
+        page.MoveRequested += client => MoveClientFolder(client);
+        page.TrashRequested += client => TrashClientFolder(client);
         TryShowPage(page);
     }
 
@@ -139,11 +147,12 @@ public partial class MainWindow : Window
         var navigateBack = backRequested ?? ShowClients;
         if (client.Profile is null)
         {
-            Run(() =>
-            {
-                ShowDialog(new CreateClientWindow(_viewModel.StorageRoot, _folders, _codes, _clientProfiles, client) { Owner = this });
-                navigateBack();
-            });
+            var legacy = new LegacyEntityDetailView(_viewModel.StorageRoot, client.ClientPath, client.DisplayName, client: true);
+            legacy.BackRequested += (_, _) => navigateBack();
+            legacy.CompleteRequested += (_, _) => CompleteClient(client, navigateBack);
+            legacy.TrashRequested += (_, _) => TrashClientFolder(client, navigateBack);
+            legacy.ProjectSelected += project => ShowProjectDetail(project, () => ShowClientDetail(client, navigateBack));
+            TryShowPage(legacy);
             return;
         }
         var profile = _clientProfiles.Load(client.Profile.Id);
@@ -173,6 +182,14 @@ public partial class MainWindow : Window
             ShowDialog(new CreateTrackedProjectWindow(_viewModel.StorageRoot, _folders, _clientCatalog, _projectProfiles) { Owner = this });
         });
         page.ProjectSelected += project => ShowProjectDetail(project);
+        page.EditRequested += project =>
+        {
+            if (project.Profile is null) CompleteProject(project, ShowProjects);
+            else { ShowProjectDetail(project); if (PageHost.Content is ProjectDetailView detail) detail.ShowInformation(); }
+        };
+        page.RenameRequested += project => RenameProjectFolder(project);
+        page.MoveRequested += project => MoveProjectFolder(project);
+        page.TrashRequested += project => TrashProjectFolder(project);
         TryShowPage(page);
     }
 
@@ -185,6 +202,10 @@ public partial class MainWindow : Window
             CreateCollection(createTitle, parentFolder, template, () => ShowCategory(parentFolder));
         });
         page.ItemSelected += item => ShowCollectionDetail(item, () => ShowCollection(title, subtitle, parentFolder, template, createTitle));
+        page.EditRequested += item => EditCollection(item, () => ShowCategory(parentFolder));
+        page.RenameRequested += item => RenameCollectionFolder(item, parentFolder, () => ShowCategory(parentFolder));
+        page.MoveRequested += item => MoveCollectionFolder(item, parentFolder, () => ShowCategory(parentFolder));
+        page.TrashRequested += item => TrashCollectionFolder(item, () => ShowCategory(parentFolder));
         TryShowPage(page);
     }
 
@@ -201,11 +222,11 @@ public partial class MainWindow : Window
         var navigateBack = backRequested ?? ShowProjects;
         if (project.Profile is null)
         {
-            Run(() =>
-            {
-                ShowDialog(new CreateTrackedProjectWindow(_viewModel.StorageRoot, _folders, _clientCatalog, _projectProfiles, project) { Owner = this });
-                navigateBack();
-            });
+            var legacy = new LegacyEntityDetailView(_viewModel.StorageRoot, project.ProjectPath, project.Reference + " · " + project.ProjectName);
+            legacy.BackRequested += (_, _) => navigateBack();
+            legacy.CompleteRequested += (_, _) => CompleteProject(project, navigateBack);
+            legacy.TrashRequested += (_, _) => TrashProjectFolder(project, navigateBack);
+            TryShowPage(legacy);
             return;
         }
         var page = new ProjectDetailView(new ProjectDetailViewModel(project, _projectProfiles));
@@ -296,6 +317,7 @@ public partial class MainWindow : Window
             ClientsView view => view.RefreshAsync(), ProjectsView view => view.RefreshAsync(),
             CollectionView view => view.RefreshAsync(), ClientDetailView view => view.RefreshAsync(),
             ProjectDetailView view => view.RefreshAsync(), CollectionDetailView view => view.RefreshAsync(),
+            LegacyEntityDetailView view => view.RefreshAsync(),
             FilamentsView view => view.RefreshAsync(), TrashView view => view.RefreshAsync(),
             _ => Task.CompletedTask
         };

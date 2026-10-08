@@ -11,11 +11,13 @@ public partial class ProjectDetailView : UserControl, IUnsavedChangesPage
     private readonly ProjectDetailViewModel _viewModel;
     private int _fileLoadVersion;
     private ProjectFileEntry? _selectedPreviewFile;
+    private readonly Action<string?, Window?> _showModelPreview;
 
-    public ProjectDetailView(ProjectDetailViewModel viewModel)
+    public ProjectDetailView(ProjectDetailViewModel viewModel, Action<string?, Window?>? showModelPreview = null)
     {
+        _showModelPreview = showModelPreview ?? ModelPreviewLauncher.Show;
         InitializeComponent();
-        Controls.FileManagement.StretchFileRows(FilesList);
+        Controls.FileManagement.ConfigureFileTable(FilesList);
         _viewModel = viewModel;
         DataContext = _viewModel;
         Loaded += async (_, _) =>
@@ -45,10 +47,10 @@ public partial class ProjectDetailView : UserControl, IUnsavedChangesPage
     private void Classify_Click(object sender, RoutedEventArgs e) => ClassifyRequested?.Invoke(this, EventArgs.Empty);
     private void File_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (FilesList.SelectedItem is not ProjectFileEntry entry) return;
-        FilesList.SelectedItem = null;
-        OpenEntry(entry);
+        _selectedPreviewFile = FilesList.SelectedItem is ProjectFileEntry { IsDirectory: false } entry && ThreeDFileSupport.IsPreviewable(entry.FullPath) ? entry : null;
+        Preview3DButton.IsEnabled = _selectedPreviewFile is not null;
     }
+    public void ShowInformation() => DetailTabs.SelectedIndex = 1;
 
     public void OpenEntry(ProjectFileEntry entry)
     {
@@ -62,7 +64,8 @@ public partial class ProjectDetailView : UserControl, IUnsavedChangesPage
         {
             _selectedPreviewFile = entry;
             Preview3DButton.IsEnabled = true;
-            MessageText.Text = "Fichier 3D sélectionné. Utilisez « Visualiser en 3D » pour l’ouvrir.";
+            try { _showModelPreview(entry.FullPath, Window.GetWindow(this)); }
+            catch (Exception exception) { MessageText.Text = UiErrorMessages.For(exception); }
         }
         else if (PreviewFileSupport.GetKind(entry.FullPath) != PreviewFileKind.None)
         {
@@ -88,7 +91,7 @@ public partial class ProjectDetailView : UserControl, IUnsavedChangesPage
     private void Preview3D_Click(object sender, RoutedEventArgs e)
     {
         if (_selectedPreviewFile is null) return;
-        ModelPreviewLauncher.Show(_selectedPreviewFile.FullPath, Window.GetWindow(this));
+        _showModelPreview(_selectedPreviewFile.FullPath, Window.GetWindow(this));
     }
 
     public void ConfigureFileManagement(string root, Window owner)

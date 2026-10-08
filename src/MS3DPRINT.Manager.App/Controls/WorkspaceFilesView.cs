@@ -14,11 +14,12 @@ public sealed class WorkspaceFilesView : UserControl
     private readonly ListView _list = new() { MinHeight = 180 };
     private readonly TextBlock _path = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 10) };
     private readonly TextBlock _message = new() { TextWrapping = TextWrapping.Wrap };
+    private readonly Button _up = new() { Content = "Remonter", Margin = new Thickness(0, 0, 10, 8), IsEnabled = false };
     public WorkspaceFilesView(string workspaceRoot, string folder)
     {
-        _root = folder; _current = folder;
-        var panel = new StackPanel(); var toolbar = new WrapPanel();
-        var up = new Button { Content = "Remonter", Margin = new Thickness(0, 0, 10, 8) };
+        _root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder)); _current = _root;
+        var panel = new DockPanel(); var toolbar = new WrapPanel();
+        var up = _up;
         up.SetResourceReference(FrameworkElement.StyleProperty, "SecondaryButton");
         up.Click += async (_, _) => { if (_current != _root) { _current = _browser.GetParentDirectory(_root, _current); await RefreshAsync(); } };
         toolbar.Children.Add(up);
@@ -27,9 +28,9 @@ public sealed class WorkspaceFilesView : UserControl
         _list.SetResourceReference(Control.BorderBrushProperty, "BorderBrush");
         _path.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
         _message.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
-        _list.DisplayMemberPath = "Name";
-        _list.MouseDoubleClick += (_, _) => { if (_list.SelectedItem is ProjectFileEntry entry) Open(entry); };
-        panel.Children.Add(_path); panel.Children.Add(toolbar); panel.Children.Add(_list); panel.Children.Add(_message); Content = panel;
+        FileManagement.ConfigureFileTable(_list);
+        DockPanel.SetDock(_path, Dock.Top); DockPanel.SetDock(toolbar, Dock.Top); DockPanel.SetDock(_message, Dock.Bottom);
+        panel.Children.Add(_path); panel.Children.Add(toolbar); panel.Children.Add(_message); panel.Children.Add(_list); Content = panel;
         Loaded += async (_, _) =>
         {
             FileManagement.Attach(toolbar, _list, workspaceRoot, () => _current, RefreshAsync, Open, Window.GetWindow(this));
@@ -46,6 +47,7 @@ public sealed class WorkspaceFilesView : UserControl
             if (version != _refreshVersion) return;
             _list.ItemsSource = entries;
             _path.Text = directory;
+            _up.IsEnabled = !string.Equals(_current, _root, StringComparison.OrdinalIgnoreCase);
             _message.Text = "Double-cliquez pour ouvrir un élément.";
         }
         catch (Exception exception) { if (version == _refreshVersion) _message.Text = UiErrorMessages.For(exception); }

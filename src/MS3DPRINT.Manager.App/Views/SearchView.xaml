@@ -11,12 +11,14 @@
             <Button Grid.Column="1" Content="Rechercher" Click="Search_Click" Margin="10,0,0,0" MinWidth="110" />
         </Grid>
         <TextBlock x:Name="MessageText" Grid.Row="2" Foreground="{DynamicResource MutedBrush}" Text="Saisissez un mot puis lancez la recherche." TextWrapping="Wrap" Margin="0,0,0,12" />
-        <ListView x:Name="ResultsList" Grid.Row="3" SelectionChanged="ResultsList_SelectionChanged" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}">
-            <ListView.ItemContainerStyle><Style TargetType="ListViewItem"><Setter Property="HorizontalContentAlignment" Value="Stretch" /></Style></ListView.ItemContainerStyle>
-            <ListView.ItemTemplate><DataTemplate><Border Padding="14,11" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"><StackPanel>
-                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14" TextWrapping="Wrap" Foreground="{DynamicResource InkBrush}" />
-                <TextBlock Text="{Binding Detail}" Margin="0,4,0,0" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" />
-            </StackPanel></Border></DataTemplate></ListView.ItemTemplate>
-        </ListView>
+        <DockPanel Grid.Row="3">
+            <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4"><Button x:Name="OpenButton" Content="Ouvrir" Click="Open_Click" IsEnabled="False" Margin="0,0,8,8" />
+            </WrapPanel>
+            <ListView x:Name="ResultsList" SelectionMode="Single" SelectionChanged="ResultsList_SelectionChanged"><ListView.View><GridView AllowsColumnReorder="True">
+                    <GridViewColumn Header="Type" Width="100" DisplayMemberBinding="{Binding Kind}" />
+                    <GridViewColumn Header="Nom" Width="330" DisplayMemberBinding="{Binding Title}" />
+                    <GridViewColumn Header="Emplacement" Width="500" DisplayMemberBinding="{Binding Path}" />
+            </GridView></ListView.View></ListView>
+        </DockPanel>
     </Grid>
 </UserControl>

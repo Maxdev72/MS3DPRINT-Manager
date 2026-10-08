@@ -47,4 +47,10 @@ Version inspectée : commit 31209dc, 8 octobre 2026. Lecture des vues WPF, évé
 
 Tests de navigation projet/client sans fiche sans écriture implicite ; tests de complétion guidée et retour au projet ; sélection sans ouverture, ouverture double clic/Entrée ; disponibilité des actions selon la sélection ; protections corbeille/liens inchangées ; agrandissement PDF conservant page et retour à taille normale. Vérifications visuelles des tableaux et détails dans les quatre thèmes, fenêtre étroite et écran standard. Suite complète puis publication et remplacement du seul MS3DPRINT Manager.exe, avec contrôle SHA256.
 
-Cet audit et cette proposition n’appliquent pas encore la refonte à l’exécutable livré.
+## Mise en œuvre — 8 octobre 2026
+
+La refonte a été appliquée : les listes concernées sont des tableaux compacts triables, avec ouverture explicite et barre d’actions sur la sélection. Les dossiers historiques s’ouvrent sans créer de fiche ; leurs fichiers restent consultables et la complétion client puis projet est déclenchée uniquement par l’action dédiée. Les détails affichent les fichiers avant les informations métier.
+
+Le navigateur de fichiers affiche Nom, Type, Taille et Modifié. Les actions ouvrir, renommer, déplacer et supprimer utilisent la ligne sélectionnée, tout en conservant la corbeille et les protections d’identité des dossiers sans fiche. L’aperçu PDF offre Agrandir/Rétablir, zoom, ajustement à la largeur et conservation de la page.
+
+Validation : 428 tests automatisés, captures de toutes les pages dans les quatre thèmes et à largeur réduite, ainsi que 20 captures de l’aperçu PDF. La publication a remplacé le seul exécutable de livraison après contrôle SHA256.

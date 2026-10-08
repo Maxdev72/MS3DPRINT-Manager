@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using MS3DPRINT.Manager.App.Controls;
 using MS3DPRINT.Manager.App.ViewModels;
 using MS3DPRINT.Manager.Core.Filaments;
 
@@ -13,12 +14,8 @@ public partial class FilamentsView : UserControl
     public FilamentsView(string workspaceRoot)
     {
         InitializeComponent();
-        // Theme resources are optional when a view is constructed outside the application.
-        var materialItemStyle = TryFindResource("MaterialDesignListViewItem") as Style
-            ?? TryFindResource(typeof(ListViewItem)) as Style;
-        if (materialItemStyle is not null && materialItemStyle.TargetType.IsAssignableFrom(typeof(ListViewItem))
-            && !FilamentsList.ItemContainerStyle.IsSealed)
-            FilamentsList.ItemContainerStyle.BasedOn = materialItemStyle;
+        CompactTable.Configure(FilamentsList);
+        CompactTable.BindOpen(FilamentsList, () => Edit_Click(FilamentsList, new RoutedEventArgs()));
         _store = new FilamentStore(workspaceRoot);
         DataContext = _model;
         _model.BrandFilter = FilamentsViewModel.AllBrands;

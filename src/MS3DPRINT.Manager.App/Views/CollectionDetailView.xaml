@@ -1,12 +1,18 @@
-<UserControl x:Class="MS3DPRINT.Manager.App.Views.CollectionDetailView"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:controls="clr-namespace:MS3DPRINT.Manager.App.Controls">
-    <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="28,23">
-        <Button Content="← Retour" Click="Back_Click" HorizontalAlignment="Left" Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource AccentForegroundBrush}" />
-        <controls:EntityActions x:Name="ManagementActions" />
-        <TextBlock Text="{Binding Name}" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource InkBrush}" Margin="0,18,0,4" />
-        <TextBlock Text="Dossier de travail" Foreground="{DynamicResource MutedBrush}" />
-        <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Margin="0,12,0,8" />
+<UserControl Foreground="{DynamicResource TextBrush}" x:Class="MS3DPRINT.Manager.App.Views.CollectionDetailView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:controls="clr-namespace:MS3DPRINT.Manager.App.Controls">
+    <Grid Margin="24,18"><Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+        <StackPanel><Button Content="← Retour" Click="Back_Click" HorizontalAlignment="Left" Style="{DynamicResource SecondaryButton}" /><TextBlock Text="{Binding Name}" FontSize="24" FontWeight="SemiBold" Margin="0,12,0,4" /><TextBlock Text="Dossier de travail" Foreground="{DynamicResource MutedBrush}" />
+            <TextBlock Text="Fiche à compléter · Vos fichiers sont accessibles." Foreground="{DynamicResource MutedBrush}" Margin="0,6,0,0"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed" /><Style.Triggers><DataTrigger Binding="{Binding HasProfile}" Value="False"><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
+        </StackPanel>
+        <controls:EntityActions x:Name="ManagementActions" Grid.Row="1" />
+        <TabControl x:Name="DetailTabs" Grid.Row="2" SelectedIndex="0" Margin="0,8,0,0" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+            <TabItem Header="Fichiers"><Grid Margin="12"><Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+                <TextBlock x:Name="CurrentPathText" Text="{Binding CurrentDirectory}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" ToolTip="{Binding CurrentDirectory}" />
+                <WrapPanel Grid.Row="1" Margin="0,8,0,0"><Button Content="Remonter" Click="Up_Click" IsEnabled="{Binding CanGoUp}" Margin="0,0,8,8" Style="{DynamicResource SecondaryButton}" /><Button x:Name="Preview3DButton" Content="Visualiser en 3D" Click="Preview3D_Click" IsEnabled="False" Margin="0,0,8,8" Style="{DynamicResource SecondaryButton}" /></WrapPanel>
+                <WrapPanel x:Name="FileActionsHost" Grid.Row="2" Margin="0,0,0,4" />
+                <ListView x:Name="FilesList" Grid.Row="3" ItemsSource="{Binding FileEntries}" SelectionChanged="File_SelectionChanged" MinHeight="140" BorderBrush="{DynamicResource BorderBrush}" Background="{DynamicResource SurfaceBrush}" />
+            </Grid></TabItem>
+            <TabItem Header="Informations"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="12" MaxWidth="760" HorizontalAlignment="Stretch">
+<TextBlock Text="{Binding Description}" TextWrapping="Wrap" Margin="0,12,0,8" />
         <StackPanel Margin="0,4,0,8">
             <StackPanel.Style><Style TargetType="StackPanel"><Style.Triggers><DataTrigger Binding="{Binding IsSupplier}" Value="False"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers></Style></StackPanel.Style>
             <TextBlock Text="Coordonnées fournisseur" FontWeight="SemiBold" />
@@ -15,16 +21,9 @@
             <TextBlock Text="{Binding Phone}" /><TextBlock Text="{Binding Email}" /><TextBlock Text="{Binding Website}" TextWrapping="Wrap" />
         </StackPanel>
         <TextBlock Text="{Binding Notes}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" />
-        <TextBlock Text="Fichiers et sous-dossiers" FontSize="16" FontWeight="SemiBold" Margin="0,24,0,6" />
-        <StackPanel Margin="0,0,0,8">
-            <TextBlock x:Name="CurrentPathText" Text="{Binding CurrentDirectory}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" ToolTip="{Binding CurrentDirectory}" />
-            <WrapPanel Margin="0,10,0,0">
-                <Button Content="Remonter" Click="Up_Click" IsEnabled="{Binding CanGoUp}" Margin="0,0,10,8" />
-                <Button x:Name="Preview3DButton" Content="Visualiser en 3D" Click="Preview3D_Click" IsEnabled="False" Margin="0,0,0,8" />
-            </WrapPanel>
-        </StackPanel>
-        <WrapPanel x:Name="FileActionsHost" Margin="0,0,0,8" />
-        <ListView x:Name="FilesList" ItemsSource="{Binding FileEntries}" SelectionChanged="File_SelectionChanged" MinHeight="220" BorderBrush="{DynamicResource BorderBrush}" Background="{DynamicResource SurfaceBrush}"><ListView.ItemTemplate><DataTemplate><Border Padding="12,8" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="{Binding Icon}" Margin="0,0,10,0" /><TextBlock Grid.Column="1" Text="{Binding Name}" /><TextBlock Grid.Column="2" Text="{Binding Length}" Foreground="{DynamicResource MutedBrush}" /></Grid></Border></DataTemplate></ListView.ItemTemplate></ListView>
-        <TextBlock x:Name="MessageText" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,14,0,0" />
-    </StackPanel></ScrollViewer>
+
+            </StackPanel></ScrollViewer></TabItem>
+        </TabControl>
+        <TextBlock x:Name="MessageText" Grid.Row="3" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,8,0,0" />
+    </Grid>
 </UserControl>

@@ -292,35 +292,25 @@ public sealed class AppMarkupTests
         Assert.Contains(comboItemStyle.Descendants(), element => element.Name.LocalName == "MultiTrigger");
     }
 
-    [Fact]
-    public void ClientAndProjectLists_UseReadableBusinessLabels()
-    {
-        var clients = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "ClientsView.xaml");
-        var projects = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "ProjectsView.xaml");
 
-        Assert.DoesNotContain(clients.Descendants(), element => ((string?)element.Attribute("Text") ?? string.Empty).Contains("IsProfileMissing"));
-        Assert.Contains(clients.Descendants(), element => ((string?)element.Attribute("Text") ?? string.Empty).Contains("ProfileLabel"));
-        Assert.Contains(projects.Descendants(), element => ((string?)element.Attribute("Text") ?? string.Empty).Contains("StatusLabel"));
-        Assert.Contains(clients.Descendants(), element =>
-            element.Name.LocalName == "Setter" &&
-            (string?)element.Attribute("Property") == "HorizontalContentAlignment" &&
-            (string?)element.Attribute("Value") == "Stretch");
+    [Fact]
+    public void LegacyDetails_OfferExplicitCompletionWithoutRequiringItForFiles()
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "LegacyEntityDetailView.xaml");
+        Assert.Contains(document.Descendants(), element => element.Name.LocalName == "Button" && (string?)element.Attribute("Click") == "Complete_Click");
+        Assert.Contains(document.Descendants(), element => element.Name.LocalName == "ContentControl" && element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "FilesHost"));
     }
 
     [Fact]
-    public void MainWindow_OpensTheCompletionFormForExistingClientsWithoutProfiles()
+    public void LegacyDetails_ExplainWhyRenamingAndMovingRequireCompletion()
     {
-        var source = LoadSource("src", "MS3DPRINT.Manager.App", "MainWindow.xaml.cs");
-
-        Assert.Contains("new CreateClientWindow(_viewModel.StorageRoot, _folders, _codes, _clientProfiles, client)", source);
-    }
-
-    [Fact]
-    public void MainWindow_OpensTheCompletionFormForExistingProjectsWithoutProfiles()
-    {
-        var source = LoadSource("src", "MS3DPRINT.Manager.App", "MainWindow.xaml.cs");
-
-        Assert.Contains("new CreateTrackedProjectWindow(_viewModel.StorageRoot, _folders, _clientCatalog, _projectProfiles, project)", source);
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "LegacyEntityDetailView.xaml");
+        foreach (var content in new[] { "Renommer…", "Déplacer…" })
+        {
+            var button = Assert.Single(document.Descendants().Where(element => element.Name.LocalName == "Button" && (string?)element.Attribute("Content") == content));
+            Assert.Equal("False", (string?)button.Attribute("IsEnabled"));
+            Assert.Contains("Complétez", (string?)button.Attribute("ToolTip"));
+        }
     }
 
     [Fact]
@@ -356,17 +346,14 @@ public sealed class AppMarkupTests
     {
         var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "ClientDetailView.xaml");
         Assert.Contains(document.Descendants(), element =>
-            element.Name.LocalName == "ListBox" &&
+            element.Name.LocalName == "ListView" &&
             element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "ProjectsList"));
         Assert.Contains(document.Descendants(), element =>
             element.Name.LocalName == "TextBlock" &&
             element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "ProjectsLoadingText"));
-        var projectItemStyle = Assert.Single(document.Descendants().Where(element =>
-            element.Name.LocalName == "Style" && (string?)element.Attribute("TargetType") == "ListBoxItem"));
-        Assert.Contains(projectItemStyle.Elements(), element =>
-            element.Name.LocalName == "Setter" &&
-            (string?)element.Attribute("Property") == "Foreground" &&
-            (string?)element.Attribute("Value") == "{DynamicResource TextBrush}");
+        foreach (var header in new[] { "Référence", "Projet", "Statut" })
+            Assert.Contains(document.Descendants(), element => element.Name.LocalName == "GridViewColumn" && (string?)element.Attribute("Header") == header);
+        Assert.Contains(document.Descendants(), element => element.Name.LocalName == "Button" && (string?)element.Attribute("Click") == "OpenProject_Click");
 
         var source = LoadSource("src", "MS3DPRINT.Manager.App", "Views", "ClientDetailView.xaml.cs");
         Assert.Contains("Task.Run(_viewModel.LoadProjects)", source);

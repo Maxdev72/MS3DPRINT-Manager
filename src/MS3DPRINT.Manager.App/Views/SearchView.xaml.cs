@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using MS3DPRINT.Manager.App.Controls;
 using System.Windows.Input;
 using MS3DPRINT.Manager.Core.Search;
 
@@ -17,6 +18,8 @@ public partial class SearchView : UserControl
         _search = search ?? throw new ArgumentNullException(nameof(search));
         _workspaceRoot = workspaceRoot ?? throw new ArgumentNullException(nameof(workspaceRoot));
         InitializeComponent();
+        CompactTable.Configure(ResultsList);
+        CompactTable.BindOpen(ResultsList, OpenSelection);
         Loaded += (_, _) => QueryBox.Focus();
         Unloaded += (_, _) => _searchCancellation?.Cancel();
     }
@@ -55,7 +58,7 @@ public partial class SearchView : UserControl
                 ? "Aucun résultat. Essayez un autre terme."
                 : response.HasMore
                     ? $"{response.Results.Count} premiers résultats affichés. Affinez votre recherche pour en voir d’autres."
-                    : $"{response.Results.Count} résultat(s). Sélectionnez une ligne pour ouvrir l’élément.";
+                    : $"{response.Results.Count} résultat(s). Double-cliquez ou appuyez sur Entrée pour ouvrir l’élément.";
         }
         catch (OperationCanceledException) { }
         catch (Exception exception)
@@ -64,10 +67,7 @@ public partial class SearchView : UserControl
         }
     }
 
-    private void ResultsList_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (ResultsList.SelectedItem is not GlobalSearchResult result) return;
-        ResultsList.SelectedItem = null;
-        ResultSelected?.Invoke(result);
-    }
+    private void ResultsList_SelectionChanged(object sender, SelectionChangedEventArgs e) => OpenButton.IsEnabled = ResultsList.SelectedItem is GlobalSearchResult;
+    private void OpenSelection() { if (ResultsList.SelectedItem is GlobalSearchResult result) ResultSelected?.Invoke(result); }
+    private void Open_Click(object sender, RoutedEventArgs e) => OpenSelection();
 }

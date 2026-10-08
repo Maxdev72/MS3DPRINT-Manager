@@ -28,23 +28,21 @@
             </ComboBox>
             <Button Grid.Column="2" Content="Actualiser" Click="Refresh_Click" Margin="12,0,0,0" />
         </Grid>
-        <ListView x:Name="ClientsList" Grid.Row="3" ItemsSource="{Binding VisibleClients}" SelectionChanged="ClientsList_SelectionChanged" BorderBrush="{DynamicResource BorderBrush}" Background="{DynamicResource SurfaceBrush}">
-            <ListView.ItemContainerStyle><Style TargetType="ListViewItem"><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Padding" Value="0" /></Style></ListView.ItemContainerStyle>
-            <ListView.ItemTemplate>
-                <DataTemplate>
-                    <Border Padding="18,13" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-                        <StackPanel>
-                            <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="15" TextWrapping="Wrap" />
-                            <TextBlock Text="{Binding FolderName}" Foreground="{DynamicResource MutedBrush}" FontSize="12" TextTrimming="CharacterEllipsis" Margin="0,3,0,0" />
-                            <WrapPanel Margin="0,12,0,0">
-                                <StackPanel Orientation="Horizontal" Margin="0,0,20,7"><TextBlock Text="CODE" Foreground="{DynamicResource MutedBrush}" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0" /><TextBlock Text="{Binding ClientCode}" /></StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,0,20,7"><TextBlock Text="PROJETS" Foreground="{DynamicResource MutedBrush}" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0" /><TextBlock Text="{Binding ProjectCount, StringFormat={}{0} projet(s)}" /></StackPanel>
-                                <Border BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" Padding="9,4" Margin="0,0,0,7"><TextBlock Text="{Binding ProfileLabel}" Foreground="{DynamicResource AccentForegroundBrush}" /></Border>
-                            </WrapPanel>
-                        </StackPanel>
-                    </Border>
-                </DataTemplate>
-            </ListView.ItemTemplate>
-        </ListView>
+        <DockPanel Grid.Row="3">
+            <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4"><Button x:Name="OpenButton" Content="Ouvrir" Click="Open_Click" IsEnabled="False" Margin="0,0,8,8" />
+                <Button x:Name="EditButton" Content="Modifier / Compléter" Click="Edit_Click" IsEnabled="False" Style="{DynamicResource SecondaryButton}" Margin="0,0,8,8" ToolTipService.ShowOnDisabled="True" />
+                <Button x:Name="RenameButton" Content="Renommer" Click="Rename_Click" IsEnabled="False" Style="{DynamicResource SecondaryButton}" Margin="0,0,8,8" ToolTipService.ShowOnDisabled="True" />
+                <Button x:Name="MoveButton" Content="Déplacer" Click="Move_Click" IsEnabled="False" Style="{DynamicResource SecondaryButton}" Margin="0,0,8,8" ToolTipService.ShowOnDisabled="True" />
+                <Button x:Name="TrashButton" Content="Supprimer" Click="Trash_Click" IsEnabled="False" Style="{DynamicResource SecondaryButton}" Margin="0,0,8,8" ToolTipService.ShowOnDisabled="True" />
+            </WrapPanel>
+            <ListView x:Name="ClientsList" SelectionMode="Single" ItemsSource="{Binding VisibleClients}" SelectionChanged="ClientsList_SelectionChanged"><ListView.View><GridView AllowsColumnReorder="True">
+                    <GridViewColumn Header="Nom" Width="240" DisplayMemberBinding="{Binding DisplayName}" />
+                    <GridViewColumn Header="Code" Width="100" DisplayMemberBinding="{Binding ClientCode}" />
+                    <GridViewColumn Header="Type" Width="135" DisplayMemberBinding="{Binding Kind}" />
+                    <GridViewColumn Header="Projets" Width="85" DisplayMemberBinding="{Binding ProjectCount}" />
+                    <GridViewColumn Header="Fiche" Width="150" DisplayMemberBinding="{Binding ProfileLabel}" />
+                    <GridViewColumn Header="Emplacement" Width="350" DisplayMemberBinding="{Binding ClientPath}" />
+            </GridView></ListView.View></ListView>
+        </DockPanel>
     </Grid>
 </UserControl>

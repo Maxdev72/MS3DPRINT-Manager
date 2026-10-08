@@ -140,7 +140,7 @@
         <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="28,14" Background="{DynamicResource SurfaceBrush}">
             <TextBlock Text="{Binding Status}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
         </Border>
-        <ContentControl x:Name="PageHost" MaxWidth="1200" HorizontalAlignment="Center"
+        <ContentControl x:Name="PageHost" MaxWidth="1200" HorizontalAlignment="Center" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
                         Width="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=DockPanel}}">
         <ScrollViewer x:Name="DashboardPage" VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="28,23" MaxWidth="1200" HorizontalAlignment="Center">

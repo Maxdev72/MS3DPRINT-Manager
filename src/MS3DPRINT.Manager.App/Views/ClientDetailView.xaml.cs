@@ -14,6 +14,8 @@ public partial class ClientDetailView : UserControl, IUnsavedChangesPage
         _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
         InitializeComponent();
         DataContext = _viewModel;
+        Controls.CompactTable.Configure(ProjectsList);
+        Controls.CompactTable.BindOpen(ProjectsList, OpenSelectedProject);
         Loaded += async (_, _) => await RefreshProjectsSafelyAsync();
     }
 
@@ -22,12 +24,13 @@ public partial class ClientDetailView : UserControl, IUnsavedChangesPage
     public event Action<ProjectSummary>? ProjectSelected;
     private void Back_Click(object sender, RoutedEventArgs e) => BackRequested?.Invoke(this, EventArgs.Empty);
     private void CreateProject_Click(object sender, RoutedEventArgs e) => CreateProjectRequested?.Invoke(this, EventArgs.Empty);
-    private void Project_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void OpenProject_Click(object sender, RoutedEventArgs e) => OpenSelectedProject();
+    private void OpenSelectedProject()
     {
         if (ProjectsList.SelectedItem is not ProjectSummary project) return;
-        ProjectsList.SelectedItem = null;
         ProjectSelected?.Invoke(project);
     }
+    public void ShowInformation() => DetailTabs.SelectedIndex = 1;
     public bool HasUnsavedChanges => _viewModel.HasUnsavedChanges;
 
     private void Save_Click(object sender, RoutedEventArgs e) => TrySaveChanges();
@@ -38,7 +41,8 @@ public partial class ClientDetailView : UserControl, IUnsavedChangesPage
         catch (Exception exception) { MessageText.Text = UiErrorMessages.For(exception); return false; }
     }
 
-    public Task RefreshAsync() => RefreshProjectsSafelyAsync();
+    public Task RefreshAsync() => Task.WhenAll(RefreshProjectsSafelyAsync(),
+        (ClientFilesHost.Content as Controls.WorkspaceFilesView)?.RefreshAsync() ?? Task.CompletedTask);
 
     private async Task RefreshProjectsSafelyAsync()
     {

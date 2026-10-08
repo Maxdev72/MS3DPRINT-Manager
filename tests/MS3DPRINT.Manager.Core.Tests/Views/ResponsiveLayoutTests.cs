@@ -78,11 +78,16 @@ public sealed class ResponsiveLayoutTests
             view.Arrange(new Rect(0, 0, 540, 600));
             view.UpdateLayout();
 
-            var title = Descendants(view).OfType<TextBlock>().Single(text => text.Text == name && text.FontWeight == FontWeights.SemiBold);
-            var code = Descendants(view).OfType<TextBlock>().Single(text => text.Text == "CODE");
-            var titleBottom = title.TranslatePoint(new Point(0, title.ActualHeight), view).Y;
-            var codeTop = code.TranslatePoint(new Point(), view).Y;
-            Assert.True(codeTop >= titleBottom, "Les métadonnées recouvrent le nom du client.");
+            var title = Descendants(view).OfType<TextBlock>().Single(text => text.Text == name);
+            var code = Descendants(view).OfType<TextBlock>().Single(text => text.Text == "AT");
+            var titleRight = title.TranslatePoint(new Point(title.ActualWidth, 0), view).X;
+            var codeLeft = code.TranslatePoint(new Point(), view).X;
+            Assert.True(titleRight <= codeLeft, "Le nom du client recouvre la colonne code.");
+            Assert.Equal(TextTrimming.CharacterEllipsis, title.TextTrimming);
+            Assert.Equal(name, title.ToolTip);
+            var list = Assert.IsType<ListView>(view.FindName("ClientsList"));
+            var row = Assert.IsType<ListViewItem>(list.ItemContainerGenerator.ContainerFromIndex(0));
+            Assert.InRange(row.ActualHeight, 36, 40);
         });
     }
 
@@ -102,13 +107,15 @@ public sealed class ResponsiveLayoutTests
             view.UpdateLayout();
 
             var title = Descendants(view).OfType<TextBlock>().Single(text => text.Text == reference);
-            var client = Descendants(view).OfType<TextBlock>().Single(text => text.Text == "CLIENT");
-            var titleBottom = title.TranslatePoint(new Point(0, title.ActualHeight), view).Y;
-            var clientTop = client.TranslatePoint(new Point(), view).Y;
-            Assert.True(clientTop >= titleBottom, "Le client recouvre la référence projet.");
             var clientName = Descendants(view).OfType<TextBlock>().Single(text => text.Text == "ATELIER_DE_MODELISATION_ET_IMPRESSION");
-            var clientRight = clientName.TranslatePoint(new Point(clientName.ActualWidth, 0), view).X;
-            Assert.True(clientRight <= view.ActualWidth - 28, "Le nom du client déborde de la liste.");
+            var titleRight = title.TranslatePoint(new Point(title.ActualWidth, 0), view).X;
+            var clientLeft = clientName.TranslatePoint(new Point(), view).X;
+            Assert.True(titleRight <= clientLeft, "La référence projet recouvre la colonne client.");
+            Assert.Equal("ATELIER_DE_MODELISATION_ET_IMPRESSION", clientName.ToolTip);
+            var list = Assert.IsType<ListView>(view.FindName("ProjectsList"));
+            Assert.Equal(ScrollBarVisibility.Auto, ScrollViewer.GetHorizontalScrollBarVisibility(list));
+            var row = Assert.IsType<ListViewItem>(list.ItemContainerGenerator.ContainerFromIndex(0));
+            Assert.InRange(row.ActualHeight, 36, 40);
         });
     }
 

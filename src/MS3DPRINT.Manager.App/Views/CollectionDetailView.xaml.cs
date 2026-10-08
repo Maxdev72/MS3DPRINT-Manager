@@ -10,12 +10,14 @@ public partial class CollectionDetailView : UserControl
     private readonly CollectionDetailViewModel _viewModel;
     private int _fileLoadVersion;
     private ProjectFileEntry? _selectedPreviewFile;
+    private readonly Action<string?, Window?> _showModelPreview;
 
-    public CollectionDetailView(CollectionDetailViewModel viewModel)
+    public CollectionDetailView(CollectionDetailViewModel viewModel, Action<string?, Window?>? showModelPreview = null)
     {
+        _showModelPreview = showModelPreview ?? ModelPreviewLauncher.Show;
         _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
         InitializeComponent();
-        Controls.FileManagement.StretchFileRows(FilesList);
+        Controls.FileManagement.ConfigureFileTable(FilesList);
         DataContext = _viewModel;
         Loaded += async (_, _) => await LoadFilesAsync(_viewModel.ReadFiles);
     }
@@ -27,10 +29,10 @@ public partial class CollectionDetailView : UserControl
 
     private void File_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (FilesList.SelectedItem is not ProjectFileEntry entry) return;
-        FilesList.SelectedItem = null;
-        OpenEntry(entry);
+        _selectedPreviewFile = FilesList.SelectedItem is ProjectFileEntry { IsDirectory: false } entry && ThreeDFileSupport.IsPreviewable(entry.FullPath) ? entry : null;
+        Preview3DButton.IsEnabled = _selectedPreviewFile is not null;
     }
+    public void ShowInformation() => DetailTabs.SelectedIndex = 1;
 
     public void OpenEntry(ProjectFileEntry entry)
     {
@@ -44,7 +46,8 @@ public partial class CollectionDetailView : UserControl
         {
             _selectedPreviewFile = entry;
             Preview3DButton.IsEnabled = true;
-            MessageText.Text = "Fichier 3D sélectionné. Utilisez « Visualiser en 3D » pour l’ouvrir.";
+            try { _showModelPreview(entry.FullPath, Window.GetWindow(this)); }
+            catch (Exception exception) { MessageText.Text = UiErrorMessages.For(exception); }
         }
         else if (PreviewFileSupport.GetKind(entry.FullPath) != PreviewFileKind.None)
         {
@@ -70,7 +73,7 @@ public partial class CollectionDetailView : UserControl
     private void Preview3D_Click(object sender, RoutedEventArgs e)
     {
         if (_selectedPreviewFile is null) return;
-        ModelPreviewLauncher.Show(_selectedPreviewFile.FullPath, Window.GetWindow(this));
+        _showModelPreview(_selectedPreviewFile.FullPath, Window.GetWindow(this));
     }
 
     public void ConfigureFileManagement(string root, Window owner)

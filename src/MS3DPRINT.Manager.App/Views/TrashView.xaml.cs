@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using MS3DPRINT.Manager.App.Controls;
 using MS3DPRINT.Manager.Core.Workspace;
 namespace MS3DPRINT.Manager.App.Views;
 public partial class TrashView : UserControl
@@ -7,7 +8,8 @@ public partial class TrashView : UserControl
     private readonly ManagedFileService _files;
     private int _version;
     private bool _restoring;
-    public TrashView(string root) { InitializeComponent(); _files = new(root); Loaded += async (_, _) => await RefreshAsync(); }
+    public TrashView(string root) { InitializeComponent(); CompactTable.Configure(TrashList); _files = new(root); Loaded += async (_, _) => await RefreshAsync(); }
+    private void Trash_SelectionChanged(object sender, SelectionChangedEventArgs e) => RestoreButton.IsEnabled = TrashList.SelectedItem is TrashEntry;
     public async Task RefreshAsync()
     {
         var version = ++_version;

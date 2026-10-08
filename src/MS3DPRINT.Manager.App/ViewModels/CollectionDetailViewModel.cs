@@ -15,6 +15,7 @@ public sealed class CollectionDetailViewModel : ObservableObject
     }
 
     public string Name => _item.Name;
+    public bool HasProfile => _item.Profile is not null;
     public string? Description => _item.Profile?.Description;
     public string? Contact => _item.Profile?.Contact;
     public string? Address => _item.Profile?.Address;

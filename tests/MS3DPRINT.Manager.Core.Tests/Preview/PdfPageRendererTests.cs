@@ -46,7 +46,28 @@ public sealed class PdfPageRendererTests : IDisposable
         Assert.Equal(new byte[] { 137, 80, 78, 71 }, secondPage[..4]);
     }
 
-    private static byte[] CreateBlankPdf(int pageHeight = 200, int pageCount = 1)
+    [Theory]
+    [InlineData(200)]
+    [InlineData(600)]
+    public async Task RenderPage_UsesRequestedWidthAndBoundsExcessiveZoom(int pageHeight)
+    {
+        File.WriteAllBytes(_path, CreateBlankPdf(pageHeight: pageHeight));
+        var renderer = await PdfPageRenderer.LoadAsync(_path);
+        var method = typeof(PdfPageRenderer).GetMethod("RenderPageAsync", [typeof(int), typeof(int)]);
+        Assert.NotNull(method);
+        var normal = await (Task<byte[]>)method.Invoke(renderer, [0, 600])!;
+        var zoomed = await (Task<byte[]>)method.Invoke(renderer, [0, 1200])!;
+        var excessive = await (Task<byte[]>)method.Invoke(renderer, [0, 100_000])!;
+        Assert.Equal(600, BinaryPrimitives.ReadInt32BigEndian(normal.AsSpan(16, 4)));
+        Assert.Equal(1200, BinaryPrimitives.ReadInt32BigEndian(zoomed.AsSpan(16, 4)));
+        var width = BinaryPrimitives.ReadInt32BigEndian(excessive.AsSpan(16, 4));
+        var height = BinaryPrimitives.ReadInt32BigEndian(excessive.AsSpan(20, 4));
+        Assert.InRange(width, 1, 4096);
+        Assert.InRange(height, 1, 4096);
+        Assert.True((long)width * height <= 12_000_000);
+    }
+
+    internal static byte[] CreateBlankPdf(int pageHeight = 200, int pageCount = 1)
     {
         var builder = new StringBuilder("%PDF-1.4\n");
         var offsets = new List<int> { 0 };

@@ -22,28 +22,12 @@
             <StackPanel Margin="0,0,12,8"><TextBlock Text="Matière / type" /><ComboBox Width="150" ItemsSource="{Binding Materials}" SelectedItem="{Binding MaterialFilter}" Margin="0,5,0,0"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" Foreground="{DynamicResource TextBrush}" /></DataTemplate></ComboBox.ItemTemplate></ComboBox></StackPanel>
             <StackPanel Margin="0,0,0,8"><TextBlock Text="Abrasif" /><ComboBox x:Name="AbrasiveFilterBox" Width="140" SelectionChanged="AbrasiveFilter_SelectionChanged" Margin="0,5,0,0"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" Foreground="{DynamicResource TextBrush}" /></DataTemplate></ComboBox.ItemTemplate></ComboBox></StackPanel>
         </WrapPanel>
-        <ListView x:Name="FilamentsList" Grid.Row="3" ItemsSource="{Binding VisibleFilaments}" SelectedItem="{Binding SelectedFilament}" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}">
-            <ListView.ItemContainerStyle><Style TargetType="ListViewItem">
-                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
-                <Style.Triggers><Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource CardHoverBrush}" />
-                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-                    <Setter Property="BorderThickness" Value="2" />
-                </Trigger></Style.Triggers>
-            </Style></ListView.ItemContainerStyle>
-            <ListView.ItemTemplate><DataTemplate>
-                <Border Padding="12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-                    <StackPanel>
-                        <WrapPanel><TextBlock Text="{Binding Brand}" FontWeight="SemiBold" Margin="0,0,8,0" /><TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" /></WrapPanel>
-                        <WrapPanel Margin="0,6,0,0">
-                            <TextBlock Text="{Binding Material}" Margin="0,0,20,0" />
-                            <TextBlock Text="{Binding PricePerKg, StringFormat={}{0:N2} €/kg}" Language="fr-FR" Margin="0,0,20,0" />
-                            <TextBlock><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Text" Value="Abrasif : non" /><Style.Triggers><DataTrigger Binding="{Binding IsAbrasive}" Value="True"><Setter Property="Text" Value="Abrasif : oui" /></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
-                        </WrapPanel>
-                    </StackPanel>
-                </Border>
-            </DataTemplate></ListView.ItemTemplate>
-        </ListView>
+        <ListView Grid.Row="3" x:Name="FilamentsList" SelectionMode="Single" ItemsSource="{Binding VisibleFilaments}" SelectedItem="{Binding SelectedFilament}"><ListView.View><GridView AllowsColumnReorder="True">
+                    <GridViewColumn Header="Marque" Width="160" DisplayMemberBinding="{Binding Brand}" />
+                    <GridViewColumn Header="Nom" Width="230" DisplayMemberBinding="{Binding Name}" />
+                    <GridViewColumn Header="Matière / type" Width="145" DisplayMemberBinding="{Binding Material}" />
+                    <GridViewColumn Header="Prix / kg" Width="145" DisplayMemberBinding="{Binding PricePerKg, StringFormat='{}{0:0.00##########################} €/kg'}" />
+                    <GridViewColumn Header="Abrasif" Width="100" DisplayMemberBinding="{Binding IsAbrasive}" />
+            </GridView></ListView.View></ListView>
     </Grid>
 </UserControl>

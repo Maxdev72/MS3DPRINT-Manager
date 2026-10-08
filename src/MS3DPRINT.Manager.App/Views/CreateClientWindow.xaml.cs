@@ -79,7 +79,7 @@ public partial class CreateClientWindow : Window, ICreatedFolderDialog
             else
             {
                 if (!Directory.Exists(_existingClient.ClientPath)) throw new DirectoryNotFoundException("Le dossier client à compléter est introuvable.");
-                profile = _viewModel.CreateProfile();
+                profile = _viewModel.CreateProfile() with { RelativePath = Path.GetRelativePath(_storageRoot, _existingClient.ClientPath) };
                 _profiles.Create(profile);
                 CreatedPath = _existingClient.ClientPath;
             }

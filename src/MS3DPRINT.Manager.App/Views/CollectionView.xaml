@@ -7,6 +7,18 @@
         <TextBlock x:Name="LoadErrorText" Grid.Row="1" Foreground="{DynamicResource ErrorBrush}" TextWrapping="Wrap" Margin="0,16,0,0" Visibility="Collapsed" />
         <TextBlock x:Name="LoadingText" Grid.Row="1" Text="Chargement…" Foreground="{DynamicResource MutedBrush}" Margin="0,16,0,0" Visibility="Collapsed" />
         <Grid Grid.Row="2" Margin="0,22,0,14"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,12,0" /><Button Grid.Column="1" Content="Actualiser" Click="Refresh_Click" /><Button Grid.Column="2" Content="← Retour" Click="Back_Click" Margin="12,0,0,0" Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource AccentForegroundBrush}" /></Grid>
-        <ListView x:Name="ItemsList" Grid.Row="3" ItemsSource="{Binding VisibleItems}" SelectionChanged="Item_SelectionChanged" BorderBrush="{DynamicResource BorderBrush}" Background="{DynamicResource SurfaceBrush}"><ListView.ItemContainerStyle><Style TargetType="ListViewItem"><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Padding" Value="0" /></Style></ListView.ItemContainerStyle><ListView.ItemTemplate><DataTemplate><Border Padding="18,13" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="15" /><TextBlock Text="Dossier de travail" Foreground="{DynamicResource MutedBrush}" FontSize="12" Margin="0,3,0,0" /></StackPanel><TextBlock Grid.Column="1" Text="{Binding LastWriteTime, StringFormat={}{0:dd/MM/yyyy}}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" /></Grid></Border></DataTemplate></ListView.ItemTemplate></ListView>
+        <DockPanel Grid.Row="3">
+            <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4"><Button x:Name="OpenButton" Content="Ouvrir" Click="Open_Click" IsEnabled="False" Margin="0,0,8,8" />
+                <Button x:Name="EditButton" Content="Modifier / Compléter" Click="Edit_Click" IsEnabled="False" Style="{DynamicResource SecondaryButton}" Margin="0,0,8,8" ToolTipService.ShowOnDisabled="True" />
+                <Button x:Name="RenameButton" Content="Renommer" Click="Rename_Click" IsEnabled="False" Style="{DynamicResource SecondaryButton}" Margin="0,0,8,8" ToolTipService.ShowOnDisabled="True" />
+                <Button x:Name="MoveButton" Content="Déplacer" Click="Move_Click" IsEnabled="False" Style="{DynamicResource SecondaryButton}" Margin="0,0,8,8" ToolTipService.ShowOnDisabled="True" />
+                <Button x:Name="TrashButton" Content="Supprimer" Click="Trash_Click" IsEnabled="False" Style="{DynamicResource SecondaryButton}" Margin="0,0,8,8" ToolTipService.ShowOnDisabled="True" />
+            </WrapPanel>
+            <ListView x:Name="ItemsList" SelectionMode="Single" ItemsSource="{Binding VisibleItems}" SelectionChanged="Item_SelectionChanged"><ListView.View><GridView AllowsColumnReorder="True">
+                    <GridViewColumn Header="Nom" Width="280" DisplayMemberBinding="{Binding Name}" />
+                    <GridViewColumn Header="Modifié" Width="165" DisplayMemberBinding="{Binding LastWriteTime, StringFormat='{}{0:dd/MM/yyyy HH:mm}'}" />
+                    <GridViewColumn Header="Emplacement" Width="450" DisplayMemberBinding="{Binding Path}" />
+            </GridView></ListView.View></ListView>
+        </DockPanel>
     </Grid>
 </UserControl>

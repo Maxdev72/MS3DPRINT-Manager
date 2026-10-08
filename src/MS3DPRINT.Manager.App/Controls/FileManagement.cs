@@ -1,16 +1,37 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Data;
 using Microsoft.Win32;
 using MS3DPRINT.Manager.App.Views;
 using MS3DPRINT.Manager.Core.Files;
 using MS3DPRINT.Manager.Core.Projects;
+using MS3DPRINT.Manager.Core.Clients;
 using MS3DPRINT.Manager.Core.Workspace;
 
 namespace MS3DPRINT.Manager.App.Controls;
 
 public static class FileManagement
 {
+    public static void ConfigureFileTable(ListView list)
+    {
+        list.ItemTemplate = null;
+        list.DisplayMemberPath = string.Empty;
+        var table = new GridView { AllowsColumnReorder = true };
+        table.Columns.Add(new GridViewColumn { Header = "Nom", Width = 330, DisplayMemberBinding = new Binding(nameof(ProjectFileEntry.Name)) });
+        table.Columns.Add(new GridViewColumn { Header = "Type", Width = 85, DisplayMemberBinding = new Binding(nameof(ProjectFileEntry.TypeLabel)) });
+        table.Columns.Add(new GridViewColumn { Header = "Taille", Width = 95, DisplayMemberBinding = new Binding(nameof(ProjectFileEntry.Length)) { Converter = new FileSizeConverter() } });
+        table.Columns.Add(new GridViewColumn { Header = "Modifié", Width = 150, DisplayMemberBinding = new Binding(nameof(ProjectFileEntry.LastWriteTime)) { StringFormat = "{0:dd/MM/yyyy HH:mm}" } });
+        list.View = table;
+        CompactTable.Configure(list);
+    }
+
+    private sealed class FileSizeConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+            => new ProjectFileEntry("", "", false, value is long size ? size : null, default).SizeLabel;
+        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => Binding.DoNothing;
+    }
     public static void StretchFileRows(ListView list)
     {
         var material = list.TryFindResource("MaterialDesignListViewItem") as Style
@@ -61,6 +82,55 @@ public static class FileManagement
                 if (prompt.ShowDialog() == true) entities.RenamePath(path, prompt.Value);
             });
         }
+        ConfigureFileTable(list);
+        var selectedButtons = new List<Button>();
+        Button SelectionButton(string label)
+        {
+            var button = AddButton(label); button.IsEnabled = list.SelectedItem is ProjectFileEntry;
+            selectedButtons.Add(button); return button;
+        }
+        var openButton = SelectionButton("Ouvrir");
+        openButton.Click += (_, _) => { if (list.SelectedItem is ProjectFileEntry entry) open(entry); };
+        var renameButton = SelectionButton("Renommer…");
+        renameButton.Click += async (_, _) =>
+        { if (list.SelectedItem is ProjectFileEntry entry) await Rename(entry.FullPath, entry.IsDirectory); };
+        var moveButton = SelectionButton("Déplacer…");
+        moveButton.Click += async (_, _) =>
+        {
+            if (list.SelectedItem is not ProjectFileEntry entry) return;
+            var picker = new OpenFolderDialog { Title = "Destination dans l’espace MS3DPRINT", InitialDirectory = currentDirectory() };
+            if (picker.ShowDialog(owner) == true) await Run(() => entities.MovePath(entry.FullPath, picker.FolderName));
+        };
+        SelectionButton("Supprimer…").Click += async (_, _) =>
+        {
+            if (list.SelectedItem is not ProjectFileEntry entry) return;
+            if (MessageBox.Show($"Envoyer « {entry.Name} » et son contenu dans la corbeille interne ?", "Supprimer", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                await Run(() => entities.TrashPath(entry.FullPath));
+        };
+        void UpdateSelectionActions()
+        {
+            var entry = list.SelectedItem as ProjectFileEntry;
+            foreach (var button in selectedButtons) button.IsEnabled = entry is not null;
+            string? explanation = null;
+            if (entry?.IsDirectory == true)
+            {
+                try
+                {
+                    var client = new ClientCatalog(new ClientProfileStore(new WorkspaceMetadataPaths(root))).Load(root)
+                        .FirstOrDefault(row => string.Equals(row.ClientPath, entry.FullPath, StringComparison.OrdinalIgnoreCase));
+                    var project = projects.Load(root).FirstOrDefault(row => string.Equals(row.ProjectPath, entry.FullPath, StringComparison.OrdinalIgnoreCase));
+                    if ((client is not null && client.Profile is null) || (project is not null && project.Profile is null))
+                        explanation = "Complétez la fiche depuis Clients ou Projets avant de renommer ou déplacer ce dossier. Ses fichiers restent accessibles.";
+                }
+                catch (Exception exception) { explanation = "Impossible de vérifier cette action : " + UiErrorMessages.For(exception); }
+            }
+            renameButton.IsEnabled = moveButton.IsEnabled = entry is not null && explanation is null;
+            renameButton.ToolTip = moveButton.ToolTip = explanation;
+            ToolTipService.SetShowOnDisabled(renameButton, true); ToolTipService.SetShowOnDisabled(moveButton, true);
+        }
+        list.SelectionChanged += (_, _) => UpdateSelectionActions();
+        UpdateSelectionActions();
+        CompactTable.BindOpen(list, () => { if (list.SelectedItem is ProjectFileEntry entry) open(entry); });
         AddButton("Nouveau dossier…").Click += async (_, _) =>
         {
             var prompt = new TextPromptWindow("Nouveau dossier", "Nom du sous-dossier à créer") { Owner = owner };
@@ -78,16 +148,7 @@ public static class FileManagement
                 if (failures.Count > 0) throw new IOException(string.Join(Environment.NewLine, failures));
             });
         };
-        AddButton("Renommer un fichier…").Click += async (_, _) =>
-        {
-            var picker = new OpenFileDialog
-            {
-                Title = "Choisissez le fichier à renommer", InitialDirectory = currentDirectory(),
-                CheckFileExists = true, Multiselect = false
-            };
-            if (picker.ShowDialog(owner) == true) await Rename(picker.FileName, isDirectory: false);
-        };
-        var help = new TextBlock { Text = "Clic droit : ouvrir, renommer, déplacer, supprimer.", Margin = new Thickness(0, 10, 0, 8), TextWrapping = TextWrapping.Wrap };
+        var help = new TextBlock { Text = "Double-clic ou Entrée : ouvrir. Sélectionnez une ligne pour la gérer.", Margin = new Thickness(0, 10, 0, 8), TextWrapping = TextWrapping.Wrap };
         help.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush"); toolbar.Children.Add(help);
 
         ProjectFileEntry? selected = null;
@@ -95,13 +156,15 @@ public static class FileManagement
         MenuItem AddItem(string header)
         { var item = new MenuItem { Header = header }; menu.Items.Add(item); return item; }
         AddItem("Ouvrir").Click += (_, _) => { if (selected is not null) open(selected); };
-        AddItem("Renommer…").Click += async (_, _) =>
+        var renameMenu = AddItem("Renommer…");
+        renameMenu.Click += async (_, _) =>
         {
             if (selected is null) return;
             var entry = selected;
             await Rename(entry.FullPath, entry.IsDirectory);
         };
-        AddItem("Déplacer…").Click += async (_, _) =>
+        var moveMenu = AddItem("Déplacer…");
+        moveMenu.Click += async (_, _) =>
         {
             if (selected is null) return;
             var picker = new OpenFolderDialog { Title = "Destination dans l’espace MS3DPRINT", InitialDirectory = currentDirectory() };
@@ -120,6 +183,10 @@ public static class FileManagement
                 node = node is Visual ? VisualTreeHelper.GetParent(node) : (node as FrameworkContentElement)?.Parent;
             selected = (node as ListViewItem)?.DataContext as ProjectFileEntry;
             if (selected is null) return;
+            list.SelectedItem = selected;
+            renameMenu.IsEnabled = renameButton.IsEnabled;
+            moveMenu.IsEnabled = moveButton.IsEnabled;
+            renameMenu.ToolTip = moveMenu.ToolTip = renameButton.ToolTip;
             args.Handled = true; menu.PlacementTarget = list; menu.IsOpen = true;
         };
         list.SetValue(AttachedProperty, true);
