@@ -165,8 +165,12 @@
                     <Border CornerRadius="12" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="14"><StackPanel><TextBlock Text="EN COURS" Foreground="{DynamicResource MutedBrush}" FontSize="11" /><TextBlock x:Name="DashboardInProgressCount" Text="{Binding DashboardInProgressCount}" FontSize="24" FontWeight="SemiBold" Margin="0,6,0,0" /></StackPanel></Border>
                     <Border CornerRadius="12" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="14"><StackPanel><TextBlock Text="TERMINÉS" Foreground="{DynamicResource MutedBrush}" FontSize="11" /><TextBlock x:Name="DashboardCompletedCount" Text="{Binding DashboardCompletedCount}" FontSize="24" FontWeight="SemiBold" Margin="0,6,0,0" /></StackPanel></Border>
                 </controls:ResponsiveCardPanel>
-                <TextBlock Text="Actions rapides" Foreground="{DynamicResource InkBrush}" FontWeight="SemiBold" FontSize="17" Margin="0,0,0,14" />
-                <controls:ResponsiveCardPanel MaxColumns="4" MinimumItemWidth="210" MinimumItemHeight="148" ItemHeightRatio="0" Gap="14">
+                <TextBlock Text="Créer" Foreground="{DynamicResource InkBrush}" FontWeight="SemiBold" FontSize="17" Margin="0,0,0,10" />
+                <WrapPanel x:Name="PrimaryDashboardActions" Margin="0,0,0,24">
+                    <Button Content="Nouveau client" Click="NewClient_Click" Margin="0,0,10,8" />
+                    <Button Content="Nouveau projet" Click="NewProject_Click" Margin="0,0,10,8" />
+                </WrapPanel>
+                <controls:ResponsiveCardPanel Visibility="Collapsed" MaxColumns="4" MinimumItemWidth="210" MinimumItemHeight="148" ItemHeightRatio="0" Gap="14">
                     <Button Style="{StaticResource ActionCardButton}" Click="NewClient_Click">
                         <StackPanel><materialDesign:PackIcon Kind="AccountPlus" Width="28" Height="28" Foreground="{DynamicResource AccentForegroundBrush}" /><TextBlock Text="Nouveau client" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,3" /><TextBlock Text="Créer le dossier et le code client." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
                     </Button>
