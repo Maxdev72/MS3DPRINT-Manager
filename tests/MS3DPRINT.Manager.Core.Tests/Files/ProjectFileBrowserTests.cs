@@ -31,6 +31,19 @@ public sealed class ProjectFileBrowserTests : IDisposable
         Assert.Throws<UnauthorizedAccessException>(() => new ProjectFileBrowser().List(project, outside));
     }
 
+    [Fact]
+    public async Task FolderSize_ReturnsNestedFileTotal()
+    {
+        var folder = Path.Combine(_root, "project", "03_CAO_3D");
+        Directory.CreateDirectory(Path.Combine(folder, "03_STL"));
+        await File.WriteAllBytesAsync(Path.Combine(folder, "piece.stl"), new byte[512]);
+        await File.WriteAllBytesAsync(Path.Combine(folder, "03_STL", "piece.3mf"), new byte[1024]);
+
+        var size = await new FolderSizeService().GetSizeAsync(folder, CancellationToken.None);
+
+        Assert.Equal(1536, size);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
