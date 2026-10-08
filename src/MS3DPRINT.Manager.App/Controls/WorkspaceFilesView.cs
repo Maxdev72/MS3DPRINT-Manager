@@ -11,6 +11,7 @@ public sealed class WorkspaceFilesView : UserControl
     private string _current;
     private int _refreshVersion;
     private readonly ProjectFileBrowser _browser = new();
+    private readonly FolderSizeService _folderSizes = new();
     private readonly ListView _list = new() { MinHeight = 180 };
     private readonly TextBlock _path = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 10) };
     private readonly TextBlock _message = new() { TextWrapping = TextWrapping.Wrap };
@@ -49,8 +50,22 @@ public sealed class WorkspaceFilesView : UserControl
             _path.Text = directory;
             _up.IsEnabled = !string.Equals(_current, _root, StringComparison.OrdinalIgnoreCase);
             _message.Text = "Double-cliquez pour ouvrir un élément.";
+            _ = LoadFolderSizesAsync(entries, version);
         }
         catch (Exception exception) { if (version == _refreshVersion) _message.Text = UiErrorMessages.For(exception); }
+    }
+
+    private async Task LoadFolderSizesAsync(IReadOnlyList<ProjectFileEntry> entries, int version)
+    {
+        var folders = entries.Where(entry => entry.IsDirectory).ToArray();
+        if (folders.Length == 0) return;
+        var sizes = await Task.WhenAll(folders.Select(async folder =>
+            (folder.FullPath, await _folderSizes.GetSizeAsync(folder.FullPath, CancellationToken.None))));
+        if (version != _refreshVersion) return;
+        var lookup = sizes.ToDictionary(item => item.FullPath, item => item.Item2);
+        _list.ItemsSource = entries.Select(entry => entry.IsDirectory && lookup.TryGetValue(entry.FullPath, out var size)
+            ? entry with { Length = size }
+            : entry).ToArray();
     }
     private async void Open(ProjectFileEntry entry)
     {
