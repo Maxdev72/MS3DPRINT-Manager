@@ -86,6 +86,15 @@
           </ScrollViewer>
         </Grid>
       </Border>
+      <Border x:Name="ClientsWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="20">
+        <Grid RowDefinitions="Auto,*" RowSpacing="16">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Spacing="4"><TextBlock Text="Tous les clients" FontSize="18" FontWeight="SemiBold" /><TextBlock Text="Catalogue lu depuis votre espace de travail." Classes="muted" /></StackPanel>
+            <Button Grid.Column="1" Content="Actualiser" Click="RefreshClients_Click" VerticalAlignment="Center" />
+          </Grid>
+          <ScrollViewer Grid.Row="1"><StackPanel x:Name="ClientList" Spacing="8" /></ScrollViewer>
+        </Grid>
+      </Border>
     </Grid>
     <Border x:Name="SearchResultsPanel" Grid.Column="1" IsVisible="False" HorizontalAlignment="Right" VerticalAlignment="Top" Width="390" MaxHeight="420" Margin="0,82,34,0" Background="{DynamicResource RaisedSurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="8">
       <ScrollViewer MaxHeight="400">

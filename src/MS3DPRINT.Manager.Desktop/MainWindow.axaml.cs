@@ -41,12 +41,16 @@ public partial class MainWindow : Window
         PageTitle.Text = destination;
         PageSubtitle.Text = $"Espace {destination.ToLowerInvariant()} de l’atelier.";
         var projectsVisible = destination == "Projets";
-        DashboardStats.IsVisible = !projectsVisible;
-        DashboardContent.IsVisible = !projectsVisible;
+        var clientsVisible = destination == "Clients";
+        DashboardStats.IsVisible = !projectsVisible && !clientsVisible;
+        DashboardContent.IsVisible = !projectsVisible && !clientsVisible;
         ProjectsWorkspacePanel.IsVisible = projectsVisible;
+        ClientsWorkspacePanel.IsVisible = clientsVisible;
 
         if (projectsVisible)
             await LoadProjectsAsync();
+        else if (clientsVisible)
+            await LoadClientsAsync();
     }
 
     private void Window_KeyDown(object? sender, KeyEventArgs e)
@@ -157,6 +161,42 @@ public partial class MainWindow : Window
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
             ProjectList.Children.Add(new TextBlock { Text = "Impossible de lire les projets.", Margin = new Avalonia.Thickness(8) });
+        }
+    }
+
+    private async void RefreshClients_Click(object? sender, RoutedEventArgs e) => await LoadClientsAsync();
+
+    private async Task LoadClientsAsync()
+    {
+        var workspaceRoot = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        ClientList.Children.Clear();
+        try
+        {
+            var clients = await Task.Run(() => new WorkspaceClientReader().Load(workspaceRoot));
+            if (clients.Count == 0)
+            {
+                ClientList.Children.Add(new TextBlock { Text = "Aucun client trouvé.", Margin = new Avalonia.Thickness(8) });
+                return;
+            }
+
+            foreach (var client in clients)
+            {
+                ClientList.Children.Add(new Border
+                {
+                    Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#141F30")),
+                    CornerRadius = new Avalonia.CornerRadius(8),
+                    Padding = new Avalonia.Thickness(14),
+                    Child = new TextBlock
+                    {
+                        Text = $"{client.DisplayName}\n{client.ProfileLabel} · {client.ProjectCount} projet(s)",
+                        TextWrapping = Avalonia.Media.TextWrapping.Wrap
+                    }
+                });
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            ClientList.Children.Add(new TextBlock { Text = "Impossible de lire les clients.", Margin = new Avalonia.Thickness(8) });
         }
     }
 }
