@@ -26,6 +26,16 @@ public sealed class AvaloniaShellMarkupTests
         Assert.Contains("Ctrl+K", markup, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Main_window_wires_navigation_and_the_search_shortcut()
+    {
+        var markup = File.ReadAllText(MainWindowPath());
+
+        Assert.Contains("NavigationButton_Click", markup, StringComparison.Ordinal);
+        Assert.Contains("Window_KeyDown", markup, StringComparison.Ordinal);
+        Assert.Contains("SearchBox", markup, StringComparison.Ordinal);
+    }
+
     private static string MainWindowPath()
         => Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml");
 
