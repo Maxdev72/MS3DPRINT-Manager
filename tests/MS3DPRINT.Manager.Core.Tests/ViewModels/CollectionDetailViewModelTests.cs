@@ -26,6 +26,19 @@ public sealed class CollectionDetailViewModelTests : IDisposable
         Assert.Equal("notes.txt", Assert.Single(listing.Entries).Name);
     }
 
+    [Fact]
+    public void CurrentPathLabel_ShowsShortCollectionBreadcrumb()
+    {
+        var itemRoot = Path.Combine(_root, "02_MODELES_3D", "FIXATION");
+        var folder = Path.Combine(itemRoot, "03_CAO_MASTER", "STL");
+        Directory.CreateDirectory(folder);
+        var viewModel = new CollectionDetailViewModel(new CollectionItemSummary("FIXATION", itemRoot, DateTimeOffset.UtcNow));
+
+        viewModel.ApplyFileListing(new CollectionFileListing(folder, []));
+
+        Assert.Equal("FIXATION › 03_CAO_MASTER › STL", viewModel.CurrentPathLabel);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);

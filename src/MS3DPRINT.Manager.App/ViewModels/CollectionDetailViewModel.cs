@@ -26,6 +26,15 @@ public sealed class CollectionDetailViewModel : ObservableObject
     public bool IsSupplier => _item.Path.Split(Path.DirectorySeparatorChar).Contains("06_FOURNISSEURS", StringComparer.OrdinalIgnoreCase);
     public string RootPath => _item.Path;
     public string CurrentDirectory { get; private set; } = string.Empty;
+    public string CurrentPathLabel
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(CurrentDirectory)) return Name;
+            var relative = Path.GetRelativePath(RootPath, CurrentDirectory);
+            return relative == "." ? Name : Name + " › " + relative.Replace(Path.DirectorySeparatorChar.ToString(), " › ").Replace(Path.AltDirectorySeparatorChar.ToString(), " › ");
+        }
+    }
     public IReadOnlyList<ProjectFileEntry> FileEntries { get; private set; } = [];
     public bool CanGoUp => !string.IsNullOrWhiteSpace(CurrentDirectory) && !string.Equals(RootPath, CurrentDirectory, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 
@@ -61,6 +70,7 @@ public sealed class CollectionDetailViewModel : ObservableObject
         CurrentDirectory = listing.DirectoryPath;
         FileEntries = listing.Entries;
         OnPropertyChanged(nameof(CurrentDirectory));
+        OnPropertyChanged(nameof(CurrentPathLabel));
         OnPropertyChanged(nameof(FileEntries));
         OnPropertyChanged(nameof(CanGoUp));
     }
