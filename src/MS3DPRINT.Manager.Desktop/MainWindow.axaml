@@ -1,0 +1,12 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="MS3DPRINT.Manager.Desktop.MainWindow"
+        Width="1200"
+        Height="760"
+        MinWidth="960"
+        MinHeight="640"
+        Title="MS3DPRINT Manager">
+  <TextBlock HorizontalAlignment="Center"
+             VerticalAlignment="Center"
+             Text="MS3DPRINT Manager" />
+</Window>

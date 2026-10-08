@@ -4,7 +4,7 @@
 
 **Goal:** Deliver a .NET 10 Avalonia Windows application that preserves all MS3DPRINT Manager functions and data while replacing the WPF interface with the validated dark immersive console.
 
-**Architecture:** Keep file-system business rules in `MS3DPRINT.Manager.Core`; create a cross-platform Avalonia desktop shell in `MS3DPRINT.Manager.Desktop`; isolate Windows-only actions and hardware discovery behind interfaces in `MS3DPRINT.Manager.Windows`. Keep the WPF application operational until the Avalonia application passes the complete parity and packaging checklist.
+**Architecture:** Keep file-system business rules in `MS3DPRINT.Manager.Core`; create a cross-platform Avalonia UI library in `MS3DPRINT.Manager.Desktop`; isolate Windows-only actions and hardware discovery in `MS3DPRINT.Manager.Windows`; and start the Windows release from `MS3DPRINT.Manager.Windows.App`. Keep the WPF application operational until the Avalonia application passes the complete parity and packaging checklist.
 
 **Tech Stack:** .NET 10, Avalonia, xUnit, Avalonia.Controls.PdfViewer/PDFium, Ab4d.SharpEngine.AvaloniaUI, Ab4d.SharpEngine.Assimp, Windows self-contained `win-x64` publishing.
 
@@ -30,6 +30,7 @@
 | `src/MS3DPRINT.Manager.Core` | Existing platform-neutral data, filesystem and business services, retargeted to .NET 10. |
 | `src/MS3DPRINT.Manager.Desktop` | Avalonia application, dark design system, navigation, view models and file-preview abstractions. |
 | `src/MS3DPRINT.Manager.Windows` | Windows implementations for shell opening and hardware information. |
+| `src/MS3DPRINT.Manager.Windows.App` | Windows executable that composes the shared Avalonia library and Windows adapters. |
 | `tests/MS3DPRINT.Manager.Desktop.Tests` | xUnit tests for view models, theme resources and navigation contracts. |
 | `tests/MS3DPRINT.Manager.Windows.Tests` | xUnit tests for Windows adapters and their safe failure modes. |
 | `tests/MS3DPRINT.Manager.Core.Tests` | Existing Core regression suite retargeted to .NET 10. |
@@ -45,18 +46,20 @@
 - Modify: `src/MS3DPRINT.Manager.Core/MS3DPRINT.Manager.Core.csproj`
 - Modify: `tests/MS3DPRINT.Manager.Core.Tests/MS3DPRINT.Manager.Core.Tests.csproj`
 - Create: `src/MS3DPRINT.Manager.Desktop/MS3DPRINT.Manager.Desktop.csproj`
-- Create: `src/MS3DPRINT.Manager.Desktop/Program.cs`
+- Create: `src/MS3DPRINT.Manager.Desktop/DesktopApplication.cs`
 - Create: `src/MS3DPRINT.Manager.Desktop/App.axaml`
 - Create: `src/MS3DPRINT.Manager.Desktop/App.axaml.cs`
 - Create: `src/MS3DPRINT.Manager.Desktop/MainWindow.axaml`
 - Create: `src/MS3DPRINT.Manager.Desktop/MainWindow.axaml.cs`
 - Create: `src/MS3DPRINT.Manager.Windows/MS3DPRINT.Manager.Windows.csproj`
+- Create: `src/MS3DPRINT.Manager.Windows.App/MS3DPRINT.Manager.Windows.App.csproj`
+- Create: `src/MS3DPRINT.Manager.Windows.App/Program.cs`
 - Create: `tests/MS3DPRINT.Manager.Desktop.Tests/MS3DPRINT.Manager.Desktop.Tests.csproj`
 - Create: `tests/MS3DPRINT.Manager.Windows.Tests/MS3DPRINT.Manager.Windows.Tests.csproj`
 
 **Interfaces:**
 - Consumes: `MS3DPRINT.Manager.Core` public services.
-- Produces: `MS3DPRINT.Manager.Desktop.App`, a runnable Avalonia application, and `MS3DPRINT.Manager.Windows`, a Windows-only adapter assembly.
+- Produces: `MS3DPRINT.Manager.Desktop`, a reusable Avalonia UI assembly, `MS3DPRINT.Manager.Windows`, a Windows-only adapter assembly, and `MS3DPRINT.Manager.Windows.App`, the runnable Windows application.
 
 - [ ] **Step 1: Write failing project-boundary tests**
 
@@ -93,7 +96,6 @@ Use these project properties:
 ```xml
 <!-- MS3DPRINT.Manager.Desktop.csproj -->
 <PropertyGroup>
-  <OutputType>WinExe</OutputType>
   <TargetFramework>net10.0</TargetFramework>
   <Nullable>enable</Nullable>
   <ImplicitUsings>enable</ImplicitUsings>
@@ -101,16 +103,15 @@ Use these project properties:
 </PropertyGroup>
 <ItemGroup>
   <ProjectReference Include="..\MS3DPRINT.Manager.Core\MS3DPRINT.Manager.Core.csproj" />
-  <ProjectReference Include="..\MS3DPRINT.Manager.Windows\MS3DPRINT.Manager.Windows.csproj" />
   <PackageReference Include="Avalonia.Desktop" Version="12.*" />
 </ItemGroup>
 ```
 
-Target Core and Core.Tests with `net10.0`. Target Windows adapters with `net10.0-windows`. Add all projects to the solution. Keep `MS3DPRINT.Manager.App` unchanged and in the solution.
+Target Core with `net10.0`; target the existing WPF application, its tests, Windows adapters and the Windows host with `net10.0-windows`. Add all projects to the solution and pin SDK `10.0.401` with `global.json`.
 
 - [ ] **Step 4: Implement the minimum Avalonia startup**
 
-`Program.Main` calls `BuildAvaloniaApp().StartWithClassicDesktopLifetime(args)`. `App` loads `MainWindow` when the desktop lifetime starts. `MainWindow` displays the text `MS3DPRINT Manager` only; styling follows Task 2.
+`DesktopApplication.BuildAvaloniaApp()` configures the common `App`. `MS3DPRINT.Manager.Windows.App.Program.Main` calls `BuildAvaloniaApp().StartWithClassicDesktopLifetime(args)`. `App` loads `MainWindow` when the desktop lifetime starts. `MainWindow` displays the text `MS3DPRINT Manager` only; styling follows Task 2.
 
 - [ ] **Step 5: Run build and tests**
 
@@ -121,7 +122,7 @@ Expected: PASS; the WPF project, Core and empty Avalonia shell build on the inst
 - [ ] **Step 6: Commit**
 
 ```powershell
-git add MS3DPRINT.Manager.sln src/MS3DPRINT.Manager.Core tests/MS3DPRINT.Manager.Core.Tests src/MS3DPRINT.Manager.Desktop src/MS3DPRINT.Manager.Windows tests/MS3DPRINT.Manager.Desktop.Tests tests/MS3DPRINT.Manager.Windows.Tests
+git add global.json MS3DPRINT.Manager.sln src/MS3DPRINT.Manager.Core src/MS3DPRINT.Manager.App tests/MS3DPRINT.Manager.Core.Tests src/MS3DPRINT.Manager.Desktop src/MS3DPRINT.Manager.Windows src/MS3DPRINT.Manager.Windows.App
 git commit -m "build: add .NET 10 Avalonia solution boundary"
 ```
 

@@ -32,13 +32,16 @@ La solution comprend trois frontières explicites.
 1. `MS3DPRINT.Manager.Core` cible `net10.0`. Il contient les entités, règles
    métier, accès à l’espace géré, recherche, corbeille, fiches et opérations
    sur les fichiers. Il ne référence aucune API WPF, Avalonia ou Windows.
-2. `MS3DPRINT.Manager.Desktop` cible `net10.0`. C’est l’application Avalonia,
-   ses vues `.axaml`, ses modèles de vue, les styles et les composants de
+2. `MS3DPRINT.Manager.Desktop` cible `net10.0`. C’est la bibliothèque Avalonia
+   partagée : vues `.axaml`, modèles de vue, styles et composants de
    navigation.
 3. `MS3DPRINT.Manager.Windows` cible `net10.0-windows`. Cette couche fournit
    les adaptateurs Windows : ouverture de fichiers via le système, informations
-   matérielles et intégration spécifique au système. L’application Avalonia
-   référence cette couche uniquement au démarrage de la cible Windows.
+   matérielles et intégration spécifique au système.
+4. `MS3DPRINT.Manager.Windows.App` cible `net10.0-windows`. C’est l’exécutable
+   de composition Windows ; il référence Desktop et Windows, configure les
+   adaptateurs puis démarre Avalonia. Les futurs hôtes macOS et Linux
+   référenceront Desktop sans jamais référencer la couche Windows.
 
 Pendant la migration, `MS3DPRINT.Manager.App` reste l’application WPF de
 référence. Elle n’est supprimée qu’après les tests de non-régression et la
