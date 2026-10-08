@@ -8,6 +8,12 @@ namespace MS3DPRINT.Manager.Core.Tests.Views;
 [Collection("Responsive layout UI")]
 public sealed class FileManagementSelectionTests
 {
+    [Theory]
+    [InlineData(@"C:\Workspace\Projet", @"C:\Workspace\Projet\03_CAO_3D\03_STL", true)]
+    [InlineData(@"C:\Workspace\Projet", @"C:\Workspace\AutreProjet", false)]
+    public void IsImportDestinationWithinScope_RejectsAnotherProject(string scope, string destination, bool expected)
+        => Assert.Equal(expected, FileManagement.IsImportDestinationWithinScope(scope, destination));
+
     [Fact]
     public void SelectionEnablesVisibleActionsWithoutOpeningThenOpenUsesSelection()
     {

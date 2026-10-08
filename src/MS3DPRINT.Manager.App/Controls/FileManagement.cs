@@ -13,6 +13,15 @@ namespace MS3DPRINT.Manager.App.Controls;
 
 public static class FileManagement
 {
+    public static bool IsImportDestinationWithinScope(string scope, string destination)
+    {
+        if (string.IsNullOrWhiteSpace(scope) || string.IsNullOrWhiteSpace(destination)) return false;
+        var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(scope));
+        var candidate = Path.TrimEndingDirectorySeparator(Path.GetFullPath(destination));
+        var relative = Path.GetRelativePath(root, candidate);
+        return relative != ".." && !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) && !Path.IsPathRooted(relative);
+    }
+
     public static void ConfigureFileTable(ListView list)
     {
         list.ItemTemplate = null;
@@ -45,7 +54,7 @@ public static class FileManagement
     private static readonly DependencyProperty AttachedProperty = DependencyProperty.RegisterAttached(
         "ManagementAttached", typeof(bool), typeof(FileManagement), new PropertyMetadata(false));
 
-    public static void Attach(Panel toolbar, ListView list, string root, Func<string> currentDirectory, Func<Task> refresh, Action<ProjectFileEntry> open, Window? owner)
+    public static void Attach(Panel toolbar, ListView list, string root, Func<string> currentDirectory, Func<Task> refresh, Action<ProjectFileEntry> open, Window? owner, string? importDestinationScope = null)
     {
         if ((bool)list.GetValue(AttachedProperty)) return;
         var files = new ManagedFileService(root);
@@ -164,6 +173,8 @@ public static class FileManagement
             if (destination.ShowDialog(owner) != true) return;
             await Run(() =>
             {
+                if (importDestinationScope is not null && !IsImportDestinationWithinScope(importDestinationScope, destination.FolderName))
+                    throw new IOException("Le dossier de destination doit rester dans l’élément actuellement ouvert.");
                 var failures = new List<string>();
                 foreach (var path in picker.FileNames)
                     try { files.Import(path, destination.FolderName); }

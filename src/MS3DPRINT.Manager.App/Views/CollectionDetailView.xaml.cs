@@ -79,7 +79,7 @@ public partial class CollectionDetailView : UserControl
 
     public void ConfigureFileManagement(string root, Window owner)
         => Controls.FileManagement.Attach(FileActionsHost, FilesList, root,
-            () => string.IsNullOrWhiteSpace(_viewModel.CurrentDirectory) ? _viewModel.RootPath : _viewModel.CurrentDirectory, RefreshAsync, OpenEntry, owner);
+            () => string.IsNullOrWhiteSpace(_viewModel.CurrentDirectory) ? _viewModel.RootPath : _viewModel.CurrentDirectory, RefreshAsync, OpenEntry, owner, _viewModel.RootPath);
 
     public Task RefreshAsync() => LoadFilesAsync(_viewModel.ReadFiles);
 
