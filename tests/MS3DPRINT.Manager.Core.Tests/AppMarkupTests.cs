@@ -53,10 +53,13 @@ public sealed class AppMarkupTests
         Assert.InRange(double.Parse(Assert.IsType<string>((string?)content.Attribute("MaxWidth"))), 1100, 1250);
 
         var panels = content.Descendants().Where(element => element.Name.LocalName == "ResponsiveCardPanel").ToArray();
-        Assert.Equal(2, panels.Length);
+        Assert.Equal(3, panels.Length);
         Assert.All(panels, panel => Assert.Equal("0", (string?)panel.Attribute("ItemHeightRatio")));
         Assert.InRange(double.Parse(Assert.IsType<string>((string?)panels[0].Attribute("MinimumItemHeight"))), 80, 100);
         Assert.InRange(double.Parse(Assert.IsType<string>((string?)panels[1].Attribute("MinimumItemHeight"))), 130, 160);
+        var activity = Assert.Single(panels.Where(panel => panel.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "DashboardActivityPanels")));
+        Assert.Equal("2", (string?)activity.Attribute("MaxColumns"));
+        Assert.Equal("280", (string?)activity.Attribute("MinimumItemWidth"));
     }
 
     [Fact]
