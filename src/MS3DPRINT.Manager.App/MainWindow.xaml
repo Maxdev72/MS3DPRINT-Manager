@@ -4,6 +4,7 @@
         xmlns:controls="clr-namespace:MS3DPRINT.Manager.App.Controls"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         Title="Gestionnaire MS3DPRINT" Width="700" Height="760" MinWidth="390" MinHeight="500"
+        Icon="Assets/app-icon.ico"
         Style="{DynamicResource MaterialDesignWindow}"
         WindowStartupLocation="CenterScreen" Background="{DynamicResource BackgroundBrush}">
     <Window.Resources>
