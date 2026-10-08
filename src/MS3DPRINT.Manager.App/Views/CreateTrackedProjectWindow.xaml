@@ -27,6 +27,10 @@
                 <TextBlock Text="Description (facultative)" FontWeight="SemiBold" /><TextBox x:Name="DescriptionBox" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="58" Margin="0,6,0,0" />
             </StackPanel>
             <StackPanel x:Name="ConfirmationStepPanel" Visibility="Collapsed"><TextBlock Text="Prêt à créer le projet" FontWeight="SemiBold" FontSize="16" /><TextBlock x:Name="ConfirmationText" Margin="0,8,0,0" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
+            <StackPanel x:Name="AfterCreatePanel" Visibility="Collapsed">
+                <TextBlock Text="Projet créé. Que souhaitez-vous faire maintenant ?" FontWeight="SemiBold" FontSize="16" />
+                <WrapPanel Margin="0,12,0,0"><Button x:Name="OpenCreatedProjectButton" Content="Ouvrir le projet" Click="OpenCreatedProject_Click" Margin="0,0,10,0" /><Button x:Name="ReturnHomeButton" Content="Retour à l’accueil" Click="ReturnHome_Click" Style="{DynamicResource SecondaryButton}" /></WrapPanel>
+            </StackPanel>
         </StackPanel></ScrollViewer>
     </DockPanel>
 </Window>

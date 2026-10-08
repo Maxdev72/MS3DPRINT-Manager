@@ -292,6 +292,12 @@ public partial class MainWindow : Window
                     string.Equals(Path.GetFullPath(item.ClientPath), Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase));
                 if (client is not null) ShowProjectDialog(client);
             }
+            if (dialog is CreateTrackedProjectWindow { OpenCreatedProject: true, CreatedPath: { } projectPath })
+            {
+                var project = _projectCatalog.Load(_viewModel.StorageRoot).FirstOrDefault(item =>
+                    string.Equals(Path.GetFullPath(item.ProjectPath), Path.GetFullPath(projectPath), StringComparison.OrdinalIgnoreCase));
+                if (project is not null) ShowProjectDetail(project);
+            }
         }
     }
 

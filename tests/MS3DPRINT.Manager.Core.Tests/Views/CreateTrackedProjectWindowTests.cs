@@ -197,6 +197,24 @@ public sealed class CreateTrackedProjectWindowTests
         });
     }
 
+    [Fact]
+    public void Wizard_ProvidesPostCreationChoice()
+    {
+        RunSta(() =>
+        {
+            var root = Path.Combine(Path.GetTempPath(), "ms3d-project-choice-" + Guid.NewGuid().ToString("N"));
+            var window = new CreateTrackedProjectWindow(root, new FolderTreeService(),
+                new ClientCatalog(new ClientProfileStore(new WorkspaceMetadataPaths(root))), new ProjectProfileStore(new WorkspaceMetadataPaths(root)));
+            try
+            {
+                Assert.NotNull(window.FindName("AfterCreatePanel"));
+                Assert.NotNull(window.FindName("OpenCreatedProjectButton"));
+                Assert.NotNull(window.FindName("ReturnHomeButton"));
+            }
+            finally { window.Close(); }
+        });
+    }
+
     private static void RunSta(Action action)
     {
         Exception? failure = null;

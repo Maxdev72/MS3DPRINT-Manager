@@ -42,6 +42,7 @@ public partial class CreateTrackedProjectWindow : Window, ICreatedFolderDialog
     }
 
     public string? CreatedPath { get; private set; }
+    public bool OpenCreatedProject { get; private set; }
     public event EventHandler? CreateClientRequested;
 
     public void SelectClient(ClientSummary client)
@@ -189,10 +190,30 @@ public partial class CreateTrackedProjectWindow : Window, ICreatedFolderDialog
                     Path.GetRelativePath(_storageRoot, _existingProject.ProjectPath)));
                 CreatedPath = _existingProject.ProjectPath;
             }
-            DialogResult = true;
+            if (_existingProject is not null)
+            {
+                DialogResult = true;
+                return;
+            }
+            ClientStepPanel.Visibility = Visibility.Collapsed;
+            ProjectStepPanel.Visibility = Visibility.Collapsed;
+            ConfirmationStepPanel.Visibility = Visibility.Collapsed;
+            AfterCreatePanel.Visibility = Visibility.Visible;
+            PreviousButton.Visibility = Visibility.Collapsed;
+            NextButton.Visibility = Visibility.Collapsed;
+            CreateButton.Visibility = Visibility.Collapsed;
+            IntroText.Text = "Le projet est prêt. Vous pourrez importer des fichiers plus tard si vous le souhaitez.";
         }
         catch (Exception exception) { ErrorText.Text = UiErrorMessages.For(exception); }
     }
+
+    private void OpenCreatedProject_Click(object sender, RoutedEventArgs e)
+    {
+        OpenCreatedProject = true;
+        DialogResult = true;
+    }
+
+    private void ReturnHome_Click(object sender, RoutedEventArgs e) => DialogResult = true;
 
     private static int GetYear(string reference)
     {
