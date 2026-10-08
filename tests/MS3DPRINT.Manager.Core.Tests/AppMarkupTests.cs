@@ -385,6 +385,21 @@ public sealed class AppMarkupTests
     }
 
     [Fact]
+    public void DetailActionBars_ExposeTheEditableInformationTab()
+    {
+        var source = LoadSource("src", "MS3DPRINT.Manager.App", "MainWindow.Management.cs");
+        foreach (var method in new[] { "WireClientActions", "WireProjectActions" })
+        {
+            var start = source.IndexOf("private void " + method, StringComparison.Ordinal);
+            Assert.True(start >= 0, "Méthode introuvable : " + method);
+            var nextMethod = source.IndexOf("\n    private void ", start + 1, StringComparison.Ordinal);
+            var body = source[start..(nextMethod < 0 ? source.Length : nextMethod)];
+            Assert.Contains("actions.CanEdit = true", body);
+            Assert.Contains("page.ShowInformation()", body);
+        }
+    }
+
+    [Fact]
     public void Dashboard_ProvidesBusinessCountersLoadedOutsideTheUiThread()
     {
         var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "MainWindow.xaml");

@@ -117,6 +117,8 @@ public partial class MainWindow
     private void WireClientActions(ClientDetailView page, ClientSummary client)
     {
         var actions = Actions(page);
+        actions.CanEdit = true;
+        actions.EditRequested += (_, _) => page.ShowInformation();
         actions.RenameRequested += (_, _) => RenameClientFolder(client);
         actions.MoveRequested += (_, _) => MoveClientFolder(client);
         actions.TrashRequested += (_, _) => TrashClientFolder(client);
@@ -126,6 +128,8 @@ public partial class MainWindow
     private void WireProjectActions(ProjectDetailView page, ProjectSummary project)
     {
         var actions = Actions(page);
+        actions.CanEdit = true;
+        actions.EditRequested += (_, _) => page.ShowInformation();
         actions.RenameRequested += (_, _) => RenameProjectFolder(project);
         actions.MoveRequested += (_, _) => MoveProjectFolder(project);
         actions.TrashRequested += (_, _) => TrashProjectFolder(project);
