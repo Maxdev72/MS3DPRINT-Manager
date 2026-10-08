@@ -5,6 +5,7 @@
         Height="760"
         MinWidth="960"
         MinHeight="640"
+        Background="{DynamicResource CanvasBrush}"
         Title="MS3DPRINT Manager">
   <TextBlock HorizontalAlignment="Center"
              VerticalAlignment="Center"

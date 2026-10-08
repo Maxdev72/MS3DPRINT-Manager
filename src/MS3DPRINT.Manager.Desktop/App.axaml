@@ -1,4 +1,10 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:fluent="clr-namespace:Avalonia.Themes.Fluent;assembly=Avalonia.Themes.Fluent"
              x:Class="MS3DPRINT.Manager.Desktop.App">
+  <Application.Styles>
+    <fluent:FluentTheme />
+    <StyleInclude Source="avares://MS3DPRINT.Manager.Desktop/Styles/Theme.axaml" />
+    <StyleInclude Source="avares://MS3DPRINT.Manager.Desktop/Styles/Controls.axaml" />
+  </Application.Styles>
 </Application>
