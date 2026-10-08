@@ -54,6 +54,52 @@
             <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
             <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="8" />
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="{DynamicResource ReadOnlyInputBrush}" />
+                    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+                    <Setter Property="Opacity" Value="1" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="ToolbarButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Padding" Value="10,5" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource CardHoverBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+                </Trigger>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="Transparent" />
+                    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+                    <Setter Property="BorderBrush" Value="Transparent" />
+                    <Setter Property="Opacity" Value="1" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="ToolbarPrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Padding" Value="12,5" />
+        </Style>
+        <Style x:Key="ToolbarDangerButton" TargetType="Button" BasedOn="{StaticResource ToolbarButton}">
+            <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#22FF8A8A" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+                    <Setter Property="BorderBrush" Value="Transparent" />
+                </Trigger>
+            </Style.Triggers>
         </Style>
         <Style TargetType="TextBox" BasedOn="{StaticResource MaterialDesignOutlinedTextBox}">
             <Setter Property="MinHeight" Value="36" />

@@ -70,10 +70,27 @@ public static class FileManagement
             catch (Exception exception) { errors.Add(UiErrorMessages.For(exception)); }
             if (errors.Count > 0) MessageBox.Show(string.Join(Environment.NewLine, errors), "MS3DPRINT Manager", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
-        Button AddButton(string label)
+        Panel AddActionGroup(string label, string hint)
         {
-            var button = new Button { Content = label, Margin = new Thickness(0, 0, 10, 8) };
-            button.SetResourceReference(FrameworkElement.StyleProperty, "SecondaryButton"); toolbar.Children.Add(button); return button;
+            var group = new StackPanel { Margin = new Thickness(0, 8, 24, 8) };
+            var heading = new TextBlock { Text = label, FontSize = 12, FontWeight = FontWeights.SemiBold };
+            heading.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
+            group.Children.Add(heading);
+            if (!string.IsNullOrWhiteSpace(hint))
+            {
+                var help = new TextBlock { Text = hint, FontSize = 12, Margin = new Thickness(0, 2, 0, 5) };
+                help.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
+                group.Children.Add(help);
+            }
+            var actions = new WrapPanel();
+            group.Children.Add(actions);
+            toolbar.Children.Add(group);
+            return actions;
+        }
+        Button AddButton(Panel destination, string label, string style = "ToolbarButton")
+        {
+            var button = new Button { Content = label, Margin = new Thickness(0, 0, 8, 6) };
+            button.SetResourceReference(FrameworkElement.StyleProperty, style); destination.Children.Add(button); return button;
         }
         async Task Rename(string path, bool isDirectory)
         {
@@ -92,10 +109,12 @@ public static class FileManagement
             });
         }
         ConfigureFileTable(list);
+        var selectionActions = AddActionGroup("Élément sélectionné", string.Empty);
+        var importActions = AddActionGroup("Ajouter au dossier", "Créez ou importez les fichiers dans le dossier affiché.");
         var selectedButtons = new List<Button>();
-        Button SelectionButton(string label)
+        Button SelectionButton(string label, string style = "ToolbarButton")
         {
-            var button = AddButton(label); button.IsEnabled = list.SelectedItem is ProjectFileEntry;
+            var button = AddButton(selectionActions, label, style); button.IsEnabled = list.SelectedItem is ProjectFileEntry;
             selectedButtons.Add(button); return button;
         }
         var openButton = SelectionButton("Ouvrir");
@@ -110,7 +129,7 @@ public static class FileManagement
             var picker = new OpenFolderDialog { Title = "Destination dans l’espace MS3DPRINT", InitialDirectory = currentDirectory() };
             if (picker.ShowDialog(owner) == true) await Run(() => entities.MovePath(entry.FullPath, picker.FolderName));
         };
-        SelectionButton("Supprimer…").Click += async (_, _) =>
+        SelectionButton("Supprimer…", "ToolbarDangerButton").Click += async (_, _) =>
         {
             if (list.SelectedItem is not ProjectFileEntry entry) return;
             if (MessageBox.Show($"Envoyer « {entry.Name} » et son contenu dans la corbeille interne ?", "Supprimer", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
@@ -144,12 +163,12 @@ public static class FileManagement
         list.SelectionChanged += (_, _) => UpdateSelectionActions();
         UpdateSelectionActions();
         CompactTable.BindOpen(list, () => { if (list.SelectedItem is ProjectFileEntry entry) open(entry); });
-        AddButton("Nouveau dossier…").Click += async (_, _) =>
+        AddButton(importActions, "Nouveau dossier…").Click += async (_, _) =>
         {
             var prompt = new TextPromptWindow("Nouveau dossier", "Nom du sous-dossier à créer") { Owner = owner };
             if (prompt.ShowDialog() == true) await Run(() => files.CreateFolder(currentDirectory(), prompt.Value));
         };
-        AddButton("Importer des fichiers…").Click += async (_, _) =>
+        AddButton(importActions, "Importer des fichiers…").Click += async (_, _) =>
         {
             var picker = new OpenFileDialog { Multiselect = true, Title = "Importer dans le dossier courant" };
             if (picker.ShowDialog(owner) == true) await Run(() =>
@@ -161,7 +180,7 @@ public static class FileManagement
                 if (failures.Count > 0) throw new IOException(string.Join(Environment.NewLine, failures));
             });
         };
-        AddButton("Importer et classer…").Click += async (_, _) =>
+        AddButton(importActions, "Importer et classer…", "ToolbarPrimaryButton").Click += async (_, _) =>
         {
             var picker = new OpenFileDialog { Multiselect = true, Title = "Choisir les fichiers à importer" };
             if (picker.ShowDialog(owner) != true) return;
@@ -182,7 +201,7 @@ public static class FileManagement
                 if (failures.Count > 0) throw new IOException(string.Join(Environment.NewLine, failures));
             });
         };
-        var help = new TextBlock { Text = "Double-clic ou Entrée : ouvrir. Sélectionnez une ligne pour la gérer.", Margin = new Thickness(0, 10, 0, 8), TextWrapping = TextWrapping.Wrap };
+        var help = new TextBlock { Text = "Sélectionnez une ligne pour la gérer. Double-clic ou Entrée : ouvrir.", Margin = new Thickness(0, 10, 0, 8), TextWrapping = TextWrapping.Wrap };
         help.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush"); toolbar.Children.Add(help);
 
         ProjectFileEntry? selected = null;

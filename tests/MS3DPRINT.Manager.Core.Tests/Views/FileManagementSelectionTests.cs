@@ -29,8 +29,17 @@ public sealed class FileManagementSelectionTests
                 var list = new ListView { ItemsSource = new[] { entry } };
                 var toolbar = new WrapPanel(); var opened = new List<ProjectFileEntry>();
                 FileManagement.Attach(toolbar, list, root, () => root, () => Task.CompletedTask, opened.Add, null);
-                Button FindButton(string label) => Assert.Single(toolbar.Children.OfType<Button>().Where(button => Equals(button.Content, label)));
-                Assert.NotNull(FindButton("Importer et classer…"));
+                IEnumerable<Button> Buttons(Panel panel) => panel.Children.OfType<Button>().Concat(panel.Children.OfType<Panel>().SelectMany(Buttons));
+                StackPanel FindGroup(string label) => Assert.Single(toolbar.Children.OfType<StackPanel>().Where(group =>
+                    group.Children.OfType<TextBlock>().Any(text => text.Text == label)));
+                Button FindButton(string label) => Assert.Single(Buttons(toolbar).Where(button => Equals(button.Content, label)));
+
+                var selectionGroup = FindGroup("Élément sélectionné");
+                var importGroup = FindGroup("Ajouter au dossier");
+                Assert.Contains(Buttons(selectionGroup), button => Equals(button.Content, "Ouvrir"));
+                Assert.DoesNotContain(Buttons(selectionGroup), button => Equals(button.Content, "Importer des fichiers…"));
+                Assert.Contains(Buttons(importGroup), button => Equals(button.Content, "Importer et classer…"));
+                Assert.DoesNotContain(Buttons(importGroup), button => Equals(button.Content, "Supprimer…"));
                 foreach (var label in new[] { "Ouvrir", "Renommer…", "Déplacer…", "Supprimer…" })
                 {
                     Assert.False(FindButton(label).IsEnabled);
@@ -48,7 +57,7 @@ public sealed class FileManagementSelectionTests
                 list.SelectedItem = null;
                 Assert.False(FindButton("Ouvrir").IsEnabled);
                 FileManagement.Attach(toolbar, list, root, () => root, () => Task.CompletedTask, opened.Add, null);
-                Assert.Single(toolbar.Children.OfType<Button>().Where(button => Equals(button.Content, "Ouvrir")));
+                Assert.Single(Buttons(toolbar).Where(button => Equals(button.Content, "Ouvrir")));
             }
             catch (Exception exception) { failure = exception; }
             finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
