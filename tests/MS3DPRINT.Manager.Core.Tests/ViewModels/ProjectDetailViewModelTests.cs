@@ -116,6 +116,21 @@ public sealed class ProjectDetailViewModelTests : IDisposable
         Assert.Equal(12, model.FileEntries.Single(entry => !entry.IsDirectory).Length);
     }
 
+    [Fact]
+    public void CurrentPathLabel_ShowsShortProjectBreadcrumb()
+    {
+        var store = new ProjectProfileStore(new WorkspaceMetadataPaths(_root));
+        var profile = new ProjectProfile(Guid.NewGuid(), Guid.NewGuid(), "MPO", "MPO-2026-001", "MPO-2026-001_TEST", "TEST", ProjectStatus.Quote,
+            DateTimeOffset.UtcNow, null, null, null, DateTimeOffset.UtcNow);
+        store.Create(profile);
+        var project = Path.Combine(_root, "01_CLIENTS", "MPO", profile.FolderName);
+        var model = new ProjectDetailViewModel(new ProjectSummary("MPO", Path.GetDirectoryName(project)!, project, profile.Reference, profile.FolderName, profile), store);
+
+        model.ApplyFileListing(new ProjectFileListing(Path.Combine(project, "01_DEVIS_FACTURES"), []));
+
+        Assert.Equal("MPO-2026-001_TEST › 01_DEVIS_FACTURES", model.CurrentPathLabel);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);

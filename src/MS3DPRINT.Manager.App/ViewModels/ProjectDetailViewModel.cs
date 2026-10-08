@@ -39,6 +39,15 @@ public sealed class ProjectDetailViewModel : ObservableObject
     public string ClientCode => _profile.ClientCode;
     public string ProjectPath => _projectPath;
     public string CurrentDirectory { get; private set; } = string.Empty;
+    public string CurrentPathLabel
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(CurrentDirectory) || string.IsNullOrWhiteSpace(ProjectPath)) return string.Empty;
+            var relative = Path.GetRelativePath(ProjectPath, CurrentDirectory);
+            return relative == "." ? Path.GetFileName(ProjectPath) : Path.GetFileName(ProjectPath) + " › " + relative.Replace(Path.DirectorySeparatorChar, '›').Replace(Path.AltDirectorySeparatorChar, '›').Replace("››", "›");
+        }
+    }
     public IReadOnlyList<ProjectFileEntry> FileEntries { get; private set; } = [];
     public bool CanGoUp => !string.IsNullOrWhiteSpace(ProjectPath) && !string.Equals(ProjectPath, CurrentDirectory, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 
@@ -120,6 +129,7 @@ public sealed class ProjectDetailViewModel : ObservableObject
         CurrentDirectory = listing.DirectoryPath;
         FileEntries = listing.Entries;
         OnPropertyChanged(nameof(CurrentDirectory));
+        OnPropertyChanged(nameof(CurrentPathLabel));
         OnPropertyChanged(nameof(FileEntries));
         OnPropertyChanged(nameof(CanGoUp));
     }
