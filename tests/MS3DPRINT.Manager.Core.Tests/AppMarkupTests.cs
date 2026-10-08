@@ -275,6 +275,17 @@ public sealed class AppMarkupTests
     }
 
     [Fact]
+    public void ClientDetailView_UsesCompactLeftAlignedTabs()
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", "ClientDetailView.xaml");
+        foreach (var header in new[] { "Fichiers", "Informations", "Projets" })
+        {
+            var tab = Assert.Single(document.Descendants().Where(element => element.Name.LocalName == "TabItem" && (string?)element.Attribute("Header") == header));
+            Assert.Equal("150", (string?)tab.Attribute("Width"));
+        }
+    }
+
+    [Fact]
     public void FilterViews_AssignTheirViewModelsBeforeLoadingXamlEvents()
     {
         foreach (var fileName in new[] { "ClientsView.xaml.cs", "ProjectsView.xaml.cs" })

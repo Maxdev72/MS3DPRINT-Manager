@@ -4,8 +4,8 @@
         <StackPanel><Button Content="← Clients" Click="Back_Click" HorizontalAlignment="Left" Style="{DynamicResource SecondaryButton}" /><TextBlock Text="{Binding DisplayName}" FontSize="24" FontWeight="SemiBold" Margin="0,12,0,4" /><TextBlock Text="{Binding ClientCode, StringFormat=Code client : {0}}" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
         <controls:EntityActions x:Name="ManagementActions" Grid.Row="1" />
         <TabControl x:Name="DetailTabs" Grid.Row="2" SelectedIndex="0" Margin="0,8,0,0" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
-            <TabItem Header="Fichiers"><ContentControl x:Name="ClientFilesHost" Margin="12" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" /></TabItem>
-            <TabItem Header="Informations"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="12" MaxWidth="760" HorizontalAlignment="Stretch">
+            <TabItem Header="Fichiers" Width="150"><ContentControl x:Name="ClientFilesHost" Margin="12" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" /></TabItem>
+            <TabItem Header="Informations" Width="150"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="12" MaxWidth="760" HorizontalAlignment="Stretch">
 <TextBlock Text="Identité" FontSize="16" FontWeight="SemiBold" Margin="0,22,0,8" />
         <StackPanel>
             <StackPanel.Style><Style TargetType="StackPanel"><Style.Triggers><DataTrigger Binding="{Binding IsProfessional}" Value="False"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers></Style></StackPanel.Style>
@@ -31,7 +31,7 @@
 
                 <Button Content="Enregistrer" Click="Save_Click" HorizontalAlignment="Right" Margin="0,16,0,8" />
             </StackPanel></ScrollViewer></TabItem>
-            <TabItem Header="Projets"><Grid Margin="12"><Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+            <TabItem Header="Projets" Width="150"><Grid Margin="12"><Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
                 <WrapPanel><Button Content="Ouvrir le projet" Click="OpenProject_Click" Margin="0,0,8,8" Style="{DynamicResource SecondaryButton}" /><Button Content="Nouveau projet" Click="CreateProject_Click" Margin="0,0,8,8" /><TextBlock x:Name="ProjectsLoadingText" Text="Chargement…" Visibility="Collapsed" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" /></WrapPanel>
                 <TextBlock x:Name="ProjectsErrorText" Grid.Row="1" Visibility="Collapsed" Foreground="{DynamicResource ErrorBrush}" TextWrapping="Wrap" Margin="0,0,0,6" />
                 <ListView x:Name="ProjectsList" Grid.Row="2" ItemsSource="{Binding Projects}" MinHeight="100" BorderBrush="{DynamicResource BorderBrush}" Background="{DynamicResource SurfaceBrush}"><ListView.View><GridView><GridViewColumn Header="Référence" Width="170" DisplayMemberBinding="{Binding Reference}" /><GridViewColumn Header="Projet" Width="260" DisplayMemberBinding="{Binding ProjectName}" /><GridViewColumn Header="Statut" Width="150" DisplayMemberBinding="{Binding StatusLabel}" /></GridView></ListView.View></ListView>
