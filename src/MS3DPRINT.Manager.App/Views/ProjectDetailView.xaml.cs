@@ -45,6 +45,7 @@ public partial class ProjectDetailView : UserControl, IUnsavedChangesPage
         catch (Exception exception) { MessageText.Text = UiErrorMessages.For(exception); return false; }
     }
     private async void Up_Click(object sender, RoutedEventArgs e) => await LoadFilesAsync(_viewModel.ReadParentFiles);
+    private async void Root_Click(object sender, RoutedEventArgs e) => await LoadFilesAsync(_viewModel.ReadRootFiles);
     private void Classify_Click(object sender, RoutedEventArgs e) => ClassifyRequested?.Invoke(this, EventArgs.Empty);
     private void File_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {

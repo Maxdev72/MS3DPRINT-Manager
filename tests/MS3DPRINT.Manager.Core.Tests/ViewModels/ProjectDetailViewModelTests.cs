@@ -99,6 +99,27 @@ public sealed class ProjectDetailViewModelTests : IDisposable
     }
 
     [Fact]
+    public void ReadRootFiles_ReturnsToProjectRootFromAnyNestedFolder()
+    {
+        var store = new ProjectProfileStore(new WorkspaceMetadataPaths(_root));
+        var profile = new ProjectProfile(Guid.NewGuid(), Guid.NewGuid(), "MPO", "MPO-2026-001", "MPO-2026-001_OUTILLAGE", "OUTILLAGE", ProjectStatus.Quote,
+            DateTimeOffset.UtcNow, null, null, null, DateTimeOffset.UtcNow);
+        store.Create(profile);
+        var projectPath = Path.Combine(_root, "01_CLIENTS", "MPO", profile.FolderName);
+        var nestedFolder = Path.Combine(projectPath, "03_CAO_3D", "03_STL");
+        Directory.CreateDirectory(nestedFolder);
+        File.WriteAllText(Path.Combine(projectPath, "brief.pdf"), "x");
+        var summary = new ProjectSummary("MPO", Path.GetDirectoryName(projectPath)!, projectPath, profile.Reference, profile.FolderName, profile);
+        var viewModel = new ProjectDetailViewModel(summary, store);
+        viewModel.ApplyFileListing(new ProjectFileListing(nestedFolder, []));
+
+        var listing = viewModel.ReadRootFiles();
+
+        Assert.Equal(projectPath, listing.DirectoryPath);
+        Assert.Contains(listing.Entries, entry => entry.Name == "brief.pdf");
+    }
+
+    [Fact]
     public void ApplyFolderSizes_UpdatesOnlyDirectoriesInCurrentListing()
     {
         var store = new ProjectProfileStore(new WorkspaceMetadataPaths(_root));

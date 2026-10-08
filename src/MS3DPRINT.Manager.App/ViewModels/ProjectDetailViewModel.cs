@@ -123,6 +123,12 @@ public sealed class ProjectDetailViewModel : ObservableObject
         return new ProjectFileListing(parent, _files.List(ProjectPath, parent));
     }
 
+    public ProjectFileListing ReadRootFiles()
+    {
+        if (string.IsNullOrWhiteSpace(ProjectPath)) return new ProjectFileListing(string.Empty, []);
+        return new ProjectFileListing(ProjectPath, _files.List(ProjectPath, ProjectPath));
+    }
+
     public void ApplyFileListing(ProjectFileListing listing)
     {
         ArgumentNullException.ThrowIfNull(listing);
