@@ -54,3 +54,11 @@ La refonte a été appliquée : les listes concernées sont des tableaux compact
 Le navigateur de fichiers affiche Nom, Type, Taille et Modifié. Les actions ouvrir, renommer, déplacer et supprimer utilisent la ligne sélectionnée, tout en conservant la corbeille et les protections d’identité des dossiers sans fiche. L’aperçu PDF offre Agrandir/Rétablir, zoom, ajustement à la largeur et conservation de la page.
 
 Validation : 428 tests automatisés, captures de toutes les pages dans les quatre thèmes et à largeur réduite, ainsi que 20 captures de l’aperçu PDF. La publication a remplacé le seul exécutable de livraison après contrôle SHA256.
+
+## Parcours guidé — livraison complémentaire, 8 octobre 2026
+
+Les entrées « Nouveau client » et « Nouveau projet » forment désormais un parcours continu : l’assistant projet peut créer puis sélectionner un client, et la création client peut enchaîner directement vers un projet. Après création, le choix entre ouvrir la fiche créée et revenir à l’accueil évite toute importation forcée.
+
+Dans une fiche projet, les fichiers sont présentés en premier avec des onglets compacts, les tailles de dossiers sont calculées sans bloquer l’interface, et les commandes sur une ligne apparaissent seulement après sélection. Le tableau de bord expose les projets récemment modifiés et les fiches incomplètes ou échéances dépassées.
+
+Validation automatisée : 440 tests réussis, aucun test ignoré (`outputs/logs/guided-workflow-full-*.binlog`). Publication Portable Win-x64 créée dans `outputs/MS3DPRINT-Manager`. Le fichier de livraison unique `MS3DPRINT Manager.exe` a été remplacé ; son SHA256 est `F70E16023215E8C7288F6C0A24B562FBDAFC4E264EC3F45E3D2298115F2ED4BC`, identique à celui de l’exécutable publié.
