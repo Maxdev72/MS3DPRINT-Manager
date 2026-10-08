@@ -34,6 +34,7 @@ public sealed class AvaloniaShellMarkupTests
         Assert.Contains("NavigationButton_Click", markup, StringComparison.Ordinal);
         Assert.Contains("Window_KeyDown", markup, StringComparison.Ordinal);
         Assert.Contains("SearchBox", markup, StringComparison.Ordinal);
+        Assert.Contains("SearchBox_KeyUp", markup, StringComparison.Ordinal);
     }
 
     private static string MainWindowPath()

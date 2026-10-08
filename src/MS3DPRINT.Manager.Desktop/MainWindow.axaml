@@ -43,7 +43,7 @@
           <TextBlock x:Name="PageSubtitle" Text="Bienvenue dans votre atelier. Voici ce qui mérite votre attention." Classes="muted" />
         </StackPanel>
         <Grid Grid.Column="1" Width="286" Height="42">
-          <TextBox x:Name="SearchBox" PlaceholderText="Rechercher partout" Padding="13,0" />
+          <TextBox x:Name="SearchBox" PlaceholderText="Rechercher partout" KeyUp="SearchBox_KeyUp" Padding="13,0" />
           <TextBlock Text="Ctrl+K" IsHitTestVisible="False" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,13,0" FontSize="11" Foreground="{DynamicResource AccentBrush}" />
         </Grid>
       </Grid>
@@ -76,5 +76,10 @@
         </Border>
       </Grid>
     </Grid>
+    <Border x:Name="SearchResultsPanel" Grid.Column="1" IsVisible="False" HorizontalAlignment="Right" VerticalAlignment="Top" Width="390" MaxHeight="420" Margin="0,82,34,0" Background="{DynamicResource RaisedSurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="8">
+      <ScrollViewer MaxHeight="400">
+        <StackPanel x:Name="SearchResults" Spacing="4" />
+      </ScrollViewer>
+    </Border>
   </Grid>
 </Window>

@@ -8,6 +8,7 @@ namespace MS3DPRINT.Manager.Desktop;
 public partial class MainWindow : Window
 {
     private const string DefaultWorkspaceRoot = @"C:\MS3DPRINT\Nextcloud\MS3DPRINT";
+    private CancellationTokenSource? _searchCancellation;
 
     public MainWindow() => InitializeComponent();
 
@@ -48,6 +49,52 @@ public partial class MainWindow : Window
 
         SearchBox.Focus();
         e.Handled = true;
+    }
+
+    private async void SearchBox_KeyUp(object? sender, KeyEventArgs e)
+    {
+        var query = SearchBox.Text?.Trim() ?? string.Empty;
+        _searchCancellation?.Cancel();
+        _searchCancellation?.Dispose();
+        _searchCancellation = new CancellationTokenSource();
+
+        if (query.Length < 2)
+        {
+            SearchResultsPanel.IsVisible = false;
+            SearchResults.Children.Clear();
+            return;
+        }
+
+        var cancellationToken = _searchCancellation.Token;
+        var workspaceRoot = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        try
+        {
+            var results = await Task.Run(
+                () => new WorkspaceSearchReader().Search(workspaceRoot, query, cancellationToken),
+                cancellationToken);
+            if (cancellationToken.IsCancellationRequested)
+                return;
+
+            SearchResults.Children.Clear();
+            foreach (var result in results.Take(8))
+            {
+                SearchResults.Children.Add(new TextBlock
+                {
+                    Text = $"{result.Title}\n{result.Detail}",
+                    TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+                    Padding = new Avalonia.Thickness(10, 8)
+                });
+            }
+
+            SearchResultsPanel.IsVisible = SearchResults.Children.Count > 0;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            SearchResultsPanel.IsVisible = false;
+        }
     }
 
     private static void ApplyRecentProject(
