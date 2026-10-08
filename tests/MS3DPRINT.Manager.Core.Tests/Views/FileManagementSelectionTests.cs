@@ -24,6 +24,7 @@ public sealed class FileManagementSelectionTests
                 var toolbar = new WrapPanel(); var opened = new List<ProjectFileEntry>();
                 FileManagement.Attach(toolbar, list, root, () => root, () => Task.CompletedTask, opened.Add, null);
                 Button FindButton(string label) => Assert.Single(toolbar.Children.OfType<Button>().Where(button => Equals(button.Content, label)));
+                Assert.NotNull(FindButton("Importer et classer…"));
                 foreach (var label in new[] { "Ouvrir", "Renommer…", "Déplacer…", "Supprimer…" }) Assert.False(FindButton(label).IsEnabled);
                 list.SelectedItem = entry;
                 Assert.Empty(opened);

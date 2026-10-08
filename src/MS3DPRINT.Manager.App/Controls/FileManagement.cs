@@ -148,6 +148,25 @@ public static class FileManagement
                 if (failures.Count > 0) throw new IOException(string.Join(Environment.NewLine, failures));
             });
         };
+        AddButton("Importer et classer…").Click += async (_, _) =>
+        {
+            var picker = new OpenFileDialog { Multiselect = true, Title = "Choisir les fichiers à importer" };
+            if (picker.ShowDialog(owner) != true) return;
+            var destination = new OpenFolderDialog
+            {
+                Title = "Choisir le dossier de destination dans le projet",
+                InitialDirectory = currentDirectory()
+            };
+            if (destination.ShowDialog(owner) != true) return;
+            await Run(() =>
+            {
+                var failures = new List<string>();
+                foreach (var path in picker.FileNames)
+                    try { files.Import(path, destination.FolderName); }
+                    catch (Exception exception) { failures.Add(Path.GetFileName(path) + " : " + UiErrorMessages.For(exception)); }
+                if (failures.Count > 0) throw new IOException(string.Join(Environment.NewLine, failures));
+            });
+        };
         var help = new TextBlock { Text = "Double-clic ou Entrée : ouvrir. Sélectionnez une ligne pour la gérer.", Margin = new Thickness(0, 10, 0, 8), TextWrapping = TextWrapping.Wrap };
         help.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush"); toolbar.Children.Add(help);
 
