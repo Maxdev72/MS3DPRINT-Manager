@@ -27,6 +27,20 @@ public sealed class AppMarkupTests
     }
 
     [Fact]
+    public void Dashboard_OpensARecentProjectDirectly()
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "MainWindow.xaml");
+        Assert.Contains(document.Descendants(), element =>
+            element.Name.LocalName == "Button" &&
+            (string?)element.Attribute("Click") == "DashboardRecentProject_Click" &&
+            (string?)element.Attribute("Tag") == "{Binding Reference}");
+
+        var source = LoadSource("src", "MS3DPRINT.Manager.App", "MainWindow.xaml.cs");
+        Assert.Contains("DashboardRecentProject_Click", source);
+        Assert.Contains("ShowProjectDetail", source);
+    }
+
+    [Fact]
     public void Dashboard_KeepsCardsCompactInAWideWindow()
     {
         var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "MainWindow.xaml");

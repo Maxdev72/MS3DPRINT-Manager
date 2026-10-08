@@ -95,6 +95,24 @@ public partial class MainWindow : Window
 
     private async void DashboardRefresh_Click(object sender, RoutedEventArgs e) => await RefreshDashboardSafelyAsync();
 
+    private async void DashboardRecentProject_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.Tag is not string reference || string.IsNullOrWhiteSpace(reference)) return;
+        try
+        {
+            var project = await Task.Run(() => _projectCatalog.Load(_viewModel.StorageRoot)
+                .FirstOrDefault(candidate => string.Equals(candidate.Reference, reference, StringComparison.OrdinalIgnoreCase)));
+            if (project is null)
+            {
+                _viewModel.Status = "Ce projet n’est plus disponible.";
+                await RefreshDashboardSafelyAsync();
+                return;
+            }
+            ShowProjectDetail(project);
+        }
+        catch (Exception exception) { _viewModel.Status = UiErrorMessages.For(exception); }
+    }
+
     private void Clients_Click(object sender, RoutedEventArgs e) => ShowClients();
     private void Search_Click(object sender, RoutedEventArgs e) => ShowSearch();
     private void Projects_Click(object sender, RoutedEventArgs e) => ShowProjects();
