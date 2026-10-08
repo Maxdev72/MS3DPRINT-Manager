@@ -7,7 +7,74 @@
         MinHeight="640"
         Background="{DynamicResource CanvasBrush}"
         Title="MS3DPRINT Manager">
-  <TextBlock HorizontalAlignment="Center"
-             VerticalAlignment="Center"
-             Text="MS3DPRINT Manager" />
+  <Grid ColumnDefinitions="232,*">
+    <Border Background="#0B111B" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0" Padding="18,22">
+      <Grid RowDefinitions="Auto,*,Auto">
+        <StackPanel Spacing="6">
+          <TextBlock Text="MS3DPRINT" FontSize="21" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+          <TextBlock Text="MANAGER" FontSize="11" LetterSpacing="2" Foreground="{DynamicResource AccentBrush}" />
+        </StackPanel>
+        <StackPanel Grid.Row="1" Margin="0,38,0,0" Spacing="6">
+          <TextBlock Text="ESPACE DE TRAVAIL" Classes="muted" Margin="10,0,0,8" />
+          <Button Content="Accueil" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
+          <Button Content="Projets" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
+          <Button Content="Clients" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
+          <Button Content="Collections" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
+          <Button Content="Filaments" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
+          <Button Content="Corbeille" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
+        </StackPanel>
+        <StackPanel Grid.Row="2" Spacing="10">
+          <Border Background="{DynamicResource RaisedSurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="12">
+            <StackPanel Spacing="4">
+              <TextBlock Text="ATELIER NORD" FontWeight="SemiBold" />
+              <TextBlock Text="Espace local connecté" Classes="muted" />
+            </StackPanel>
+          </Border>
+          <Button Content="Paramètres" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
+        </StackPanel>
+      </Grid>
+    </Border>
+    <Grid Grid.Column="1" Margin="34,28" RowDefinitions="Auto,Auto,*" RowSpacing="28">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20">
+        <StackPanel Spacing="6">
+          <TextBlock Text="Vue d’ensemble" FontSize="30" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+          <TextBlock Text="Bienvenue dans votre atelier. Voici ce qui mérite votre attention." Classes="muted" />
+        </StackPanel>
+        <Border Grid.Column="1" Width="286" Height="42" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="9" Padding="13,0">
+          <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+            <TextBlock Text="Rechercher partout" Foreground="{DynamicResource MutedTextBrush}" />
+            <TextBlock Grid.Column="1" Text="Ctrl+K" FontSize="11" Foreground="{DynamicResource AccentBrush}" />
+          </Grid>
+        </Border>
+      </Grid>
+      <Grid Grid.Row="1" ColumnDefinitions="*,*,*" ColumnSpacing="16">
+        <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
+          <StackPanel Spacing="10"><TextBlock Text="PROJETS ACTIFS" Classes="muted" /><TextBlock Text="12" FontSize="28" FontWeight="SemiBold" /><TextBlock Text="3 mis à jour cette semaine" Foreground="{DynamicResource AccentBrush}" /></StackPanel>
+        </Border>
+        <Border Grid.Column="1" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
+          <StackPanel Spacing="10"><TextBlock Text="À CLASSER" Classes="muted" /><TextBlock Text="08" FontSize="28" FontWeight="SemiBold" /><TextBlock Text="Fichiers en attente" Foreground="{DynamicResource AccentBrush}" /></StackPanel>
+        </Border>
+        <Border Grid.Column="2" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
+          <StackPanel Spacing="10"><TextBlock Text="FILAMENTS" Classes="muted" /><TextBlock Text="24" FontSize="28" FontWeight="SemiBold" /><TextBlock Text="4 bobines à surveiller" Foreground="{DynamicResource AccentBrush}" /></StackPanel>
+        </Border>
+      </Grid>
+      <Grid Grid.Row="2" ColumnDefinitions="*,300" ColumnSpacing="20">
+        <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="20">
+          <Grid RowDefinitions="Auto,*" RowSpacing="14">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Spacing="4"><TextBlock Text="Projets récents" FontSize="18" FontWeight="SemiBold" /><TextBlock Text="Reprenez votre travail là où vous l’avez laissé." Classes="muted" /></StackPanel>
+              <Button Grid.Column="1" Content="Voir les projets" VerticalAlignment="Center" />
+            </Grid>
+            <StackPanel Grid.Row="1" Spacing="10">
+              <Border Background="{DynamicResource RaisedSurfaceBrush}" CornerRadius="9" Padding="15"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock Text="Support bobine V4" FontWeight="SemiBold" /><TextBlock Text="Client Atelier Nord · Modifié aujourd’hui" Classes="muted" /></StackPanel><TextBlock Grid.Column="1" Text="3 fichiers" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}" /></Grid></Border>
+              <Border Background="{DynamicResource RaisedSurfaceBrush}" CornerRadius="9" Padding="15"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock Text="Boîtier capteur" FontWeight="SemiBold" /><TextBlock Text="Client Techlab · Modifié hier" Classes="muted" /></StackPanel><TextBlock Grid.Column="1" Text="7 fichiers" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}" /></Grid></Border>
+            </StackPanel>
+          </Grid>
+        </Border>
+        <Border Grid.Column="1" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="20">
+          <StackPanel Spacing="16"><TextBlock Text="Activité" FontSize="18" FontWeight="SemiBold" /><StackPanel Spacing="6"><TextBlock Text="Aujourd’hui" Classes="muted" /><TextBlock Text="Un projet a été mis à jour" TextWrapping="Wrap" /></StackPanel><StackPanel Spacing="6"><TextBlock Text="Hier" Classes="muted" /><TextBlock Text="Deux fichiers ajoutés à classer" TextWrapping="Wrap" /></StackPanel><Border Height="1" Background="{DynamicResource BorderBrush}" /><Button Content="Créer un projet" HorizontalAlignment="Left" /></StackPanel>
+        </Border>
+      </Grid>
+    </Grid>
+  </Grid>
 </Window>
