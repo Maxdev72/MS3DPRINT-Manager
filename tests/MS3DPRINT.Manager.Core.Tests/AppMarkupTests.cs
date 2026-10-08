@@ -323,7 +323,7 @@ public sealed class AppMarkupTests
             (string?)element.Attribute("Click") == "CreateProject_Click");
 
         var source = LoadSource("src", "MS3DPRINT.Manager.App", "MainWindow.xaml.cs");
-        Assert.Contains("preselectedClient: client", source);
+        Assert.Contains("ShowProjectDialog(client)", source);
     }
 
     [Fact]
