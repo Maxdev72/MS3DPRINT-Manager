@@ -41,6 +41,20 @@ public sealed class AppMarkupTests
     }
 
     [Fact]
+    public void DashboardRecentHeader_UsesSeparateColumnsForTitleAndAction()
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "MainWindow.xaml");
+        var action = Assert.Single(document.Descendants().Where(element =>
+            element.Name.LocalName == "Button" && (string?)element.Attribute("Content") == "Voir les projets"));
+        Assert.Equal("1", (string?)action.Attribute("Grid.Column"));
+        Assert.Equal("Grid", action.Parent?.Name.LocalName);
+        Assert.Contains(action.Parent!.Elements(), element =>
+            element.Name.LocalName == "TextBlock" &&
+            (string?)element.Attribute("Text") == "Projets récents" &&
+            (string?)element.Attribute("Grid.Column") == "0");
+    }
+
+    [Fact]
     public void Dashboard_KeepsCardsCompactInAWideWindow()
     {
         var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "MainWindow.xaml");
