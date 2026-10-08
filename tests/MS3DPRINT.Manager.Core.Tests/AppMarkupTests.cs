@@ -285,6 +285,19 @@ public sealed class AppMarkupTests
         }
     }
 
+    [Theory]
+    [InlineData("CollectionDetailView.xaml")]
+    [InlineData("LegacyEntityDetailView.xaml")]
+    public void RemainingDetailViews_UseCompactLeftAlignedTabs(string fileName)
+    {
+        var document = LoadMarkup("src", "MS3DPRINT.Manager.App", "Views", fileName);
+        foreach (var header in new[] { "Fichiers", "Informations" })
+        {
+            var tab = Assert.Single(document.Descendants().Where(element => element.Name.LocalName == "TabItem" && (string?)element.Attribute("Header") == header));
+            Assert.Equal("150", (string?)tab.Attribute("Width"));
+        }
+    }
+
     [Fact]
     public void FilterViews_AssignTheirViewModelsBeforeLoadingXamlEvents()
     {

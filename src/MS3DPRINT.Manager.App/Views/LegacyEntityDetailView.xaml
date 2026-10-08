@@ -7,8 +7,8 @@
             <Button Content="Supprimer…" Click="Trash_Click" Foreground="{DynamicResource ErrorBrush}" Style="{DynamicResource SecondaryButton}" Margin="0,0,8,8" />
         </WrapPanel>
         <TabControl x:Name="DetailTabs" Grid.Row="2" SelectedIndex="0" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
-            <TabItem Header="Fichiers"><ContentControl x:Name="FilesHost" Margin="12" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" /></TabItem>
-            <TabItem Header="Informations"><TextBlock Margin="16" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Text="Ce dossier ne possède pas encore de fiche. Utilisez « Compléter la fiche » pour ajouter ses informations. La consultation des fichiers ne modifie pas la fiche." /></TabItem>
+            <TabItem Header="Fichiers" Width="150"><ContentControl x:Name="FilesHost" Margin="12" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" /></TabItem>
+            <TabItem Header="Informations" Width="150"><TextBlock Margin="16" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Text="Ce dossier ne possède pas encore de fiche. Utilisez « Compléter la fiche » pour ajouter ses informations. La consultation des fichiers ne modifie pas la fiche." /></TabItem>
         </TabControl>
     </Grid>
 </UserControl>
