@@ -39,6 +39,26 @@ public sealed class CollectionDetailViewModelTests : IDisposable
         Assert.Equal("FIXATION › 03_CAO_MASTER › STL", viewModel.CurrentPathLabel);
     }
 
+    [Fact]
+    public void ApplyFolderSizes_UpdatesOnlyDirectoryEntries()
+    {
+        var itemRoot = Path.Combine(_root, "02_MODELES_3D", "FIXATION");
+        Directory.CreateDirectory(itemRoot);
+        var viewModel = new CollectionDetailViewModel(new CollectionItemSummary("FIXATION", itemRoot, DateTimeOffset.UtcNow));
+        var folder = Path.Combine(itemRoot, "03_CAO_MASTER");
+        var file = Path.Combine(itemRoot, "notice.pdf");
+        viewModel.ApplyFileListing(new CollectionFileListing(itemRoot,
+        [
+            new ProjectFileEntry("03_CAO_MASTER", folder, true, null, DateTimeOffset.UtcNow),
+            new ProjectFileEntry("notice.pdf", file, false, 12, DateTimeOffset.UtcNow)
+        ]));
+
+        viewModel.ApplyFolderSizes(new Dictionary<string, long?> { [folder] = 1536 });
+
+        Assert.Equal(1536, viewModel.FileEntries.Single(entry => entry.IsDirectory).Length);
+        Assert.Equal(12, viewModel.FileEntries.Single(entry => !entry.IsDirectory).Length);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);

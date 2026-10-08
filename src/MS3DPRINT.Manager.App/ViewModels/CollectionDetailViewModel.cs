@@ -74,6 +74,15 @@ public sealed class CollectionDetailViewModel : ObservableObject
         OnPropertyChanged(nameof(FileEntries));
         OnPropertyChanged(nameof(CanGoUp));
     }
+
+    public void ApplyFolderSizes(IReadOnlyDictionary<string, long?> sizes)
+    {
+        ArgumentNullException.ThrowIfNull(sizes);
+        FileEntries = FileEntries.Select(entry => entry.IsDirectory && sizes.TryGetValue(entry.FullPath, out var size)
+            ? entry with { Length = size }
+            : entry).ToArray();
+        OnPropertyChanged(nameof(FileEntries));
+    }
 }
 
 public sealed record CollectionFileListing(string DirectoryPath, IReadOnlyList<ProjectFileEntry> Entries);
