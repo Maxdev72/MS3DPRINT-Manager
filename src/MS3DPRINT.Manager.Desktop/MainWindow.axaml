@@ -7,6 +7,7 @@
         MinHeight="640"
         Background="{DynamicResource CanvasBrush}"
         KeyDown="Window_KeyDown"
+        Opened="Window_Opened"
         Title="MS3DPRINT Manager">
   <Grid ColumnDefinitions="232,*">
     <Border Background="#0B111B" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0" Padding="18,22">
@@ -48,13 +49,13 @@
       </Grid>
       <Grid Grid.Row="1" ColumnDefinitions="*,*,*" ColumnSpacing="16">
         <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
-          <StackPanel Spacing="10"><TextBlock Text="PROJETS ACTIFS" Classes="muted" /><TextBlock Text="12" FontSize="28" FontWeight="SemiBold" /><TextBlock Text="3 mis à jour cette semaine" Foreground="{DynamicResource AccentBrush}" /></StackPanel>
+          <StackPanel Spacing="10"><TextBlock Text="PROJETS" Classes="muted" /><TextBlock x:Name="ProjectCountText" Text="—" FontSize="28" FontWeight="SemiBold" /><TextBlock Text="Dans votre espace de travail" Foreground="{DynamicResource AccentBrush}" /></StackPanel>
         </Border>
         <Border Grid.Column="1" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
-          <StackPanel Spacing="10"><TextBlock Text="À CLASSER" Classes="muted" /><TextBlock Text="08" FontSize="28" FontWeight="SemiBold" /><TextBlock Text="Fichiers en attente" Foreground="{DynamicResource AccentBrush}" /></StackPanel>
+          <StackPanel Spacing="10"><TextBlock Text="DEVIS" Classes="muted" /><TextBlock x:Name="QuoteCountText" Text="—" FontSize="28" FontWeight="SemiBold" /><TextBlock Text="Projets à chiffrer" Foreground="{DynamicResource AccentBrush}" /></StackPanel>
         </Border>
         <Border Grid.Column="2" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
-          <StackPanel Spacing="10"><TextBlock Text="FILAMENTS" Classes="muted" /><TextBlock Text="24" FontSize="28" FontWeight="SemiBold" /><TextBlock Text="4 bobines à surveiller" Foreground="{DynamicResource AccentBrush}" /></StackPanel>
+          <StackPanel Spacing="10"><TextBlock Text="EN COURS" Classes="muted" /><TextBlock x:Name="InProgressCountText" Text="—" FontSize="28" FontWeight="SemiBold" /><TextBlock Text="Projets en fabrication" Foreground="{DynamicResource AccentBrush}" /></StackPanel>
         </Border>
       </Grid>
       <Grid Grid.Row="2" ColumnDefinitions="*,300" ColumnSpacing="20">
@@ -65,13 +66,13 @@
               <Button Grid.Column="1" Content="Voir les projets" VerticalAlignment="Center" />
             </Grid>
             <StackPanel Grid.Row="1" Spacing="10">
-              <Border Background="{DynamicResource RaisedSurfaceBrush}" CornerRadius="9" Padding="15"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock Text="Support bobine V4" FontWeight="SemiBold" /><TextBlock Text="Client Atelier Nord · Modifié aujourd’hui" Classes="muted" /></StackPanel><TextBlock Grid.Column="1" Text="3 fichiers" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}" /></Grid></Border>
-              <Border Background="{DynamicResource RaisedSurfaceBrush}" CornerRadius="9" Padding="15"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock Text="Boîtier capteur" FontWeight="SemiBold" /><TextBlock Text="Client Techlab · Modifié hier" Classes="muted" /></StackPanel><TextBlock Grid.Column="1" Text="7 fichiers" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}" /></Grid></Border>
+              <Border Background="{DynamicResource RaisedSurfaceBrush}" CornerRadius="9" Padding="15"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock x:Name="RecentProjectOneTitle" Text="Chargement des projets…" FontWeight="SemiBold" /><TextBlock x:Name="RecentProjectOneDetail" Text="" Classes="muted" /></StackPanel><TextBlock x:Name="RecentProjectOneStatus" Grid.Column="1" Text="" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}" /></Grid></Border>
+              <Border Background="{DynamicResource RaisedSurfaceBrush}" CornerRadius="9" Padding="15"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock x:Name="RecentProjectTwoTitle" Text="" FontWeight="SemiBold" /><TextBlock x:Name="RecentProjectTwoDetail" Text="" Classes="muted" /></StackPanel><TextBlock x:Name="RecentProjectTwoStatus" Grid.Column="1" Text="" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}" /></Grid></Border>
             </StackPanel>
           </Grid>
         </Border>
         <Border Grid.Column="1" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="20">
-          <StackPanel Spacing="16"><TextBlock Text="Activité" FontSize="18" FontWeight="SemiBold" /><StackPanel Spacing="6"><TextBlock Text="Aujourd’hui" Classes="muted" /><TextBlock Text="Un projet a été mis à jour" TextWrapping="Wrap" /></StackPanel><StackPanel Spacing="6"><TextBlock Text="Hier" Classes="muted" /><TextBlock Text="Deux fichiers ajoutés à classer" TextWrapping="Wrap" /></StackPanel><Border Height="1" Background="{DynamicResource BorderBrush}" /><Button Content="Créer un projet" HorizontalAlignment="Left" /></StackPanel>
+          <StackPanel Spacing="16"><TextBlock Text="Activité" FontSize="18" FontWeight="SemiBold" /><StackPanel Spacing="6"><TextBlock Text="Espace de travail" Classes="muted" /><TextBlock x:Name="WorkspaceStatusText" Text="Lecture des données…" TextWrapping="Wrap" /></StackPanel><StackPanel Spacing="6"><TextBlock Text="Clients" Classes="muted" /><TextBlock x:Name="ClientCountText" Text="—" TextWrapping="Wrap" /></StackPanel><Border Height="1" Background="{DynamicResource BorderBrush}" /><Button Content="Créer un projet" HorizontalAlignment="Left" /></StackPanel>
         </Border>
       </Grid>
     </Grid>
