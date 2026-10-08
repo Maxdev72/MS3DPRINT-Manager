@@ -9,6 +9,8 @@ public sealed class MainViewModel : ObservableObject
     private string _dashboardQuotesCount = "—";
     private string _dashboardInProgressCount = "—";
     private string _dashboardCompletedCount = "—";
+    private IReadOnlyList<DashboardProjectRow> _recentProjects = [];
+    private IReadOnlyList<DashboardAlert> _dashboardAlerts = [];
 
     public MainViewModel(string? storageRoot = null)
     {
@@ -53,6 +55,18 @@ public sealed class MainViewModel : ObservableObject
         private set => SetProperty(ref _dashboardCompletedCount, value);
     }
 
+    public IReadOnlyList<DashboardProjectRow> RecentProjects
+    {
+        get => _recentProjects;
+        private set => SetProperty(ref _recentProjects, value);
+    }
+
+    public IReadOnlyList<DashboardAlert> DashboardAlerts
+    {
+        get => _dashboardAlerts;
+        private set => SetProperty(ref _dashboardAlerts, value);
+    }
+
     public void ApplyDashboard(DashboardSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
@@ -61,5 +75,7 @@ public sealed class MainViewModel : ObservableObject
         DashboardQuotesCount = snapshot.Quotes.ToString();
         DashboardInProgressCount = snapshot.InProgress.ToString();
         DashboardCompletedCount = snapshot.Completed.ToString();
+        RecentProjects = snapshot.RecentProjects;
+        DashboardAlerts = snapshot.Alerts;
     }
 }

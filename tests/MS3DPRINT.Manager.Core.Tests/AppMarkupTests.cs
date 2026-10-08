@@ -22,6 +22,8 @@ public sealed class AppMarkupTests
             element.Name.LocalName == "WrapPanel" && element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == "PrimaryDashboardActions")));
         Assert.Contains(actions.Elements(), element => element.Name.LocalName == "Button" && (string?)element.Attribute("Content") == "Nouveau client");
         Assert.Contains(actions.Elements(), element => element.Name.LocalName == "Button" && (string?)element.Attribute("Content") == "Nouveau projet");
+        Assert.Contains(document.Descendants(), element => element.Name.LocalName == "TextBlock" && (string?)element.Attribute("Text") == "Projets récents");
+        Assert.Contains(document.Descendants(), element => element.Name.LocalName == "TextBlock" && (string?)element.Attribute("Text") == "À surveiller");
     }
 
     [Fact]
