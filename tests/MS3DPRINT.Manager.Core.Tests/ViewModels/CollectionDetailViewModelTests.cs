@@ -59,6 +59,22 @@ public sealed class CollectionDetailViewModelTests : IDisposable
         Assert.Equal(12, viewModel.FileEntries.Single(entry => !entry.IsDirectory).Length);
     }
 
+    [Fact]
+    public void ReadRootFiles_ReturnsToCollectionRootFromAnyNestedFolder()
+    {
+        var itemRoot = Path.Combine(_root, "02_MODELES_3D", "FIXATION");
+        var nestedFolder = Path.Combine(itemRoot, "03_CAO_MASTER", "STL");
+        Directory.CreateDirectory(nestedFolder);
+        File.WriteAllText(Path.Combine(itemRoot, "notice.pdf"), "x");
+        var viewModel = new CollectionDetailViewModel(new CollectionItemSummary("FIXATION", itemRoot, DateTimeOffset.UtcNow));
+        viewModel.ApplyFileListing(new CollectionFileListing(nestedFolder, []));
+
+        var listing = viewModel.ReadRootFiles();
+
+        Assert.Equal(itemRoot, listing.DirectoryPath);
+        Assert.Contains(listing.Entries, entry => entry.Name == "notice.pdf");
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);

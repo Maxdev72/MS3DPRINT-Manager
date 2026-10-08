@@ -27,6 +27,7 @@ public partial class CollectionDetailView : UserControl
 
     private void Back_Click(object sender, RoutedEventArgs e) => BackRequested?.Invoke(this, EventArgs.Empty);
     private async void Up_Click(object sender, RoutedEventArgs e) => await LoadFilesAsync(_viewModel.ReadParentFiles);
+    private async void Root_Click(object sender, RoutedEventArgs e) => await LoadFilesAsync(_viewModel.ReadRootFiles);
 
     private void File_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {

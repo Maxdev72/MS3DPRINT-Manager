@@ -64,6 +64,9 @@ public sealed class CollectionDetailViewModel : ObservableObject
         return new CollectionFileListing(parent, _files.List(RootPath, parent));
     }
 
+    public CollectionFileListing ReadRootFiles()
+        => new(RootPath, _files.List(RootPath, RootPath));
+
     public void ApplyFileListing(CollectionFileListing listing)
     {
         ArgumentNullException.ThrowIfNull(listing);
