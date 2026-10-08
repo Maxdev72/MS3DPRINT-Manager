@@ -14,13 +14,27 @@ public sealed class ClientDialogUiCollection { }
 public sealed class CreateClientWindowSmokeTests
 {
     [Fact]
-    public void IndividualSelection_HidesCompanyAndDuplicateContactControls()
+    public void NewClientDialog_ProvidesProjectContinuationChoice()
     {
-        Exception? failure = null;
-        var thread = new Thread(() =>
+        RunSta(() =>
         {
+            var root = Path.Combine(Path.GetTempPath(), "ms3dprint-dialog-" + Guid.NewGuid().ToString("N"));
+            var window = new CreateClientWindow(root, new FolderTreeService(), new ClientCodeRegistry(Path.Combine(root, "data")), new ClientProfileStore(new WorkspaceMetadataPaths(root)));
             try
             {
+                Assert.NotNull(window.FindName("AfterCreatePanel"));
+                Assert.NotNull(window.FindName("CreateProjectNowButton"));
+                Assert.NotNull(window.FindName("ReturnHomeButton"));
+            }
+            finally { window.Close(); }
+        });
+    }
+
+    [Fact]
+    public void IndividualSelection_HidesCompanyAndDuplicateContactControls()
+    {
+        RunSta(() =>
+        {
                 var root = Path.Combine(Path.GetTempPath(), "ms3dprint-dialog-" + Guid.NewGuid().ToString("N"));
                 var metadata = new WorkspaceMetadataPaths(root);
                 var window = new CreateClientWindow(root, new FolderTreeService(), new ClientCodeRegistry(Path.Combine(root, "data")), new ClientProfileStore(metadata));
@@ -32,12 +46,15 @@ public sealed class CreateClientWindowSmokeTests
                     Assert.Equal(Visibility.Visible, ((StackPanel)window.FindName("IndividualPanel")).Visibility);
                 }
                 finally { window.Close(); }
-            }
-            catch (Exception exception) { failure = exception; }
         });
-        thread.SetApartmentState(ApartmentState.STA);
-        thread.Start();
+    }
+
+    private static void RunSta(Action action)
+    {
+        Exception? failure = null;
+        var thread = new Thread(() => { try { action(); } catch (Exception exception) { failure = exception; } });
+        thread.SetApartmentState(ApartmentState.STA); thread.Start();
         Assert.True(thread.Join(TimeSpan.FromSeconds(10)));
-        Assert.Null(failure);
+        if (failure is not null) throw failure;
     }
 }

@@ -286,6 +286,12 @@ public partial class MainWindow : Window
         {
             _viewModel.Status = "Élément traité : " + ((ICreatedFolderDialog)dialog).CreatedPath;
             _ = RefreshVisibleAsync();
+            if (dialog is CreateClientWindow { CreateProjectAfterCreation: true, CreatedPath: { } path })
+            {
+                var client = _clientCatalog.Load(_viewModel.StorageRoot).FirstOrDefault(item =>
+                    string.Equals(Path.GetFullPath(item.ClientPath), Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase));
+                if (client is not null) ShowProjectDialog(client);
+            }
         }
     }
 

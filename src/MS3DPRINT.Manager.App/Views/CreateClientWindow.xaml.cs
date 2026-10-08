@@ -43,6 +43,7 @@ public partial class CreateClientWindow : Window, ICreatedFolderDialog
     }
 
     public string? CreatedPath { get; private set; }
+    public bool CreateProjectAfterCreation { get; private set; }
 
     private void Cancel_Click(object sender, RoutedEventArgs e) => Close();
 
@@ -83,8 +84,22 @@ public partial class CreateClientWindow : Window, ICreatedFolderDialog
                 _profiles.Create(profile);
                 CreatedPath = _existingClient.ClientPath;
             }
-            DialogResult = true;
+            if (_existingClient is not null)
+            {
+                DialogResult = true;
+                return;
+            }
+            CreateButton.Visibility = Visibility.Collapsed;
+            AfterCreatePanel.Visibility = Visibility.Visible;
         }
         catch (Exception exception) { ErrorText.Text = UiErrorMessages.For(exception); }
     }
+
+    private void CreateProjectNow_Click(object sender, RoutedEventArgs e)
+    {
+        CreateProjectAfterCreation = true;
+        DialogResult = true;
+    }
+
+    private void ReturnHome_Click(object sender, RoutedEventArgs e) => DialogResult = true;
 }
