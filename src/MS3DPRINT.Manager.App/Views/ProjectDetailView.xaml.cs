@@ -12,6 +12,7 @@ public partial class ProjectDetailView : UserControl, IUnsavedChangesPage
     private int _fileLoadVersion;
     private ProjectFileEntry? _selectedPreviewFile;
     private readonly Action<string?, Window?> _showModelPreview;
+    private readonly FolderSizeService _folderSizes = new();
 
     public ProjectDetailView(ProjectDetailViewModel viewModel, Action<string?, Window?>? showModelPreview = null)
     {
@@ -112,10 +113,21 @@ public partial class ProjectDetailView : UserControl, IUnsavedChangesPage
             if (loadVersion != _fileLoadVersion) return;
             _viewModel.ApplyFileListing(listing);
             MessageText.Text = string.Empty;
+            _ = LoadFolderSizesAsync(listing, loadVersion);
         }
         catch (Exception exception)
         {
             if (loadVersion == _fileLoadVersion) MessageText.Text = UiErrorMessages.For(exception);
         }
+    }
+
+    private async Task LoadFolderSizesAsync(ProjectFileListing listing, int loadVersion)
+    {
+        var folders = listing.Entries.Where(entry => entry.IsDirectory).ToArray();
+        if (folders.Length == 0) return;
+        var sizes = await Task.WhenAll(folders.Select(async folder =>
+            (folder.FullPath, await _folderSizes.GetSizeAsync(folder.FullPath, CancellationToken.None))));
+        if (loadVersion != _fileLoadVersion) return;
+        _viewModel.ApplyFolderSizes(sizes.ToDictionary(item => item.FullPath, item => item.Item2));
     }
 }

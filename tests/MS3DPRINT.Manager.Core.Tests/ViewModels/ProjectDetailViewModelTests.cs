@@ -98,6 +98,24 @@ public sealed class ProjectDetailViewModelTests : IDisposable
         Assert.Equal("brief.pdf", Assert.Single(listing.Entries).Name);
     }
 
+    [Fact]
+    public void ApplyFolderSizes_UpdatesOnlyDirectoriesInCurrentListing()
+    {
+        var store = new ProjectProfileStore(new WorkspaceMetadataPaths(_root));
+        var profile = new ProjectProfile(Guid.NewGuid(), Guid.NewGuid(), "MPO", "MPO-2026-001", "MPO-2026-001_TEST", "TEST", ProjectStatus.Quote,
+            DateTimeOffset.UtcNow, null, null, null, DateTimeOffset.UtcNow);
+        store.Create(profile);
+        var model = new ProjectDetailViewModel(profile, store);
+        model.ApplyFileListing(new ProjectFileListing("C:\\test", [
+            new ProjectFileEntry("DOSSIER", "C:\\test\\DOSSIER", true, null, DateTimeOffset.UtcNow),
+            new ProjectFileEntry("brief.pdf", "C:\\test\\brief.pdf", false, 12, DateTimeOffset.UtcNow)]));
+
+        model.ApplyFolderSizes(new Dictionary<string, long?> { ["C:\\test\\DOSSIER"] = 1536 });
+
+        Assert.Equal(1536, model.FileEntries.Single(entry => entry.IsDirectory).Length);
+        Assert.Equal(12, model.FileEntries.Single(entry => !entry.IsDirectory).Length);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);

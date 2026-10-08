@@ -124,6 +124,15 @@ public sealed class ProjectDetailViewModel : ObservableObject
         OnPropertyChanged(nameof(CanGoUp));
     }
 
+    public void ApplyFolderSizes(IReadOnlyDictionary<string, long?> sizes)
+    {
+        ArgumentNullException.ThrowIfNull(sizes);
+        FileEntries = FileEntries.Select(entry => entry.IsDirectory && sizes.TryGetValue(entry.FullPath, out var size)
+            ? entry with { Length = size }
+            : entry).ToArray();
+        OnPropertyChanged(nameof(FileEntries));
+    }
+
     public void LoadFiles() => ApplyFileListing(ReadFiles());
 
     public void OpenDirectory(ProjectFileEntry entry)
