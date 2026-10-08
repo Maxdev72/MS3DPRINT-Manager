@@ -44,6 +44,14 @@ public partial class CreateTrackedProjectWindow : Window, ICreatedFolderDialog
     public string? CreatedPath { get; private set; }
     public event EventHandler? CreateClientRequested;
 
+    public void SelectClient(ClientSummary client)
+    {
+        ArgumentNullException.ThrowIfNull(client);
+        LoadClientsSafely();
+        ClientBox.SelectedItem = ClientBox.Items.OfType<ClientSummary>().FirstOrDefault(candidate =>
+            string.Equals(Path.GetFullPath(candidate.ClientPath), Path.GetFullPath(client.ClientPath), StringComparison.OrdinalIgnoreCase));
+    }
+
     private void Retry_Click(object sender, RoutedEventArgs e) => LoadClientsSafely();
 
     private void LoadClientsSafely()

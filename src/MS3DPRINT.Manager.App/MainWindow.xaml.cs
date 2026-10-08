@@ -73,6 +73,21 @@ public partial class MainWindow : Window
     private void NewClient_Click(object sender, RoutedEventArgs e) => Run(() =>
         ShowDialog(new CreateClientWindow(_viewModel.StorageRoot, _folders, _codes, _clientProfiles) { Owner = this }));
 
+    private void ShowProjectDialog(ClientSummary? preselectedClient = null)
+    {
+        var dialog = new CreateTrackedProjectWindow(_viewModel.StorageRoot, _folders, _clientCatalog, _projectProfiles,
+            preselectedClient: preselectedClient) { Owner = this };
+        dialog.CreateClientRequested += (_, _) =>
+        {
+            var clientDialog = new CreateClientWindow(_viewModel.StorageRoot, _folders, _codes, _clientProfiles) { Owner = this };
+            if (clientDialog.ShowDialog() != true || clientDialog.CreatedPath is null) return;
+            var created = _clientCatalog.Load(_viewModel.StorageRoot).FirstOrDefault(client =>
+                string.Equals(Path.GetFullPath(client.ClientPath), Path.GetFullPath(clientDialog.CreatedPath), StringComparison.OrdinalIgnoreCase));
+            if (created is not null) dialog.SelectClient(created);
+        };
+        ShowDialog(dialog);
+    }
+
     private async void Dashboard_Click(object sender, RoutedEventArgs e)
     {
         if (TryShowPage(DashboardPage)) await RefreshDashboardSafelyAsync();
@@ -168,7 +183,7 @@ public partial class MainWindow : Window
         page.BackRequested += (_, _) => navigateBack();
         page.CreateProjectRequested += (_, _) => Run(() =>
         {
-            ShowDialog(new CreateTrackedProjectWindow(_viewModel.StorageRoot, _folders, _clientCatalog, _projectProfiles, preselectedClient: client) { Owner = this });
+            ShowProjectDialog(client);
         });
         page.ProjectSelected += project => ShowProjectDetail(project, () => ShowClientDetail(client, navigateBack));
         TryShowPage(page);
@@ -179,7 +194,7 @@ public partial class MainWindow : Window
         var page = new ProjectsView(new ProjectsViewModel(_projectCatalog, _viewModel.StorageRoot));
         page.CreateRequested += (_, _) => Run(() =>
         {
-            ShowDialog(new CreateTrackedProjectWindow(_viewModel.StorageRoot, _folders, _clientCatalog, _projectProfiles) { Owner = this });
+            ShowProjectDialog();
         });
         page.ProjectSelected += project => ShowProjectDetail(project);
         page.EditRequested += project =>
@@ -236,8 +251,7 @@ public partial class MainWindow : Window
         TryShowPage(page);
     }
 
-    private void NewProject_Click(object sender, RoutedEventArgs e) => Run(() =>
-        ShowDialog(new CreateTrackedProjectWindow(_viewModel.StorageRoot, _folders, _clientCatalog, _projectProfiles) { Owner = this }));
+    private void NewProject_Click(object sender, RoutedEventArgs e) => Run(() => ShowProjectDialog());
 
     private void NewModel_Click(object sender, RoutedEventArgs e) => ShowNamedItem("Nouveau modèle 3D", "02_MODELES_3D", FolderTemplates.Model);
 
