@@ -10,4 +10,7 @@ public sealed class WorkspaceTrashReader
         ArgumentException.ThrowIfNullOrWhiteSpace(workspaceRoot);
         return new ManagedFileService(workspaceRoot).ListTrash();
     }
+
+    public void Restore(string workspaceRoot, Guid id)
+        => new ManagedFileService(workspaceRoot).Restore(id);
 }

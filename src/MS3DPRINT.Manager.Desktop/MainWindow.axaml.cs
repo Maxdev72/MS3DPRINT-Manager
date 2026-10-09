@@ -390,10 +390,23 @@ public partial class MainWindow : Window
             var entries = await Task.Run(() => new WorkspaceTrashReader().Load(workspaceRoot));
             if (entries.Count == 0) { TrashList.Children.Add(new TextBlock { Text = "La corbeille est vide.", Margin = new Avalonia.Thickness(8) }); return; }
             foreach (var entry in entries)
-                TrashList.Children.Add(new TextBlock { Text = entry.Label, Margin = new Avalonia.Thickness(12, 8), TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+            {
+                var restore = new Button { Content = $"Restaurer · {entry.Label}", Tag = entry.Id, HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left };
+                restore.Click += RestoreTrash_Click;
+                TrashList.Children.Add(restore);
+            }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         { TrashList.Children.Add(new TextBlock { Text = "Impossible de lire la corbeille.", Margin = new Avalonia.Thickness(8) }); }
+    }
+
+    private async void RestoreTrash_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: Guid id }) return;
+        var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        try { await Task.Run(() => new WorkspaceTrashReader().Restore(root, id)); await LoadTrashAsync(); }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
+        { PageSubtitle.Text = exception.Message; }
     }
 
     private async void RefreshSettings_Click(object? sender, RoutedEventArgs e) => await LoadSettingsAsync();
