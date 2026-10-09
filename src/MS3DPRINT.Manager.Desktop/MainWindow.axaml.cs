@@ -316,6 +316,11 @@ public partial class MainWindow : Window
         try
         {
             new WorkspaceClientCreator().CreateProfessional(root, dialog.ClientName, dialog.Code);
+            PageTitle.Text = "Clients";
+            PageSubtitle.Text = "Client créé.";
+            DashboardStats.IsVisible = false;
+            DashboardContent.IsVisible = false;
+            ClientsWorkspacePanel.IsVisible = true;
             await LoadClientsAsync();
         }
         catch (Exception exception) when (exception is ArgumentException or IOException or InvalidOperationException)
