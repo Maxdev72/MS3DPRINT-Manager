@@ -76,6 +76,14 @@ public partial class MainWindow : Window
 
     private void Window_KeyDown(object? sender, KeyEventArgs e)
     {
+        if (e.Key == Key.Escape && SearchResultsPanel.IsVisible)
+        {
+            SearchResultsPanel.IsVisible = false;
+            SearchResults.Children.Clear();
+            e.Handled = true;
+            return;
+        }
+
         if (e.KeyModifiers != KeyModifiers.Control || e.Key != Key.K)
             return;
 
