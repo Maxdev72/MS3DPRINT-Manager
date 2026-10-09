@@ -14,6 +14,16 @@ public sealed class WorkspaceInventoryReaderTests
     }
 
     [Fact]
+    public void Load_all_collections_combines_supported_categories()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"ms3dprint-collections-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(root, "02_MODELES_3D", "Pièces"));
+        Directory.CreateDirectory(Path.Combine(root, "06_FOURNISSEURS", "Fournisseur"));
+        try { Assert.Equal(2, new WorkspaceInventoryReader().LoadAllCollections(root).Count); }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
     public void Load_filaments_does_not_create_storage_when_absent()
     {
         var root = Path.Combine(Path.GetTempPath(), $"ms3dprint-filaments-{Guid.NewGuid():N}");
