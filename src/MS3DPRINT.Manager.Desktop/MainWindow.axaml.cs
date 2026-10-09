@@ -50,13 +50,15 @@ public partial class MainWindow : Window
         var collectionsVisible = destination == "Collections";
         var filamentsVisible = destination == "Filaments";
         var trashVisible = destination == "Corbeille";
-        DashboardStats.IsVisible = !projectsVisible && !clientsVisible && !collectionsVisible && !filamentsVisible && !trashVisible;
-        DashboardContent.IsVisible = !projectsVisible && !clientsVisible && !collectionsVisible && !filamentsVisible && !trashVisible;
+        var settingsVisible = destination == "Paramètres";
+        DashboardStats.IsVisible = !projectsVisible && !clientsVisible && !collectionsVisible && !filamentsVisible && !trashVisible && !settingsVisible;
+        DashboardContent.IsVisible = !projectsVisible && !clientsVisible && !collectionsVisible && !filamentsVisible && !trashVisible && !settingsVisible;
         ProjectsWorkspacePanel.IsVisible = projectsVisible;
         ClientsWorkspacePanel.IsVisible = clientsVisible;
         CollectionsWorkspacePanel.IsVisible = collectionsVisible;
         FilamentsWorkspacePanel.IsVisible = filamentsVisible;
         TrashWorkspacePanel.IsVisible = trashVisible;
+        SettingsWorkspacePanel.IsVisible = settingsVisible;
 
         if (projectsVisible)
             await LoadProjectsAsync();
@@ -68,6 +70,8 @@ public partial class MainWindow : Window
             await LoadFilamentsAsync();
         else if (trashVisible)
             await LoadTrashAsync();
+        else if (settingsVisible)
+            await LoadSettingsAsync();
     }
 
     private void Window_KeyDown(object? sender, KeyEventArgs e)
@@ -299,5 +303,16 @@ public partial class MainWindow : Window
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         { TrashList.Children.Add(new TextBlock { Text = "Impossible de lire la corbeille.", Margin = new Avalonia.Thickness(8) }); }
+    }
+
+    private async void RefreshSettings_Click(object? sender, RoutedEventArgs e) => await LoadSettingsAsync();
+
+    private async Task LoadSettingsAsync()
+    {
+        var workspaceRoot = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        StorageList.Children.Clear();
+        var providers = await Task.Run(() => new WorkspaceStorageReader().Load(workspaceRoot));
+        foreach (var provider in providers)
+            StorageList.Children.Add(new TextBlock { Text = $"{provider.DisplayName} · {(provider.IsAvailable ? "Disponible" : "Non configuré")}", Margin = new Avalonia.Thickness(8) });
     }
 }
