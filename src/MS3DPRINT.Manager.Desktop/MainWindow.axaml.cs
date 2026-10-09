@@ -195,6 +195,11 @@ public partial class MainWindow : Window
             try
             {
                 new WorkspaceProjectCreator().Create(client.ClientPath, client.ClientCode, DateTime.Today.Year, dialog.ProjectName);
+                PageTitle.Text = "Projets";
+                PageSubtitle.Text = "Projet créé.";
+                DashboardStats.IsVisible = false;
+                DashboardContent.IsVisible = false;
+                ProjectsWorkspacePanel.IsVisible = true;
                 await LoadProjectsAsync();
             }
             catch (Exception exception) when (exception is ArgumentException or IOException or InvalidOperationException)
