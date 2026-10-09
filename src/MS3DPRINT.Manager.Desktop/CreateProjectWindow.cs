@@ -14,6 +14,10 @@ public sealed class CreateProjectWindow : Window
     {
         Title = "Créer un projet"; Width = 440; Height = 260;
         _clients = new ComboBox { ItemsSource = clients, PlaceholderText = "Choisir un client" };
+        _clients.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<ClientSummary>((client, _) => new TextBlock
+        {
+            Text = $"{client.DisplayName} · {client.ClientCode}"
+        });
         _name = new TextBox { PlaceholderText = "Nom du projet" };
         var create = new Button { Content = "Créer", HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right };
         create.Click += (_, _) => Close(Client is not null && !string.IsNullOrWhiteSpace(ProjectName));
