@@ -193,6 +193,16 @@ public partial class MainWindow : Window
 
     private async void RefreshProjects_Click(object? sender, RoutedEventArgs e) => await LoadProjectsAsync();
 
+    private async void DashboardProjects_Click(object? sender, RoutedEventArgs e)
+    {
+        DashboardStats.IsVisible = false;
+        DashboardContent.IsVisible = false;
+        ProjectsWorkspacePanel.IsVisible = true;
+        PageTitle.Text = "Projets";
+        PageSubtitle.Text = "Tous les projets de l’atelier.";
+        await LoadProjectsAsync();
+    }
+
     private async void CreateProject_Click(object? sender, RoutedEventArgs e)
     {
         var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
@@ -517,7 +527,11 @@ public partial class MainWindow : Window
             var collections = await Task.Run(() => new WorkspaceInventoryReader().LoadAllCollections(workspaceRoot));
             if (collections.Count == 0) { CollectionList.Children.Add(new TextBlock { Text = "Aucune collection trouvée.", Margin = new Avalonia.Thickness(8) }); return; }
             foreach (var item in collections)
-                CollectionList.Children.Add(new Border { Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#141F30")), CornerRadius = new Avalonia.CornerRadius(8), Padding = new Avalonia.Thickness(14), Child = new TextBlock { Text = $"{item.Name}\nModifié le {item.LastWriteTime:dd/MM/yyyy}", TextWrapping = Avalonia.Media.TextWrapping.Wrap } });
+            {
+                var button = new Button { Content = $"{item.Name}\n{item.Profile?.Description ?? "Collection"} · Modifié le {item.LastWriteTime:dd/MM/yyyy}", Tag = item.Path, HorizontalContentAlignment = HorizontalAlignment.Left };
+                button.Click += OpenFolder_Click;
+                CollectionList.Children.Add(button);
+            }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         { CollectionList.Children.Add(new TextBlock { Text = "Impossible de lire les collections.", Margin = new Avalonia.Thickness(8) }); }
@@ -540,6 +554,22 @@ public partial class MainWindow : Window
         { PageSubtitle.Text = exception.Message; }
     }
 
+    private async void EditFilament_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: MS3DPRINT.Manager.Core.Filaments.FilamentProfile original }) return;
+        var dialog = new CreateFilamentWindow(original);
+        if (!await dialog.ShowDialog<bool>(this)) return;
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            await Task.Run(() => new WorkspaceFilamentEditor().Update(root, original, dialog.Brand, dialog.FilamentName, dialog.Material, dialog.Price, dialog.IsAbrasive));
+            PageSubtitle.Text = "Fiche filament enregistrée.";
+            await LoadFilamentsAsync();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { PageSubtitle.Text = exception.Message; }
+    }
+
     private async Task LoadFilamentsAsync()
     {
         var workspaceRoot = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
@@ -549,7 +579,11 @@ public partial class MainWindow : Window
             var filaments = await Task.Run(() => new WorkspaceInventoryReader().LoadFilaments(workspaceRoot));
             if (filaments.Count == 0) { FilamentList.Children.Add(new TextBlock { Text = "Aucun filament enregistré.", Margin = new Avalonia.Thickness(8) }); return; }
             foreach (var filament in filaments)
-                FilamentList.Children.Add(new Border { Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#141F30")), CornerRadius = new Avalonia.CornerRadius(8), Padding = new Avalonia.Thickness(14), Child = new TextBlock { Text = $"{filament.Brand} · {filament.Name}\n{filament.Material} · {filament.PricePerKg:0.00} €/kg{(filament.IsAbrasive ? " · Abrasif" : string.Empty)}", TextWrapping = Avalonia.Media.TextWrapping.Wrap } });
+            {
+                var button = new Button { Content = $"{filament.Brand} · {filament.Name}\n{filament.Material} · {filament.PricePerKg:0.00} €/kg{(filament.IsAbrasive ? " · Abrasif" : string.Empty)}", Tag = filament, HorizontalContentAlignment = HorizontalAlignment.Left };
+                button.Click += EditFilament_Click;
+                FilamentList.Children.Add(button);
+            }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         { FilamentList.Children.Add(new TextBlock { Text = "Impossible de lire les filaments.", Margin = new Avalonia.Thickness(8) }); }

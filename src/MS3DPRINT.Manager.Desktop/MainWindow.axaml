@@ -63,7 +63,7 @@
           <Grid RowDefinitions="Auto,*" RowSpacing="14">
             <Grid ColumnDefinitions="*,Auto">
               <StackPanel Spacing="4"><TextBlock Text="Projets récents" FontSize="18" FontWeight="SemiBold" /><TextBlock Text="Reprenez votre travail là où vous l’avez laissé." Classes="muted" /></StackPanel>
-              <Button Grid.Column="1" Content="Voir les projets" VerticalAlignment="Center" />
+              <Button Grid.Column="1" Content="Voir les projets" Click="DashboardProjects_Click" VerticalAlignment="Center" />
             </Grid>
             <StackPanel Grid.Row="1" Spacing="10">
               <Border Background="{DynamicResource RaisedSurfaceBrush}" CornerRadius="9" Padding="15"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock x:Name="RecentProjectOneTitle" Text="Chargement des projets…" FontWeight="SemiBold" /><TextBlock x:Name="RecentProjectOneDetail" Text="" Classes="muted" /></StackPanel><TextBlock x:Name="RecentProjectOneStatus" Grid.Column="1" Text="" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}" /></Grid></Border>
