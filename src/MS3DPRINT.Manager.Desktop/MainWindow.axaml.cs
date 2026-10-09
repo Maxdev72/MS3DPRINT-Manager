@@ -353,11 +353,14 @@ public partial class MainWindow : Window
         open.Click += OpenFolder_Click;
         var rename = new Button { Content = "Renommer", Tag = project };
         rename.Click += RenameProject_Click;
+        var move = new Button { Content = "Déplacer", Tag = project };
+        move.Click += MoveProject_Click;
         var trash = new Button { Content = "Corbeille", Tag = project };
         trash.Click += TrashProject_Click;
         commands.Children.Add(edit);
         commands.Children.Add(open);
         commands.Children.Add(rename);
+        commands.Children.Add(move);
         commands.Children.Add(trash);
         content.Children.Add(commands);
         ProjectList.Children.Add(new Border
@@ -429,6 +432,25 @@ public partial class MainWindow : Window
             await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).RenameProject(project, dialog.Value));
             PageTitle.Text = "Projets";
             PageSubtitle.Text = "Projet renommé.";
+            await LoadProjectsAsync();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { PageSubtitle.Text = exception.Message; }
+    }
+
+    private async void MoveProject_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: ProjectSummary project }) return;
+        var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        var clients = await Task.Run(() => new WorkspaceClientReader().Load(root)
+            .Where(client => !string.Equals(client.ClientPath, project.ClientPath, StringComparison.OrdinalIgnoreCase)).ToArray());
+        var dialog = new ClientPickerWindow(clients);
+        if (!await dialog.ShowDialog<bool>(this) || dialog.SelectedClient is not { } destination) return;
+        try
+        {
+            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).MoveProject(project, destination));
+            PageTitle.Text = "Projets";
+            PageSubtitle.Text = "Projet déplacé.";
             await LoadProjectsAsync();
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
