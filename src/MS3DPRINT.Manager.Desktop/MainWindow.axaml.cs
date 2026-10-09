@@ -4,6 +4,7 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using MS3DPRINT.Manager.Core.Clients;
+using MS3DPRINT.Manager.Core.Files;
 using MS3DPRINT.Manager.Core.Projects;
 using MS3DPRINT.Manager.Desktop.Dashboard;
 
@@ -322,6 +323,9 @@ public partial class MainWindow : Window
                 await new ImagePreviewWindow(path).ShowDialog(this);
                 return;
             }
+
+            if (ThreeDFileSupport.IsPreviewable(path) && DesktopPreviewLauncher.TryOpenThreeD(path))
+                return;
 
             var launcher = TopLevel.GetTopLevel(this)?.Launcher;
             if (launcher is not null)

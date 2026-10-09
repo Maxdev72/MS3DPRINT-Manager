@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationIcon>..\MS3DPRINT.Manager.App\Assets\app-icon.ico</ApplicationIcon>
@@ -11,6 +11,7 @@
   <ItemGroup>
     <ProjectReference Include="..\MS3DPRINT.Manager.Desktop\MS3DPRINT.Manager.Desktop.csproj" />
     <ProjectReference Include="..\MS3DPRINT.Manager.Windows\MS3DPRINT.Manager.Windows.csproj" />
+    <ProjectReference Include="..\MS3DPRINT.Manager.App\MS3DPRINT.Manager.App.csproj" />
   </ItemGroup>
 
   <ItemGroup>

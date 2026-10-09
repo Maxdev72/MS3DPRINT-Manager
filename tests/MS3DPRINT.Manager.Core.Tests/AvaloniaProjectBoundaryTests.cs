@@ -51,7 +51,7 @@ public sealed class AvaloniaProjectBoundaryTests
         Assert.True(File.Exists(projectPath), "The Windows host project must exist.");
 
         var project = File.ReadAllText(projectPath);
-        Assert.Contains("<TargetFramework>net10.0-windows</TargetFramework>", project, StringComparison.Ordinal);
+        Assert.Contains("<TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>", project, StringComparison.Ordinal);
         Assert.Contains("MS3DPRINT.Manager.Desktop", project, StringComparison.Ordinal);
         Assert.Contains("MS3DPRINT.Manager.Windows", project, StringComparison.Ordinal);
     }
