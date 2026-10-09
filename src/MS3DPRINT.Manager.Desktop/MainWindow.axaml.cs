@@ -9,6 +9,7 @@ public partial class MainWindow : Window
 {
     private const string DefaultWorkspaceRoot = @"C:\MS3DPRINT\Nextcloud\MS3DPRINT";
     private CancellationTokenSource? _searchCancellation;
+    private Button? _selectedNavigationButton;
 
     public MainWindow() => InitializeComponent();
 
@@ -35,8 +36,12 @@ public partial class MainWindow : Window
 
     private async void NavigationButton_Click(object? sender, RoutedEventArgs e)
     {
-        if (sender is not Button { Tag: string destination })
+        if (sender is not Button button || button.Tag is not string destination)
             return;
+
+        _selectedNavigationButton?.Classes.Remove("selected");
+        button.Classes.Add("selected");
+        _selectedNavigationButton = button;
 
         PageTitle.Text = destination;
         PageSubtitle.Text = $"Espace {destination.ToLowerInvariant()} de l’atelier.";

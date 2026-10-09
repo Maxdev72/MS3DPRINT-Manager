@@ -18,12 +18,12 @@
         </StackPanel>
         <StackPanel Grid.Row="1" Margin="0,38,0,0" Spacing="6">
           <TextBlock Text="ESPACE DE TRAVAIL" Classes="muted" Margin="10,0,0,8" />
-          <Button Content="Accueil" Tag="Accueil" Click="NavigationButton_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
-          <Button Content="Projets" Tag="Projets" Click="NavigationButton_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
-          <Button Content="Clients" Tag="Clients" Click="NavigationButton_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
-          <Button Content="Collections" Tag="Collections" Click="NavigationButton_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
-          <Button Content="Filaments" Tag="Filaments" Click="NavigationButton_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
-          <Button Content="Corbeille" Tag="Corbeille" Click="NavigationButton_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
+          <Button Classes="nav-item selected" Content="Accueil" Tag="Accueil" Click="NavigationButton_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
+          <Button Classes="nav-item" Content="Projets" Tag="Projets" Click="NavigationButton_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
+          <Button Classes="nav-item" Content="Clients" Tag="Clients" Click="NavigationButton_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
+          <Button Classes="nav-item" Content="Collections" Tag="Collections" Click="NavigationButton_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
+          <Button Classes="nav-item" Content="Filaments" Tag="Filaments" Click="NavigationButton_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
+          <Button Classes="nav-item" Content="Corbeille" Tag="Corbeille" Click="NavigationButton_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
         </StackPanel>
         <StackPanel Grid.Row="2" Spacing="10">
           <Border Background="{DynamicResource RaisedSurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="12">
@@ -32,7 +32,7 @@
               <TextBlock Text="Espace local connecté" Classes="muted" />
             </StackPanel>
           </Border>
-          <Button Content="Paramètres" Tag="Paramètres" Click="NavigationButton_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
+          <Button Classes="nav-item" Content="Paramètres" Tag="Paramètres" Click="NavigationButton_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
         </StackPanel>
       </Grid>
     </Border>
