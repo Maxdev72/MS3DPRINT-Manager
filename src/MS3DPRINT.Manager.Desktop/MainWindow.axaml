@@ -103,7 +103,7 @@
       </Border>
       <Border x:Name="FilamentsWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="20">
         <Grid RowDefinitions="Auto,*" RowSpacing="16">
-          <Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock Text="Filaments" FontSize="18" FontWeight="SemiBold" /><TextBlock Text="Stock de matières et caractéristiques." Classes="muted" /></StackPanel><Button Grid.Column="1" Content="Actualiser" Click="RefreshFilaments_Click" VerticalAlignment="Center" /></Grid>
+          <Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock Text="Filaments" FontSize="18" FontWeight="SemiBold" /><TextBlock Text="Stock de matières et caractéristiques." Classes="muted" /></StackPanel><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"><Button Content="Ajouter" Click="CreateFilament_Click" /><Button Content="Actualiser" Click="RefreshFilaments_Click" VerticalAlignment="Center" /></StackPanel></Grid>
           <ScrollViewer Grid.Row="1"><StackPanel x:Name="FilamentList" Spacing="8" /></ScrollViewer>
         </Grid>
       </Border>

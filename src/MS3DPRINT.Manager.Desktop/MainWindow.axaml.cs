@@ -1,6 +1,10 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
+using Avalonia.Media;
+using MS3DPRINT.Manager.Core.Clients;
+using MS3DPRINT.Manager.Core.Projects;
 using MS3DPRINT.Manager.Desktop.Dashboard;
 
 namespace MS3DPRINT.Manager.Desktop;
@@ -162,6 +166,10 @@ public partial class MainWindow : Window
             PageSubtitle.Text = result.Title;
             await LoadClientsAsync();
         }
+        else if (result.Kind == MS3DPRINT.Manager.Core.Search.GlobalSearchResultKind.File)
+        {
+            await OpenFileAsync(result.Path);
+        }
     }
 
     private static void ApplyRecentProject(
@@ -259,6 +267,8 @@ public partial class MainWindow : Window
             else await LoadProjectDirectoryAsync(project, new ProjectWorkspaceBrowser().Parent(project.ProjectPath, directory));
         };
         ProjectList.Children.Add(back);
+        if (directory == project.ProjectPath)
+            AddProjectOverview(project);
         try
         {
             var entries = await Task.Run(() => new ProjectWorkspaceBrowser().List(project.ProjectPath, directory));
@@ -285,6 +295,16 @@ public partial class MainWindow : Window
     private async void FileEntry_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: string path } || !File.Exists(path)) return;
+        await OpenFileAsync(path);
+    }
+
+    private async Task OpenFileAsync(string path)
+    {
+        if (!File.Exists(path))
+        {
+            PageSubtitle.Text = "Ce fichier n’est plus disponible.";
+            return;
+        }
         try
         {
             if (IsImage(path))
@@ -305,6 +325,66 @@ public partial class MainWindow : Window
 
     private static bool IsImage(string path)
         => Path.GetExtension(path).ToLowerInvariant() is ".png" or ".jpg" or ".jpeg" or ".bmp" or ".gif";
+
+    private void AddProjectOverview(ProjectSummary project)
+    {
+        var details = project.Profile is { } profile
+            ? $"{project.ClientFolderName} · {project.StatusLabel}" + (profile.DueDate is { } due ? $" · Échéance {due:dd/MM/yyyy}" : string.Empty)
+            : $"{project.ClientFolderName} · Fiche à compléter";
+        var content = new StackPanel { Spacing = 8 };
+        content.Children.Add(new TextBlock { Text = project.Reference + " · " + project.ProjectName, FontWeight = FontWeight.SemiBold, FontSize = 16 });
+        content.Children.Add(new TextBlock { Text = details, Classes = { "muted" }, TextWrapping = TextWrapping.Wrap });
+        if (!string.IsNullOrWhiteSpace(project.Profile?.Description))
+            content.Children.Add(new TextBlock { Text = project.Profile.Description, TextWrapping = TextWrapping.Wrap });
+        var commands = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        var edit = new Button { Content = "Modifier la fiche", Tag = project };
+        edit.Click += EditProject_Click;
+        var open = new Button { Content = "Ouvrir le dossier", Tag = project.ProjectPath };
+        open.Click += OpenFolder_Click;
+        commands.Children.Add(edit);
+        commands.Children.Add(open);
+        content.Children.Add(commands);
+        ProjectList.Children.Add(new Border
+        {
+            Background = new SolidColorBrush(Color.Parse("#141F30")), CornerRadius = new Avalonia.CornerRadius(10), Padding = new Avalonia.Thickness(16), Child = content
+        });
+    }
+
+    private async void EditProject_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: ProjectSummary { Profile: { } profile } project })
+        {
+            PageSubtitle.Text = "Cette fiche historique ne peut pas encore être modifiée.";
+            return;
+        }
+        var dialog = new EditProjectWindow(profile);
+        if (!await dialog.ShowDialog<bool>(this)) return;
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var updated = await Task.Run(() => new WorkspaceProfileEditor().UpdateProject(root, profile, dialog.Status, dialog.DueDate, dialog.Description, dialog.Notes));
+            PageSubtitle.Text = "Fiche projet enregistrée.";
+            await LoadProjectDirectoryAsync(project with { Profile = updated }, project.ProjectPath);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        {
+            PageSubtitle.Text = exception.Message;
+        }
+    }
+
+    private async void OpenFolder_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string path } || !Directory.Exists(path)) return;
+        try
+        {
+            var launcher = TopLevel.GetTopLevel(this)?.Launcher;
+            if (launcher is not null) await launcher.LaunchUriAsync(new Uri(path));
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or UriFormatException)
+        {
+            PageSubtitle.Text = "Impossible d’ouvrir ce dossier.";
+        }
+    }
 
     private async void RefreshClients_Click(object? sender, RoutedEventArgs e) => await LoadClientsAsync();
 
@@ -360,10 +440,70 @@ public partial class MainWindow : Window
         }
     }
 
-    private void ClientEntry_Click(object? sender, RoutedEventArgs e)
+    private async void ClientEntry_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: MS3DPRINT.Manager.Core.Clients.ClientSummary client })
-            PageSubtitle.Text = $"{client.DisplayName} · {client.ClientCode} · {client.ProjectCount} projet(s)";
+            await LoadClientDetailAsync(client);
+    }
+
+    private async Task LoadClientDetailAsync(ClientSummary client)
+    {
+        ClientList.Children.Clear();
+        var back = new Button { Content = "← Retour aux clients", HorizontalAlignment = HorizontalAlignment.Left };
+        back.Click += async (_, _) => await LoadClientsAsync();
+        ClientList.Children.Add(back);
+
+        var card = new StackPanel { Spacing = 8 };
+        card.Children.Add(new TextBlock { Text = client.DisplayName, FontSize = 18, FontWeight = FontWeight.SemiBold });
+        card.Children.Add(new TextBlock { Text = $"{client.ProfileLabel} · {client.ClientCode} · {client.ProjectCount} projet(s)", Classes = { "muted" } });
+        if (!string.IsNullOrWhiteSpace(client.Profile?.Address)) card.Children.Add(new TextBlock { Text = client.Profile.Address, TextWrapping = TextWrapping.Wrap });
+        if (!string.IsNullOrWhiteSpace(client.Profile?.Notes)) card.Children.Add(new TextBlock { Text = client.Profile.Notes, TextWrapping = TextWrapping.Wrap });
+        var commands = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        var edit = new Button { Content = "Modifier la fiche", Tag = client };
+        edit.Click += EditClient_Click;
+        var open = new Button { Content = "Ouvrir le dossier", Tag = client.ClientPath };
+        open.Click += OpenFolder_Click;
+        commands.Children.Add(edit); commands.Children.Add(open); card.Children.Add(commands);
+        ClientList.Children.Add(new Border { Background = new SolidColorBrush(Color.Parse("#141F30")), CornerRadius = new Avalonia.CornerRadius(10), Padding = new Avalonia.Thickness(16), Child = card });
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var projects = await Task.Run(() => new WorkspaceProjectReader().Load(root)
+                .Where(project => string.Equals(project.ClientPath, client.ClientPath, StringComparison.OrdinalIgnoreCase)).ToArray());
+            if (projects.Length > 0) ClientList.Children.Add(new TextBlock { Text = "Projets", FontWeight = FontWeight.SemiBold, Margin = new Avalonia.Thickness(0, 10, 0, 0) });
+            foreach (var project in projects)
+            {
+                var projectButton = new Button { Content = $"{project.Reference} · {project.ProjectName}\n{project.StatusLabel}", Tag = project, HorizontalContentAlignment = HorizontalAlignment.Left };
+                projectButton.Click += ProjectEntry_Click;
+                ClientList.Children.Add(projectButton);
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            PageSubtitle.Text = "Impossible de lire les projets de ce client.";
+        }
+    }
+
+    private async void EditClient_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: ClientSummary { Profile: { } profile } client })
+        {
+            PageSubtitle.Text = "Cette fiche historique ne peut pas encore être modifiée.";
+            return;
+        }
+        var dialog = new EditClientWindow(profile);
+        if (!await dialog.ShowDialog<bool>(this)) return;
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var updated = await Task.Run(() => new WorkspaceProfileEditor().UpdateClient(root, profile, dialog.Address, dialog.Notes));
+            PageSubtitle.Text = "Fiche client enregistrée.";
+            await LoadClientDetailAsync(client with { Profile = updated });
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        {
+            PageSubtitle.Text = exception.Message;
+        }
     }
 
     private async void RefreshCollections_Click(object? sender, RoutedEventArgs e) => await LoadCollectionsAsync();
@@ -384,6 +524,21 @@ public partial class MainWindow : Window
     }
 
     private async void RefreshFilaments_Click(object? sender, RoutedEventArgs e) => await LoadFilamentsAsync();
+
+    private async void CreateFilament_Click(object? sender, RoutedEventArgs e)
+    {
+        var dialog = new CreateFilamentWindow();
+        if (!await dialog.ShowDialog<bool>(this)) return;
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            await Task.Run(() => new WorkspaceFilamentEditor().Create(root, dialog.Brand, dialog.FilamentName, dialog.Material, dialog.Price, dialog.IsAbrasive));
+            PageSubtitle.Text = "Filament ajouté.";
+            await LoadFilamentsAsync();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { PageSubtitle.Text = exception.Message; }
+    }
 
     private async Task LoadFilamentsAsync()
     {
