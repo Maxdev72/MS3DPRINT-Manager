@@ -110,12 +110,14 @@ public partial class MainWindow : Window
             SearchResults.Children.Clear();
             foreach (var result in results.Take(8))
             {
-                SearchResults.Children.Add(new TextBlock
+                var item = new Button
                 {
-                    Text = $"{result.Title}\n{result.Detail}",
-                    TextWrapping = Avalonia.Media.TextWrapping.Wrap,
-                    Padding = new Avalonia.Thickness(10, 8)
-                });
+                    Content = $"{result.Title}\n{result.Detail}",
+                    HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left,
+                    Tag = result
+                };
+                item.Click += SearchResult_Click;
+                SearchResults.Children.Add(item);
             }
 
             SearchResultsPanel.IsVisible = SearchResults.Children.Count > 0;
@@ -126,6 +128,31 @@ public partial class MainWindow : Window
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
             SearchResultsPanel.IsVisible = false;
+        }
+    }
+
+    private async void SearchResult_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: MS3DPRINT.Manager.Core.Search.GlobalSearchResult result }) return;
+        SearchResultsPanel.IsVisible = false;
+        SearchBox.Text = string.Empty;
+        if (result.Project is { } project)
+        {
+            ProjectsWorkspacePanel.IsVisible = true;
+            DashboardStats.IsVisible = false;
+            DashboardContent.IsVisible = false;
+            PageTitle.Text = project.ProjectName;
+            PageSubtitle.Text = project.Reference;
+            await LoadProjectDirectoryAsync(project, project.ProjectPath);
+        }
+        else if (result.Client is not null)
+        {
+            ClientsWorkspacePanel.IsVisible = true;
+            DashboardStats.IsVisible = false;
+            DashboardContent.IsVisible = false;
+            PageTitle.Text = "Clients";
+            PageSubtitle.Text = result.Title;
+            await LoadClientsAsync();
         }
     }
 
