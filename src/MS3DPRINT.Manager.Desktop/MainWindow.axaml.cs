@@ -238,11 +238,31 @@ public partial class MainWindow : Window
                     folder.Click += async (_, _) => await LoadProjectDirectoryAsync(project, entry.FullPath);
                     ProjectList.Children.Add(folder);
                 }
-                else ProjectList.Children.Add(new TextBlock { Text = $"Fichier · {entry.Name}", Margin = new Avalonia.Thickness(12, 6) });
+                else
+                {
+                    var file = new Button { Content = $"Fichier · {entry.Name}", Tag = entry.FullPath, HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left };
+                    file.Click += FileEntry_Click;
+                    ProjectList.Children.Add(file);
+                }
             }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         { ProjectList.Children.Add(new TextBlock { Text = "Impossible de lire les fichiers du projet.", Margin = new Avalonia.Thickness(8) }); }
+    }
+
+    private async void FileEntry_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string path } || !File.Exists(path)) return;
+        try
+        {
+            var launcher = TopLevel.GetTopLevel(this)?.Launcher;
+            if (launcher is not null)
+                await launcher.LaunchUriAsync(new Uri(path));
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or UriFormatException)
+        {
+            PageSubtitle.Text = "Impossible d’ouvrir ce fichier.";
+        }
     }
 
     private async void RefreshClients_Click(object? sender, RoutedEventArgs e) => await LoadClientsAsync();
