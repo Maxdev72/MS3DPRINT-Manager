@@ -90,7 +90,7 @@
         <Grid RowDefinitions="Auto,*" RowSpacing="16">
           <Grid ColumnDefinitions="*,Auto">
             <StackPanel Spacing="4"><TextBlock Text="Tous les clients" FontSize="18" FontWeight="SemiBold" /><TextBlock Text="Catalogue lu depuis votre espace de travail." Classes="muted" /></StackPanel>
-            <Button Grid.Column="1" Content="Actualiser" Click="RefreshClients_Click" VerticalAlignment="Center" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"><Button Content="Créer" Click="CreateClient_Click" /><Button Content="Actualiser" Click="RefreshClients_Click" VerticalAlignment="Center" /></StackPanel>
           </Grid>
           <ScrollViewer Grid.Row="1"><StackPanel x:Name="ClientList" Spacing="8" /></ScrollViewer>
         </Grid>

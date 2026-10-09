@@ -295,6 +295,22 @@ public partial class MainWindow : Window
 
     private async void RefreshClients_Click(object? sender, RoutedEventArgs e) => await LoadClientsAsync();
 
+    private async void CreateClient_Click(object? sender, RoutedEventArgs e)
+    {
+        var dialog = new CreateClientWindow();
+        if (!await dialog.ShowDialog<bool>(this)) return;
+        var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        try
+        {
+            new WorkspaceClientCreator().CreateProfessional(root, dialog.ClientName, dialog.Code);
+            await LoadClientsAsync();
+        }
+        catch (Exception exception) when (exception is ArgumentException or IOException or InvalidOperationException)
+        {
+            PageSubtitle.Text = exception.Message;
+        }
+    }
+
     private async Task LoadClientsAsync()
     {
         var workspaceRoot = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
