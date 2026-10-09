@@ -626,13 +626,35 @@ public partial class MainWindow : Window
             if (collections.Count == 0) { CollectionList.Children.Add(new TextBlock { Text = "Aucune collection trouvée.", Margin = new Avalonia.Thickness(8) }); return; }
             foreach (var item in collections)
             {
-                var button = new Button { Content = $"{item.Name}\n{item.Profile?.Description ?? "Collection"} · Modifié le {item.LastWriteTime:dd/MM/yyyy}", Tag = item.Path, HorizontalContentAlignment = HorizontalAlignment.Left };
-                button.Click += OpenFolder_Click;
-                CollectionList.Children.Add(button);
+                var content = new StackPanel { Spacing = 6 };
+                content.Children.Add(new TextBlock { Text = item.Name, FontWeight = FontWeight.SemiBold });
+                content.Children.Add(new TextBlock { Text = (item.Profile?.Description ?? "Collection") + $" · Modifié le {item.LastWriteTime:dd/MM/yyyy}", Classes = { "muted" }, TextWrapping = TextWrapping.Wrap });
+                var commands = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+                var open = new Button { Content = "Ouvrir", Tag = item.Path }; open.Click += OpenFolder_Click;
+                var edit = new Button { Content = "Modifier la fiche", Tag = item }; edit.Click += EditCollection_Click;
+                commands.Children.Add(open); commands.Children.Add(edit); content.Children.Add(commands);
+                CollectionList.Children.Add(new Border { Background = new SolidColorBrush(Color.Parse("#141F30")), CornerRadius = new Avalonia.CornerRadius(10), Padding = new Avalonia.Thickness(14), Child = content });
             }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         { CollectionList.Children.Add(new TextBlock { Text = "Impossible de lire les collections.", Margin = new Avalonia.Thickness(8) }); }
+    }
+
+    private async void EditCollection_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: MS3DPRINT.Manager.Core.Collections.CollectionItemSummary item }) return;
+        var dialog = new EditCollectionWindow(item);
+        if (!await dialog.ShowDialog<bool>(this)) return;
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var category = Path.GetRelativePath(root, item.Path).Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)[0];
+            await Task.Run(() => new WorkspaceCollectionEditor().Save(root, item, category, dialog.NameValue, dialog.Description, dialog.Notes));
+            PageSubtitle.Text = "Fiche collection enregistrée.";
+            await LoadCollectionsAsync();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { PageSubtitle.Text = exception.Message; }
     }
 
     private async void RefreshFilaments_Click(object? sender, RoutedEventArgs e) => await LoadFilamentsAsync();
