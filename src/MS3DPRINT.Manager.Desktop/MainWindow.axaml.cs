@@ -177,6 +177,18 @@ public partial class MainWindow : Window
 
     private async void RefreshProjects_Click(object? sender, RoutedEventArgs e) => await LoadProjectsAsync();
 
+    private async void CreateProject_Click(object? sender, RoutedEventArgs e)
+    {
+        var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        var clients = await Task.Run(() => new WorkspaceClientReader().Load(root));
+        var dialog = new CreateProjectWindow(clients);
+        if (await dialog.ShowDialog<bool>(this) && dialog.Client is { } client)
+        {
+            new WorkspaceProjectCreator().Create(client.ClientPath, client.ClientCode, DateTime.Today.Year, dialog.ProjectName);
+            await LoadProjectsAsync();
+        }
+    }
+
     private async Task LoadProjectsAsync()
     {
         var workspaceRoot = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;

@@ -72,7 +72,7 @@
           </Grid>
         </Border>
         <Border Grid.Column="1" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="20">
-          <StackPanel Spacing="16"><TextBlock Text="Activité" FontSize="18" FontWeight="SemiBold" /><StackPanel Spacing="6"><TextBlock Text="Espace de travail" Classes="muted" /><TextBlock x:Name="WorkspaceStatusText" Text="Lecture des données…" TextWrapping="Wrap" /></StackPanel><StackPanel Spacing="6"><TextBlock Text="Clients" Classes="muted" /><TextBlock x:Name="ClientCountText" Text="—" TextWrapping="Wrap" /></StackPanel><Border Height="1" Background="{DynamicResource BorderBrush}" /><Button Content="Créer un projet" HorizontalAlignment="Left" /></StackPanel>
+          <StackPanel Spacing="16"><TextBlock Text="Activité" FontSize="18" FontWeight="SemiBold" /><StackPanel Spacing="6"><TextBlock Text="Espace de travail" Classes="muted" /><TextBlock x:Name="WorkspaceStatusText" Text="Lecture des données…" TextWrapping="Wrap" /></StackPanel><StackPanel Spacing="6"><TextBlock Text="Clients" Classes="muted" /><TextBlock x:Name="ClientCountText" Text="—" TextWrapping="Wrap" /></StackPanel><Border Height="1" Background="{DynamicResource BorderBrush}" /><Button Content="Créer un projet" Click="CreateProject_Click" HorizontalAlignment="Left" /></StackPanel>
         </Border>
       </Grid>
       <Border x:Name="ProjectsWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="20">
