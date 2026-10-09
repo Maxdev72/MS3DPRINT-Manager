@@ -344,23 +344,26 @@ public partial class MainWindow : Window
 
             foreach (var client in clients)
             {
-                ClientList.Children.Add(new Border
+                var item = new Button
                 {
-                    Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#141F30")),
-                    CornerRadius = new Avalonia.CornerRadius(8),
-                    Padding = new Avalonia.Thickness(14),
-                    Child = new TextBlock
-                    {
-                        Text = $"{client.DisplayName}\n{client.ProfileLabel} · {client.ProjectCount} projet(s)",
-                        TextWrapping = Avalonia.Media.TextWrapping.Wrap
-                    }
-                });
+                    Content = $"{client.DisplayName}\n{client.ProfileLabel} · {client.ProjectCount} projet(s)",
+                    Tag = client,
+                    HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left
+                };
+                item.Click += ClientEntry_Click;
+                ClientList.Children.Add(item);
             }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
             ClientList.Children.Add(new TextBlock { Text = "Impossible de lire les clients.", Margin = new Avalonia.Thickness(8) });
         }
+    }
+
+    private void ClientEntry_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: MS3DPRINT.Manager.Core.Clients.ClientSummary client })
+            PageSubtitle.Text = $"{client.DisplayName} · {client.ClientCode} · {client.ProjectCount} projet(s)";
     }
 
     private async void RefreshCollections_Click(object? sender, RoutedEventArgs e) => await LoadCollectionsAsync();
