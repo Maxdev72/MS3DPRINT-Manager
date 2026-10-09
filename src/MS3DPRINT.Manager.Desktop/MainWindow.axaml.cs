@@ -43,11 +43,13 @@ public partial class MainWindow : Window
         var projectsVisible = destination == "Projets";
         var clientsVisible = destination == "Clients";
         var collectionsVisible = destination == "Collections";
-        DashboardStats.IsVisible = !projectsVisible && !clientsVisible && !collectionsVisible;
-        DashboardContent.IsVisible = !projectsVisible && !clientsVisible && !collectionsVisible;
+        var filamentsVisible = destination == "Filaments";
+        DashboardStats.IsVisible = !projectsVisible && !clientsVisible && !collectionsVisible && !filamentsVisible;
+        DashboardContent.IsVisible = !projectsVisible && !clientsVisible && !collectionsVisible && !filamentsVisible;
         ProjectsWorkspacePanel.IsVisible = projectsVisible;
         ClientsWorkspacePanel.IsVisible = clientsVisible;
         CollectionsWorkspacePanel.IsVisible = collectionsVisible;
+        FilamentsWorkspacePanel.IsVisible = filamentsVisible;
 
         if (projectsVisible)
             await LoadProjectsAsync();
@@ -55,6 +57,8 @@ public partial class MainWindow : Window
             await LoadClientsAsync();
         else if (collectionsVisible)
             await LoadCollectionsAsync();
+        else if (filamentsVisible)
+            await LoadFilamentsAsync();
     }
 
     private void Window_KeyDown(object? sender, KeyEventArgs e)
@@ -219,5 +223,22 @@ public partial class MainWindow : Window
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         { CollectionList.Children.Add(new TextBlock { Text = "Impossible de lire les collections.", Margin = new Avalonia.Thickness(8) }); }
+    }
+
+    private async void RefreshFilaments_Click(object? sender, RoutedEventArgs e) => await LoadFilamentsAsync();
+
+    private async Task LoadFilamentsAsync()
+    {
+        var workspaceRoot = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        FilamentList.Children.Clear();
+        try
+        {
+            var filaments = await Task.Run(() => new WorkspaceInventoryReader().LoadFilaments(workspaceRoot));
+            if (filaments.Count == 0) { FilamentList.Children.Add(new TextBlock { Text = "Aucun filament enregistré.", Margin = new Avalonia.Thickness(8) }); return; }
+            foreach (var filament in filaments)
+                FilamentList.Children.Add(new Border { Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#141F30")), CornerRadius = new Avalonia.CornerRadius(8), Padding = new Avalonia.Thickness(14), Child = new TextBlock { Text = $"{filament.Brand} · {filament.Name}\n{filament.Material} · {filament.PricePerKg:0.00} €/kg{(filament.IsAbrasive ? " · Abrasif" : string.Empty)}", TextWrapping = Avalonia.Media.TextWrapping.Wrap } });
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        { FilamentList.Children.Add(new TextBlock { Text = "Impossible de lire les filaments.", Margin = new Avalonia.Thickness(8) }); }
     }
 }
