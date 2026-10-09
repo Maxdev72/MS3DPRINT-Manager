@@ -174,14 +174,32 @@ public partial class MainWindow : Window
         if (sender is not Button { Tag: MS3DPRINT.Manager.Core.Projects.ProjectSummary project }) return;
         PageTitle.Text = project.ProjectName;
         PageSubtitle.Text = project.Reference;
+        await LoadProjectDirectoryAsync(project, project.ProjectPath);
+    }
+
+    private async Task LoadProjectDirectoryAsync(MS3DPRINT.Manager.Core.Projects.ProjectSummary project, string directory)
+    {
         ProjectList.Children.Clear();
-        ProjectList.Children.Add(new Button { Content = "← Retour aux projets", HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left, Tag = "back" });
-        ((Button)ProjectList.Children[0]).Click += async (_, _) => await LoadProjectsAsync();
+        var back = new Button { Content = directory == project.ProjectPath ? "← Retour aux projets" : "← Dossier parent", HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left };
+        back.Click += async (_, _) =>
+        {
+            if (directory == project.ProjectPath) await LoadProjectsAsync();
+            else await LoadProjectDirectoryAsync(project, new ProjectWorkspaceBrowser().Parent(project.ProjectPath, directory));
+        };
+        ProjectList.Children.Add(back);
         try
         {
-            var entries = await Task.Run(() => new ProjectWorkspaceBrowser().List(project.ProjectPath));
+            var entries = await Task.Run(() => new ProjectWorkspaceBrowser().List(project.ProjectPath, directory));
             foreach (var entry in entries)
-                ProjectList.Children.Add(new TextBlock { Text = $"{(entry.IsDirectory ? "Dossier" : "Fichier")} · {entry.Name}", Margin = new Avalonia.Thickness(12, 6) });
+            {
+                if (entry.IsDirectory)
+                {
+                    var folder = new Button { Content = $"Dossier · {entry.Name}", HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left };
+                    folder.Click += async (_, _) => await LoadProjectDirectoryAsync(project, entry.FullPath);
+                    ProjectList.Children.Add(folder);
+                }
+                else ProjectList.Children.Add(new TextBlock { Text = $"Fichier · {entry.Name}", Margin = new Avalonia.Thickness(12, 6) });
+            }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         { ProjectList.Children.Add(new TextBlock { Text = "Impossible de lire les fichiers du projet.", Margin = new Avalonia.Thickness(8) }); }
