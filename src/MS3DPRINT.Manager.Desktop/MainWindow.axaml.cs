@@ -255,6 +255,12 @@ public partial class MainWindow : Window
         if (sender is not Button { Tag: string path } || !File.Exists(path)) return;
         try
         {
+            if (IsImage(path))
+            {
+                await new ImagePreviewWindow(path).ShowDialog(this);
+                return;
+            }
+
             var launcher = TopLevel.GetTopLevel(this)?.Launcher;
             if (launcher is not null)
                 await launcher.LaunchUriAsync(new Uri(path));
@@ -264,6 +270,9 @@ public partial class MainWindow : Window
             PageSubtitle.Text = "Impossible d’ouvrir ce fichier.";
         }
     }
+
+    private static bool IsImage(string path)
+        => Path.GetExtension(path).ToLowerInvariant() is ".png" or ".jpg" or ".jpeg" or ".bmp" or ".gif";
 
     private async void RefreshClients_Click(object? sender, RoutedEventArgs e) => await LoadClientsAsync();
 
