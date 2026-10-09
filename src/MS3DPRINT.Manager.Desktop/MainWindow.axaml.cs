@@ -153,23 +153,38 @@ public partial class MainWindow : Window
 
             foreach (var project in projects)
             {
-                ProjectList.Children.Add(new Border
+                var button = new Button
                 {
-                    Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#141F30")),
-                    CornerRadius = new Avalonia.CornerRadius(8),
-                    Padding = new Avalonia.Thickness(14),
-                    Child = new TextBlock
-                    {
-                        Text = $"{project.Reference} · {project.ProjectName}\n{project.ClientFolderName} · {project.StatusLabel}",
-                        TextWrapping = Avalonia.Media.TextWrapping.Wrap
-                    }
-                });
+                    Tag = project,
+                    Content = $"{project.Reference} · {project.ProjectName}\n{project.ClientFolderName} · {project.StatusLabel}",
+                    HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left
+                };
+                button.Click += ProjectEntry_Click;
+                ProjectList.Children.Add(button);
             }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
             ProjectList.Children.Add(new TextBlock { Text = "Impossible de lire les projets.", Margin = new Avalonia.Thickness(8) });
         }
+    }
+
+    private async void ProjectEntry_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: MS3DPRINT.Manager.Core.Projects.ProjectSummary project }) return;
+        PageTitle.Text = project.ProjectName;
+        PageSubtitle.Text = project.Reference;
+        ProjectList.Children.Clear();
+        ProjectList.Children.Add(new Button { Content = "← Retour aux projets", HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left, Tag = "back" });
+        ((Button)ProjectList.Children[0]).Click += async (_, _) => await LoadProjectsAsync();
+        try
+        {
+            var entries = await Task.Run(() => new ProjectWorkspaceBrowser().List(project.ProjectPath));
+            foreach (var entry in entries)
+                ProjectList.Children.Add(new TextBlock { Text = $"{(entry.IsDirectory ? "Dossier" : "Fichier")} · {entry.Name}", Margin = new Avalonia.Thickness(12, 6) });
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        { ProjectList.Children.Add(new TextBlock { Text = "Impossible de lire les fichiers du projet.", Margin = new Avalonia.Thickness(8) }); }
     }
 
     private async void RefreshClients_Click(object? sender, RoutedEventArgs e) => await LoadClientsAsync();
