@@ -327,6 +327,9 @@ public partial class MainWindow : Window
             if (ThreeDFileSupport.IsPreviewable(path) && DesktopPreviewLauncher.TryOpenThreeD(path))
                 return;
 
+            if (DesktopPreviewLauncher.TryOpenDocument(path))
+                return;
+
             var launcher = TopLevel.GetTopLevel(this)?.Launcher;
             if (launcher is not null)
                 await launcher.LaunchUriAsync(new Uri(path));

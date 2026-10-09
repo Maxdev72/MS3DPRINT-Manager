@@ -10,6 +10,7 @@ internal static class Program
     public static void Main(string[] args)
     {
         DesktopPreviewLauncher.OpenThreeD = path => ModelPreviewLauncher.Show(path, null);
+        DesktopPreviewLauncher.OpenDocument = path => new DocumentPreviewWindow(path).ShowDialog();
         DesktopApplication.BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
 }
