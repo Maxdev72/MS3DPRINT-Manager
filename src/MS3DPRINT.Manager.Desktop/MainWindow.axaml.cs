@@ -42,15 +42,19 @@ public partial class MainWindow : Window
         PageSubtitle.Text = $"Espace {destination.ToLowerInvariant()} de l’atelier.";
         var projectsVisible = destination == "Projets";
         var clientsVisible = destination == "Clients";
-        DashboardStats.IsVisible = !projectsVisible && !clientsVisible;
-        DashboardContent.IsVisible = !projectsVisible && !clientsVisible;
+        var collectionsVisible = destination == "Collections";
+        DashboardStats.IsVisible = !projectsVisible && !clientsVisible && !collectionsVisible;
+        DashboardContent.IsVisible = !projectsVisible && !clientsVisible && !collectionsVisible;
         ProjectsWorkspacePanel.IsVisible = projectsVisible;
         ClientsWorkspacePanel.IsVisible = clientsVisible;
+        CollectionsWorkspacePanel.IsVisible = collectionsVisible;
 
         if (projectsVisible)
             await LoadProjectsAsync();
         else if (clientsVisible)
             await LoadClientsAsync();
+        else if (collectionsVisible)
+            await LoadCollectionsAsync();
     }
 
     private void Window_KeyDown(object? sender, KeyEventArgs e)
@@ -198,5 +202,22 @@ public partial class MainWindow : Window
         {
             ClientList.Children.Add(new TextBlock { Text = "Impossible de lire les clients.", Margin = new Avalonia.Thickness(8) });
         }
+    }
+
+    private async void RefreshCollections_Click(object? sender, RoutedEventArgs e) => await LoadCollectionsAsync();
+
+    private async Task LoadCollectionsAsync()
+    {
+        var workspaceRoot = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        CollectionList.Children.Clear();
+        try
+        {
+            var collections = await Task.Run(() => new WorkspaceInventoryReader().LoadAllCollections(workspaceRoot));
+            if (collections.Count == 0) { CollectionList.Children.Add(new TextBlock { Text = "Aucune collection trouvée.", Margin = new Avalonia.Thickness(8) }); return; }
+            foreach (var item in collections)
+                CollectionList.Children.Add(new Border { Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#141F30")), CornerRadius = new Avalonia.CornerRadius(8), Padding = new Avalonia.Thickness(14), Child = new TextBlock { Text = $"{item.Name}\nModifié le {item.LastWriteTime:dd/MM/yyyy}", TextWrapping = Avalonia.Media.TextWrapping.Wrap } });
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        { CollectionList.Children.Add(new TextBlock { Text = "Impossible de lire les collections.", Margin = new Avalonia.Thickness(8) }); }
     }
 }
