@@ -351,10 +351,13 @@ public partial class MainWindow : Window
         edit.Click += EditProject_Click;
         var open = new Button { Content = "Ouvrir le dossier", Tag = project.ProjectPath };
         open.Click += OpenFolder_Click;
+        var rename = new Button { Content = "Renommer", Tag = project };
+        rename.Click += RenameProject_Click;
         var trash = new Button { Content = "Corbeille", Tag = project };
         trash.Click += TrashProject_Click;
         commands.Children.Add(edit);
         commands.Children.Add(open);
+        commands.Children.Add(rename);
         commands.Children.Add(trash);
         content.Children.Add(commands);
         ProjectList.Children.Add(new Border
@@ -409,6 +412,23 @@ public partial class MainWindow : Window
             await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).TrashProject(project));
             PageTitle.Text = "Projets";
             PageSubtitle.Text = "Projet envoyé dans la corbeille.";
+            await LoadProjectsAsync();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { PageSubtitle.Text = exception.Message; }
+    }
+
+    private async void RenameProject_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: ProjectSummary project }) return;
+        var dialog = new TextPromptWindow("Renommer le projet", "La référence du projet restera inchangée.", project.ProjectName);
+        if (!await dialog.ShowDialog<bool>(this)) return;
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).RenameProject(project, dialog.Value));
+            PageTitle.Text = "Projets";
+            PageSubtitle.Text = "Projet renommé.";
             await LoadProjectsAsync();
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
@@ -492,9 +512,11 @@ public partial class MainWindow : Window
         edit.Click += EditClient_Click;
         var open = new Button { Content = "Ouvrir le dossier", Tag = client.ClientPath };
         open.Click += OpenFolder_Click;
+        var rename = new Button { Content = "Renommer", Tag = client };
+        rename.Click += RenameClient_Click;
         var trash = new Button { Content = "Corbeille", Tag = client };
         trash.Click += TrashClient_Click;
-        commands.Children.Add(edit); commands.Children.Add(open); commands.Children.Add(trash); card.Children.Add(commands);
+        commands.Children.Add(edit); commands.Children.Add(open); commands.Children.Add(rename); commands.Children.Add(trash); card.Children.Add(commands);
         ClientList.Children.Add(new Border { Background = new SolidColorBrush(Color.Parse("#141F30")), CornerRadius = new Avalonia.CornerRadius(10), Padding = new Avalonia.Thickness(16), Child = card });
         try
         {
@@ -547,6 +569,23 @@ public partial class MainWindow : Window
             await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).TrashClient(client));
             PageTitle.Text = "Clients";
             PageSubtitle.Text = "Client envoyé dans la corbeille.";
+            await LoadClientsAsync();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { PageSubtitle.Text = exception.Message; }
+    }
+
+    private async void RenameClient_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: ClientSummary client }) return;
+        var dialog = new TextPromptWindow("Renommer le client", "Le code client et les références existantes restent inchangés.", client.FolderName);
+        if (!await dialog.ShowDialog<bool>(this)) return;
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).RenameClient(client, dialog.Value));
+            PageTitle.Text = "Clients";
+            PageSubtitle.Text = "Client renommé.";
             await LoadClientsAsync();
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
