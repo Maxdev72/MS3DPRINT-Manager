@@ -184,8 +184,15 @@ public partial class MainWindow : Window
         var dialog = new CreateProjectWindow(clients);
         if (await dialog.ShowDialog<bool>(this) && dialog.Client is { } client)
         {
-            new WorkspaceProjectCreator().Create(client.ClientPath, client.ClientCode, DateTime.Today.Year, dialog.ProjectName);
-            await LoadProjectsAsync();
+            try
+            {
+                new WorkspaceProjectCreator().Create(client.ClientPath, client.ClientCode, DateTime.Today.Year, dialog.ProjectName);
+                await LoadProjectsAsync();
+            }
+            catch (Exception exception) when (exception is ArgumentException or IOException or InvalidOperationException)
+            {
+                PageSubtitle.Text = exception.Message;
+            }
         }
     }
 
