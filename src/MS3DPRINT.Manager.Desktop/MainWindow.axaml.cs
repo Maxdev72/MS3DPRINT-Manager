@@ -351,8 +351,11 @@ public partial class MainWindow : Window
         edit.Click += EditProject_Click;
         var open = new Button { Content = "Ouvrir le dossier", Tag = project.ProjectPath };
         open.Click += OpenFolder_Click;
+        var trash = new Button { Content = "Corbeille", Tag = project };
+        trash.Click += TrashProject_Click;
         commands.Children.Add(edit);
         commands.Children.Add(open);
+        commands.Children.Add(trash);
         content.Children.Add(commands);
         ProjectList.Children.Add(new Border
         {
@@ -394,6 +397,22 @@ public partial class MainWindow : Window
         {
             PageSubtitle.Text = "Impossible d’ouvrir ce dossier.";
         }
+    }
+
+    private async void TrashProject_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: ProjectSummary project }) return;
+        if (!await new ConfirmTrashWindow(project.Reference, "Tous les fichiers et sous-dossiers du projet sont concernés.").ShowDialog<bool>(this)) return;
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).TrashProject(project));
+            PageTitle.Text = "Projets";
+            PageSubtitle.Text = "Projet envoyé dans la corbeille.";
+            await LoadProjectsAsync();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { PageSubtitle.Text = exception.Message; }
     }
 
     private async void RefreshClients_Click(object? sender, RoutedEventArgs e) => await LoadClientsAsync();
@@ -473,7 +492,9 @@ public partial class MainWindow : Window
         edit.Click += EditClient_Click;
         var open = new Button { Content = "Ouvrir le dossier", Tag = client.ClientPath };
         open.Click += OpenFolder_Click;
-        commands.Children.Add(edit); commands.Children.Add(open); card.Children.Add(commands);
+        var trash = new Button { Content = "Corbeille", Tag = client };
+        trash.Click += TrashClient_Click;
+        commands.Children.Add(edit); commands.Children.Add(open); commands.Children.Add(trash); card.Children.Add(commands);
         ClientList.Children.Add(new Border { Background = new SolidColorBrush(Color.Parse("#141F30")), CornerRadius = new Avalonia.CornerRadius(10), Padding = new Avalonia.Thickness(16), Child = card });
         try
         {
@@ -514,6 +535,22 @@ public partial class MainWindow : Window
         {
             PageSubtitle.Text = exception.Message;
         }
+    }
+
+    private async void TrashClient_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: ClientSummary client }) return;
+        if (!await new ConfirmTrashWindow(client.DisplayName, "Ses projets et tous ses fichiers seront concernés.").ShowDialog<bool>(this)) return;
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).TrashClient(client));
+            PageTitle.Text = "Clients";
+            PageSubtitle.Text = "Client envoyé dans la corbeille.";
+            await LoadClientsAsync();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { PageSubtitle.Text = exception.Message; }
     }
 
     private async void RefreshCollections_Click(object? sender, RoutedEventArgs e) => await LoadCollectionsAsync();
