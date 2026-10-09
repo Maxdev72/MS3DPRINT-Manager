@@ -49,12 +49,14 @@ public partial class MainWindow : Window
         var clientsVisible = destination == "Clients";
         var collectionsVisible = destination == "Collections";
         var filamentsVisible = destination == "Filaments";
-        DashboardStats.IsVisible = !projectsVisible && !clientsVisible && !collectionsVisible && !filamentsVisible;
-        DashboardContent.IsVisible = !projectsVisible && !clientsVisible && !collectionsVisible && !filamentsVisible;
+        var trashVisible = destination == "Corbeille";
+        DashboardStats.IsVisible = !projectsVisible && !clientsVisible && !collectionsVisible && !filamentsVisible && !trashVisible;
+        DashboardContent.IsVisible = !projectsVisible && !clientsVisible && !collectionsVisible && !filamentsVisible && !trashVisible;
         ProjectsWorkspacePanel.IsVisible = projectsVisible;
         ClientsWorkspacePanel.IsVisible = clientsVisible;
         CollectionsWorkspacePanel.IsVisible = collectionsVisible;
         FilamentsWorkspacePanel.IsVisible = filamentsVisible;
+        TrashWorkspacePanel.IsVisible = trashVisible;
 
         if (projectsVisible)
             await LoadProjectsAsync();
@@ -64,6 +66,8 @@ public partial class MainWindow : Window
             await LoadCollectionsAsync();
         else if (filamentsVisible)
             await LoadFilamentsAsync();
+        else if (trashVisible)
+            await LoadTrashAsync();
     }
 
     private void Window_KeyDown(object? sender, KeyEventArgs e)
@@ -278,5 +282,22 @@ public partial class MainWindow : Window
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         { FilamentList.Children.Add(new TextBlock { Text = "Impossible de lire les filaments.", Margin = new Avalonia.Thickness(8) }); }
+    }
+
+    private async void RefreshTrash_Click(object? sender, RoutedEventArgs e) => await LoadTrashAsync();
+
+    private async Task LoadTrashAsync()
+    {
+        var workspaceRoot = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        TrashList.Children.Clear();
+        try
+        {
+            var entries = await Task.Run(() => new WorkspaceTrashReader().Load(workspaceRoot));
+            if (entries.Count == 0) { TrashList.Children.Add(new TextBlock { Text = "La corbeille est vide.", Margin = new Avalonia.Thickness(8) }); return; }
+            foreach (var entry in entries)
+                TrashList.Children.Add(new TextBlock { Text = entry.Label, Margin = new Avalonia.Thickness(12, 8), TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        { TrashList.Children.Add(new TextBlock { Text = "Impossible de lire la corbeille.", Margin = new Avalonia.Thickness(8) }); }
     }
 }

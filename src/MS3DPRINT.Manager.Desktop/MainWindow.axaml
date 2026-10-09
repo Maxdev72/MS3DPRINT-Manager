@@ -107,6 +107,9 @@
           <ScrollViewer Grid.Row="1"><StackPanel x:Name="FilamentList" Spacing="8" /></ScrollViewer>
         </Grid>
       </Border>
+      <Border x:Name="TrashWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="20">
+        <Grid RowDefinitions="Auto,*" RowSpacing="16"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock Text="Corbeille" FontSize="18" FontWeight="SemiBold" /><TextBlock Text="Éléments supprimés de façon réversible." Classes="muted" /></StackPanel><Button Grid.Column="1" Content="Actualiser" Click="RefreshTrash_Click" VerticalAlignment="Center" /></Grid><ScrollViewer Grid.Row="1"><StackPanel x:Name="TrashList" Spacing="8" /></ScrollViewer></Grid>
+      </Border>
     </Grid>
     <Border x:Name="SearchResultsPanel" Grid.Column="1" IsVisible="False" HorizontalAlignment="Right" VerticalAlignment="Top" Width="390" MaxHeight="420" Margin="0,82,34,0" Background="{DynamicResource RaisedSurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="8">
       <ScrollViewer MaxHeight="400">
