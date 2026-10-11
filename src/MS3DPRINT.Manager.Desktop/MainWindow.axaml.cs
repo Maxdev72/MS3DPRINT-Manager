@@ -513,7 +513,10 @@ public partial class MainWindow : Window
         var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
         try
         {
-            new WorkspaceClientCreator().CreateProfessional(root, dialog.ClientName, dialog.Code);
+            if (dialog.IsIndividual)
+                new WorkspaceClientCreator().CreateIndividual(root, dialog.FirstName, dialog.LastName, dialog.Code);
+            else
+                new WorkspaceClientCreator().CreateProfessional(root, dialog.ClientName, dialog.Code);
             PageTitle.Text = "Clients";
             PageSubtitle.Text = "Client créé.";
             DashboardStats.IsVisible = false;

@@ -15,4 +15,14 @@ public sealed class WorkspaceClientCreator
             new PrimaryContact(null, null, null, null, null), now, now, RelativePath: Path.Combine("01_CLIENTS", name));
         return new ClientCreationService(paths.RootPath, new FolderTreeService(), new ClientProfileStore(paths), new ClientCodeRegistry(Path.Combine(paths.RootPath, "data"))).Create(profile);
     }
+
+    public ClientProfile CreateIndividual(string workspaceRoot, string firstName, string lastName, string code)
+    {
+        var paths = new WorkspaceMetadataPaths(workspaceRoot);
+        var now = DateTimeOffset.UtcNow;
+        var folderName = (lastName.Trim() + " " + firstName.Trim()).Trim();
+        var profile = new ClientProfile(Guid.NewGuid(), ClientKind.Individual, folderName, code, null, firstName.Trim(), lastName.Trim(), null, null,
+            new PrimaryContact(firstName.Trim(), lastName.Trim(), null, null, null), now, now, RelativePath: Path.Combine("01_CLIENTS", folderName));
+        return new ClientCreationService(paths.RootPath, new FolderTreeService(), new ClientProfileStore(paths), new ClientCodeRegistry(Path.Combine(paths.RootPath, "data"))).Create(profile);
+    }
 }
