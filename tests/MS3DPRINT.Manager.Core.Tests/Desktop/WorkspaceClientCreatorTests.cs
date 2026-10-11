@@ -34,4 +34,21 @@ public sealed class WorkspaceClientCreatorTests
         }
         finally { Directory.Delete(root, true); }
     }
+
+    [Fact]
+    public void Complete_existing_client_preserves_its_legacy_folder()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"ms3dprint-legacy-client-{Guid.NewGuid():N}");
+        var folder = Path.Combine(root, "01_CLIENTS", "CLIENT HISTORIQUE");
+        Directory.CreateDirectory(folder);
+        try
+        {
+            var profile = new WorkspaceClientCreator().CompleteExisting(root, folder, ClientKind.Professional, "CLIENT HISTORIQUE", "HISTO", null, null);
+
+            Assert.Equal("CLIENT HISTORIQUE", profile.FolderName);
+            Assert.Equal("01_CLIENTS/CLIENT HISTORIQUE", profile.RelativePath?.Replace('\\', '/'));
+            Assert.True(Directory.Exists(folder));
+        }
+        finally { Directory.Delete(root, true); }
+    }
 }

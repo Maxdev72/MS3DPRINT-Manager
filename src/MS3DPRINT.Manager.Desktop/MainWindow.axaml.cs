@@ -683,11 +683,25 @@ public partial class MainWindow : Window
 
     private async void EditClient_Click(object? sender, RoutedEventArgs e)
     {
-        if (sender is not Button { Tag: ClientSummary { Profile: { } profile } client })
+        if (sender is not Button { Tag: ClientSummary client }) return;
+        if (client.Profile is null)
         {
-            PageSubtitle.Text = "Cette fiche historique ne peut pas encore être modifiée.";
+            var completion = new CreateClientWindow(client);
+            if (!await completion.ShowDialog<bool>(this)) return;
+            try
+            {
+                var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+                var completedProfile = await Task.Run(() => new WorkspaceClientCreator().CompleteExisting(root, client.ClientPath,
+                    completion.IsIndividual ? ClientKind.Individual : ClientKind.Professional,
+                    completion.IsIndividual ? completion.LastName : completion.ClientName, completion.Code, completion.FirstName, completion.LastName));
+                PageSubtitle.Text = "Fiche client historique complétée.";
+                await LoadClientDetailAsync(client with { Profile = completedProfile });
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+            { PageSubtitle.Text = exception.Message; }
             return;
         }
+        var profile = client.Profile;
         var dialog = new EditClientWindow(profile);
         if (!await dialog.ShowDialog<bool>(this)) return;
         try
