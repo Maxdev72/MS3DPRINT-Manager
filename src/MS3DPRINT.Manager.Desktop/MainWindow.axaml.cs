@@ -766,13 +766,32 @@ public partial class MainWindow : Window
             if (filaments.Count == 0) { FilamentList.Children.Add(new TextBlock { Text = "Aucun filament enregistré.", Margin = new Avalonia.Thickness(8) }); return; }
             foreach (var filament in filaments)
             {
+                var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
                 var button = new Button { Content = $"{filament.Brand} · {filament.Name}\n{filament.Material} · {filament.PricePerKg:0.00} €/kg{(filament.IsAbrasive ? " · Abrasif" : string.Empty)}", Tag = filament, HorizontalContentAlignment = HorizontalAlignment.Left };
                 button.Click += EditFilament_Click;
-                FilamentList.Children.Add(button);
+                var trash = new Button { Content = "Corbeille", Tag = filament };
+                trash.Click += TrashFilament_Click;
+                row.Children.Add(button); row.Children.Add(trash);
+                FilamentList.Children.Add(row);
             }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         { FilamentList.Children.Add(new TextBlock { Text = "Impossible de lire les filaments.", Margin = new Avalonia.Thickness(8) }); }
+    }
+
+    private async void TrashFilament_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: MS3DPRINT.Manager.Core.Filaments.FilamentProfile filament }) return;
+        if (!await new ConfirmTrashWindow(filament.Brand + " " + filament.Name, "La fiche pourra être restaurée depuis la corbeille.").ShowDialog<bool>(this)) return;
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            await Task.Run(() => new MS3DPRINT.Manager.Core.Filaments.FilamentStore(root).Trash(filament.Id));
+            PageSubtitle.Text = "Filament envoyé dans la corbeille.";
+            await LoadFilamentsAsync();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { PageSubtitle.Text = exception.Message; }
     }
 
     private async void RefreshTrash_Click(object? sender, RoutedEventArgs e) => await LoadTrashAsync();
