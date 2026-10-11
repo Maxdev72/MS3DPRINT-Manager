@@ -297,18 +297,15 @@ public partial class MainWindow : Window
             {
                 if (entry.IsDirectory)
                 {
-                    var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-                    var folder = new Button { Content = $"Dossier · {entry.Name}", HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left };
+                    var folder = new Button
+                    {
+                        Content = $"▸  {entry.Name}\nDossier du projet",
+                        HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left,
+                        HorizontalAlignment = HorizontalAlignment.Stretch,
+                        Classes = { "workspace-card" }
+                    };
                     folder.Click += async (_, _) => await LoadProjectDirectoryAsync(project, entry.FullPath);
-                    var context = new ProjectDirectoryContext(project, directory, entry.FullPath);
-                    var rename = new Button { Content = "Renommer", Tag = context };
-                    rename.Click += RenameProjectFile_Click;
-                    var move = new Button { Content = "Déplacer", Tag = context };
-                    move.Click += MoveProjectEntry_Click;
-                    var trash = new Button { Content = "Corbeille", Tag = context };
-                    trash.Click += TrashProjectFile_Click;
-                    row.Children.Add(folder); row.Children.Add(rename); row.Children.Add(move); row.Children.Add(trash);
-                    ProjectList.Children.Add(row);
+                    ProjectList.Children.Add(folder);
                 }
                 else
                 {
