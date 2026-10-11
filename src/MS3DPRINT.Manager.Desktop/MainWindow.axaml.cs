@@ -921,10 +921,15 @@ public partial class MainWindow : Window
         try
         {
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
-            var filaments = new WorkspaceInventoryReader().LoadFilaments(root);
+            var inventory = new WorkspaceInventoryReader();
+            var filaments = inventory.LoadFilaments(root);
+            var printers = inventory.LoadPrinters(root);
             EstimateFilament.ItemsSource = filaments;
             EstimateFilament.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>((f, _) => new TextBlock { Text = $"{f.Brand} · {f.Name} ({f.PricePerKg:0.00} €/kg)" });
             EstimateFilament.SelectedIndex = filaments.Count > 0 ? 0 : -1;
+            EstimatePrinter.ItemsSource = printers.Where(printer => printer.IsActive).ToArray();
+            EstimatePrinter.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<PrinterProfile>((printer, _) => new TextBlock { Text = $"{printer.Name} · {printer.HourlyRate:0.00} €/h" });
+            EstimatePrinter.SelectedIndex = printers.Any(printer => printer.IsActive) ? 0 : -1;
             EstimateDetail.Text = filaments.Count == 0 ? "Ajoutez un filament dans la page Filaments pour démarrer." : "Renseignez vos paramètres puis calculez.";
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException)
@@ -933,6 +938,12 @@ public partial class MainWindow : Window
             EstimateDetail.Text = "Les filaments ne peuvent pas être lus : " + exception.Message;
         }
         return Task.CompletedTask;
+    }
+
+    private void EstimatePrinter_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (EstimatePrinter.SelectedItem is not PrinterProfile printer) return;
+        EstimateMachineRate.Text = printer.HourlyRate.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
     }
 
     private async void RefreshPrinters_Click(object? sender, RoutedEventArgs e) => await LoadPrintersAsync();

@@ -20,6 +20,15 @@ public sealed class AvaloniaShellMarkupTests
     }
 
     [Fact]
+    public void Estimate_workspace_can_select_a_registered_printer()
+    {
+        var markup = File.ReadAllText(MainWindowPath());
+
+        Assert.Contains("EstimatePrinter", markup, StringComparison.Ordinal);
+        Assert.Contains("EstimatePrinter_SelectionChanged", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Main_window_exposes_a_dashboard_and_command_search()
     {
         var markup = File.ReadAllText(MainWindowPath());
