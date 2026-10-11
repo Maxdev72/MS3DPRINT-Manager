@@ -20,6 +20,22 @@ public sealed class WorkspaceCollectionEditorTests : IDisposable
         Assert.Equal("Pièce imprimable", new CollectionProfileStore(_root).FindByPath(folder)!.Description);
     }
 
+    [Fact]
+    public void Save_persists_supplier_contact_information()
+    {
+        var folder = Path.Combine(_root, "06_FOURNISSEURS", "Filament Pro");
+        Directory.CreateDirectory(folder);
+        var item = new CollectionItemSummary("Filament Pro", folder, DateTimeOffset.UtcNow);
+
+        var saved = new WorkspaceCollectionEditor().Save(_root, item, "06_FOURNISSEURS", "Filament Pro", null, null,
+            contact: "Camille Durand", address: "8 rue des Ateliers", phone: "0600000000", email: "contact@example.test", website: "https://example.test");
+
+        Assert.Equal("Camille Durand", saved.Contact);
+        var stored = new CollectionProfileStore(_root).FindByPath(folder)!;
+        Assert.Equal("contact@example.test", stored.Email);
+        Assert.Equal("https://example.test", stored.Website);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root)) Directory.Delete(_root, true);

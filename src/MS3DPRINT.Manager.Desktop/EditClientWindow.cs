@@ -8,6 +8,10 @@ public sealed class EditClientWindow : Window
 {
     private readonly TextBox _address;
     private readonly TextBox _notes;
+    private readonly TextBox _companyName;
+    private readonly TextBox _siret;
+    private readonly TextBox _identityFirstName;
+    private readonly TextBox _identityLastName;
     private readonly TextBox _contactFirstName;
     private readonly TextBox _contactLastName;
     private readonly TextBox _contactRole;
@@ -15,6 +19,10 @@ public sealed class EditClientWindow : Window
     private readonly TextBox _contactEmail;
     public string? Address => Normalize(_address.Text);
     public string? Notes => Normalize(_notes.Text);
+    public string? CompanyName => Normalize(_companyName.Text);
+    public string? Siret => Normalize(_siret.Text);
+    public string? IdentityFirstName => Normalize(_identityFirstName.Text);
+    public string? IdentityLastName => Normalize(_identityLastName.Text);
     public string? ContactFirstName => Normalize(_contactFirstName.Text);
     public string? ContactLastName => Normalize(_contactLastName.Text);
     public string? ContactRole => Normalize(_contactRole.Text);
@@ -27,6 +35,10 @@ public sealed class EditClientWindow : Window
         Width = 520;
         Height = 680;
         MinWidth = 420;
+        _companyName = new TextBox { Text = profile.CompanyName ?? string.Empty, PlaceholderText = "Raison sociale", IsVisible = profile.Kind == ClientKind.Professional };
+        _siret = new TextBox { Text = profile.Siret ?? string.Empty, PlaceholderText = "SIRET", IsVisible = profile.Kind == ClientKind.Professional };
+        _identityFirstName = new TextBox { Text = profile.FirstName ?? string.Empty, PlaceholderText = "Prénom", IsVisible = profile.Kind == ClientKind.Individual };
+        _identityLastName = new TextBox { Text = profile.LastName ?? string.Empty, PlaceholderText = "Nom", IsVisible = profile.Kind == ClientKind.Individual };
         _address = new TextBox { Text = profile.Address ?? string.Empty, PlaceholderText = "Adresse", AcceptsReturn = true, TextWrapping = Avalonia.Media.TextWrapping.Wrap, MinHeight = 90 };
         _notes = new TextBox { Text = profile.Notes ?? string.Empty, PlaceholderText = "Notes internes", AcceptsReturn = true, TextWrapping = Avalonia.Media.TextWrapping.Wrap, MinHeight = 100 };
         _contactFirstName = new TextBox { Text = profile.PrimaryContact.FirstName ?? string.Empty, PlaceholderText = "Prénom du contact" };
@@ -43,6 +55,7 @@ public sealed class EditClientWindow : Window
             {
                 new TextBlock { Text = profile.Kind == ClientKind.Professional ? profile.CompanyName ?? profile.FolderName : string.Join(" ", new[] { profile.FirstName, profile.LastName }), FontSize = 20, FontWeight = Avalonia.Media.FontWeight.SemiBold },
                 new TextBlock { Text = profile.ClientCode, Classes = { "muted" } },
+                new TextBlock { Text = "Identité" }, _companyName, _siret, _identityFirstName, _identityLastName,
                 new TextBlock { Text = "Contact" }, _contactFirstName, _contactLastName, _contactRole, _contactPhone, _contactEmail,
                 new TextBlock { Text = "Adresse" }, _address,
                 new TextBlock { Text = "Notes" }, _notes, save

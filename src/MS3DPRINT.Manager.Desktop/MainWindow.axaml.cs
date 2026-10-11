@@ -694,7 +694,8 @@ public partial class MainWindow : Window
         {
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
             var updated = await Task.Run(() => new WorkspaceProfileEditor().UpdateClient(root, profile, dialog.Address, dialog.Notes,
-                dialog.ContactFirstName, dialog.ContactLastName, dialog.ContactRole, dialog.ContactPhone, dialog.ContactEmail));
+                dialog.ContactFirstName, dialog.ContactLastName, dialog.ContactRole, dialog.ContactPhone, dialog.ContactEmail,
+                dialog.CompanyName, dialog.Siret, dialog.IdentityFirstName, dialog.IdentityLastName));
             PageSubtitle.Text = "Fiche client enregistrée.";
             await LoadClientDetailAsync(client with { Profile = updated });
         }
@@ -809,7 +810,8 @@ public partial class MainWindow : Window
         {
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
             var category = Path.GetRelativePath(root, item.Path).Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)[0];
-            await Task.Run(() => new WorkspaceCollectionEditor().Save(root, item, category, dialog.NameValue, dialog.Description, dialog.Notes));
+            await Task.Run(() => new WorkspaceCollectionEditor().Save(root, item, category, dialog.NameValue, dialog.Description, dialog.Notes,
+                dialog.Contact, dialog.Address, dialog.Phone, dialog.Email, dialog.Website));
             PageSubtitle.Text = "Fiche collection enregistrée.";
             await LoadCollectionsAsync();
         }

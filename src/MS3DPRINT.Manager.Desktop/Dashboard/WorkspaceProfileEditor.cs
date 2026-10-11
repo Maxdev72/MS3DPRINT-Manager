@@ -28,7 +28,8 @@ public sealed class WorkspaceProfileEditor
     }
 
     public ClientProfile UpdateClient(string workspaceRoot, ClientProfile profile, string? address, string? notes,
-        string? firstName, string? lastName, string? role, string? phone, string? email)
+        string? firstName, string? lastName, string? role, string? phone, string? email,
+        string? companyName = null, string? siret = null, string? individualFirstName = null, string? individualLastName = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(workspaceRoot);
         ArgumentNullException.ThrowIfNull(profile);
@@ -36,6 +37,10 @@ public sealed class WorkspaceProfileEditor
         return store.Update(profile with
         {
             Address = Normalize(address), Notes = Normalize(notes),
+            CompanyName = profile.Kind == ClientKind.Professional ? Normalize(companyName) ?? profile.CompanyName : null,
+            Siret = profile.Kind == ClientKind.Professional ? Normalize(siret) : null,
+            FirstName = profile.Kind == ClientKind.Individual ? Normalize(individualFirstName) ?? profile.FirstName : null,
+            LastName = profile.Kind == ClientKind.Individual ? Normalize(individualLastName) ?? profile.LastName : null,
             PrimaryContact = new PrimaryContact(Normalize(firstName), Normalize(lastName), Normalize(role), Normalize(phone), Normalize(email))
         }, profile.UpdatedAt);
     }
