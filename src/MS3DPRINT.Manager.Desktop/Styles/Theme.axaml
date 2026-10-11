@@ -11,6 +11,8 @@
   <SolidColorBrush x:Key="MutedTextBrush" Color="#94A7C4" />
   <SolidColorBrush x:Key="DangerBrush" Color="#F87171" />
   <SolidColorBrush x:Key="FocusBorderBrush" Color="#9BC0FF" />
+  <SolidColorBrush x:Key="HoverBrush" Color="#1A2D4B" />
+  <SolidColorBrush x:Key="PressedBrush" Color="#284777" />
 
   <x:Double x:Key="PagePadding">30</x:Double>
   <CornerRadius x:Key="PanelCornerRadius">16</CornerRadius>
@@ -23,8 +25,12 @@
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
-    <Setter Property="Padding" Value="14,10" />
+    <Setter Property="Padding" Value="15,10" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="CornerRadius" Value="8" />
   </Style>
+  <Style Selector="Button:pointerover"><Setter Property="Background" Value="{DynamicResource HoverBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Style>
+  <Style Selector="Button:pressed"><Setter Property="Background" Value="{DynamicResource PressedBrush}" /></Style>
   <Style Selector="Button:focus">
     <Setter Property="BorderBrush" Value="{DynamicResource FocusBorderBrush}" />
     <Setter Property="BorderThickness" Value="2" />
@@ -33,8 +39,13 @@
     <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+    <Setter Property="Padding" Value="12,9" />
+    <Setter Property="FontSize" Value="14" />
   </Style>
   <Style Selector="TextBox:focus">
     <Setter Property="BorderBrush" Value="{DynamicResource FocusBorderBrush}" />
   </Style>
+  <Style Selector="ComboBox"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" /><Setter Property="Padding" Value="10,8" /></Style>
+  <Style Selector="CheckBox"><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /><Setter Property="FontSize" Value="14" /></Style>
+  <Style Selector="Window"><Setter Property="FontFamily" Value="Inter, Segoe UI, Arial" /><Setter Property="FontSize" Value="14" /></Style>
 </Styles>

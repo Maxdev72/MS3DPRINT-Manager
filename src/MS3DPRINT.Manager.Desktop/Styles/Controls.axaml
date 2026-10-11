@@ -26,12 +26,13 @@
   <Style Selector="Button.workspace-card">
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Left" />
-    <Setter Property="MinHeight" Value="64" />
-    <Setter Property="Padding" Value="18,14" />
+    <Setter Property="MinHeight" Value="72" />
+    <Setter Property="Padding" Value="20,15" />
     <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
   </Style>
   <Style Selector="Button.workspace-card:pointerover">
     <Setter Property="Background" Value="#1B3154" />
     <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
   </Style>
+  <Style Selector="Button.workspace-card:focus"><Setter Property="BorderThickness" Value="2" /><Setter Property="BorderBrush" Value="{DynamicResource FocusBorderBrush}" /></Style>
 </Styles>
