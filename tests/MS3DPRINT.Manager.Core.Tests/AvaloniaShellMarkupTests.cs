@@ -20,6 +20,14 @@ public sealed class AvaloniaShellMarkupTests
     }
 
     [Fact]
+    public void Estimate_workspace_wires_saved_estimate_loading()
+    {
+        var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
+
+        Assert.Contains("LoadSavedEstimate_Click", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Estimate_workspace_templates_tolerate_empty_items()
     {
         var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));

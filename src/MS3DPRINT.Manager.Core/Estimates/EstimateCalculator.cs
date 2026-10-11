@@ -24,7 +24,7 @@ public static class EstimateCalculator
 }
 
 
-public sealed record EstimateProfile(Guid Id, string Name, string FilamentName, string PrinterName, EstimateInputs Inputs, EstimateResult Result, DateTimeOffset CreatedAt);
+public sealed record EstimateProfile(Guid Id, string Name, string FilamentName, string PrinterName, EstimateInputs Inputs, EstimateResult Result, DateTimeOffset CreatedAt, decimal WeightGrams = 0, decimal MachineHours = 0, decimal MachineHourlyRate = 0);
 
 public sealed class EstimateStore
 {

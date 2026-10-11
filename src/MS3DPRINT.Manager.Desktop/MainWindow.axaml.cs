@@ -1008,7 +1008,35 @@ public partial class MainWindow : Window
         SavedEstimateList.Children.Clear();
         var estimates = await Task.Run(() => new EstimateStore(root).LoadAll());
         foreach (var estimate in estimates.Take(4))
-            SavedEstimateList.Children.Add(new TextBlock { Text = $"{estimate.Name} · {estimate.Result.FinalPrice:0.00} €", TextWrapping = TextWrapping.Wrap });
+        {
+            var button = new Button { Content = $"{estimate.Name} · {estimate.Result.FinalPrice:0.00} €", Tag = estimate, HorizontalContentAlignment = HorizontalAlignment.Left };
+            button.Click += LoadSavedEstimate_Click;
+            SavedEstimateList.Children.Add(button);
+        }
+    }
+
+    private void LoadSavedEstimate_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: EstimateProfile estimate }) return;
+        var inputs = estimate.Inputs;
+        EstimateName.Text = estimate.Name;
+        EstimateWeight.Text = estimate.WeightGrams.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        EstimateHours.Text = estimate.MachineHours.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        EstimateMachineRate.Text = estimate.MachineHourlyRate.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        EstimateElectricity.Text = inputs.ElectricityCost.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        EstimateDesign.Text = inputs.DesignCost.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        EstimateLabor.Text = inputs.LaborCost.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        EstimatePostProcessing.Text = inputs.PostProcessingCost.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        EstimateConsumables.Text = inputs.ConsumablesCost.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        EstimatePackaging.Text = inputs.PackagingShippingCost.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        EstimateMisc.Text = inputs.MiscCost.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        EstimateMargin.Text = inputs.MarginPercent.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        EstimateFailure.Text = inputs.FailureRatePercent.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        EstimateDiscount.Text = inputs.DiscountPercent.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        _latestEstimateInputs = inputs;
+        _latestEstimateResult = estimate.Result;
+        EstimateFinal.Text = estimate.Result.FinalPrice.ToString("0.00") + " €";
+        EstimateDetail.Text = "Estimation chargée. Ajustez les valeurs puis recalculez.";
     }
 
     private async void SaveEstimate_Click(object? sender, RoutedEventArgs e)
@@ -1019,7 +1047,10 @@ public partial class MainWindow : Window
         {
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
             var printer = EstimatePrinter.SelectedItem as PrinterProfile;
-            new EstimateStore(root).Create(new EstimateProfile(Guid.NewGuid(), string.IsNullOrWhiteSpace(EstimateName.Text) ? "Nouvelle estimation" : EstimateName.Text.Trim(), $"{filament.Brand} {filament.Name}", printer?.Name ?? "Coût machine manuel", _latestEstimateInputs, _latestEstimateResult, DateTimeOffset.UtcNow));
+            TryEstimateValue(EstimateWeight.Text, out var savedWeight);
+            TryEstimateValue(EstimateHours.Text, out var savedHours);
+            TryEstimateValue(EstimateMachineRate.Text, out var savedRate);
+            new EstimateStore(root).Create(new EstimateProfile(Guid.NewGuid(), string.IsNullOrWhiteSpace(EstimateName.Text) ? "Nouvelle estimation" : EstimateName.Text.Trim(), $"{filament.Brand} {filament.Name}", printer?.Name ?? "Coût machine manuel", _latestEstimateInputs, _latestEstimateResult, DateTimeOffset.UtcNow, savedWeight, savedHours, savedRate));
             EstimateDetail.Text = "Estimation enregistrée.";
             await LoadSavedEstimatesAsync(root);
         }
