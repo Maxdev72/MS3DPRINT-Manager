@@ -942,6 +942,8 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void RefreshEstimates_Click(object? sender, RoutedEventArgs e) => await LoadEstimateFilamentsAsync();
+
     private void EstimatePrinter_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (EstimatePrinter.SelectedItem is not PrinterProfile printer) return;

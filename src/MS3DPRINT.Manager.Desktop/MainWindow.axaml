@@ -112,7 +112,7 @@
       <Border x:Name="EstimatesWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="24">
         <Grid ColumnDefinitions="*,300" ColumnSpacing="28">
           <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Spacing="14">
-            <TextBlock Text="Nouvelle estimation" FontSize="20" FontWeight="SemiBold" />
+            <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Nouvelle estimation" FontSize="20" FontWeight="SemiBold" /><Button Grid.Column="1" Content="Actualiser" Click="RefreshEstimates_Click" /></Grid>
             <TextBlock Text="Un calcul de prix de vente fondé sur vos coûts réels, vos aléas et votre marge." Classes="muted" TextWrapping="Wrap" />
             <TextBlock Text="Nom de l’estimation" /><TextBox x:Name="EstimateName" Text="Nouvelle estimation" />
             <TextBlock Text="Filament" /><ComboBox x:Name="EstimateFilament" />
