@@ -913,7 +913,7 @@ public partial class MainWindow : Window
         try
         {
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
-            await Task.Run(() => new WorkspaceFilamentEditor().Create(root, dialog.Brand, dialog.FilamentName, dialog.Material, dialog.Price, dialog.IsAbrasive));
+            new WorkspaceFilamentEditor().Create(root, dialog.Brand, dialog.FilamentName, dialog.Material, dialog.Price, dialog.IsAbrasive);
             PageSubtitle.Text = "Filament ajouté.";
             await LoadFilamentsAsync();
         }
@@ -929,7 +929,7 @@ public partial class MainWindow : Window
         try
         {
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
-            await Task.Run(() => new WorkspaceFilamentEditor().Update(root, original, dialog.Brand, dialog.FilamentName, dialog.Material, dialog.Price, dialog.IsAbrasive));
+            new WorkspaceFilamentEditor().Update(root, original, dialog.Brand, dialog.FilamentName, dialog.Material, dialog.Price, dialog.IsAbrasive);
             PageSubtitle.Text = "Fiche filament enregistrée.";
             await LoadFilamentsAsync();
         }
