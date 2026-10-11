@@ -1007,6 +1007,11 @@ public partial class MainWindow : Window
     {
         SavedEstimateList.Children.Clear();
         var estimates = await Task.Run(() => new EstimateStore(root).LoadAll());
+        if (estimates.Count == 0)
+        {
+            SavedEstimateList.Children.Add(new TextBlock { Text = "Aucune estimation enregistrée.", Classes = { "muted" } });
+            return;
+        }
         foreach (var estimate in estimates.Take(4))
         {
             var button = new Button { Content = $"{estimate.Name} · {estimate.Result.FinalPrice:0.00} €", Tag = estimate, HorizontalContentAlignment = HorizontalAlignment.Left };
