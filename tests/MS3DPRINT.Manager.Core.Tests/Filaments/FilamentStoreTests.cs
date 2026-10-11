@@ -96,6 +96,7 @@ public sealed class FilamentStoreTests : IDisposable
 
     [Theory]
     [InlineData("24,90", true, "24.90")]
+    [InlineData("24.90", true, "24.90")]
     [InlineData("0", true, "0")]
     [InlineData("-1", false, "0")]
     [InlineData("2 4,90", false, "0")]

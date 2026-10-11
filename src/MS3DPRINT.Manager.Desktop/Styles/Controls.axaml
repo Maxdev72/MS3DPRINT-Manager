@@ -23,4 +23,15 @@
     <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
   </Style>
+  <Style Selector="Button.workspace-card">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="MinHeight" Value="64" />
+    <Setter Property="Padding" Value="18,14" />
+    <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
+  </Style>
+  <Style Selector="Button.workspace-card:pointerover">
+    <Setter Property="Background" Value="#1B3154" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+  </Style>
 </Styles>

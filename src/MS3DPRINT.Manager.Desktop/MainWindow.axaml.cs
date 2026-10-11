@@ -250,7 +250,9 @@ public partial class MainWindow : Window
                 {
                     Tag = project,
                     Content = $"{project.Reference} · {project.ProjectName}\n{project.ClientFolderName} · {project.StatusLabel}",
-                    HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left
+                    HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left,
+                    HorizontalAlignment = HorizontalAlignment.Stretch,
+                    Classes = { "workspace-card" }
                 };
                 button.Click += ProjectEntry_Click;
                 ProjectList.Children.Add(button);
@@ -634,7 +636,9 @@ public partial class MainWindow : Window
                 {
                     Content = $"{client.DisplayName}\n{client.ProfileLabel} · {client.ProjectCount} projet(s)",
                     Tag = client,
-                    HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left
+                    HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left,
+                    HorizontalAlignment = HorizontalAlignment.Stretch,
+                    Classes = { "workspace-card" }
                 };
                 item.Click += ClientEntry_Click;
                 ClientList.Children.Add(item);
@@ -955,7 +959,7 @@ public partial class MainWindow : Window
             foreach (var filament in filaments)
             {
                 var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-                var button = new Button { Content = $"{filament.Brand} · {filament.Name}\n{filament.Material} · {filament.PricePerKg:0.00} €/kg{(filament.IsAbrasive ? " · Abrasif" : string.Empty)}", Tag = filament, HorizontalContentAlignment = HorizontalAlignment.Left };
+                var button = new Button { Content = $"{filament.Brand} · {filament.Name}\n{filament.Material} · {filament.PricePerKg:0.00} €/kg{(filament.IsAbrasive ? " · Abrasif" : string.Empty)}", Tag = filament, HorizontalContentAlignment = HorizontalAlignment.Left, HorizontalAlignment = HorizontalAlignment.Stretch, Classes = { "workspace-card" } };
                 button.Click += EditFilament_Click;
                 var trash = new Button { Content = "Corbeille", Tag = filament };
                 trash.Click += TrashFilament_Click;
