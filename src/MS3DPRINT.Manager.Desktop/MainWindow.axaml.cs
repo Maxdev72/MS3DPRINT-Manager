@@ -525,15 +525,7 @@ public partial class MainWindow : Window
     private async void OpenFolder_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: string path } || !Directory.Exists(path)) return;
-        try
-        {
-            var launcher = TopLevel.GetTopLevel(this)?.Launcher;
-            if (launcher is not null) await launcher.LaunchUriAsync(new Uri(path));
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or UriFormatException)
-        {
-            PageSubtitle.Text = "Impossible d’ouvrir ce dossier.";
-        }
+        await new FolderBrowserWindow(path, OpenFileAsync).ShowDialog(this);
     }
 
     private async void TrashProject_Click(object? sender, RoutedEventArgs e)
