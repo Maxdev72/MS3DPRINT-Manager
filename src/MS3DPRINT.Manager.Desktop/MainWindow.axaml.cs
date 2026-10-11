@@ -295,9 +295,18 @@ public partial class MainWindow : Window
             {
                 if (entry.IsDirectory)
                 {
+                    var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
                     var folder = new Button { Content = $"Dossier · {entry.Name}", HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left };
                     folder.Click += async (_, _) => await LoadProjectDirectoryAsync(project, entry.FullPath);
-                    ProjectList.Children.Add(folder);
+                    var context = new ProjectDirectoryContext(project, directory, entry.FullPath);
+                    var rename = new Button { Content = "Renommer", Tag = context };
+                    rename.Click += RenameProjectFile_Click;
+                    var move = new Button { Content = "Déplacer", Tag = context };
+                    move.Click += MoveProjectEntry_Click;
+                    var trash = new Button { Content = "Corbeille", Tag = context };
+                    trash.Click += TrashProjectFile_Click;
+                    row.Children.Add(folder); row.Children.Add(rename); row.Children.Add(move); row.Children.Add(trash);
+                    ProjectList.Children.Add(row);
                 }
                 else
                 {
@@ -306,9 +315,11 @@ public partial class MainWindow : Window
                     file.Click += FileEntry_Click;
                     var rename = new Button { Content = "Renommer", Tag = new ProjectDirectoryContext(project, directory, entry.FullPath) };
                     rename.Click += RenameProjectFile_Click;
+                    var move = new Button { Content = "Déplacer", Tag = new ProjectDirectoryContext(project, directory, entry.FullPath) };
+                    move.Click += MoveProjectEntry_Click;
                     var trash = new Button { Content = "Corbeille", Tag = new ProjectDirectoryContext(project, directory, entry.FullPath) };
                     trash.Click += TrashProjectFile_Click;
-                    row.Children.Add(file); row.Children.Add(rename); row.Children.Add(trash);
+                    row.Children.Add(file); row.Children.Add(rename); row.Children.Add(move); row.Children.Add(trash);
                     ProjectList.Children.Add(row);
                 }
             }
@@ -359,13 +370,14 @@ public partial class MainWindow : Window
     private async void RenameProjectFile_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: ProjectDirectoryContext context }) return;
-        var dialog = new TextPromptWindow("Renommer le fichier", "Le fichier conservera son emplacement dans le projet.", Path.GetFileName(context.Path));
+        var isDirectory = Directory.Exists(context.Path);
+        var dialog = new TextPromptWindow(isDirectory ? "Renommer le dossier" : "Renommer le fichier", isDirectory ? "Le dossier conservera son emplacement dans le projet." : "Le fichier conservera son emplacement dans le projet.", Path.GetFileName(context.Path));
         if (!await dialog.ShowDialog<bool>(this)) return;
         try
         {
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
             await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).RenamePath(context.Path, dialog.Value));
-            PageSubtitle.Text = "Fichier renommé.";
+            PageSubtitle.Text = isDirectory ? "Dossier renommé." : "Fichier renommé.";
             await LoadProjectDirectoryAsync(context.Project, context.Directory);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
@@ -376,12 +388,31 @@ public partial class MainWindow : Window
     {
         if (sender is not Button { Tag: ProjectDirectoryContext context }) return;
         var name = Path.GetFileName(context.Path);
-        if (!await new ConfirmTrashWindow(name, "Le fichier pourra être restauré depuis la corbeille.").ShowDialog<bool>(this)) return;
+        var isDirectory = Directory.Exists(context.Path);
+        if (!await new ConfirmTrashWindow(name, isDirectory ? "Le dossier et son contenu pourront être restaurés depuis la corbeille." : "Le fichier pourra être restauré depuis la corbeille.").ShowDialog<bool>(this)) return;
         try
         {
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
             await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.ManagedFileService(root).Trash(context.Path, label: name));
-            PageSubtitle.Text = "Fichier envoyé dans la corbeille.";
+            PageSubtitle.Text = isDirectory ? "Dossier envoyé dans la corbeille." : "Fichier envoyé dans la corbeille.";
+            await LoadProjectDirectoryAsync(context.Project, context.Directory);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { PageSubtitle.Text = exception.Message; }
+    }
+
+    private async void MoveProjectEntry_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: ProjectDirectoryContext context }) return;
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = "Choisir le dossier de destination", AllowMultiple = false });
+        var destination = folders.FirstOrDefault()?.TryGetLocalPath();
+        if (string.IsNullOrWhiteSpace(destination)) return;
+        try
+        {
+            var isDirectory = Directory.Exists(context.Path);
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).MovePath(context.Path, destination));
+            PageSubtitle.Text = isDirectory ? "Dossier déplacé." : "Fichier déplacé.";
             await LoadProjectDirectoryAsync(context.Project, context.Directory);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
@@ -758,7 +789,10 @@ public partial class MainWindow : Window
                 var commands = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
                 var open = new Button { Content = "Ouvrir", Tag = item.Path }; open.Click += OpenFolder_Click;
                 var edit = new Button { Content = "Modifier la fiche", Tag = item }; edit.Click += EditCollection_Click;
-                commands.Children.Add(open); commands.Children.Add(edit); content.Children.Add(commands);
+                var rename = new Button { Content = "Renommer", Tag = item }; rename.Click += RenameCollection_Click;
+                var move = new Button { Content = "Déplacer", Tag = item }; move.Click += MoveCollection_Click;
+                var trash = new Button { Content = "Corbeille", Tag = item }; trash.Click += TrashCollection_Click;
+                commands.Children.Add(open); commands.Children.Add(edit); commands.Children.Add(rename); commands.Children.Add(move); commands.Children.Add(trash); content.Children.Add(commands);
                 CollectionList.Children.Add(new Border { Background = new SolidColorBrush(Color.Parse("#141F30")), CornerRadius = new Avalonia.CornerRadius(10), Padding = new Avalonia.Thickness(14), Child = content });
             }
         }
@@ -777,6 +811,57 @@ public partial class MainWindow : Window
             var category = Path.GetRelativePath(root, item.Path).Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)[0];
             await Task.Run(() => new WorkspaceCollectionEditor().Save(root, item, category, dialog.NameValue, dialog.Description, dialog.Notes));
             PageSubtitle.Text = "Fiche collection enregistrée.";
+            await LoadCollectionsAsync();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { PageSubtitle.Text = exception.Message; }
+    }
+
+    private static string CollectionCategory(string root, MS3DPRINT.Manager.Core.Collections.CollectionItemSummary item) =>
+        Path.GetRelativePath(root, item.Path).Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)[0];
+
+    private async void RenameCollection_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: MS3DPRINT.Manager.Core.Collections.CollectionItemSummary item }) return;
+        var dialog = new TextPromptWindow("Renommer la collection", "Le dossier et sa fiche seront mis à jour ensemble.", item.Name);
+        if (!await dialog.ShowDialog<bool>(this)) return;
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).RenameCollection(item, CollectionCategory(root, item), dialog.Value));
+            PageSubtitle.Text = "Collection renommée.";
+            await LoadCollectionsAsync();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { PageSubtitle.Text = exception.Message; }
+    }
+
+    private async void MoveCollection_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: MS3DPRINT.Manager.Core.Collections.CollectionItemSummary item }) return;
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = "Choisir le dossier de destination", AllowMultiple = false });
+        var destination = folders.FirstOrDefault()?.TryGetLocalPath();
+        if (string.IsNullOrWhiteSpace(destination)) return;
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).MoveCollection(item, CollectionCategory(root, item), destination));
+            PageSubtitle.Text = "Collection déplacée.";
+            await LoadCollectionsAsync();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { PageSubtitle.Text = exception.Message; }
+    }
+
+    private async void TrashCollection_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: MS3DPRINT.Manager.Core.Collections.CollectionItemSummary item }) return;
+        if (!await new ConfirmTrashWindow(item.Name, "La collection et son contenu pourront être restaurés depuis la corbeille.").ShowDialog<bool>(this)) return;
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).TrashCollection(item));
+            PageSubtitle.Text = "Collection envoyée dans la corbeille.";
             await LoadCollectionsAsync();
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
