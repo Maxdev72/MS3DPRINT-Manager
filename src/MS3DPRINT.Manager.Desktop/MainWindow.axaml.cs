@@ -666,6 +666,22 @@ public partial class MainWindow : Window
 
     private async void RefreshCollections_Click(object? sender, RoutedEventArgs e) => await LoadCollectionsAsync();
 
+    private async void CreateCollection_Click(object? sender, RoutedEventArgs e)
+    {
+        var dialog = new CreateCollectionWindow();
+        if (!await dialog.ShowDialog<bool>(this)) return;
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var item = await Task.Run(() => new WorkspaceCollectionCreator().Create(root, dialog.Category, dialog.NameValue));
+            await Task.Run(() => new WorkspaceCollectionEditor().Save(root, item, dialog.Category, item.Name, null, null));
+            PageSubtitle.Text = "Collection créée.";
+            await LoadCollectionsAsync();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { PageSubtitle.Text = exception.Message; }
+    }
+
     private async Task LoadCollectionsAsync()
     {
         var workspaceRoot = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;

@@ -97,7 +97,7 @@
       </Border>
       <Border x:Name="CollectionsWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="20">
         <Grid RowDefinitions="Auto,*" RowSpacing="16">
-          <Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock Text="Collections" FontSize="18" FontWeight="SemiBold" /><TextBlock Text="Modèles 3D, produits et fournisseurs." Classes="muted" /></StackPanel><Button Grid.Column="1" Content="Actualiser" Click="RefreshCollections_Click" VerticalAlignment="Center" /></Grid>
+          <Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock Text="Collections" FontSize="18" FontWeight="SemiBold" /><TextBlock Text="Modèles 3D, produits et fournisseurs." Classes="muted" /></StackPanel><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"><Button Content="Créer" Click="CreateCollection_Click" /><Button Content="Actualiser" Click="RefreshCollections_Click" VerticalAlignment="Center" /></StackPanel></Grid>
           <ScrollViewer Grid.Row="1"><StackPanel x:Name="CollectionList" Spacing="8" /></ScrollViewer>
         </Grid>
       </Border>
