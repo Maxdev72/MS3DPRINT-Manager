@@ -1046,6 +1046,21 @@ public partial class MainWindow : Window
         EstimateDetail.Text = "Estimation chargée. Ajustez les valeurs puis recalculez.";
     }
 
+    private void ResetEstimate_Click(object? sender, RoutedEventArgs e)
+    {
+        EstimateName.Text = "Nouvelle estimation";
+        EstimateWeight.Text = "100";
+        EstimateHours.Text = "2";
+        EstimateMachineRate.Text = "2";
+        EstimateElectricity.Text = EstimateDesign.Text = EstimateLabor.Text = EstimatePostProcessing.Text = EstimateConsumables.Text = EstimatePackaging.Text = EstimateMisc.Text = EstimateDiscount.Text = "0";
+        EstimateMargin.Text = "30";
+        EstimateFailure.Text = "5";
+        _latestEstimateInputs = null;
+        _latestEstimateResult = null;
+        EstimateFinal.Text = "—";
+        EstimateDetail.Text = "Nouvelle estimation prête.";
+    }
+
     private async void SaveEstimate_Click(object? sender, RoutedEventArgs e)
     {
         if (_latestEstimateInputs is null || _latestEstimateResult is null || EstimateFilament.SelectedItem is not MS3DPRINT.Manager.Core.Filaments.FilamentProfile filament)
