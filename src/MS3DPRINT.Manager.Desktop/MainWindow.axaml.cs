@@ -3,6 +3,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Platform.Storage;
 using MS3DPRINT.Manager.Core.Clients;
 using MS3DPRINT.Manager.Core.Files;
 using MS3DPRINT.Manager.Core.Projects;
@@ -282,6 +283,9 @@ public partial class MainWindow : Window
         var createFolder = new Button { Content = "+ Nouveau dossier", Tag = (Project: project, Directory: directory), HorizontalAlignment = HorizontalAlignment.Left };
         createFolder.Click += CreateProjectFolder_Click;
         ProjectList.Children.Add(createFolder);
+        var import = new Button { Content = "Importer un fichier", Tag = (Project: project, Directory: directory), HorizontalAlignment = HorizontalAlignment.Left };
+        import.Click += ImportProjectFile_Click;
+        ProjectList.Children.Add(import);
         if (directory == project.ProjectPath)
             AddProjectOverview(project);
         try
@@ -321,6 +325,23 @@ public partial class MainWindow : Window
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
             await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.ManagedFileService(root).CreateFolder(context.Item2, dialog.Value));
             PageSubtitle.Text = "Dossier créé.";
+            await LoadProjectDirectoryAsync(context.Item1, context.Item2);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { PageSubtitle.Text = exception.Message; }
+    }
+
+    private async void ImportProjectFile_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: ValueTuple<ProjectSummary, string> context }) return;
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions { Title = "Importer un fichier", AllowMultiple = false });
+        var source = files.FirstOrDefault()?.TryGetLocalPath();
+        if (string.IsNullOrWhiteSpace(source)) return;
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.ManagedFileService(root).Import(source, context.Item2));
+            PageSubtitle.Text = "Fichier importé.";
             await LoadProjectDirectoryAsync(context.Item1, context.Item2);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
