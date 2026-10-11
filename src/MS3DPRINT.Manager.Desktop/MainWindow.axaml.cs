@@ -788,11 +788,29 @@ public partial class MainWindow : Window
 
     private async void RefreshSettings_Click(object? sender, RoutedEventArgs e) => await LoadSettingsAsync();
 
+    private async void VerifyWorkspace_Click(object? sender, RoutedEventArgs e)
+    {
+        var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        try
+        {
+            var result = await Task.Run(() => new MS3DPRINT.Manager.Core.Storage.FolderTreeService().EnsureMainStructure(root));
+            PageSubtitle.Text = result.CreatedFolders.Count == 0
+                ? "Arborescence vérifiée : tous les dossiers existent."
+                : $"Arborescence vérifiée : {result.CreatedFolders.Count} dossier(s) ajouté(s).";
+            await LoadSettingsAsync();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        { PageSubtitle.Text = exception.Message; }
+    }
+
     private async Task LoadSettingsAsync()
     {
         var workspaceRoot = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
         StorageList.Children.Clear();
         var providers = await Task.Run(() => new WorkspaceStorageReader().Load(workspaceRoot));
+        var open = new Button { Content = "Ouvrir l’espace de travail", Tag = workspaceRoot, HorizontalAlignment = HorizontalAlignment.Left };
+        open.Click += OpenFolder_Click;
+        StorageList.Children.Add(open);
         foreach (var provider in providers)
             StorageList.Children.Add(new TextBlock { Text = $"{provider.DisplayName} · {(provider.IsAvailable ? "Disponible" : "Non configuré")}", Margin = new Avalonia.Thickness(8) });
     }
