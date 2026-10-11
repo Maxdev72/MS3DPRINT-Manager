@@ -19,6 +19,8 @@ public partial class MainWindow : Window
     private const string DefaultWorkspaceRoot = @"C:\MS3DPRINT\Nextcloud\MS3DPRINT";
     private CancellationTokenSource? _searchCancellation;
     private Button? _selectedNavigationButton;
+    private EstimateInputs? _latestEstimateInputs;
+    private EstimateResult? _latestEstimateResult;
 
     public MainWindow() => InitializeComponent();
 
@@ -916,7 +918,7 @@ public partial class MainWindow : Window
 
     private async void RefreshFilaments_Click(object? sender, RoutedEventArgs e) => await LoadFilamentsAsync();
 
-    private Task LoadEstimateFilamentsAsync()
+    private async Task LoadEstimateFilamentsAsync()
     {
         try
         {
@@ -931,13 +933,13 @@ public partial class MainWindow : Window
             EstimatePrinter.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<PrinterProfile>((printer, _) => new TextBlock { Text = $"{printer.Name} · {printer.HourlyRate:0.00} €/h" });
             EstimatePrinter.SelectedIndex = printers.Any(printer => printer.IsActive) ? 0 : -1;
             EstimateDetail.Text = filaments.Count == 0 ? "Ajoutez un filament dans la page Filaments pour démarrer." : "Renseignez vos paramètres puis calculez.";
+            await LoadSavedEstimatesAsync(root);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException)
         {
             EstimateFilament.ItemsSource = null;
             EstimateDetail.Text = "Les filaments ne peuvent pas être lus : " + exception.Message;
         }
-        return Task.CompletedTask;
     }
 
     private void EstimatePrinter_SelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -1001,6 +1003,30 @@ public partial class MainWindow : Window
     }
 
 
+    private async Task LoadSavedEstimatesAsync(string root)
+    {
+        SavedEstimateList.Children.Clear();
+        var estimates = await Task.Run(() => new EstimateStore(root).LoadAll());
+        foreach (var estimate in estimates.Take(4))
+            SavedEstimateList.Children.Add(new TextBlock { Text = $"{estimate.Name} · {estimate.Result.FinalPrice:0.00} €", TextWrapping = TextWrapping.Wrap });
+    }
+
+    private async void SaveEstimate_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_latestEstimateInputs is null || _latestEstimateResult is null || EstimateFilament.SelectedItem is not MS3DPRINT.Manager.Core.Filaments.FilamentProfile filament)
+        { EstimateDetail.Text = "Calculez l’estimation avant de l’enregistrer."; return; }
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var printer = EstimatePrinter.SelectedItem as PrinterProfile;
+            new EstimateStore(root).Create(new EstimateProfile(Guid.NewGuid(), string.IsNullOrWhiteSpace(EstimateName.Text) ? "Nouvelle estimation" : EstimateName.Text.Trim(), $"{filament.Brand} {filament.Name}", printer?.Name ?? "Coût machine manuel", _latestEstimateInputs, _latestEstimateResult, DateTimeOffset.UtcNow));
+            EstimateDetail.Text = "Estimation enregistrée.";
+            await LoadSavedEstimatesAsync(root);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException)
+        { EstimateDetail.Text = exception.Message; }
+    }
+
     private void CalculateEstimate_Click(object? sender, RoutedEventArgs e)
     {
         if (EstimateFilament.SelectedItem is not MS3DPRINT.Manager.Core.Filaments.FilamentProfile filament)
@@ -1023,10 +1049,13 @@ public partial class MainWindow : Window
 
         try
         {
-            var result = EstimateCalculator.Calculate(new EstimateInputs(
+            var inputs = new EstimateInputs(
                 MaterialCost: filament.PricePerKg * grams / 1000m, MachineCost: hours * rate, ElectricityCost: electricity,
                 DesignCost: design, LaborCost: labor, PostProcessingCost: postProcessing, ConsumablesCost: consumables,
-                PackagingShippingCost: packaging, MiscCost: misc, MarginPercent: margin, FailureRatePercent: failure, DiscountPercent: discount));
+                PackagingShippingCost: packaging, MiscCost: misc, MarginPercent: margin, FailureRatePercent: failure, DiscountPercent: discount);
+            var result = EstimateCalculator.Calculate(inputs);
+            _latestEstimateInputs = inputs;
+            _latestEstimateResult = result;
             EstimateFinal.Text = result.FinalPrice.ToString("0.00") + " €";
             EstimateDetail.Text = $"Coût brut : {result.RawCost:0.00} € · Avec aléas : {result.ExpectedCost:0.00} € · Avant remise : {result.SalePrice:0.00} €.";
         }
