@@ -20,6 +20,15 @@ public sealed class AvaloniaShellMarkupTests
     }
 
     [Fact]
+    public void Estimate_workspace_templates_tolerate_empty_items()
+    {
+        var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
+
+        Assert.Contains("f?.Brand", source, StringComparison.Ordinal);
+        Assert.Contains("printer?.Name", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Estimate_workspace_can_select_a_registered_printer()
     {
         var markup = File.ReadAllText(MainWindowPath());

@@ -927,10 +927,10 @@ public partial class MainWindow : Window
             var filaments = inventory.LoadFilaments(root);
             var printers = inventory.LoadPrinters(root);
             EstimateFilament.ItemsSource = filaments;
-            EstimateFilament.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>((f, _) => new TextBlock { Text = $"{f.Brand} · {f.Name} ({f.PricePerKg:0.00} €/kg)" });
+            EstimateFilament.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>((f, _) => new TextBlock { Text = f is null ? "Filament indisponible" : $"{f?.Brand} · {f?.Name} ({f?.PricePerKg:0.00} €/kg)" });
             EstimateFilament.SelectedIndex = filaments.Count > 0 ? 0 : -1;
             EstimatePrinter.ItemsSource = printers.Where(printer => printer.IsActive).ToArray();
-            EstimatePrinter.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<PrinterProfile>((printer, _) => new TextBlock { Text = $"{printer.Name} · {printer.HourlyRate:0.00} €/h" });
+            EstimatePrinter.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<PrinterProfile>((printer, _) => new TextBlock { Text = printer is null ? "Imprimante indisponible" : $"{printer?.Name} · {printer?.HourlyRate:0.00} €/h" });
             EstimatePrinter.SelectedIndex = printers.Any(printer => printer.IsActive) ? 0 : -1;
             EstimateDetail.Text = filaments.Count == 0 ? "Ajoutez un filament dans la page Filaments pour démarrer." : "Renseignez vos paramètres puis calculez.";
             await LoadSavedEstimatesAsync(root);
