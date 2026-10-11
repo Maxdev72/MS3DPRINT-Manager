@@ -1,5 +1,6 @@
 using MS3DPRINT.Manager.Core.Collections;
 using MS3DPRINT.Manager.Core.Filaments;
+using MS3DPRINT.Manager.Core.Printers;
 
 namespace MS3DPRINT.Manager.Desktop.Dashboard;
 
@@ -13,6 +14,9 @@ public sealed class WorkspaceInventoryReader
 
     public IReadOnlyList<FilamentProfile> LoadFilaments(string workspaceRoot)
         => new FilamentStore(workspaceRoot).LoadAll();
+
+    public IReadOnlyList<PrinterProfile> LoadPrinters(string workspaceRoot)
+        => new PrinterStore(workspaceRoot).LoadAll();
 
     public IReadOnlyList<CollectionItemSummary> LoadAllCollections(string workspaceRoot)
         => CollectionCategories.SelectMany(category => LoadCollections(workspaceRoot, category))

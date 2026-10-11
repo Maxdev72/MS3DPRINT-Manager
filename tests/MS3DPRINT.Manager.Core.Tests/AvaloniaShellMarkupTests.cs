@@ -8,6 +8,8 @@ public sealed class AvaloniaShellMarkupTests
     [InlineData("Clients")]
     [InlineData("Collections")]
     [InlineData("Filaments")]
+    [InlineData("Estimations")]
+    [InlineData("Imprimantes")]
     [InlineData("Corbeille")]
     [InlineData("Paramètres")]
     public void Main_window_exposes_each_workspace_destination(string label)

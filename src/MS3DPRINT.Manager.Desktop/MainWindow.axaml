@@ -24,6 +24,7 @@
           <Button Classes="nav-item" Content="Collections" Tag="Collections" Click="NavigationButton_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
           <Button Classes="nav-item" Content="Filaments" Tag="Filaments" Click="NavigationButton_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
           <Button Classes="nav-item" Content="Estimations" Tag="Estimations" Click="NavigationButton_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
+          <Button Classes="nav-item" Content="Imprimantes" Tag="Imprimantes" Click="NavigationButton_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
           <Button Classes="nav-item" Content="Corbeille" Tag="Corbeille" Click="NavigationButton_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
         </StackPanel>
         <StackPanel Grid.Row="2" Spacing="10">
@@ -124,6 +125,12 @@
             <Button Content="Calculer l’estimation" Click="CalculateEstimate_Click" HorizontalAlignment="Left" />
           </StackPanel></ScrollViewer>
           <Border Grid.Column="1" Background="{DynamicResource RaisedSurfaceBrush}" CornerRadius="12" Padding="22"><StackPanel Spacing="12"><TextBlock Text="RÉSULTAT" Classes="muted"/><TextBlock x:Name="EstimateFinal" Text="—" FontSize="32" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"/><TextBlock x:Name="EstimateDetail" Text="Sélectionnez un filament et calculez." Classes="muted" TextWrapping="Wrap"/></StackPanel></Border>
+        </Grid>
+      </Border>
+      <Border x:Name="PrintersWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="20">
+        <Grid RowDefinitions="Auto,*" RowSpacing="16">
+          <Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock Text="Imprimantes" FontSize="18" FontWeight="SemiBold" /><TextBlock Text="Parc machines et coûts horaires utilisés dans vos estimations." Classes="muted" /></StackPanel><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"><Button Content="Ajouter" Click="CreatePrinter_Click" /><Button Content="Actualiser" Click="RefreshPrinters_Click" /></StackPanel></Grid>
+          <ScrollViewer Grid.Row="1"><StackPanel x:Name="PrinterList" Spacing="8" /></ScrollViewer>
         </Grid>
       </Border>
       <Border x:Name="TrashWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="20">

@@ -7,6 +7,7 @@ using Avalonia.Platform.Storage;
 using MS3DPRINT.Manager.Core.Clients;
 using MS3DPRINT.Manager.Core.Files;
 using MS3DPRINT.Manager.Core.Projects;
+using MS3DPRINT.Manager.Core.Printers;
 using MS3DPRINT.Manager.Core.Estimates;
 using MS3DPRINT.Manager.Desktop.Dashboard;
 
@@ -58,15 +59,17 @@ public partial class MainWindow : Window
         var collectionsVisible = destination == "Collections";
         var filamentsVisible = destination == "Filaments";
         var estimatesVisible = destination == "Estimations";
+        var printersVisible = destination == "Imprimantes";
         var trashVisible = destination == "Corbeille";
         var settingsVisible = destination == "Paramètres";
-        DashboardStats.IsVisible = !projectsVisible && !clientsVisible && !collectionsVisible && !filamentsVisible && !estimatesVisible && !trashVisible && !settingsVisible;
-        DashboardContent.IsVisible = !projectsVisible && !clientsVisible && !collectionsVisible && !filamentsVisible && !estimatesVisible && !trashVisible && !settingsVisible;
+        DashboardStats.IsVisible = !projectsVisible && !clientsVisible && !collectionsVisible && !filamentsVisible && !estimatesVisible && !printersVisible && !trashVisible && !settingsVisible;
+        DashboardContent.IsVisible = !projectsVisible && !clientsVisible && !collectionsVisible && !filamentsVisible && !estimatesVisible && !printersVisible && !trashVisible && !settingsVisible;
         ProjectsWorkspacePanel.IsVisible = projectsVisible;
         ClientsWorkspacePanel.IsVisible = clientsVisible;
         CollectionsWorkspacePanel.IsVisible = collectionsVisible;
         FilamentsWorkspacePanel.IsVisible = filamentsVisible;
         EstimatesWorkspacePanel.IsVisible = estimatesVisible;
+        PrintersWorkspacePanel.IsVisible = printersVisible;
         TrashWorkspacePanel.IsVisible = trashVisible;
         SettingsWorkspacePanel.IsVisible = settingsVisible;
 
@@ -80,6 +83,8 @@ public partial class MainWindow : Window
             await LoadFilamentsAsync();
         else if (estimatesVisible)
             await LoadEstimateFilamentsAsync();
+        else if (printersVisible)
+            await LoadPrintersAsync();
         else if (trashVisible)
             await LoadTrashAsync();
         else if (settingsVisible)
@@ -913,13 +918,77 @@ public partial class MainWindow : Window
 
     private Task LoadEstimateFilamentsAsync()
     {
-        var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
-        var filaments = new WorkspaceInventoryReader().LoadFilaments(root);
-        EstimateFilament.ItemsSource = filaments;
-        EstimateFilament.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>((f, _) => new TextBlock { Text = $"{f.Brand} · {f.Name} ({f.PricePerKg:0.00} €/kg)" });
-        EstimateFilament.SelectedIndex = filaments.Count > 0 ? 0 : -1;
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var filaments = new WorkspaceInventoryReader().LoadFilaments(root);
+            EstimateFilament.ItemsSource = filaments;
+            EstimateFilament.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>((f, _) => new TextBlock { Text = $"{f.Brand} · {f.Name} ({f.PricePerKg:0.00} €/kg)" });
+            EstimateFilament.SelectedIndex = filaments.Count > 0 ? 0 : -1;
+            EstimateDetail.Text = filaments.Count == 0 ? "Ajoutez un filament dans la page Filaments pour démarrer." : "Renseignez vos paramètres puis calculez.";
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException)
+        {
+            EstimateFilament.ItemsSource = null;
+            EstimateDetail.Text = "Les filaments ne peuvent pas être lus : " + exception.Message;
+        }
         return Task.CompletedTask;
     }
+
+    private async void RefreshPrinters_Click(object? sender, RoutedEventArgs e) => await LoadPrintersAsync();
+
+    private async void CreatePrinter_Click(object? sender, RoutedEventArgs e)
+    {
+        var dialog = new CreatePrinterWindow();
+        if (!await dialog.ShowDialog<bool>(this)) return;
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var now = DateTimeOffset.UtcNow;
+            new PrinterStore(root).Create(new PrinterProfile(Guid.NewGuid(), dialog.Brand, dialog.Model, dialog.PrinterName, dialog.HourlyRate, dialog.BuildVolume, dialog.PrinterIsActive, now, now));
+            PageSubtitle.Text = "Imprimante ajoutée.";
+            await LoadPrintersAsync();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { PageSubtitle.Text = exception.Message; }
+    }
+
+    private async Task LoadPrintersAsync()
+    {
+        var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        PrinterList.Children.Clear();
+        try
+        {
+            var printers = await Task.Run(() => new WorkspaceInventoryReader().LoadPrinters(root));
+            if (printers.Count == 0)
+            {
+                PrinterList.Children.Add(new TextBlock { Text = "Aucune imprimante enregistrée.", Margin = new Avalonia.Thickness(8) });
+                return;
+            }
+            foreach (var printer in printers)
+            {
+                var details = string.IsNullOrWhiteSpace(printer.BuildVolume) ? (printer.IsActive ? "Active" : "Inactive") : $"{printer.BuildVolume} · {(printer.IsActive ? "Active" : "Inactive")}";
+                PrinterList.Children.Add(new Border
+                {
+                    Background = Avalonia.Media.Brushes.Transparent,
+                    Padding = new Avalonia.Thickness(14),
+                    Child = new StackPanel
+                    {
+                        Spacing = 4,
+                        Children =
+                        {
+                            new TextBlock { Text = printer.Name, FontWeight = FontWeight.SemiBold },
+                            new TextBlock { Text = $"{printer.Brand} · {printer.Model} · {printer.HourlyRate:0.00} €/h", Foreground = Avalonia.Media.Brushes.LightSteelBlue },
+                            new TextBlock { Text = details, Foreground = Avalonia.Media.Brushes.LightSteelBlue }
+                        }
+                    }
+                });
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException)
+        { PrinterList.Children.Add(new TextBlock { Text = "Impossible de lire les imprimantes : " + exception.Message, Margin = new Avalonia.Thickness(8) }); }
+    }
+
 
     private void CalculateEstimate_Click(object? sender, RoutedEventArgs e)
     {
