@@ -488,11 +488,26 @@ public partial class MainWindow : Window
 
     private async void EditProject_Click(object? sender, RoutedEventArgs e)
     {
-        if (sender is not Button { Tag: ProjectSummary { Profile: { } profile } project })
+        if (sender is not Button { Tag: ProjectSummary project }) return;
+        if (project.Profile is null)
         {
-            PageSubtitle.Text = "Cette fiche historique ne peut pas encore être modifiée.";
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var client = (await Task.Run(() => new WorkspaceClientReader().Load(root)))
+                .FirstOrDefault(candidate => string.Equals(candidate.ClientPath, project.ClientPath, StringComparison.OrdinalIgnoreCase));
+            if (client?.Profile is null) { PageSubtitle.Text = "Complétez d’abord la fiche de ce client historique."; return; }
+            var completion = new TextPromptWindow("Compléter la fiche projet", "Le dossier et les fichiers existants seront conservés.", project.ProjectName);
+            if (!await completion.ShowDialog<bool>(this)) return;
+            try
+            {
+                var completed = await Task.Run(() => new WorkspaceProjectCreator().CompleteExisting(root, project, client.Profile, completion.Value));
+                PageSubtitle.Text = "Fiche projet historique complétée.";
+                await LoadProjectDirectoryAsync(project with { Profile = completed }, project.ProjectPath);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+            { PageSubtitle.Text = exception.Message; }
             return;
         }
+        var profile = project.Profile;
         var dialog = new EditProjectWindow(profile);
         if (!await dialog.ShowDialog<bool>(this)) return;
         try
