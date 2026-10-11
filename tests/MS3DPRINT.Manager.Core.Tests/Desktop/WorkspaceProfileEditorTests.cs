@@ -39,10 +39,11 @@ public sealed class WorkspaceProfileEditorTests : IDisposable
             new PrimaryContact(null, null, null, null, null), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, RelativePath: "01_CLIENTS/ACME");
         new ClientProfileStore(paths).Create(profile);
 
-        var updated = new WorkspaceProfileEditor().UpdateClient(_root, profile, "12 rue de l'Impression", "À rappeler jeudi");
+        var updated = new WorkspaceProfileEditor().UpdateClient(_root, profile, "12 rue de l'Impression", "À rappeler jeudi", "Camille", "Durand", "Achats", "0600000000", "camille@example.test");
 
         Assert.Equal("12 rue de l'Impression", updated.Address);
         Assert.Equal("À rappeler jeudi", new ClientProfileStore(paths).Load(profile.Id).Notes);
+        Assert.Equal("camille@example.test", updated.PrimaryContact.Email);
     }
 
     public void Dispose()

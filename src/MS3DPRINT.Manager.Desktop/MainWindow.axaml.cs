@@ -660,7 +660,8 @@ public partial class MainWindow : Window
         try
         {
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
-            var updated = await Task.Run(() => new WorkspaceProfileEditor().UpdateClient(root, profile, dialog.Address, dialog.Notes));
+            var updated = await Task.Run(() => new WorkspaceProfileEditor().UpdateClient(root, profile, dialog.Address, dialog.Notes,
+                dialog.ContactFirstName, dialog.ContactLastName, dialog.ContactRole, dialog.ContactPhone, dialog.ContactEmail));
             PageSubtitle.Text = "Fiche client enregistrée.";
             await LoadClientDetailAsync(client with { Profile = updated });
         }
