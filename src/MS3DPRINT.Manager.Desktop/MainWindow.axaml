@@ -16,7 +16,7 @@
           <TextBlock Text="MS3DPRINT" FontSize="21" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
           <TextBlock Text="MANAGER" FontSize="11" LetterSpacing="2" Foreground="{DynamicResource AccentBrush}" />
         </StackPanel>
-        <StackPanel Grid.Row="1" Margin="0,38,0,0" Spacing="6">
+        <StackPanel x:Name="NavigationItems" Grid.Row="1" Margin="0,38,0,0" Spacing="6">
           <TextBlock Text="ESPACE DE TRAVAIL" Classes="muted" Margin="10,0,0,8" />
           <Button Classes="nav-item selected" Content="Accueil" Tag="Accueil" Click="NavigationButton_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
           <Button Classes="nav-item" Content="Projets" Tag="Projets" Click="NavigationButton_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />

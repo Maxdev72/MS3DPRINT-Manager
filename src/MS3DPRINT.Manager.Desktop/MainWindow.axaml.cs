@@ -46,7 +46,7 @@ public partial class MainWindow : Window
         if (sender is not Button button || button.Tag is not string destination)
             return;
 
-        _selectedNavigationButton?.Classes.Remove("selected");
+        foreach (var navigationButton in NavigationItems.Children.OfType<Button>()) navigationButton.Classes.Remove("selected");
         button.Classes.Add("selected");
         _selectedNavigationButton = button;
 

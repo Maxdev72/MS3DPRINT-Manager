@@ -47,5 +47,5 @@
   </Style>
   <Style Selector="ComboBox"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" /><Setter Property="Padding" Value="10,8" /></Style>
   <Style Selector="CheckBox"><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /><Setter Property="FontSize" Value="14" /></Style>
-  <Style Selector="Window"><Setter Property="FontFamily" Value="Inter, Segoe UI, Arial" /><Setter Property="FontSize" Value="14" /></Style>
+  <Style Selector="Window"><Setter Property="FontFamily" Value="Inter, Segoe UI, Arial" /><Setter Property="FontSize" Value="14" /><Setter Property="Background" Value="{DynamicResource CanvasBrush}" /></Style>
 </Styles>
