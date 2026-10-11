@@ -306,7 +306,9 @@ public partial class MainWindow : Window
                     file.Click += FileEntry_Click;
                     var rename = new Button { Content = "Renommer", Tag = new ProjectDirectoryContext(project, directory, entry.FullPath) };
                     rename.Click += RenameProjectFile_Click;
-                    row.Children.Add(file); row.Children.Add(rename);
+                    var trash = new Button { Content = "Corbeille", Tag = new ProjectDirectoryContext(project, directory, entry.FullPath) };
+                    trash.Click += TrashProjectFile_Click;
+                    row.Children.Add(file); row.Children.Add(rename); row.Children.Add(trash);
                     ProjectList.Children.Add(row);
                 }
             }
@@ -364,6 +366,22 @@ public partial class MainWindow : Window
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
             await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).RenamePath(context.Path, dialog.Value));
             PageSubtitle.Text = "Fichier renommé.";
+            await LoadProjectDirectoryAsync(context.Project, context.Directory);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { PageSubtitle.Text = exception.Message; }
+    }
+
+    private async void TrashProjectFile_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: ProjectDirectoryContext context }) return;
+        var name = Path.GetFileName(context.Path);
+        if (!await new ConfirmTrashWindow(name, "Le fichier pourra être restauré depuis la corbeille.").ShowDialog<bool>(this)) return;
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.ManagedFileService(root).Trash(context.Path, label: name));
+            PageSubtitle.Text = "Fichier envoyé dans la corbeille.";
             await LoadProjectDirectoryAsync(context.Project, context.Directory);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
