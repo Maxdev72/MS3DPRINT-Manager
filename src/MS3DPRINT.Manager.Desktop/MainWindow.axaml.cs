@@ -758,6 +758,18 @@ public partial class MainWindow : Window
 
     private async void RefreshCollections_Click(object? sender, RoutedEventArgs e) => await LoadCollectionsAsync();
 
+    private async void ClassifyFile_Click(object? sender, RoutedEventArgs e)
+    {
+        var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        if (await new ClassifyFileWindow(root).ShowDialog<bool>(this)) PageSubtitle.Text = "Fichier classé dans le projet.";
+    }
+
+    private void OpenThreeDViewer_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DesktopPreviewLauncher.OpenThreeD is null) { PageSubtitle.Text = "Le visualiseur 3D n’est pas disponible sur cette plateforme."; return; }
+        DesktopPreviewLauncher.OpenThreeD(null);
+    }
+
     private async void CreateCollection_Click(object? sender, RoutedEventArgs e)
     {
         var dialog = new CreateCollectionWindow();
