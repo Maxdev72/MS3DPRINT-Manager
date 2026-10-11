@@ -7,6 +7,7 @@ using Avalonia.Platform.Storage;
 using MS3DPRINT.Manager.Core.Clients;
 using MS3DPRINT.Manager.Core.Files;
 using MS3DPRINT.Manager.Core.Projects;
+using MS3DPRINT.Manager.Core.Estimates;
 using MS3DPRINT.Manager.Desktop.Dashboard;
 
 namespace MS3DPRINT.Manager.Desktop;
@@ -56,14 +57,16 @@ public partial class MainWindow : Window
         var clientsVisible = destination == "Clients";
         var collectionsVisible = destination == "Collections";
         var filamentsVisible = destination == "Filaments";
+        var estimatesVisible = destination == "Estimations";
         var trashVisible = destination == "Corbeille";
         var settingsVisible = destination == "Paramètres";
-        DashboardStats.IsVisible = !projectsVisible && !clientsVisible && !collectionsVisible && !filamentsVisible && !trashVisible && !settingsVisible;
-        DashboardContent.IsVisible = !projectsVisible && !clientsVisible && !collectionsVisible && !filamentsVisible && !trashVisible && !settingsVisible;
+        DashboardStats.IsVisible = !projectsVisible && !clientsVisible && !collectionsVisible && !filamentsVisible && !estimatesVisible && !trashVisible && !settingsVisible;
+        DashboardContent.IsVisible = !projectsVisible && !clientsVisible && !collectionsVisible && !filamentsVisible && !estimatesVisible && !trashVisible && !settingsVisible;
         ProjectsWorkspacePanel.IsVisible = projectsVisible;
         ClientsWorkspacePanel.IsVisible = clientsVisible;
         CollectionsWorkspacePanel.IsVisible = collectionsVisible;
         FilamentsWorkspacePanel.IsVisible = filamentsVisible;
+        EstimatesWorkspacePanel.IsVisible = estimatesVisible;
         TrashWorkspacePanel.IsVisible = trashVisible;
         SettingsWorkspacePanel.IsVisible = settingsVisible;
 
@@ -75,6 +78,8 @@ public partial class MainWindow : Window
             await LoadCollectionsAsync();
         else if (filamentsVisible)
             await LoadFilamentsAsync();
+        else if (estimatesVisible)
+            await LoadEstimateFilamentsAsync();
         else if (trashVisible)
             await LoadTrashAsync();
         else if (settingsVisible)
@@ -905,6 +910,54 @@ public partial class MainWindow : Window
     }
 
     private async void RefreshFilaments_Click(object? sender, RoutedEventArgs e) => await LoadFilamentsAsync();
+
+    private Task LoadEstimateFilamentsAsync()
+    {
+        var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        var filaments = new WorkspaceInventoryReader().LoadFilaments(root);
+        EstimateFilament.ItemsSource = filaments;
+        EstimateFilament.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>((f, _) => new TextBlock { Text = $"{f.Brand} · {f.Name} ({f.PricePerKg:0.00} €/kg)" });
+        EstimateFilament.SelectedIndex = filaments.Count > 0 ? 0 : -1;
+        return Task.CompletedTask;
+    }
+
+    private void CalculateEstimate_Click(object? sender, RoutedEventArgs e)
+    {
+        if (EstimateFilament.SelectedItem is not MS3DPRINT.Manager.Core.Filaments.FilamentProfile filament)
+        {
+            EstimateDetail.Text = "Ajoutez ou sélectionnez un filament.";
+            return;
+        }
+
+        if (!TryEstimateValue(EstimateWeight.Text, out var grams) || !TryEstimateValue(EstimateHours.Text, out var hours) ||
+            !TryEstimateValue(EstimateMachineRate.Text, out var rate) || !TryEstimateValue(EstimateElectricity.Text, out var electricity) ||
+            !TryEstimateValue(EstimateDesign.Text, out var design) || !TryEstimateValue(EstimateLabor.Text, out var labor) ||
+            !TryEstimateValue(EstimatePostProcessing.Text, out var postProcessing) || !TryEstimateValue(EstimateConsumables.Text, out var consumables) ||
+            !TryEstimateValue(EstimatePackaging.Text, out var packaging) || !TryEstimateValue(EstimateMisc.Text, out var misc) ||
+            !TryEstimateValue(EstimateMargin.Text, out var margin) || !TryEstimateValue(EstimateFailure.Text, out var failure) || !TryEstimateValue(EstimateDiscount.Text, out var discount) ||
+            grams < 0 || hours < 0 || rate < 0 || electricity < 0 || design < 0 || labor < 0 || postProcessing < 0 || consumables < 0 || packaging < 0 || misc < 0)
+        {
+            EstimateDetail.Text = "Saisissez des montants positifs, avec une virgule ou un point.";
+            return;
+        }
+
+        try
+        {
+            var result = EstimateCalculator.Calculate(new EstimateInputs(
+                MaterialCost: filament.PricePerKg * grams / 1000m, MachineCost: hours * rate, ElectricityCost: electricity,
+                DesignCost: design, LaborCost: labor, PostProcessingCost: postProcessing, ConsumablesCost: consumables,
+                PackagingShippingCost: packaging, MiscCost: misc, MarginPercent: margin, FailureRatePercent: failure, DiscountPercent: discount));
+            EstimateFinal.Text = result.FinalPrice.ToString("0.00") + " €";
+            EstimateDetail.Text = $"Coût brut : {result.RawCost:0.00} € · Avec aléas : {result.ExpectedCost:0.00} € · Avant remise : {result.SalePrice:0.00} €.";
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            EstimateDetail.Text = "Le taux d’échec doit être inférieur à 100 %, et la remise entre 0 et 100 %.";
+        }
+    }
+
+    private static bool TryEstimateValue(string? value, out decimal result) =>
+        decimal.TryParse(value?.Replace(',', '.'), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out result);
 
     private async void CreateFilament_Click(object? sender, RoutedEventArgs e)
     {
