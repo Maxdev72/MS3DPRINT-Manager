@@ -12,6 +12,7 @@ namespace MS3DPRINT.Manager.Desktop;
 
 public partial class MainWindow : Window
 {
+    private sealed record ProjectDirectoryContext(ProjectSummary Project, string Directory, string Path);
     private const string DefaultWorkspaceRoot = @"C:\MS3DPRINT\Nextcloud\MS3DPRINT";
     private CancellationTokenSource? _searchCancellation;
     private Button? _selectedNavigationButton;
@@ -296,9 +297,13 @@ public partial class MainWindow : Window
                 }
                 else
                 {
+                    var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
                     var file = new Button { Content = $"Fichier · {entry.Name}", Tag = entry.FullPath, HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left };
                     file.Click += FileEntry_Click;
-                    ProjectList.Children.Add(file);
+                    var rename = new Button { Content = "Renommer", Tag = new ProjectDirectoryContext(project, directory, entry.FullPath) };
+                    rename.Click += RenameProjectFile_Click;
+                    row.Children.Add(file); row.Children.Add(rename);
+                    ProjectList.Children.Add(row);
                 }
             }
         }
@@ -326,6 +331,22 @@ public partial class MainWindow : Window
     {
         if (sender is not Button { Tag: string path } || !File.Exists(path)) return;
         await OpenFileAsync(path);
+    }
+
+    private async void RenameProjectFile_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: ProjectDirectoryContext context }) return;
+        var dialog = new TextPromptWindow("Renommer le fichier", "Le fichier conservera son emplacement dans le projet.", Path.GetFileName(context.Path));
+        if (!await dialog.ShowDialog<bool>(this)) return;
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).RenamePath(context.Path, dialog.Value));
+            PageSubtitle.Text = "Fichier renommé.";
+            await LoadProjectDirectoryAsync(context.Project, context.Directory);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { PageSubtitle.Text = exception.Message; }
     }
 
     private async Task OpenFileAsync(string path)
