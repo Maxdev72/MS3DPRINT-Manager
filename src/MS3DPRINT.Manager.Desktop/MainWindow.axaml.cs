@@ -625,9 +625,11 @@ public partial class MainWindow : Window
         open.Click += OpenFolder_Click;
         var rename = new Button { Content = "Renommer", Tag = client };
         rename.Click += RenameClient_Click;
+        var move = new Button { Content = "Déplacer", Tag = client };
+        move.Click += MoveClient_Click;
         var trash = new Button { Content = "Corbeille", Tag = client };
         trash.Click += TrashClient_Click;
-        commands.Children.Add(edit); commands.Children.Add(open); commands.Children.Add(rename); commands.Children.Add(trash); card.Children.Add(commands);
+        commands.Children.Add(edit); commands.Children.Add(open); commands.Children.Add(rename); commands.Children.Add(move); commands.Children.Add(trash); card.Children.Add(commands);
         ClientList.Children.Add(new Border { Background = new SolidColorBrush(Color.Parse("#141F30")), CornerRadius = new Avalonia.CornerRadius(10), Padding = new Avalonia.Thickness(16), Child = card });
         try
         {
@@ -698,6 +700,24 @@ public partial class MainWindow : Window
             await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).RenameClient(client, dialog.Value));
             PageTitle.Text = "Clients";
             PageSubtitle.Text = "Client renommé.";
+            await LoadClientsAsync();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { PageSubtitle.Text = exception.Message; }
+    }
+
+    private async void MoveClient_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: ClientSummary client }) return;
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = "Choisir le dossier de destination", AllowMultiple = false });
+        var destination = folders.FirstOrDefault()?.TryGetLocalPath();
+        if (string.IsNullOrWhiteSpace(destination)) return;
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).MoveClient(client, destination));
+            PageTitle.Text = "Clients";
+            PageSubtitle.Text = "Client déplacé.";
             await LoadClientsAsync();
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
