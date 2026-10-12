@@ -277,6 +277,35 @@ public partial class MainWindow : Window
         return cell;
     }
 
+    private const string ActionRowColumns = "2*,*,Auto,64";
+
+    /// <summary>
+    /// Table row opened by clicking it, with a separate actions menu on the right.
+    /// The row button sits behind the cells (which ignore the pointer) so the menu is never nested in it.
+    /// </summary>
+    private static Grid CreateActionRow(Button open, Button actions, params Control[] cells)
+    {
+        var row = new Grid { ColumnDefinitions = new ColumnDefinitions(ActionRowColumns), ColumnSpacing = 16, Margin = new Avalonia.Thickness(14, 0), MinHeight = 44 };
+        open.Classes.Add("table-row");
+        open.Margin = new Avalonia.Thickness(-14, 0);
+        Grid.SetColumnSpan(open, 4);
+        row.Children.Add(open);
+        for (var index = 0; index < cells.Length; index++)
+        {
+            cells[index].IsHitTestVisible = false;
+            Grid.SetColumn(cells[index], index);
+            row.Children.Add(cells[index]);
+        }
+        actions.HorizontalAlignment = HorizontalAlignment.Center;
+        actions.VerticalAlignment = VerticalAlignment.Center;
+        Grid.SetColumn(actions, 3);
+        row.Children.Add(actions);
+        return row;
+    }
+
+    private bool _projectListMode;
+    private bool _clientListMode;
+
     private static Button CreateOverflowActions(params Button[] actions)
         => CreateOverflowActions(PlacementMode.BottomEdgeAlignedRight, actions);
 
@@ -359,6 +388,7 @@ public partial class MainWindow : Window
         var workspaceRoot = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
         ProjectList.Children.Clear();
         ProjectList.Spacing = 0;
+        _projectListMode = true;
         ProjectsPanelTitle.Text = "Tous les projets";
         ProjectsPanelSubtitle.Text = "Catalogue lu depuis votre espace de travail.";
         ProjectsPanelActions.IsVisible = true;
@@ -372,26 +402,21 @@ public partial class MainWindow : Window
                 return;
             }
 
-            ProjectList.Children.Add(CreateCompactTableHeader("2*,*,Auto", "PROJET", "CLIENT", "STATUT"));
+            ProjectList.Children.Add(CreateCompactTableHeader(ActionRowColumns, "PROJET", "CLIENT", "STATUT", "ACTIONS"));
 
             foreach (var project in projects)
             {
-                var row = new Grid { ColumnDefinitions = new ColumnDefinitions("2*,*,Auto"), ColumnSpacing = 16 };
-                var title = CreateCompactTableCell($"{project.Reference} · {project.ProjectName}", prominent: true);
-                var client = CreateCompactTableCell(project.ClientFolderName);
-                var status = CreateCompactTableCell(project.StatusLabel, accent: true);
-                Grid.SetColumn(client, 1); Grid.SetColumn(status, 2);
-                row.Children.Add(title); row.Children.Add(client); row.Children.Add(status);
-                var button = new Button
-                {
-                    Tag = project,
-                    Content = row,
-                    HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left,
-                    HorizontalAlignment = HorizontalAlignment.Stretch,
-                    Classes = { "table-row" }
-                };
-                button.Click += ProjectEntry_Click;
-                ProjectList.Children.Add(button);
+                var open = new Button { Tag = project, HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch };
+                open.Click += ProjectEntry_Click;
+                var folder = new Button { Content = "↗  Ouvrir le dossier", Tag = project.ProjectPath }; folder.Click += OpenFolder_Click;
+                var edit = new Button { Content = "✎  Modifier la fiche", Tag = project }; edit.Click += EditProject_Click;
+                var rename = new Button { Content = "↻  Renommer", Tag = project }; rename.Click += RenameProject_Click;
+                var move = new Button { Content = "⇄  Déplacer", Tag = project }; move.Click += MoveProject_Click;
+                var trash = new Button { Content = "⌫  Corbeille", Tag = project }; trash.Click += TrashProject_Click;
+                ProjectList.Children.Add(CreateActionRow(open, CreateOverflowActions(folder, edit, rename, move, trash),
+                    CreateCompactTableCell($"{project.Reference} · {project.ProjectName}", prominent: true),
+                    CreateCompactTableCell(project.ClientFolderName),
+                    CreateCompactTableCell(project.StatusLabel, accent: true)));
             }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
@@ -415,6 +440,7 @@ public partial class MainWindow : Window
     {
         ProjectList.Children.Clear();
         ProjectList.Spacing = 8;
+        _projectListMode = false;
         ProjectsPanelTitle.Text = directory == project.ProjectPath ? "Fiche projet" : Path.GetFileName(directory);
         ProjectsPanelSubtitle.Text = $"{project.Reference} · {project.ClientFolderName}";
         ProjectsPanelActions.IsVisible = false;
@@ -642,15 +668,8 @@ public partial class MainWindow : Window
             content.Children.Add(new TextBlock { Text = project.Profile.Description, TextWrapping = TextWrapping.Wrap });
         var edit = new Button { Content = "✎  Modifier la fiche", Tag = project };
         edit.Click += EditProject_Click;
-        var open = new Button { Content = "↗  Ouvrir le dossier", Tag = project.ProjectPath };
-        open.Click += OpenFolder_Click;
-        var rename = new Button { Content = "↻  Renommer", Tag = project };
-        rename.Click += RenameProject_Click;
-        var move = new Button { Content = "⇄  Déplacer", Tag = project };
-        move.Click += MoveProject_Click;
-        var trash = new Button { Content = "⌫  Corbeille", Tag = project };
-        trash.Click += TrashProject_Click;
-        content.Children.Add(CreateOverflowActions(PlacementMode.BottomEdgeAlignedLeft, open, edit, rename, move, trash));
+        edit.HorizontalAlignment = HorizontalAlignment.Left;
+        content.Children.Add(edit);
         ProjectList.Children.Add(new Border
         {
             Background = new SolidColorBrush(Color.Parse("#141F30")), CornerRadius = new Avalonia.CornerRadius(10), Padding = new Avalonia.Thickness(16), Child = content
@@ -672,7 +691,8 @@ public partial class MainWindow : Window
             {
                 var completed = await Task.Run(() => new WorkspaceProjectCreator().CompleteExisting(root, project, client.Profile, completion.Value));
                 PageSubtitle.Text = "Fiche projet historique complétée.";
-                await LoadProjectDirectoryAsync(project with { Profile = completed }, project.ProjectPath);
+                if (_projectListMode) await LoadProjectsAsync();
+                else await LoadProjectDirectoryAsync(project with { Profile = completed }, project.ProjectPath);
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
             { PageSubtitle.Text = exception.Message; }
@@ -686,7 +706,8 @@ public partial class MainWindow : Window
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
             var updated = await Task.Run(() => new WorkspaceProfileEditor().UpdateProject(root, profile, dialog.Status, dialog.DueDate, dialog.Description, dialog.Notes));
             PageSubtitle.Text = "Fiche projet enregistrée.";
-            await LoadProjectDirectoryAsync(project with { Profile = updated }, project.ProjectPath);
+            if (_projectListMode) await LoadProjectsAsync();
+            else await LoadProjectDirectoryAsync(project with { Profile = updated }, project.ProjectPath);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         {
@@ -857,6 +878,7 @@ public partial class MainWindow : Window
         var workspaceRoot = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
         ClientList.Children.Clear();
         ClientList.Spacing = 0;
+        _clientListMode = true;
         _currentClientDetail = null;
         ClientsPanelTitle.Text = "Tous les clients";
         ClientsPanelSubtitle.Text = "Catalogue lu depuis votre espace de travail.";
@@ -870,26 +892,21 @@ public partial class MainWindow : Window
                 return;
             }
 
-            ClientList.Children.Add(CreateCompactTableHeader("2*,*,Auto", "CLIENT", "FICHE", "PROJETS"));
+            ClientList.Children.Add(CreateCompactTableHeader(ActionRowColumns, "CLIENT", "FICHE", "PROJETS", "ACTIONS"));
 
             foreach (var client in clients)
             {
-                var row = new Grid { ColumnDefinitions = new ColumnDefinitions("2*,*,Auto"), ColumnSpacing = 16 };
-                var name = CreateCompactTableCell(client.DisplayName, prominent: true);
-                var profile = CreateCompactTableCell(client.ProfileLabel);
-                var projects = CreateCompactTableCell($"{client.ProjectCount} projet(s)", accent: true);
-                Grid.SetColumn(profile, 1); Grid.SetColumn(projects, 2);
-                row.Children.Add(name); row.Children.Add(profile); row.Children.Add(projects);
-                var item = new Button
-                {
-                    Content = row,
-                    Tag = client,
-                    HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left,
-                    HorizontalAlignment = HorizontalAlignment.Stretch,
-                    Classes = { "table-row" }
-                };
-                item.Click += ClientEntry_Click;
-                ClientList.Children.Add(item);
+                var open = new Button { Tag = client, HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch };
+                open.Click += ClientEntry_Click;
+                var folder = new Button { Content = "↗  Ouvrir le dossier", Tag = client.ClientPath }; folder.Click += OpenFolder_Click;
+                var edit = new Button { Content = "✎  Modifier la fiche", Tag = client }; edit.Click += EditClient_Click;
+                var rename = new Button { Content = "↻  Renommer", Tag = client }; rename.Click += RenameClient_Click;
+                var move = new Button { Content = "⇄  Déplacer", Tag = client }; move.Click += MoveClient_Click;
+                var trash = new Button { Content = "⌫  Corbeille", Tag = client }; trash.Click += TrashClient_Click;
+                ClientList.Children.Add(CreateActionRow(open, CreateOverflowActions(folder, edit, rename, move, trash),
+                    CreateCompactTableCell(client.DisplayName, prominent: true),
+                    CreateCompactTableCell(client.ProfileLabel),
+                    CreateCompactTableCell($"{client.ProjectCount} projet(s)", accent: true)));
             }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
@@ -908,6 +925,7 @@ public partial class MainWindow : Window
     {
         ClientList.Children.Clear();
         ClientList.Spacing = 8;
+        _clientListMode = false;
         _currentClientDetail = client;
         ClientsPanelTitle.Text = "Fiche client";
         ClientsPanelSubtitle.Text = client.DisplayName;
@@ -928,15 +946,8 @@ public partial class MainWindow : Window
         if (!string.IsNullOrWhiteSpace(client.Profile?.Notes)) card.Children.Add(new TextBlock { Text = client.Profile.Notes, TextWrapping = TextWrapping.Wrap });
         var edit = new Button { Content = "✎  Modifier la fiche", Tag = client };
         edit.Click += EditClient_Click;
-        var open = new Button { Content = "↗  Ouvrir le dossier", Tag = client.ClientPath };
-        open.Click += OpenFolder_Click;
-        var rename = new Button { Content = "↻  Renommer", Tag = client };
-        rename.Click += RenameClient_Click;
-        var move = new Button { Content = "⇄  Déplacer", Tag = client };
-        move.Click += MoveClient_Click;
-        var trash = new Button { Content = "⌫  Corbeille", Tag = client };
-        trash.Click += TrashClient_Click;
-        card.Children.Add(CreateOverflowActions(PlacementMode.BottomEdgeAlignedLeft, open, edit, rename, move, trash));
+        edit.HorizontalAlignment = HorizontalAlignment.Left;
+        card.Children.Add(edit);
         ClientList.Children.Add(new Border { Background = new SolidColorBrush(Color.Parse("#141F30")), CornerRadius = new Avalonia.CornerRadius(10), Padding = new Avalonia.Thickness(16), Child = card });
         try
         {
@@ -978,7 +989,8 @@ public partial class MainWindow : Window
                     completion.IsIndividual ? ClientKind.Individual : ClientKind.Professional,
                     completion.IsIndividual ? completion.LastName : completion.ClientName, completion.Code, completion.FirstName, completion.LastName, completion.Siret, completion.Address));
                 PageSubtitle.Text = "Fiche client historique complétée.";
-                await LoadClientDetailAsync(client with { Profile = completedProfile });
+                if (_clientListMode) await LoadClientsAsync();
+                else await LoadClientDetailAsync(client with { Profile = completedProfile });
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
             { PageSubtitle.Text = exception.Message; }
@@ -994,7 +1006,8 @@ public partial class MainWindow : Window
                 dialog.ContactFirstName, dialog.ContactLastName, dialog.ContactRole, dialog.ContactPhone, dialog.ContactEmail,
                 dialog.CompanyName, dialog.Siret, dialog.IdentityFirstName, dialog.IdentityLastName));
             PageSubtitle.Text = "Fiche client enregistrée.";
-            await LoadClientDetailAsync(client with { Profile = updated });
+            if (_clientListMode) await LoadClientsAsync();
+            else await LoadClientDetailAsync(client with { Profile = updated });
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         {

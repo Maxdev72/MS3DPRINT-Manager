@@ -16,6 +16,8 @@
 - Création de client : recherche d’entreprise sur Internet pendant la saisie du nom (SIRET et adresse repris
   automatiquement), suggestions d’adresse, code client proposé automatiquement et dossier au format `NOM_CLIENT`.
 - Import de fichier : proposition de renommage `nom__RÉFÉRENCE-PROJET.ext` (modifiable), ou conservation du nom d’origine.
+- Projets et Clients : le menu d’actions « ⋯ » (ouvrir, modifier, renommer, déplacer, corbeille) est sur chaque ligne
+  de la liste ; dans un projet ou un client déjà ouvert il ne reste que « Modifier la fiche ».
 - Filaments : plus de clic sur la ligne, la modification est dans le menu « ⋯ ».
 
 ### Améliorations
