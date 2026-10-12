@@ -2325,7 +2325,10 @@ public partial class MainWindow : Window
             if (chip.Content is StackPanel { Children: [Border dot, ..] })
             {
                 if (dot.Child is TextBlock firstNumber)
+                {
+                    dot.Child = null; // detach first: a control cannot have two parents
                     dot.Child = new Panel { Children = { firstNumber, Icons.Glyph("IconCheck", 14) } };
+                }
                 if (dot.Child is Panel { Children: [TextBlock number, Control check] })
                 {
                     var finished = index < _estimateStep && chip.IsEnabled;
