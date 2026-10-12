@@ -2,6 +2,11 @@
 
 ## 12 octobre 2026
 
+### Dossiers modifiables
+- Dans le contenu d’un dossier de collection : **Nouveau dossier**, **Importer un fichier**, et pour chaque ligne un menu « ⋯ » (renommer, déplacer, corbeille, ouvrir avec…).
+- Dans un projet, les sous-dossiers ont aussi leur menu d’actions.
+- Ouvrir un dossier remplace la page affichée au lieu de se superposer à elle.
+
 ### Audit accessibilité et robustesse
 - Boutons à icône et lignes de listes nommés pour les lecteurs d’écran ; boutons d’action agrandis (36 px).
 - Textes de 10 et 11 px portés à 12 px ; couleurs restantes passées en jetons de thème.

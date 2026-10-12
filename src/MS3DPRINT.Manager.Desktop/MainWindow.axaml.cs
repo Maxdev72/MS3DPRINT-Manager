@@ -18,7 +18,7 @@ namespace MS3DPRINT.Manager.Desktop;
 
 public partial class MainWindow : Window
 {
-    private sealed record ProjectDirectoryContext(ProjectSummary Project, string Directory, string Path);
+    private sealed record ProjectDirectoryContext(ProjectSummary? Project, string Directory, string Path);
     private const string DefaultWorkspaceRoot = @"C:\MS3DPRINT\Nextcloud\MS3DPRINT";
     private CancellationTokenSource? _searchCancellation;
     private Button? _selectedNavigationButton;
@@ -1041,7 +1041,7 @@ public partial class MainWindow : Window
                 {
                     var folder = new Button { HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch };
                     folder.Click += async (_, _) => await LoadProjectDirectoryAsync(project, entry.FullPath);
-                    ProjectList.Children.Add(CreateActionRow(folder, null,
+                    ProjectList.Children.Add(CreateActionRow(folder, CreateOverflowActions(EntryActions(new ProjectDirectoryContext(project, directory, entry.FullPath), isFile: false)),
                         CreateNameCell("IconProjects", entry.Name, accentIcon: true),
                         CreateCompactTableCell("Dossier"), CreateCompactTableCell("—")));
                 }
@@ -1065,6 +1065,66 @@ public partial class MainWindow : Window
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         { ProjectList.Children.Add(new TextBlock { Text = "Impossible de lire les fichiers du projet.", Margin = new Avalonia.Thickness(8) }); }
+    }
+
+    /// <summary>Reloads the directory an action was made in: a project folder, or a generic workspace folder.</summary>
+    private async Task ReloadDirectoryAsync(ProjectDirectoryContext context)
+    {
+        if (context.Project is { } project) { await LoadProjectDirectoryAsync(project, context.Directory); return; }
+        _folderWorkspaceDirectory = context.Directory;
+        await LoadFolderWorkspaceAsync();
+    }
+
+    private ProjectDirectoryContext FolderContext(string path) => new(null, _folderWorkspaceDirectory ?? _folderWorkspaceRoot ?? string.Empty, path);
+
+    private async void CreateWorkspaceFolder_Click(object? sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_folderWorkspaceDirectory)) return;
+        var directory = _folderWorkspaceDirectory;
+        var dialog = new TextPromptWindow("Nouveau dossier", "Nom du sous-dossier à créer.", string.Empty);
+        if (!await dialog.ShowDialog<bool>(this)) return;
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var folderName = dialog.Value;
+            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.ManagedFileService(root).CreateFolder(directory, folderName));
+            Notify("Dossier créé.");
+            await LoadFolderWorkspaceAsync();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { Notify(exception.Message, error: true); }
+    }
+
+    private async void ImportWorkspaceFile_Click(object? sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_folderWorkspaceDirectory)) return;
+        var directory = _folderWorkspaceDirectory;
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions { Title = "Importer un fichier", AllowMultiple = false });
+        var source = files.FirstOrDefault()?.TryGetLocalPath();
+        if (string.IsNullOrWhiteSpace(source)) return;
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.ManagedFileService(root).Import(source, directory));
+            Notify("Fichier importé.");
+            await LoadFolderWorkspaceAsync();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { Notify(exception.Message, error: true); }
+    }
+
+    private Button[] EntryActions(ProjectDirectoryContext context, bool isFile)
+    {
+        var rename = new Button { Content = Icons.Label("IconRename", "Renommer"), Tag = context };
+        rename.Click += RenameProjectFile_Click;
+        var move = new Button { Content = Icons.Label("IconMove", "Déplacer"), Tag = context };
+        move.Click += MoveProjectEntry_Click;
+        var trash = new Button { Content = Icons.Label("IconTrash", "Corbeille"), Tag = context };
+        trash.Click += TrashProjectFile_Click;
+        if (!isFile) return [rename, move, trash];
+        var openWith = new Button { Content = Icons.Label("IconOpen", "Ouvrir avec…"), Tag = context.Path };
+        openWith.Click += OpenWithFile_Click;
+        return [openWith, rename, move, trash];
     }
 
     private async void CreateProjectFolder_Click(object? sender, RoutedEventArgs e)
@@ -1161,7 +1221,7 @@ public partial class MainWindow : Window
             var newName = dialog.Value;
             await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).RenamePath(context.Path, newName));
             Notify(isDirectory ? "Dossier renommé." : "Fichier renommé.");
-            await LoadProjectDirectoryAsync(context.Project, context.Directory);
+            await ReloadDirectoryAsync(context);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         { Notify(exception.Message, error: true); }
@@ -1178,7 +1238,7 @@ public partial class MainWindow : Window
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
             await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.ManagedFileService(root).Trash(context.Path, label: name));
             Notify(isDirectory ? "Dossier envoyé dans la corbeille." : "Fichier envoyé dans la corbeille.");
-            await LoadProjectDirectoryAsync(context.Project, context.Directory);
+            await ReloadDirectoryAsync(context);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         { Notify(exception.Message, error: true); }
@@ -1196,7 +1256,7 @@ public partial class MainWindow : Window
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
             await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).MovePath(context.Path, destination));
             Notify(isDirectory ? "Dossier déplacé." : "Fichier déplacé.");
-            await LoadProjectDirectoryAsync(context.Project, context.Directory);
+            await ReloadDirectoryAsync(context);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         { Notify(exception.Message, error: true); }
@@ -1377,7 +1437,14 @@ public partial class MainWindow : Window
             _folderWorkspaceDirectory = new ProjectWorkspaceBrowser().Parent(root, directory);
             await LoadFolderWorkspaceAsync();
         };
-        FolderWorkspaceList.Children.Add(back);
+        var newFolder = new Button { Content = Icons.Label("IconProjects", "Nouveau dossier") };
+        newFolder.Click += CreateWorkspaceFolder_Click;
+        var importFile = new Button { Content = Icons.Label("IconUpload", "Importer un fichier") };
+        importFile.Click += ImportWorkspaceFile_Click;
+        var toolbar = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 8, Margin = new Avalonia.Thickness(0, 0, 0, 8) };
+        Grid.SetColumn(newFolder, 1); Grid.SetColumn(importFile, 2);
+        toolbar.Children.Add(back); toolbar.Children.Add(newFolder); toolbar.Children.Add(importFile);
+        FolderWorkspaceList.Children.Add(toolbar);
         try
         {
             var entries = await Task.Run(() => new ProjectWorkspaceBrowser().List(root, directory));
@@ -1388,7 +1455,7 @@ public partial class MainWindow : Window
             }
 
             FolderWorkspaceList.Spacing = 0;
-            FolderWorkspaceList.Children.Add(CreateCompactTableHeader(ActionRowColumns, "NOM", "TYPE", "TAILLE", ""));
+            FolderWorkspaceList.Children.Add(CreateCompactTableHeader(ActionRowColumns, "NOM", "TYPE", "TAILLE", "ACTIONS"));
             foreach (var entry in entries)
             {
                 var open = new Button { HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch };
@@ -1396,7 +1463,7 @@ public partial class MainWindow : Window
                     open.Click += async (_, _) => { _folderWorkspaceDirectory = entry.FullPath; await LoadFolderWorkspaceAsync(); };
                 else
                     open.Click += async (_, _) => await OpenFileAsync(entry.FullPath);
-                FolderWorkspaceList.Children.Add(CreateActionRow(open, null,
+                FolderWorkspaceList.Children.Add(CreateActionRow(open, CreateOverflowActions(EntryActions(FolderContext(entry.FullPath), isFile: !entry.IsDirectory)),
                     CreateNameCell(entry.IsDirectory ? "IconProjects" : "IconFile", entry.Name, accentIcon: entry.IsDirectory),
                     CreateCompactTableCell(entry.TypeLabel), CreateCompactTableCell(entry.IsDirectory ? "—" : entry.SizeLabel)));
             }
