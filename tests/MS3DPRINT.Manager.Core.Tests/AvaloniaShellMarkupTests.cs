@@ -173,6 +173,16 @@ public sealed class AvaloniaShellMarkupTests
         Assert.Contains("Button.menu-action", styles, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Overflow_action_menu_does_not_render_a_second_presenter_surface()
+    {
+        var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
+        var styles = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "Styles", "Controls.axaml"));
+
+        Assert.Contains("FlyoutPresenterClasses.Add(\"action-menu-flyout\")", source, StringComparison.Ordinal);
+        Assert.Contains("FlyoutPresenter.action-menu-flyout", styles, StringComparison.Ordinal);
+    }
+
     private static string MainWindowPath()
         => Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml");
 

@@ -276,6 +276,7 @@ public partial class MainWindow : Window
                 Child = menu
             }
         };
+        flyout.FlyoutPresenterClasses.Add("action-menu-flyout");
         var overflow = new Button { Content = "⋯", Classes = { "icon-action" } };
         ToolTip.SetTip(overflow, "Actions");
         overflow.Click += (_, _) => flyout.ShowAt(overflow);
