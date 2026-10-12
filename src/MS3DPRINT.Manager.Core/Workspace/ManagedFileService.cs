@@ -165,7 +165,7 @@ public sealed class ManagedFileService
         }
     }
 
-    public string Import(string sourceFile, string destinationDirectory)
+    public string Import(string sourceFile, string destinationDirectory, string? destinationFileName = null)
     {
         lock (_gate)
         {
@@ -174,8 +174,10 @@ public sealed class ManagedFileService
             CheckLinks(source);
             if (!File.Exists(source)) throw new FileNotFoundException("Fichier source introuvable.", source);
             ValidateName(Path.GetFileName(source));
+            var finalName = string.IsNullOrWhiteSpace(destinationFileName) ? Path.GetFileName(source) : destinationFileName.Trim();
+            ValidateName(finalName);
             var parent = DestinationDirectory(destinationDirectory);
-            var destination = Managed(Path.Combine(parent, Path.GetFileName(source)));
+            var destination = Managed(Path.Combine(parent, finalName));
             Vacant(destination);
             var temporary = Path.Combine(parent, ".import-" + Guid.NewGuid().ToString("N"));
             try

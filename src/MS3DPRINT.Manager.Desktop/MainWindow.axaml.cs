@@ -520,11 +520,15 @@ public partial class MainWindow : Window
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions { Title = "Importer un fichier", AllowMultiple = false });
         var source = files.FirstOrDefault()?.TryGetLocalPath();
         if (string.IsNullOrWhiteSpace(source)) return;
+        var originalName = Path.GetFileName(source);
+        var naming = new ImportNameWindow(originalName, ProjectFileClassifier.SuggestImportName(originalName, context.Item1.Reference), context.Item1.Reference);
+        if (!await naming.ShowDialog<bool>(this)) return;
         try
         {
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
-            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.ManagedFileService(root).Import(source, context.Item2));
-            PageSubtitle.Text = "Fichier importé.";
+            var finalName = naming.FileName;
+            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.ManagedFileService(root).Import(source, context.Item2, finalName));
+            PageSubtitle.Text = string.Equals(finalName, originalName, StringComparison.Ordinal) ? "Fichier importé." : $"Fichier importé sous le nom {finalName}.";
             await LoadProjectDirectoryAsync(context.Item1, context.Item2);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)

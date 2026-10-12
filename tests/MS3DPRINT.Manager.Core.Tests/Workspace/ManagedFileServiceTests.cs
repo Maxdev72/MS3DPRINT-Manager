@@ -28,6 +28,32 @@ public sealed class ManagedFileServiceTests : IDisposable
     }
 
     [Fact]
+    public void Import_CanStoreTheFileUnderAnotherName()
+    {
+        var source = Path.Combine(_root, "source.txt");
+        File.WriteAllText(source, "document");
+        var destination = Path.Combine(_root, "01_CLIENTS", "ACME", "AC-2026-001_TEST", "02_FICHIERS_CLIENT");
+        Directory.CreateDirectory(destination);
+
+        var imported = new ManagedFileService(_root).Import(source, destination, "source__AC-2026-001.txt");
+
+        Assert.Equal("source__AC-2026-001.txt", Path.GetFileName(imported));
+        Assert.True(File.Exists(source));
+        Assert.False(File.Exists(Path.Combine(destination, "source.txt")));
+    }
+
+    [Fact]
+    public void Import_RejectsAnInvalidTargetName()
+    {
+        var source = Path.Combine(_root, "source.txt");
+        File.WriteAllText(source, "document");
+        var destination = Path.Combine(_root, "01_CLIENTS", "ACME", "AC-2026-001_TEST", "02_FICHIERS_CLIENT");
+        Directory.CreateDirectory(destination);
+
+        Assert.ThrowsAny<Exception>(() => new ManagedFileService(_root).Import(source, destination, "..\\evil.txt"));
+    }
+
+    [Fact]
     public void Import_CopiesWithoutOverwriting()
     {
         var source = FileAt("source/test.txt");

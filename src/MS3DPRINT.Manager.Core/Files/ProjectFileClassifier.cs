@@ -23,6 +23,21 @@ public static partial class ProjectFileClassifier
         return new ProjectFileDestination(category, DirectoryFor(category), stem + "__" + reference + extension);
     }
 
+    /// <summary>
+    /// Name proposed when importing a file into a project: "&lt;name&gt;__&lt;project reference&gt;.&lt;ext&gt;".
+    /// A name that already carries the reference is returned unchanged.
+    /// </summary>
+    public static string SuggestImportName(string sourceFileName, string projectReference)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceFileName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(projectReference);
+        var fileName = Path.GetFileName(sourceFileName);
+        var stem = Path.GetFileNameWithoutExtension(fileName);
+        if (stem.Length == 0) throw new ArgumentException("Le fichier source doit avoir un nom valide.", nameof(sourceFileName));
+        var suffix = "__" + projectReference.Trim();
+        return stem.EndsWith(suffix, StringComparison.OrdinalIgnoreCase) ? fileName : stem + suffix + Path.GetExtension(fileName);
+    }
+
     private static ProjectFileCategory CategoryFor(string extension) => extension.ToUpperInvariant() switch
     {
         ".PDF" => ProjectFileCategory.Documents,
