@@ -176,7 +176,7 @@ public sealed class ModelViewerView : UserControl
     {
         try
         {
-            var gpu = new GpuMeshViewport();
+            var gpu = new GpuViewportHost();
             gpu.Failed += message => Dispatcher.UIThread.Post(() => FallBackToSoftware(message));
             return gpu;
         }
@@ -214,7 +214,7 @@ public sealed class ModelViewerView : UserControl
             next.SetMesh(_mesh);
             next.Camera.Yaw = camera.Yaw; next.Camera.Pitch = camera.Pitch; next.Camera.Zoom = camera.Zoom; next.Camera.PanX = camera.PanX; next.Camera.PanY = camera.PanY;
         }
-        if (next is GpuMeshViewport gpu)
+        if (next is GpuViewportHost gpu)
         {
             _gizmo = new AxesGizmo(gpu.Camera) { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom };
             _stage.Children.Add(_gizmo);
@@ -235,7 +235,7 @@ public sealed class ModelViewerView : UserControl
 
     private void FallBackToSoftware(string reason)
     {
-        if (_viewport is not GpuMeshViewport) return;
+        if (_viewport is not GpuViewportHost) return;
         UseViewport(new MeshViewport());
         _renderer.SelectedIndex = 1;
         _rendererNote.Text = "Rendu par le processeur (carte graphique indisponible : " + reason + ")";

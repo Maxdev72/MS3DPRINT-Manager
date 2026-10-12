@@ -31,7 +31,7 @@ public interface IMeshViewport
 /// is drawn with a depth buffer, flat shading derived on the GPU and 4x multisampling, so rotation stays smooth
 /// on meshes of millions of triangles. Left drag rotates, right/middle drag pans, wheel zooms.
 /// </summary>
-public sealed class GpuMeshViewport : OpenGlControlBase, IMeshViewport
+public sealed class GpuMeshViewport : OpenGlControlBase
 {
     private const double FieldOfView = 40 * Math.PI / 180;
     private const int MaxWireTriangles = 400_000;
@@ -45,8 +45,6 @@ public sealed class GpuMeshViewport : OpenGlControlBase, IMeshViewport
     private int _indexCount, _wireCount, _pointCount;
     private MeshModel? _mesh;
     private bool _meshDirty, _wireDirty, _markersDirty;
-    private Point _last;
-    private bool _rotating, _panning;
 
     public GpuMeshViewport()
     {
@@ -54,7 +52,6 @@ public sealed class GpuMeshViewport : OpenGlControlBase, IMeshViewport
         ClipToBounds = true;
     }
 
-    public Control Visual => this;
     public ViewCamera Camera { get; } = new();
     public bool Wireframe { get; set; }
     public Color ModelColor { get; set; } = Color.FromRgb(0x58, 0xA6, 0xFF);
@@ -73,9 +70,7 @@ public sealed class GpuMeshViewport : OpenGlControlBase, IMeshViewport
     public event Action<string>? Failed;
 
     public event Action? CameraChanged;
-    public event Action<Point>? Clicked;
-    private Point _pressPoint;
-    private bool _moved;
+
 
     public void SetMesh(MeshModel? mesh)
     {
@@ -341,56 +336,6 @@ public sealed class GpuMeshViewport : OpenGlControlBase, IMeshViewport
         _gl.DeleteRenderbuffer(_msaaColor);
         _gl.DeleteRenderbuffer(_msaaDepth);
         _msaaFramebuffer = _msaaColor = _msaaDepth = 0;
-    }
-
-    protected override void OnPointerPressed(PointerPressedEventArgs e)
-    {
-        base.OnPointerPressed(e);
-        var point = e.GetCurrentPoint(this);
-        _last = _pressPoint = point.Position;
-        _moved = false;
-        _rotating = point.Properties.IsLeftButtonPressed;
-        _panning = point.Properties.IsRightButtonPressed || point.Properties.IsMiddleButtonPressed;
-        if (_rotating || _panning) { e.Pointer.Capture(this); e.Handled = true; }
-    }
-
-    protected override void OnPointerMoved(PointerEventArgs e)
-    {
-        base.OnPointerMoved(e);
-        if (!_rotating && !_panning) return;
-        var position = e.GetPosition(this);
-        var dx = position.X - _last.X; var dy = position.Y - _last.Y;
-        _last = position;
-        if (Math.Abs(position.X - _pressPoint.X) + Math.Abs(position.Y - _pressPoint.Y) > 4) _moved = true;
-        if (_rotating)
-        {
-            Camera.Yaw -= dx * 0.01;
-            Camera.Pitch = Math.Clamp(Camera.Pitch + dy * 0.01, -Math.PI / 2 + 0.02, Math.PI / 2 - 0.02);
-        }
-        else
-        {
-            var scale = 760 / Math.Max(1, Bounds.Height);
-            Camera.PanX += dx * scale;
-            Camera.PanY += dy * scale;
-        }
-        RequestRender(true);
-    }
-
-    protected override void OnPointerReleased(PointerReleasedEventArgs e)
-    {
-        base.OnPointerReleased(e);
-        var wasClick = _rotating && !_moved;
-        _rotating = _panning = false;
-        e.Pointer.Capture(null);
-        if (wasClick) Clicked?.Invoke(e.GetPosition(this));
-    }
-
-    protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
-    {
-        base.OnPointerWheelChanged(e);
-        Camera.Zoom = Math.Clamp(Camera.Zoom * Math.Pow(1.12, e.Delta.Y), 0.05, 40);
-        RequestRender(true);
-        e.Handled = true;
     }
 
     private const string SolidVertex = @"
