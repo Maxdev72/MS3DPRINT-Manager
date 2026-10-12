@@ -1326,12 +1326,26 @@ public partial class MainWindow : Window
             _folderWorkspaceDirectory = _folderWorkspaceRoot;
             _folderWorkspaceReturnTitle = PageTitle.Text;
             _folderWorkspaceReturnSubtitle = PageSubtitle.Text;
+            // The folder view replaces the page underneath instead of being drawn over it.
+            if (!FolderWorkspacePanel.IsVisible)
+            {
+                _hiddenByFolderWorkspace = WorkspacePanels().Where(panel => panel.IsVisible).ToList();
+                foreach (var panel in _hiddenByFolderWorkspace) panel.IsVisible = false;
+            }
             FolderWorkspacePanel.IsVisible = true;
             await LoadFolderWorkspaceAsync();
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         { Notify("Impossible d’ouvrir ce dossier : " + exception.Message, error: true); }
     }
+
+    private List<Control> _hiddenByFolderWorkspace = [];
+
+    private IEnumerable<Control> WorkspacePanels() =>
+    [
+        DashboardStats, DashboardContent, ProjectsWorkspacePanel, ClientsWorkspacePanel, CollectionsWorkspacePanel,
+        FilamentsWorkspacePanel, EstimatesWorkspacePanel, PrintersWorkspacePanel, TrashWorkspacePanel, SettingsWorkspacePanel
+    ];
 
     private async Task LoadFolderWorkspaceAsync()
     {
@@ -1353,6 +1367,8 @@ public partial class MainWindow : Window
             if (string.Equals(root, directory, StringComparison.OrdinalIgnoreCase))
             {
                 FolderWorkspacePanel.IsVisible = false;
+                foreach (var panel in _hiddenByFolderWorkspace) panel.IsVisible = true;
+                _hiddenByFolderWorkspace = [];
                 PageTitle.Text = _folderWorkspaceReturnTitle ?? "Vue d’ensemble";
                 PageSubtitle.Text = _folderWorkspaceReturnSubtitle ?? string.Empty;
                 return;
