@@ -39,6 +39,21 @@ public sealed class WorkspaceClientCreatorTests
     }
 
     [Fact]
+    public void Create_professional_keeps_the_siret_and_address_picked_from_suggestions()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"ms3dprint-client-siret-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(root, "01_CLIENTS"));
+        try
+        {
+            var profile = new WorkspaceClientCreator().CreateProfessional(root, "Atelier Test", "AT", "12345678900012", "1 RUE TEST 75001 PARIS");
+
+            Assert.Equal("12345678900012", profile.Siret);
+            Assert.Equal("1 RUE TEST 75001 PARIS", profile.Address);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
     public void Create_individual_names_the_folder_firstname_then_lastname_like_existing_clients()
     {
         var root = Path.Combine(Path.GetTempPath(), $"ms3dprint-person-name-{Guid.NewGuid():N}");

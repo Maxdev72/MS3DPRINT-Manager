@@ -87,8 +87,8 @@
       <Border x:Name="ProjectsWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="20">
         <Grid RowDefinitions="Auto,*" RowSpacing="16">
           <Grid ColumnDefinitions="*,Auto">
-            <StackPanel Spacing="4"><TextBlock Text="Tous les projets" FontSize="18" FontWeight="SemiBold" /><TextBlock Text="Catalogue lu depuis votre espace de travail." Classes="muted" /></StackPanel>
-            <Button Grid.Column="1" Content="Actualiser" Click="RefreshProjects_Click" VerticalAlignment="Center" />
+            <StackPanel Spacing="4"><TextBlock x:Name="ProjectsPanelTitle" Text="Tous les projets" FontSize="18" FontWeight="SemiBold" /><TextBlock x:Name="ProjectsPanelSubtitle" Text="Catalogue lu depuis votre espace de travail." Classes="muted" /></StackPanel>
+            <Button x:Name="ProjectsPanelActions" Grid.Column="1" Content="Actualiser" Click="RefreshProjects_Click" VerticalAlignment="Center" />
           </Grid>
           <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
             <StackPanel x:Name="ProjectList" HorizontalAlignment="Stretch" Spacing="0" />
@@ -98,8 +98,8 @@
       <Border x:Name="ClientsWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="20">
         <Grid RowDefinitions="Auto,*" RowSpacing="16">
           <Grid ColumnDefinitions="*,Auto">
-            <StackPanel Spacing="4"><TextBlock Text="Tous les clients" FontSize="18" FontWeight="SemiBold" /><TextBlock Text="Catalogue lu depuis votre espace de travail." Classes="muted" /></StackPanel>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"><Button Content="Créer" Click="CreateClient_Click" /><Button Content="Actualiser" Click="RefreshClients_Click" VerticalAlignment="Center" /></StackPanel>
+            <StackPanel Spacing="4"><TextBlock x:Name="ClientsPanelTitle" Text="Tous les clients" FontSize="18" FontWeight="SemiBold" /><TextBlock x:Name="ClientsPanelSubtitle" Text="Catalogue lu depuis votre espace de travail." Classes="muted" /></StackPanel>
+            <StackPanel x:Name="ClientsPanelActions" Grid.Column="1" Orientation="Horizontal" Spacing="8"><Button Content="Créer" Click="CreateClient_Click" /><Button Content="Actualiser" Click="RefreshClients_Click" VerticalAlignment="Center" /></StackPanel>
           </Grid>
           <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel x:Name="ClientList" HorizontalAlignment="Stretch" Spacing="0" /></ScrollViewer>
         </Grid>

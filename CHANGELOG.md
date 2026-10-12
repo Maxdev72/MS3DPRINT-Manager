@@ -13,6 +13,10 @@
 - Nouveau visualiseur 3D intégré (STL et OBJ) : rotation, zoom, déplacement, mode solide ou filaire,
   couleur au choix et analyse indicative des parois fines.
 
+- Création de client : recherche d’entreprise sur Internet pendant la saisie du nom (SIRET et adresse repris
+  automatiquement), suggestions d’adresse, code client proposé automatiquement et dossier au format `NOM_CLIENT`.
+- Filaments : plus de clic sur la ligne, la modification est dans le menu « ⋯ ».
+
 ### Améliorations
 - Projets, Clients, Collections, Filaments et Imprimantes s’affichent en tableau compact.
 - Les fenêtres de saisie s’ouvrent au centre du logiciel.
@@ -20,6 +24,9 @@
 - Imprimantes : le volume d’impression est grisé pour l’instant et l’option « Imprimante active » est retirée.
 
 ### Corrections
+- Depuis une fiche client, ouvrir un projet affiche bien le projet (la page ne restait plus sur le contact),
+  et « Retour » ramène à la fiche client. Les boutons « Créer » et « Actualiser » de la liste des clients ne
+  s’affichent plus dans une fiche.
 - Le logiciel ne plantait plus au démarrage (onglet Estimations).
 - La création d’un projet depuis le tableau de bord ne plante plus.
 

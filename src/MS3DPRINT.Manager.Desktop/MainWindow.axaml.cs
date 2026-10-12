@@ -74,17 +74,41 @@ public partial class MainWindow : Window
         CentralWorkspace.Width = Math.Min(1200, Math.Max(0, windowWidth - sidebarWidth - centralMargins));
     }
 
+    private ClientSummary? _projectOriginClient;
+    private ClientSummary? _currentClientDetail;
+
+    /// <summary>Shows exactly one workspace panel and highlights its menu entry.</summary>
+    private void ShowWorkspace(string destination)
+    {
+        foreach (var navigationButton in NavigationItems.Children.OfType<Button>().Where(button => button.Tag is string))
+        {
+            if (navigationButton.Tag as string == destination) navigationButton.Classes.Add("selected");
+            else navigationButton.Classes.Remove("selected");
+        }
+        var dashboard = destination == "Accueil";
+        DashboardStats.IsVisible = dashboard;
+        DashboardContent.IsVisible = dashboard;
+        ProjectsWorkspacePanel.IsVisible = destination == "Projets";
+        ClientsWorkspacePanel.IsVisible = destination == "Clients";
+        CollectionsWorkspacePanel.IsVisible = destination == "Collections";
+        FilamentsWorkspacePanel.IsVisible = destination == "Filaments";
+        EstimatesWorkspacePanel.IsVisible = destination == "Estimations";
+        PrintersWorkspacePanel.IsVisible = destination == "Imprimantes";
+        TrashWorkspacePanel.IsVisible = destination == "Corbeille";
+        SettingsWorkspacePanel.IsVisible = destination == "Paramètres";
+        FolderWorkspacePanel.IsVisible = false;
+        _selectedNavigationButton = NavigationItems.Children.OfType<Button>().FirstOrDefault(button => button.Tag as string == destination);
+    }
+
     private async void NavigationButton_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button button || button.Tag is not string destination)
             return;
 
-        foreach (var navigationButton in NavigationItems.Children.OfType<Button>()) navigationButton.Classes.Remove("selected");
-        button.Classes.Add("selected");
-        _selectedNavigationButton = button;
-
+        ShowWorkspace(destination);
         PageTitle.Text = destination;
         PageSubtitle.Text = $"Espace {destination.ToLowerInvariant()} de l’atelier.";
+        _projectOriginClient = null;
         var projectsVisible = destination == "Projets";
         var clientsVisible = destination == "Clients";
         var collectionsVisible = destination == "Collections";
@@ -93,17 +117,6 @@ public partial class MainWindow : Window
         var printersVisible = destination == "Imprimantes";
         var trashVisible = destination == "Corbeille";
         var settingsVisible = destination == "Paramètres";
-        DashboardStats.IsVisible = !projectsVisible && !clientsVisible && !collectionsVisible && !filamentsVisible && !estimatesVisible && !printersVisible && !trashVisible && !settingsVisible;
-        DashboardContent.IsVisible = !projectsVisible && !clientsVisible && !collectionsVisible && !filamentsVisible && !estimatesVisible && !printersVisible && !trashVisible && !settingsVisible;
-        ProjectsWorkspacePanel.IsVisible = projectsVisible;
-        ClientsWorkspacePanel.IsVisible = clientsVisible;
-        CollectionsWorkspacePanel.IsVisible = collectionsVisible;
-        FilamentsWorkspacePanel.IsVisible = filamentsVisible;
-        EstimatesWorkspacePanel.IsVisible = estimatesVisible;
-        PrintersWorkspacePanel.IsVisible = printersVisible;
-        TrashWorkspacePanel.IsVisible = trashVisible;
-        SettingsWorkspacePanel.IsVisible = settingsVisible;
-        FolderWorkspacePanel.IsVisible = false;
 
         if (projectsVisible)
             await LoadProjectsAsync();
@@ -195,18 +208,15 @@ public partial class MainWindow : Window
         SearchBox.Text = string.Empty;
         if (result.Project is { } project)
         {
-            ProjectsWorkspacePanel.IsVisible = true;
-            DashboardStats.IsVisible = false;
-            DashboardContent.IsVisible = false;
+            _projectOriginClient = null;
+            ShowWorkspace("Projets");
             PageTitle.Text = project.ProjectName;
             PageSubtitle.Text = project.Reference;
             await LoadProjectDirectoryAsync(project, project.ProjectPath);
         }
         else if (result.Client is not null)
         {
-            ClientsWorkspacePanel.IsVisible = true;
-            DashboardStats.IsVisible = false;
-            DashboardContent.IsVisible = false;
+            ShowWorkspace("Clients");
             PageTitle.Text = "Clients";
             PageSubtitle.Text = result.Title;
             await LoadClientsAsync();
@@ -300,22 +310,11 @@ public partial class MainWindow : Window
 
     private async void RefreshProjects_Click(object? sender, RoutedEventArgs e) => await LoadProjectsAsync();
 
-    private void ShowProjectsPanel()
-    {
-        foreach (var navigationButton in NavigationItems.Children.OfType<Button>())
-        {
-            var selected = navigationButton.Tag as string == "Projets";
-            if (selected) navigationButton.Classes.Add("selected"); else navigationButton.Classes.Remove("selected");
-        }
-        DashboardStats.IsVisible = false;
-        DashboardContent.IsVisible = false;
-        ProjectsWorkspacePanel.IsVisible = true;
-    }
-
     private async void RecentProject_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: ProjectSummary project }) return;
-        ShowProjectsPanel();
+        _projectOriginClient = null;
+        ShowWorkspace("Projets");
         PageTitle.Text = project.ProjectName;
         PageSubtitle.Text = project.Reference;
         await LoadProjectDirectoryAsync(project, project.ProjectPath);
@@ -323,10 +322,8 @@ public partial class MainWindow : Window
 
     private async void DashboardProjects_Click(object? sender, RoutedEventArgs e)
     {
-        ShowProjectsPanel();
-        DashboardStats.IsVisible = false;
-        DashboardContent.IsVisible = false;
-        ProjectsWorkspacePanel.IsVisible = true;
+        _projectOriginClient = null;
+        ShowWorkspace("Projets");
         PageTitle.Text = "Projets";
         PageSubtitle.Text = "Tous les projets de l’atelier.";
         await LoadProjectsAsync();
@@ -344,9 +341,7 @@ public partial class MainWindow : Window
                 new WorkspaceProjectCreator().Create(client.ClientPath, client.ClientCode, DateTime.Today.Year, dialog.ProjectName);
                 PageTitle.Text = "Projets";
                 PageSubtitle.Text = "Projet créé.";
-                DashboardStats.IsVisible = false;
-                DashboardContent.IsVisible = false;
-                ProjectsWorkspacePanel.IsVisible = true;
+                ShowWorkspace("Projets");
                 await LoadProjectsAsync();
             }
             catch (Exception exception) when (exception is ArgumentException or IOException or InvalidOperationException)
@@ -361,6 +356,9 @@ public partial class MainWindow : Window
         var workspaceRoot = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
         ProjectList.Children.Clear();
         ProjectList.Spacing = 0;
+        ProjectsPanelTitle.Text = "Tous les projets";
+        ProjectsPanelSubtitle.Text = "Catalogue lu depuis votre espace de travail.";
+        ProjectsPanelActions.IsVisible = true;
 
         try
         {
@@ -402,6 +400,9 @@ public partial class MainWindow : Window
     private async void ProjectEntry_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: MS3DPRINT.Manager.Core.Projects.ProjectSummary project }) return;
+        // A project opened from a client sheet remembers that client, so "Retour" goes back to it.
+        _projectOriginClient = ClientsWorkspacePanel.IsVisible ? _currentClientDetail : null;
+        ShowWorkspace("Projets");
         PageTitle.Text = project.ProjectName;
         PageSubtitle.Text = project.Reference;
         await LoadProjectDirectoryAsync(project, project.ProjectPath);
@@ -411,11 +412,28 @@ public partial class MainWindow : Window
     {
         ProjectList.Children.Clear();
         ProjectList.Spacing = 8;
+        ProjectsPanelTitle.Text = directory == project.ProjectPath ? "Fiche projet" : Path.GetFileName(directory);
+        ProjectsPanelSubtitle.Text = $"{project.Reference} · {project.ClientFolderName}";
+        ProjectsPanelActions.IsVisible = false;
         var toolbar = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), Margin = new Avalonia.Thickness(0, 0, 0, 8) };
-        var back = new Button { Content = directory == project.ProjectPath ? "← Retour aux projets" : "← Dossier parent", HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left };
+        var origin = _projectOriginClient;
+        var back = new Button { Content = directory != project.ProjectPath ? "← Dossier parent" : origin is null ? "← Retour aux projets" : "← Retour au client", HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left };
         back.Click += async (_, _) =>
         {
-            if (directory == project.ProjectPath) await LoadProjectsAsync();
+            if (directory == project.ProjectPath && origin is not null)
+            {
+                _projectOriginClient = null;
+                ShowWorkspace("Clients");
+                PageTitle.Text = "Clients";
+                PageSubtitle.Text = origin.DisplayName;
+                await LoadClientDetailAsync(origin);
+            }
+            else if (directory == project.ProjectPath)
+            {
+                PageTitle.Text = "Projets";
+                PageSubtitle.Text = "Tous les projets de l’atelier.";
+                await LoadProjectsAsync();
+            }
             else await LoadProjectDirectoryAsync(project, new ProjectWorkspaceBrowser().Parent(project.ProjectPath, directory));
         };
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right };
@@ -813,14 +831,12 @@ public partial class MainWindow : Window
         try
         {
             if (dialog.IsIndividual)
-                new WorkspaceClientCreator().CreateIndividual(root, dialog.FirstName, dialog.LastName, dialog.Code);
+                new WorkspaceClientCreator().CreateIndividual(root, dialog.FirstName, dialog.LastName, dialog.Code, dialog.Address);
             else
-                new WorkspaceClientCreator().CreateProfessional(root, dialog.ClientName, dialog.Code);
+                new WorkspaceClientCreator().CreateProfessional(root, dialog.ClientName, dialog.Code, dialog.Siret, dialog.Address);
             PageTitle.Text = "Clients";
             PageSubtitle.Text = "Client créé.";
-            DashboardStats.IsVisible = false;
-            DashboardContent.IsVisible = false;
-            ClientsWorkspacePanel.IsVisible = true;
+            ShowWorkspace("Clients");
             await LoadClientsAsync();
         }
         catch (Exception exception) when (exception is ArgumentException or IOException or InvalidOperationException)
@@ -834,6 +850,10 @@ public partial class MainWindow : Window
         var workspaceRoot = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
         ClientList.Children.Clear();
         ClientList.Spacing = 0;
+        _currentClientDetail = null;
+        ClientsPanelTitle.Text = "Tous les clients";
+        ClientsPanelSubtitle.Text = "Catalogue lu depuis votre espace de travail.";
+        ClientsPanelActions.IsVisible = true;
         try
         {
             var clients = await Task.Run(() => new WorkspaceClientReader().Load(workspaceRoot));
@@ -881,8 +901,17 @@ public partial class MainWindow : Window
     {
         ClientList.Children.Clear();
         ClientList.Spacing = 8;
+        _currentClientDetail = client;
+        ClientsPanelTitle.Text = "Fiche client";
+        ClientsPanelSubtitle.Text = client.DisplayName;
+        ClientsPanelActions.IsVisible = false;
         var back = new Button { Content = "← Retour aux clients", HorizontalAlignment = HorizontalAlignment.Left };
-        back.Click += async (_, _) => await LoadClientsAsync();
+        back.Click += async (_, _) =>
+        {
+            PageTitle.Text = "Clients";
+            PageSubtitle.Text = "Espace clients de l’atelier.";
+            await LoadClientsAsync();
+        };
         ClientList.Children.Add(back);
 
         var card = new StackPanel { Spacing = 8 };
@@ -940,7 +969,7 @@ public partial class MainWindow : Window
                 var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
                 var completedProfile = await Task.Run(() => new WorkspaceClientCreator().CompleteExisting(root, client.ClientPath,
                     completion.IsIndividual ? ClientKind.Individual : ClientKind.Professional,
-                    completion.IsIndividual ? completion.LastName : completion.ClientName, completion.Code, completion.FirstName, completion.LastName));
+                    completion.IsIndividual ? completion.LastName : completion.ClientName, completion.Code, completion.FirstName, completion.LastName, completion.Siret, completion.Address));
                 PageSubtitle.Text = "Fiche client historique complétée.";
                 await LoadClientDetailAsync(client with { Profile = completedProfile });
             }
