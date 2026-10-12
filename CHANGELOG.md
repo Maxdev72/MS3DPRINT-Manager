@@ -2,6 +2,10 @@
 
 ## 12 octobre 2026
 
+### Position de la fenêtre mémorisée
+- La fenêtre se rouvre à l’endroit où vous l’avez laissée, sur le bon écran, avec sa taille ; fermée en plein écran, elle se rouvre en plein écran et revient à sa position d’avant en la réduisant.
+- Si cet endroit n’est plus visible (écran débranché, résolution changée), elle est recentrée sur l’écran principal.
+
 ### Comparaison de deux versions
 - « Comparer avec une autre version » charge un second fichier et le superpose au premier dans une autre couleur (rouge sur bleu) : les zones rouges montrent où la version B dépasse A, les bleues où A dépasse B.
 - Tableau des écarts en mm : largeur, profondeur, hauteur, volume, surface et nombre de triangles ; affichage de A ou de B seul, alignement des centres.

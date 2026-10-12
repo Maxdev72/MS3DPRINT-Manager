@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
@@ -50,13 +51,38 @@ public partial class MainWindow : Window
         {
             Width = Math.Max(MinWidth, saved.Width);
             Height = Math.Max(MinHeight, saved.Height);
+            if (saved.X is { } x && saved.Y is { } y)
+            {
+                WindowStartupLocation = WindowStartupLocation.Manual;
+                Position = new PixelPoint(x, y);
+                _normalPosition = Position;
+                _positionRestored = true;
+            }
             if (saved.Maximized) WindowState = WindowState.Maximized;
         }
+        PositionChanged += (_, e) => { if (WindowState == WindowState.Normal) _normalPosition = e.Point; };
         Closing += (_, _) =>
             _placement.Save(new WindowPlacement(
                 WindowState == WindowState.Normal ? Bounds.Width : Width,
                 WindowState == WindowState.Normal ? Bounds.Height : Height,
-                WindowState == WindowState.Maximized));
+                WindowState == WindowState.Maximized,
+                (WindowState == WindowState.Normal ? Position : _normalPosition)?.X,
+                (WindowState == WindowState.Normal ? Position : _normalPosition)?.Y));
+    }
+
+    private PixelPoint? _normalPosition;
+    private bool _positionRestored;
+
+    /// <summary>Puts the window back on a visible monitor when its saved place is no longer reachable.</summary>
+    private void EnsureOnScreen()
+    {
+        if (!_positionRestored || WindowState != WindowState.Normal || Screens is not { All.Count: > 0 } screens) return;
+        var scale = RenderScaling;
+        var size = new PixelSize((int)(Bounds.Width * scale), (int)(Bounds.Height * scale));
+        if (size.Width < 100) size = new PixelSize((int)(Width * scale), (int)(Height * scale));
+        var areas = screens.All.Select(screen => screen.WorkingArea).ToList();
+        if (WindowPlacementStore.IsReachable(new PixelRect(Position, size), areas)) return;
+        Position = WindowPlacementStore.CentreIn((screens.Primary ?? screens.All[0]).WorkingArea, size);
     }
 
     private bool _preloaded;
@@ -65,6 +91,7 @@ public partial class MainWindow : Window
 
     private async void Window_Opened(object? sender, EventArgs e)
     {
+        EnsureOnScreen();
         UpdateCentralWorkspaceWidth(Bounds.Width);
         var shortcut = 1;
         foreach (var navigation in NavigationButtons().Take(9))
