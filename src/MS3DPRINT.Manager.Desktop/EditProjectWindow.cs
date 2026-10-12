@@ -10,7 +10,7 @@ public sealed class EditProjectWindow : DialogWindow
     private readonly TextBox _dueDate;
     private readonly TextBox _description;
     private readonly TextBox _notes;
-    private readonly TextBlock _error = new() { Foreground = Avalonia.Media.Brushes.IndianRed, IsVisible = false, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
+    private readonly TextBlock _error = new() { Foreground = (Avalonia.Media.IBrush?)Avalonia.Application.Current?.FindResource("DangerBrush") ?? Avalonia.Media.Brushes.IndianRed, IsVisible = false, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
 
     public ProjectStatus Status => _status.SelectedItem is ProjectStatus value ? value : ProjectStatus.Quote;
     public DateOnly? DueDate { get; private set; }

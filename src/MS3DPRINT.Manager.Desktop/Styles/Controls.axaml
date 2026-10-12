@@ -76,16 +76,16 @@
     <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}" />
   </Style>
   <Style Selector="Button.primary-action:pointerover"><Setter Property="Background" Value="{DynamicResource FocusBorderBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource FocusBorderBrush}" /></Style>
-  <Style Selector="Button.primary-action:pressed"><Setter Property="Background" Value="#4F7FE6" /></Style>
+  <Style Selector="Button.primary-action:pressed"><Setter Property="Background" Value="{DynamicResource AccentPressedBrush}" /></Style>
   <Style Selector="Button.primary-action Path.icon"><Setter Property="Stroke" Value="{DynamicResource AccentForegroundBrush}" /></Style>
   <Style Selector="Button.primary-action TextBlock"><Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}" /></Style>
   <Style Selector="Button.ghost"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderBrush" Value="Transparent" /><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /></Style>
   <Style Selector="Button.ghost:pointerover"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" /><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Style>
-  <Style Selector="Button.danger"><Setter Property="Foreground" Value="{DynamicResource DangerBrush}" /><Setter Property="BorderBrush" Value="#5A2A30" /></Style>
+  <Style Selector="Button.danger"><Setter Property="Foreground" Value="{DynamicResource DangerBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource DangerBorderBrush}" /></Style>
   <Style Selector="Button.danger:pointerover"><Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" /></Style>
   <Style Selector="Button.icon-action">
-    <Setter Property="MinWidth" Value="34" />
-    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="MinWidth" Value="36" />
+    <Setter Property="MinHeight" Value="36" />
     <Setter Property="Padding" Value="7,2" />
     <Setter Property="FontSize" Value="18" />
     <Setter Property="FontWeight" Value="SemiBold" />

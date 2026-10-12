@@ -2,6 +2,12 @@
 
 ## 12 octobre 2026
 
+### Audit accessibilité et robustesse
+- Boutons à icône et lignes de listes nommés pour les lecteurs d’écran ; boutons d’action agrandis (36 px).
+- Textes de 10 et 11 px portés à 12 px ; couleurs restantes passées en jetons de thème.
+- La page Estimations et le choix de dossier d’import ne figent plus la fenêtre pendant la lecture du disque.
+- Ajout de `PRODUCT.md` et `DESIGN.md` pour cadrer les prochaines évolutions.
+
 ### Passe Impeccable
 - Vraies icônes dessinées (menus d’actions, boutons, tri des colonnes, notifications) à la place des symboles texte.
 - Menu actif sans liseré coloré ; pages posées directement sur le fond, sans cartes imbriquées ni titres répétés.

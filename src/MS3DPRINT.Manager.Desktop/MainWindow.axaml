@@ -22,7 +22,7 @@
           <Image Source="avares://MS3DPRINT.Manager.Desktop/Assets/app-icon.png" Width="36" Height="36" />
           <StackPanel Classes="nav-label" VerticalAlignment="Center" Spacing="1">
             <TextBlock Text="MS3DPRINT" FontSize="17" FontWeight="SemiBold" />
-            <TextBlock Text="MANAGER" FontSize="10" FontWeight="SemiBold" LetterSpacing="2.5" Foreground="{DynamicResource AccentBrush}" />
+            <TextBlock Text="MANAGER" FontSize="12" FontWeight="SemiBold" LetterSpacing="2.5" Foreground="{DynamicResource AccentBrush}" />
           </StackPanel>
         </StackPanel>
         <ScrollViewer Grid.Row="1" Margin="0,26,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -67,7 +67,7 @@
           <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
             <Path Classes="icon" Data="{StaticResource IconSearch}" />
             <TextBox x:Name="SearchBox" Grid.Column="1" Classes="search-input" PlaceholderText="Rechercher un projet, un client, un fichier…" KeyUp="SearchBox_KeyUp" KeyDown="SearchBox_KeyDown" VerticalAlignment="Center" AutomationProperties.Name="Recherche globale" />
-            <Border Grid.Column="2" Classes="key-hint" VerticalAlignment="Center"><TextBlock Text="Ctrl+K" FontSize="11" Foreground="{DynamicResource MutedTextBrush}" /></Border>
+            <Border Grid.Column="2" Classes="key-hint" VerticalAlignment="Center"><TextBlock Text="Ctrl+K" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" /></Border>
           </Grid>
         </Border>
       </Grid>

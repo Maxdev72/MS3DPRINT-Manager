@@ -557,8 +557,9 @@ public partial class MainWindow : Window
         var icon = new Avalonia.Controls.Shapes.Path { Classes = { "icon", error ? "icon-danger" : "icon-success" }, Width = 18, Height = 18, VerticalAlignment = VerticalAlignment.Top, Margin = new Avalonia.Thickness(0, 1, 0, 0) };
         if (Avalonia.Application.Current?.TryFindResource(error ? "IconAlert" : "IconCheck", out var geometry) == true && geometry is Geometry data) icon.Data = data;
         var text = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap, MaxWidth = 340 };
-        var close = new Button { Content = Icons.Glyph("IconClose", 14), Classes = { "icon-action" }, MinWidth = 24, MinHeight = 24, Padding = new Avalonia.Thickness(4, 0), FontSize = 11, VerticalAlignment = VerticalAlignment.Top };
+        var close = new Button { Content = Icons.Glyph("IconClose", 14), Classes = { "icon-action" }, MinWidth = 32, MinHeight = 32, Padding = new Avalonia.Thickness(4, 0), VerticalAlignment = VerticalAlignment.Top };
         ToolTip.SetTip(close, "Fermer");
+        Avalonia.Automation.AutomationProperties.SetName(close, "Fermer la notification");
         var layout = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 10 };
         Grid.SetColumn(text, 1); Grid.SetColumn(close, 2);
         layout.Children.Add(icon); layout.Children.Add(text); layout.Children.Add(close);
@@ -602,7 +603,7 @@ public partial class MainWindow : Window
         {
             Control cell;
             if (index == headings.Length - 1)
-                cell = new TextBlock { Text = headings[index], FontSize = 11, FontWeight = FontWeight.SemiBold, Classes = { "faint" } };
+                cell = new TextBlock { Text = headings[index], FontSize = 12, FontWeight = FontWeight.SemiBold, Classes = { "faint" } };
             else
             {
                 var column = index;
@@ -626,7 +627,7 @@ public partial class MainWindow : Window
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions(columns), ColumnSpacing = 16 };
         for (var index = 0; index < headings.Length; index++)
         {
-            var heading = new TextBlock { Text = headings[index], FontSize = 11, FontWeight = FontWeight.SemiBold, Classes = { "muted" } };
+            var heading = new TextBlock { Text = headings[index], FontSize = 12, FontWeight = FontWeight.SemiBold, Classes = { "muted" } };
             Grid.SetColumn(heading, index);
             grid.Children.Add(heading);
         }
@@ -662,6 +663,13 @@ public partial class MainWindow : Window
         return cell;
     }
 
+    private static string CellText(Control cell) => cell switch
+    {
+        TextBlock text => text.Text ?? string.Empty,
+        Panel panel => string.Join(" ", panel.Children.OfType<TextBlock>().Select(text => text.Text)),
+        _ => string.Empty
+    };
+
     private const string ActionRowColumns = "2*,*,110,64";
 
     /// <summary>
@@ -678,6 +686,8 @@ public partial class MainWindow : Window
         if (open is not null)
         {
             open.Classes.Add("table-row");
+            if (cells.Length > 0 && CellText(cells[0]) is { Length: > 0 } rowName)
+                Avalonia.Automation.AutomationProperties.SetName(open, "Ouvrir " + rowName);
             open.Margin = new Avalonia.Thickness(-14, 0);
             Grid.SetColumnSpan(open, columnCount);
             row.Children.Add(open);
@@ -1100,7 +1110,7 @@ public partial class MainWindow : Window
         string? suggestedFolder = null;
         if (atRoot)
         {
-            destinations = ImportDestinations(context.Item1.ProjectPath);
+            destinations = await Task.Run(() => ImportDestinations(context.Item1.ProjectPath));
             try { suggestedFolder = Path.Combine(context.Item1.ProjectPath, ProjectFileClassifier.Suggest(originalName, context.Item1.FolderName).RelativeDirectory); }
             catch (ArgumentException) { }
         }
@@ -1880,10 +1890,11 @@ public partial class MainWindow : Window
         try
         {
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
-            var inventory = new WorkspaceInventoryReader();
-            var filaments = inventory.LoadFilaments(root);
-            var printers = inventory.LoadPrinters(root);
-            var projects = new WorkspaceProjectReader().Load(root);
+            var (filaments, printers, projects) = await Task.Run(() =>
+            {
+                var inventory = new WorkspaceInventoryReader();
+                return (inventory.LoadFilaments(root), inventory.LoadPrinters(root), new WorkspaceProjectReader().Load(root));
+            });
             EstimateProject.ItemsSource = projects;
             EstimateProject.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<ProjectSummary>((project, _) => new TextBlock { Text = project is null ? string.Empty : $"{project.Reference} · {project.ClientTitle()}" });
             EstimateProject.SelectedIndex = -1;
@@ -2069,6 +2080,8 @@ public partial class MainWindow : Window
                 button.Click += LoadSavedEstimate_Click;
                 var trash = new Button { Content = Icons.Glyph("IconTrash"), Tag = estimate, Classes = { "icon-action" } };
                 ToolTip.SetTip(trash, "Envoyer à la corbeille");
+                Avalonia.Automation.AutomationProperties.SetName(trash, $"Envoyer l’estimation {estimate.Name} à la corbeille");
+                Avalonia.Automation.AutomationProperties.SetName(button, $"{estimate.Name}, {estimate.Result.FinalPrice:0.00} €");
                 trash.Click += TrashEstimate_Click;
                 var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 6 };
                 Grid.SetColumn(trash, 1);

@@ -18,6 +18,9 @@
       <SolidColorBrush x:Key="FaintTextBrush" Color="#7385A3" />
       <!-- Accent and states -->
       <SolidColorBrush x:Key="AccentBrush" Color="#6B9BFF" />
+      <SolidColorBrush x:Key="AccentPressedBrush" Color="#4F7FE6" />
+      <SolidColorBrush x:Key="SelectionTextBrush" Color="#3A5FA8" />
+      <SolidColorBrush x:Key="DangerBorderBrush" Color="#5A2A30" />
       <SolidColorBrush x:Key="AccentSoftBrush" Color="#1A2C4D" />
       <SolidColorBrush x:Key="AccentForegroundBrush" Color="#08101F" />
       <SolidColorBrush x:Key="FocusBorderBrush" Color="#9BC0FF" />
@@ -116,7 +119,7 @@
   </Style>
   <Style Selector="TextBox:focus">
     <Setter Property="BorderBrush" Value="{DynamicResource FocusBorderBrush}" />
-    <Setter Property="SelectionBrush" Value="#3A5FA8" />
+    <Setter Property="SelectionBrush" Value="{DynamicResource SelectionTextBrush}" />
     <Setter Property="SelectionForegroundBrush" Value="{DynamicResource TextBrush}" />
     <Setter Property="CaretBrush" Value="{DynamicResource TextBrush}" />
   </Style>
