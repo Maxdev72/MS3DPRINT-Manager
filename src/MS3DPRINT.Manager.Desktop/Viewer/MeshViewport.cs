@@ -38,6 +38,11 @@ public sealed class MeshViewport : Control, IMeshViewport
     private bool _moved;
     public ViewCamera Camera { get; } = new();
     public bool Wireframe { get; set; }
+    public MeshModel? SecondMesh { get; set; }
+    public Color SecondColor { get; set; }
+    public bool ShowFirst { get; set; } = true;
+    public bool ShowSecond { get; set; } = true;
+    public Vector3 SecondOffset { get; set; }
     public ClipPlane? CutPlane { get; set; }
     public bool WindingInverted { get; set; }
     public Color ModelColor { get; set; } = Color.FromRgb(0x58, 0xA6, 0xFF);

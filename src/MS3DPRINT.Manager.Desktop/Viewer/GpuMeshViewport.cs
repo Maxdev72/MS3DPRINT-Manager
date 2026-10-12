@@ -33,6 +33,13 @@ public interface IMeshViewport
     ClipPlane? CutPlane { get; set; }
     /// <summary>True when the file lists its triangles inside out; the cut section is then coloured on the other face.</summary>
     bool WindingInverted { get; set; }
+    /// <summary>A second model drawn in the same space, to compare two versions (the GPU view only).</summary>
+    MeshModel? SecondMesh { get; set; }
+    Color SecondColor { get; set; }
+    bool ShowFirst { get; set; }
+    bool ShowSecond { get; set; }
+    /// <summary>Translation applied to the second model, for example to put its centre on the first one's.</summary>
+    Vector3 SecondOffset { get; set; }
     void SetMesh(MeshModel? mesh);
     void ResetView();
     void RequestRender(bool interactive);
@@ -74,6 +81,20 @@ public sealed class GpuMeshViewport : OpenGlControlBase
 
     public ClipPlane? CutPlane { get; set; }
     public bool WindingInverted { get; set; }
+    public Color SecondColor { get; set; } = Color.FromRgb(0xFF, 0x6B, 0x6B);
+    public bool ShowFirst { get; set; } = true;
+    public bool ShowSecond { get; set; } = true;
+    public Vector3 SecondOffset { get; set; }
+
+    private MeshModel? _second;
+    private int _secondVao, _secondWireVao, _secondPosition, _secondIndex, _secondWire, _secondIndexCount, _secondWireCount;
+    private bool _secondDirty, _secondWireDirty;
+
+    public MeshModel? SecondMesh
+    {
+        get => _second;
+        set { _second = value; _secondDirty = true; _secondWireDirty = true; }
+    }
 
     private IReadOnlyList<Vector3>? _markers;
     public IReadOnlyList<Vector3>? Markers
@@ -126,6 +147,9 @@ public sealed class GpuMeshViewport : OpenGlControlBase
             _indexBuffer = _gl.GenBuffer();
             _wireBuffer = _gl.GenBuffer();
             _pointBuffer = _gl.GenBuffer();
+            _secondPosition = _gl.GenBuffer(); _secondIndex = _gl.GenBuffer(); _secondWire = _gl.GenBuffer();
+            _secondVao = _gl.GenVertexArray(); _secondWireVao = _gl.GenVertexArray();
+            _secondDirty = true; _secondWireDirty = true;
             _meshVao = _gl.GenVertexArray();
             _wireVao = _gl.GenVertexArray();
             _pointVao = _gl.GenVertexArray();
@@ -149,6 +173,8 @@ public sealed class GpuMeshViewport : OpenGlControlBase
         _gl.DeleteProgram(_pointProgram);
         _gl.DeleteBuffer(_positionBuffer); _gl.DeleteBuffer(_indexBuffer); _gl.DeleteBuffer(_wireBuffer); _gl.DeleteBuffer(_pointBuffer);
         _gl.DeleteVertexArray(_meshVao); _gl.DeleteVertexArray(_wireVao); _gl.DeleteVertexArray(_pointVao);
+        _gl.DeleteBuffer(_secondPosition); _gl.DeleteBuffer(_secondIndex); _gl.DeleteBuffer(_secondWire);
+        _gl.DeleteVertexArray(_secondVao); _gl.DeleteVertexArray(_secondWireVao);
         ReleaseMultisample();
         IsReady = false;
         _gl = null;
@@ -209,15 +235,21 @@ public sealed class GpuMeshViewport : OpenGlControlBase
             _gl.Uniform4(_gl.GetUniformLocation(_solidProgram, "uClip"), clip.Axis == 0 ? sign : 0, clip.Axis == 1 ? sign : 0, clip.Axis == 2 ? sign : 0, clip.Offset * sign);
         }
         else _gl.Uniform4(_gl.GetUniformLocation(_solidProgram, "uClip"), 0, 0, 1, 1e30f);
-        if (Wireframe)
+        var uOffset = _gl.GetUniformLocation(_solidProgram, "uOffset");
+        var uColor = _gl.GetUniformLocation(_solidProgram, "uColor");
+        _gl.Uniform3(uOffset, 0, 0, 0);
+        if (ShowFirst) DrawMesh(_meshVao, _wireVao, _indexCount, _wireCount);
+        if (_second is not null && ShowSecond)
         {
-            _gl.BindVertexArray(_wireVao);
-            _gl.DrawElements(GlApi.Lines, _wireCount);
-        }
-        else
-        {
-            _gl.BindVertexArray(_meshVao);
-            _gl.DrawElements(GlApi.Triangles, _indexCount);
+            var other = SecondColor;
+            var move = SecondOffset;
+            _gl.Uniform3(uColor, other.R / 255f, other.G / 255f, other.B / 255f);
+            _gl.Uniform3(uOffset, move.X, move.Y, move.Z);
+            // where both versions coincide, the first one wins instead of flickering
+            _gl.Enable(GlApi.PolygonOffsetFill);
+            _gl.PolygonOffset(1f, 1f);
+            DrawMesh(_secondVao, _secondWireVao, _secondIndexCount, _secondWireCount);
+            _gl.Disable(GlApi.PolygonOffsetFill);
         }
 
         if (_pointCount > 0)
@@ -231,6 +263,12 @@ public sealed class GpuMeshViewport : OpenGlControlBase
             _gl.DrawArrays(GlApi.Points, 0, _pointCount);
         }
         _gl.BindVertexArray(0);
+    }
+
+    private void DrawMesh(int vao, int wireVao, int indexCount, int wireCount)
+    {
+        if (Wireframe) { _gl!.BindVertexArray(wireVao); _gl.DrawElements(GlApi.Lines, wireCount); }
+        else { _gl!.BindVertexArray(vao); _gl.DrawElements(GlApi.Triangles, indexCount); }
     }
 
     /// <summary>View (centre, then rotation) and perspective matrices, in the layout OpenGL expects.</summary>
@@ -271,41 +309,22 @@ public sealed class GpuMeshViewport : OpenGlControlBase
         if (_meshDirty)
         {
             _meshDirty = false;
-            _indexCount = 0;
-            if (_mesh is { } mesh)
-            {
-                gl.BindVertexArray(_meshVao);
-                gl.BindBuffer(GlApi.ArrayBuffer, _positionBuffer);
-                gl.BufferData(GlApi.ArrayBuffer, mesh.Positions, mesh.Positions.Length * 12);
-                gl.EnableVertexAttribArray(0);
-                gl.VertexAttribPointerFloat(0, 3, 12);
-                gl.BindBuffer(GlApi.ElementArrayBuffer, _indexBuffer);
-                gl.BufferData(GlApi.ElementArrayBuffer, mesh.Indices, mesh.Indices.Length * 4);
-                _indexCount = mesh.Indices.Length;
-                gl.BindVertexArray(0);
-            }
+            _indexCount = _mesh is { } mesh ? UploadMesh(gl, mesh, _meshVao, _positionBuffer, _indexBuffer) : 0;
         }
-
         if (_wireDirty && Wireframe && _mesh is { } wireMesh)
         {
             _wireDirty = false;
-            var triangles = wireMesh.TriangleCount;
-            var step = Math.Max(1, triangles / MaxWireTriangles);
-            var edges = new List<int>(Math.Min(triangles, MaxWireTriangles) * 6 + 6);
-            for (var t = 0; t < triangles; t += step)
-            {
-                int a = wireMesh.Indices[t * 3], b = wireMesh.Indices[t * 3 + 1], c = wireMesh.Indices[t * 3 + 2];
-                edges.Add(a); edges.Add(b); edges.Add(b); edges.Add(c); edges.Add(c); edges.Add(a);
-            }
-            var array = edges.ToArray();
-            gl.BindVertexArray(_wireVao);
-            gl.BindBuffer(GlApi.ArrayBuffer, _positionBuffer);
-            gl.EnableVertexAttribArray(0);
-            gl.VertexAttribPointerFloat(0, 3, 12);
-            gl.BindBuffer(GlApi.ElementArrayBuffer, _wireBuffer);
-            gl.BufferData(GlApi.ElementArrayBuffer, array, array.Length * 4);
-            _wireCount = array.Length;
-            gl.BindVertexArray(0);
+            _wireCount = UploadWire(gl, wireMesh, _wireVao, _positionBuffer, _wireBuffer);
+        }
+        if (_secondDirty)
+        {
+            _secondDirty = false;
+            _secondIndexCount = _second is { } second ? UploadMesh(gl, second, _secondVao, _secondPosition, _secondIndex) : 0;
+        }
+        if (_secondWireDirty && Wireframe && _second is { } secondWire)
+        {
+            _secondWireDirty = false;
+            _secondWireCount = UploadWire(gl, secondWire, _secondWireVao, _secondPosition, _secondWire);
         }
 
         if (_markersDirty)
@@ -325,6 +344,41 @@ public sealed class GpuMeshViewport : OpenGlControlBase
                 gl.BindVertexArray(0);
             }
         }
+    }
+
+    private static int UploadMesh(GlApi gl, MeshModel mesh, int vao, int positions, int indices)
+    {
+        gl.BindVertexArray(vao);
+        gl.BindBuffer(GlApi.ArrayBuffer, positions);
+        gl.BufferData(GlApi.ArrayBuffer, mesh.Positions, mesh.Positions.Length * 12);
+        gl.EnableVertexAttribArray(0);
+        gl.VertexAttribPointerFloat(0, 3, 12);
+        gl.BindBuffer(GlApi.ElementArrayBuffer, indices);
+        gl.BufferData(GlApi.ElementArrayBuffer, mesh.Indices, mesh.Indices.Length * 4);
+        gl.BindVertexArray(0);
+        return mesh.Indices.Length;
+    }
+
+    /// <summary>Edge list for the wireframe, thinned on very large meshes.</summary>
+    private static int UploadWire(GlApi gl, MeshModel mesh, int vao, int positions, int wire)
+    {
+        var triangles = mesh.TriangleCount;
+        var step = Math.Max(1, triangles / MaxWireTriangles);
+        var edges = new List<int>(Math.Min(triangles, MaxWireTriangles) * 6 + 6);
+        for (var t = 0; t < triangles; t += step)
+        {
+            int a = mesh.Indices[t * 3], b = mesh.Indices[t * 3 + 1], c = mesh.Indices[t * 3 + 2];
+            edges.Add(a); edges.Add(b); edges.Add(b); edges.Add(c); edges.Add(c); edges.Add(a);
+        }
+        var array = edges.ToArray();
+        gl.BindVertexArray(vao);
+        gl.BindBuffer(GlApi.ArrayBuffer, positions);
+        gl.EnableVertexAttribArray(0);
+        gl.VertexAttribPointerFloat(0, 3, 12);
+        gl.BindBuffer(GlApi.ElementArrayBuffer, wire);
+        gl.BufferData(GlApi.ElementArrayBuffer, array, array.Length * 4);
+        gl.BindVertexArray(0);
+        return array.Length;
     }
 
     /// <summary>Creates (or resizes) a multisampled render target; returns false when none is available.</summary>
@@ -368,12 +422,14 @@ public sealed class GpuMeshViewport : OpenGlControlBase
 layout(location = 0) in vec3 aPos;
 uniform mat4 uView;
 uniform mat4 uProj;
+uniform vec3 uOffset;
 out vec3 vView;
 out vec3 vModel;
 void main() {
-    vec4 v = uView * vec4(aPos, 1.0);
+    vec3 p = aPos + uOffset;
+    vec4 v = uView * vec4(p, 1.0);
     vView = v.xyz;
-    vModel = aPos;
+    vModel = p;
     gl_Position = uProj * v;
 }";
 

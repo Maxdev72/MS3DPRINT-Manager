@@ -32,6 +32,16 @@ public sealed class ModelViewerView : UserControl
     private readonly TextBlock _volumeResult = new() { TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _volumeNote = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
     private MeshMeasures? _measures;
+    private readonly Button _compareButton = new() { Content = "Comparer avec une autre version…", IsEnabled = false };
+    private readonly StackPanel _compareDetails = new() { Spacing = 8, IsVisible = false };
+    private readonly CheckBox _showFirst = new() { IsChecked = true };
+    private readonly CheckBox _showSecond = new() { IsChecked = true };
+    private readonly CheckBox _alignCentres = new() { Content = "Aligner les centres" };
+    private readonly StackPanel _compareTable = new() { Spacing = 2 };
+    private readonly TextBlock _compareNote = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
+    private MeshModel? _second;
+    private MeshMeasures? _secondMeasures;
+    private string? _secondName;
     private readonly ToggleButton _cutToggle = new() { Content = "Activer la coupe", IsEnabled = false };
     private readonly ComboBox _cutAxis = new() { ItemsSource = new[] { "Horizontale (hauteur, axe Z)", "Verticale, axe X", "Verticale, axe Y" }, SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch };
     private readonly Slider _cutSlider = new() { Minimum = 0, Maximum = 100, Value = 50, IsEnabled = false };
@@ -141,6 +151,10 @@ public sealed class ModelViewerView : UserControl
             swatch.Click += (_, _) => { _hex.Text = hex; ApplyColor(); };
             _swatches.Children.Add(swatch);
         }
+        _compareButton.Click += async (_, _) => await CompareAsync();
+        _showFirst.IsCheckedChanged += (_, _) => ApplyComparison();
+        _showSecond.IsCheckedChanged += (_, _) => ApplyComparison();
+        _alignCentres.IsCheckedChanged += (_, _) => ApplyComparison();
         _cutToggle.IsCheckedChanged += (_, _) => UpdateCut();
         _cutAxis.SelectionChanged += (_, _) => UpdateCut();
         _cutSlider.PropertyChanged += (_, e) => { if (e.Property == Slider.ValueProperty) UpdateCut(); };
@@ -151,7 +165,7 @@ public sealed class ModelViewerView : UserControl
         _units.ItemsSource = ModelUnits.All.Select(unit => unit.Label).Append("Personnalisé…").ToList();
         _units.SelectedIndex = 0;
         _units.SelectionChanged += (_, _) => UnitChosen();
-        _scale.TextChanged += (_, _) => { RefreshMeasures(); RefreshDimensions(); };
+        _scale.TextChanged += (_, _) => { RefreshMeasures(); RefreshDimensions(); RebuildComparison(); };
         _slicerPanel.Children.Add(_slicerNote);
         _slicerPanel.Children.Add(Muted("Imprimante"));
         _slicerPanel.Children.Add(_slicerMachine);
@@ -209,6 +223,7 @@ public sealed class ModelViewerView : UserControl
                 FormKit.SectionLabel("Mesures"), _measureToggle,
                 new TextBlock { Text = "Cliquez deux points du modèle : ils s’accrochent aux sommets proches. Les longueurs sont en mm selon les unités du modèle. M active, Échap annule le point en cours.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap },
                 _measureList, _clearMeasures,
+                FormKit.SectionLabel("Comparer deux versions"), _compareButton, _compareDetails,
                 FormKit.SectionLabel("Plan de coupe"), _cutToggle, _cutAxis, _cutSlider, _cutFlip, _cutLabel,
                 FormKit.SectionLabel("Volume et poids"), _volumeResult, Muted("Matière"), _material,
                 new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,*,Auto"), ColumnSpacing = 8, Children = { _infill, Place(Unit("% remplissage"), 1), Place(_walls, 2), Place(Unit("mm parois"), 3) } },
@@ -274,6 +289,7 @@ public sealed class ModelViewerView : UserControl
         _stage.Children.Insert(0, next.Visual);
         next.Wireframe = _mode.SelectedIndex == 1;
         next.WindingInverted = _measures?.Inverted == true;
+        ApplyComparison(next);
         if (PreviewColorParser.TryParse(_hex.Text, out var color)) next.ModelColor = color;
         AutomationProperties.SetName(next.Visual, "Vue 3D du modèle : souris pour tourner, déplacer et zoomer, touche R pour recentrer, W pour le mode filaire");
         if (_stage.Children.Contains(_overlay)) _stage.Children.Remove(_overlay);
@@ -383,6 +399,8 @@ public sealed class ModelViewerView : UserControl
             _overlay.Mesh = mesh;
             _measureToggle.IsEnabled = true;
             _cutToggle.IsEnabled = true;
+            _compareButton.IsEnabled = true;
+            ClearComparison();
             _cutToggle.IsChecked = false;
             // development hook, like the other MS3DPRINT_START_* variables: open with a cut at this percentage
             if (double.TryParse(Environment.GetEnvironmentVariable("MS3DPRINT_START_CUT"), NumberStyles.Float, CultureInfo.InvariantCulture, out var startCut))
@@ -405,6 +423,8 @@ public sealed class ModelViewerView : UserControl
             ToolTip.SetTip(_location, path);
             _location.IsVisible = _dimensions.IsVisible = true;
             ApplyRememberedUnit(path, mesh);
+            // development hook, like the other MS3DPRINT_START_* variables: open with a second version already loaded
+            if (Environment.GetEnvironmentVariable("MS3DPRINT_START_COMPARE") is { Length: > 0 } startCompare) _ = LoadSecondAsync(startCompare);
             _message.Text = $"{mesh.TriangleCount:N0} triangles · chargé en {stopwatch.Elapsed.TotalSeconds:N1} s.";
             ModelLoaded?.Invoke(Path.GetFileName(path));
             _viewport.Visual.Focus();
@@ -530,6 +550,7 @@ public sealed class ModelViewerView : UserControl
             var measures = await Task.Run(() => MeshVolume.Compute(mesh));
             if (version != _loadVersion) return;
             _measures = measures;
+            if (_second is not null) RebuildComparison();
             _viewport.WindingInverted = measures.Inverted;
             _viewport.RequestRender(false);
         }
@@ -606,6 +627,124 @@ public sealed class ModelViewerView : UserControl
         var name = axis == 0 ? "X" : axis == 1 ? "Y" : "Z";
         _cutLabel.Text = $"Coupe à {name} = {ModelUnits.Format((offset - min) * MeasureScale)} mm sur {ModelUnits.Format((max - min) * MeasureScale)} mm. La face coupée apparaît en orange.";
         _viewport.RequestRender(false);
+    }
+
+    /// <summary>Asks for a second version of the model and shows it over the first, in another colour, with a table of differences.</summary>
+    private async Task CompareAsync()
+    {
+        var storage = TopLevel.GetTopLevel(this)?.StorageProvider;
+        if (storage is null || _mesh is null) return;
+        var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Choisir l’autre version du modèle",
+            AllowMultiple = false,
+            FileTypeFilter = [new FilePickerFileType("Modèles 3D (STL, OBJ)") { Patterns = ["*.stl", "*.obj"] }]
+        });
+        var local = files.FirstOrDefault()?.TryGetLocalPath();
+        if (string.IsNullOrWhiteSpace(local)) return;
+        await LoadSecondAsync(local);
+    }
+
+    private async Task LoadSecondAsync(string local)
+    {
+        if (_mesh is null) return;
+        var first = _mesh;
+        _compareButton.IsEnabled = false;
+        _message.Text = "Chargement de l’autre version…";
+        try
+        {
+            var path = ModelFileSelection.Select([local]);
+            var (mesh, measures) = await Task.Run(() =>
+            {
+                var loaded = MeshLoader.Load(path);
+                return (loaded, MeshVolume.Compute(loaded));
+            });
+            if (!ReferenceEquals(first, _mesh)) return;
+            _second = mesh;
+            _secondMeasures = measures;
+            _secondName = Path.GetFileName(path);
+            // the comparison is drawn by the graphics card only
+            if (_renderer.SelectedIndex != 0) _renderer.SelectedIndex = 0;
+            _message.Text = $"{mesh.TriangleCount:N0} triangles chargés pour la comparaison.";
+            RebuildComparison();
+        }
+        catch (Exception exception) when (exception is IOException or InvalidDataException or NotSupportedException or FormatException or UnauthorizedAccessException or ArgumentException or FileNotFoundException)
+        {
+            _message.Text = "Impossible d’ouvrir cette version : " + exception.Message;
+        }
+        finally { _compareButton.IsEnabled = _mesh is not null; }
+    }
+
+    private void ClearComparison()
+    {
+        _second = null;
+        _secondMeasures = null;
+        _secondName = null;
+        _compareDetails.IsVisible = false;
+        ApplyComparison();
+    }
+
+    private static Control LegendDot(Color color) => new Border { Width = 12, Height = 12, CornerRadius = new CornerRadius(6), Background = new SolidColorBrush(color), VerticalAlignment = VerticalAlignment.Center };
+
+    /// <summary>Builds the legend and the table of differences for the loaded pair.</summary>
+    private void RebuildComparison()
+    {
+        _compareDetails.Children.Clear();
+        _compareTable.Children.Clear();
+        if (_mesh is not { } first || _second is not { } second || _measures is not { } firstMeasures || _secondMeasures is not { } secondMeasures)
+        {
+            _compareDetails.IsVisible = false;
+            ApplyComparison();
+            return;
+        }
+        var other = Color.FromRgb(0xFF, 0x6B, 0x6B);
+        if (PreviewColorParser.TryParse(_hex.Text, out var mine) && Math.Abs(mine.R - other.R) + Math.Abs(mine.G - other.G) + Math.Abs(mine.B - other.B) < 90) other = Color.FromRgb(0x58, 0xA6, 0xFF);
+        _viewport.SecondColor = other;
+        var firstColor = PreviewColorParser.TryParse(_hex.Text, out var chosen) ? chosen : Color.FromRgb(0x58, 0xA6, 0xFF);
+
+        _showFirst.Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { LegendDot(firstColor), new TextBlock { Text = "A : " + Path.GetFileName(_modelPath), TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = 230 } } };
+        _showSecond.Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { LegendDot(other), new TextBlock { Text = "B : " + _secondName, TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = 230 } } };
+
+        void Cells(string label, string a, string b, string difference, bool header)
+        {
+            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("1.3*,*,*,1.6*"), ColumnSpacing = 6 };
+            string[] values = [label, a, b, difference];
+            for (var column = 0; column < 4; column++)
+            {
+                var text = new TextBlock { Text = values[column], FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis, FontWeight = header ? FontWeight.SemiBold : FontWeight.Normal };
+                if (header || column == 0) text.Classes.Add("muted");
+                ToolTip.SetTip(text, values[column]);
+                Grid.SetColumn(text, column);
+                row.Children.Add(text);
+            }
+            _compareTable.Children.Add(row);
+        }
+        Cells(string.Empty, "A", "B", "B par rapport à A", header: true);
+        foreach (var line in MeshComparison.Compare(first, second, firstMeasures, secondMeasures, MeasureScale))
+            Cells(line.Label, line.First, line.Second, line.Difference, header: false);
+
+        var remove = new Button { Content = "Retirer la comparaison" };
+        remove.Click += (_, _) => ClearComparison();
+        _compareNote.Text = "Zones rouges (B) : B dépasse A. Zones bleues (A) : A dépasse B. Les surfaces identiques restent bleues.";
+        _compareDetails.Children.Add(_showFirst);
+        _compareDetails.Children.Add(_showSecond);
+        _compareDetails.Children.Add(_alignCentres);
+        _compareDetails.Children.Add(_compareTable);
+        _compareDetails.Children.Add(_compareNote);
+        _compareDetails.Children.Add(remove);
+        _compareDetails.IsVisible = true;
+        ApplyComparison();
+    }
+
+    private void ApplyComparison() => ApplyComparison(_viewport);
+
+    private void ApplyComparison(IMeshViewport viewport)
+    {
+        viewport.SecondMesh = _second;
+        viewport.ShowFirst = _showFirst.IsChecked != false;
+        viewport.ShowSecond = _showSecond.IsChecked != false;
+        viewport.SecondOffset = _alignCentres.IsChecked == true && _mesh is { } first && _second is { } second ? MeshComparison.CentreOffset(first, second) : default;
+        viewport.RequestRender(false);
     }
 
     private void UpdateMeasureMode()
@@ -773,6 +912,7 @@ public sealed class ModelViewerView : UserControl
         }
         _viewport.ModelColor = color;
         UpdateSwatches();
+        if (_second is not null) RebuildComparison();
         _viewport.RequestRender(false);
     }
 

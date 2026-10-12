@@ -18,6 +18,7 @@ internal sealed class GlApi
     public const int VertexShader = 0x8B31, FragmentShader = 0x8B30, CompileStatus = 0x8B81, LinkStatus = 0x8B82;
     public const int Framebuffer = 0x8D40, ReadFramebuffer = 0x8CA8, DrawFramebuffer = 0x8CA9, Renderbuffer = 0x8D41;
     public const int ColorAttachment0 = 0x8CE0, DepthAttachment = 0x8D00, DepthComponent24 = 0x81A6, Rgba8 = 0x8058;
+    public const int PolygonOffsetFill = 0x8037;
     public const int FramebufferComplete = 0x8CD5, MaxSamples = 0x8D57, Nearest = 0x2600;
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi)] private delegate void GenObjects(int count, out int id);
@@ -51,6 +52,7 @@ internal sealed class GlApi
     [UnmanagedFunctionPointer(CallingConvention.Winapi)] private delegate int CheckFramebufferStatusFn(int target);
     [UnmanagedFunctionPointer(CallingConvention.Winapi)] private delegate void BlitFramebufferFn(int sx0, int sy0, int sx1, int sy1, int dx0, int dy0, int dx1, int dy1, int mask, int filter);
     [UnmanagedFunctionPointer(CallingConvention.Winapi)] private delegate int GetErrorFn();
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)] private delegate void PolygonOffsetFn(float factor, float units);
 
     private readonly GenObjects _genBuffers, _genVertexArrays, _genFramebuffers, _genRenderbuffers;
     private readonly DeleteObjects _deleteBuffers, _deleteVertexArrays, _deleteFramebuffers, _deleteRenderbuffers;
@@ -83,6 +85,7 @@ internal sealed class GlApi
     private readonly CheckFramebufferStatusFn _checkFramebufferStatus;
     private readonly BlitFramebufferFn _blitFramebuffer;
     private readonly GetErrorFn _getError;
+    private readonly PolygonOffsetFn _polygonOffset;
 
     public GlApi(GlInterface gl)
     {
@@ -123,6 +126,7 @@ internal sealed class GlApi
         _checkFramebufferStatus = Load<CheckFramebufferStatusFn>("glCheckFramebufferStatus");
         _blitFramebuffer = Load<BlitFramebufferFn>("glBlitFramebuffer");
         _getError = Load<GetErrorFn>("glGetError");
+        _polygonOffset = Load<PolygonOffsetFn>("glPolygonOffset");
     }
 
     public int GenBuffer() { _genBuffers(1, out var id); return id; }
@@ -150,6 +154,7 @@ internal sealed class GlApi
     public void Viewport(int width, int height) => _viewport(0, 0, width, height);
     public int GetInteger(int name) { _getIntegerv(name, out var value); return value; }
     public int GetError() => _getError();
+    public void PolygonOffset(float factor, float units) => _polygonOffset(factor, units);
     public void AttachRenderbuffer(int attachment, int renderbuffer) => _framebufferRenderbuffer(Framebuffer, attachment, Renderbuffer, renderbuffer);
     public void RenderbufferStorage(int samples, int format, int width, int height) => _renderbufferStorageMultisample(Renderbuffer, samples, format, width, height);
     public bool FramebufferIsComplete() => _checkFramebufferStatus(Framebuffer) == FramebufferComplete;

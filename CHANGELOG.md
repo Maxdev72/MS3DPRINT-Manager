@@ -2,6 +2,11 @@
 
 ## 12 octobre 2026
 
+### Comparaison de deux versions
+- « Comparer avec une autre version » charge un second fichier et le superpose au premier dans une autre couleur (rouge sur bleu) : les zones rouges montrent où la version B dépasse A, les bleues où A dépasse B.
+- Tableau des écarts en mm : largeur, profondeur, hauteur, volume, surface et nombre de triangles ; affichage de A ou de B seul, alignement des centres.
+- La comparaison utilise le rendu par carte graphique (le logiciel y repasse automatiquement).
+
 ### Plan de coupe
 - Nouvelle section « Plan de coupe » (touche `C`) : une coupe horizontale (hauteur) ou verticale selon X ou Y, réglée au curseur, avec le choix du côté conservé et la position affichée en mm.
 - La face coupée apparaît en orange pour lire les parois et les cavités ; mesures et sélection de points ignorent la partie coupée.

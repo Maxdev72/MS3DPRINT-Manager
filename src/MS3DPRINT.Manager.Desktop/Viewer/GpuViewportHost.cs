@@ -33,6 +33,11 @@ public sealed class GpuViewportHost : Panel, IMeshViewport
     public IReadOnlyList<Vector3>? Markers { get => _gpu.Markers; set => _gpu.Markers = value; }
     public ClipPlane? CutPlane { get => _gpu.CutPlane; set => _gpu.CutPlane = value; }
     public bool WindingInverted { get => _gpu.WindingInverted; set => _gpu.WindingInverted = value; }
+    public MeshModel? SecondMesh { get => _gpu.SecondMesh; set => _gpu.SecondMesh = value; }
+    public Color SecondColor { get => _gpu.SecondColor; set => _gpu.SecondColor = value; }
+    public bool ShowFirst { get => _gpu.ShowFirst; set => _gpu.ShowFirst = value; }
+    public bool ShowSecond { get => _gpu.ShowSecond; set => _gpu.ShowSecond = value; }
+    public Vector3 SecondOffset { get => _gpu.SecondOffset; set => _gpu.SecondOffset = value; }
     public bool IsReady => _gpu.IsReady;
     public event Action<string>? Failed;
     public event Action? CameraChanged;
