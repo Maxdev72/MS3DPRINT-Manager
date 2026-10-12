@@ -67,12 +67,12 @@ public sealed class AvaloniaShellMarkupTests
     }
 
     [Fact]
-    public void Main_window_keeps_the_workspace_within_a_1200_pixel_reading_width()
+    public void Main_window_keeps_only_the_central_workspace_within_a_1200_pixel_reading_width()
     {
         var markup = File.ReadAllText(MainWindowPath());
 
-        Assert.Contains("MaxWidth=\"1200\"", markup, StringComparison.Ordinal);
-        Assert.Contains("HorizontalAlignment=\"Center\"", markup, StringComparison.Ordinal);
+        Assert.Contains("<Grid Grid.Column=\"1\" Margin=\"34,28\" MaxWidth=\"1200\" HorizontalAlignment=\"Center\"", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("<Grid ColumnDefinitions=\"232,*\" MaxWidth=\"1200\"", markup, StringComparison.Ordinal);
     }
 
     [Fact]
