@@ -84,8 +84,8 @@
             <StackPanel Spacing="4"><TextBlock Text="Tous les projets" FontSize="18" FontWeight="SemiBold" /><TextBlock Text="Catalogue lu depuis votre espace de travail." Classes="muted" /></StackPanel>
             <Button Grid.Column="1" Content="Actualiser" Click="RefreshProjects_Click" VerticalAlignment="Center" />
           </Grid>
-          <ScrollViewer Grid.Row="1">
-            <StackPanel x:Name="ProjectList" Spacing="8" />
+          <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
+            <StackPanel x:Name="ProjectList" HorizontalAlignment="Stretch" Spacing="8" />
           </ScrollViewer>
         </Grid>
       </Border>

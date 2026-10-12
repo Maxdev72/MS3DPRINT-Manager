@@ -100,6 +100,17 @@ public sealed class AvaloniaShellMarkupTests
         Assert.DoesNotContain("new FolderBrowserWindow", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Project_cards_fill_the_available_workspace_and_open_on_click()
+    {
+        var markup = File.ReadAllText(MainWindowPath());
+        var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
+
+        Assert.Contains("<ScrollViewer Grid.Row=\"1\" HorizontalScrollBarVisibility=\"Disabled\" HorizontalContentAlignment=\"Stretch\">", markup, StringComparison.Ordinal);
+        Assert.Contains("<StackPanel x:Name=\"ProjectList\" HorizontalAlignment=\"Stretch\"", markup, StringComparison.Ordinal);
+        Assert.Contains("button.Click += ProjectEntry_Click", source, StringComparison.Ordinal);
+    }
+
     private static string MainWindowPath()
         => Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml");
 
