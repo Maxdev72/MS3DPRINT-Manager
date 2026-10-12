@@ -1,3 +1,4 @@
+using MS3DPRINT.Manager.Core.Workspace;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
@@ -115,11 +116,12 @@ public partial class MainWindow
             open.Click += ClientEntry_Click;
             var folder = new Button { Content = Icons.Label("IconOpen", "Ouvrir le dossier"), Tag = client.ClientPath }; folder.Click += OpenFolder_Click;
             var edit = new Button { Content = Icons.Label("IconEdit", "Modifier la fiche"), Tag = client }; edit.Click += EditClient_Click;
+            var code = new Button { Content = Icons.Label("IconEdit", "Changer le code…"), Tag = client }; code.Click += ChangeClientCode_Click;
             var rename = new Button { Content = Icons.Label("IconRename", "Renommer"), Tag = client }; rename.Click += RenameClient_Click;
             var move = new Button { Content = Icons.Label("IconMove", "Déplacer"), Tag = client }; move.Click += MoveClient_Click;
             var trash = new Button { Content = Icons.Label("IconTrash", "Corbeille"), Tag = client }; trash.Click += TrashClient_Click;
             var kindVariant = client.IsProfileMissing ? "warning" : client.Kind == ClientKind.Individual ? "neutral" : "info";
-            ClientList.Children.Add(CreateActionRow(ClientRowColumns, open, CreateOverflowActions(folder, edit, rename, move, trash),
+            ClientList.Children.Add(CreateActionRow(ClientRowColumns, open, CreateOverflowActions(folder, edit, code, rename, move, trash),
                 CreateCompactTableCell(client.Title(), prominent: true),
                 CreateCompactTableCell(string.IsNullOrWhiteSpace(client.ClientCode) ? "—" : client.ClientCode, accent: true),
                 new Border { Classes = { "badge", kindVariant }, Child = new TextBlock { Text = client.ProfileLabel } },
@@ -182,9 +184,11 @@ public partial class MainWindow
         if (!string.IsNullOrWhiteSpace(client.Profile?.Notes)) card.Children.Add(new TextBlock { Text = client.Profile.Notes, TextWrapping = TextWrapping.Wrap });
         var edit = new Button { Content = Icons.Label("IconEdit", "Modifier la fiche"), Tag = client };
         edit.Click += EditClient_Click;
+        var changeCode = new Button { Content = Icons.Label("IconRename", "Changer le code"), Tag = client };
+        changeCode.Click += ChangeClientCode_Click;
         var newProject = new Button { Content = "+  Nouveau projet", Tag = client, Classes = { "primary-action" } };
         newProject.Click += CreateProjectForClient_Click;
-        card.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { newProject, edit } });
+        card.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { newProject, edit, changeCode } });
         ClientList.Children.Add(new Border { Classes = { "card-raised" }, Padding = new Avalonia.Thickness(18), Child = card });
         try
         {
@@ -257,6 +261,37 @@ public partial class MainWindow
         {
             Notify(exception.Message, error: true);
         }
+    }
+
+    /// <summary>Changes the client code after showing, as it is typed, which project folders and fiches will follow.</summary>
+    private async void ChangeClientCode_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: ClientSummary client }) return;
+        if (client.Profile is not { } profile) { Notify("Complétez d’abord la fiche de ce client historique.", error: true); return; }
+        var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        IReadOnlyList<ClientSummary> all;
+        try { all = await Task.Run(() => new WorkspaceClientReader().Load(root)); }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { Notify(exception.Message, error: true); return; }
+
+        var name = profile.Kind == ClientKind.Individual ? string.Join(" ", new[] { profile.FirstName, profile.LastName }.Where(part => !string.IsNullOrWhiteSpace(part))) : profile.CompanyName ?? profile.FolderName;
+        var othersCodes = all.Where(other => !string.Equals(other.ClientPath, client.ClientPath, StringComparison.OrdinalIgnoreCase)).Select(other => other.ClientCode);
+        var changer = new ClientCodeChanger(root);
+        var dialog = new ChangeClientCodeWindow(DisplayNames.Format(name), client.ClientCode, MS3DPRINT.Manager.Core.Naming.ClientCodeSuggester.SuggestUnique(name, othersCodes),
+            code => changer.Plan(client, code, all));
+        if (!await dialog.ShowDialog<bool>(this) || dialog.Plan is not { } plan) return;
+        BeginBusy();
+        try
+        {
+            await Task.Run(() => changer.Apply(plan));
+            Notify($"Code client changé : {plan.OldCode} → {plan.NewCode}.");
+            var updated = client with { ClientCode = plan.NewCode, Profile = profile with { ClientCode = plan.NewCode } };
+            if (_clientListMode) await LoadClientsAsync();
+            else await LoadClientDetailAsync(updated);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { Notify(exception.Message, error: true); }
+        finally { EndBusy(); }
     }
 
     private async void TrashClient_Click(object? sender, RoutedEventArgs e)

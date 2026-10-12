@@ -65,6 +65,14 @@ internal sealed class ProjectReferenceReservations(string workspaceRoot)
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }
 
+    /// <summary>Gives a reservation back (used to undo a failed change of client code).</summary>
+    public void Release(string reference)
+    {
+        var path = Path.Combine(DirectoryPath, reference.ToUpperInvariant() + ".json");
+        WorkspacePathSafety.EnsureNoLinks(path);
+        if (File.Exists(path)) File.Delete(path);
+    }
+
     private static void ReadReference(string file, List<string> names, bool required)
     {
         WorkspacePathSafety.EnsureNoLinks(file);
