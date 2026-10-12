@@ -126,6 +126,19 @@ public sealed class AvaloniaShellMarkupTests
         Assert.Contains("Button.primary-action", styles, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Workspace_lists_use_compact_table_headers_and_rows()
+    {
+        var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
+        var styles = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "Styles", "Controls.axaml"));
+
+        Assert.Contains("CreateCompactTableHeader", source, StringComparison.Ordinal);
+        Assert.Contains("\"PROJET\", \"CLIENT\", \"STATUT\"", source, StringComparison.Ordinal);
+        Assert.Contains("\"CLIENT\", \"FICHE\", \"PROJETS\"", source, StringComparison.Ordinal);
+        Assert.Contains("\"table-row\"", source, StringComparison.Ordinal);
+        Assert.Contains("Button.table-row", styles, StringComparison.Ordinal);
+    }
+
     private static string MainWindowPath()
         => Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml");
 

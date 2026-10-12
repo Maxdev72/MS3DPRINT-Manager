@@ -223,6 +223,28 @@ public partial class MainWindow : Window
         status.Text = project.StatusLabel;
     }
 
+    private static Border CreateCompactTableHeader(string columns, params string[] headings)
+    {
+        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions(columns), ColumnSpacing = 16 };
+        for (var index = 0; index < headings.Length; index++)
+        {
+            var heading = new TextBlock { Text = headings[index], FontSize = 11, FontWeight = FontWeight.SemiBold, Classes = { "muted" } };
+            Grid.SetColumn(heading, index);
+            grid.Children.Add(heading);
+        }
+        return new Border { Background = Avalonia.Media.Brushes.Transparent, Padding = new Avalonia.Thickness(14, 6), Child = grid };
+    }
+
+    private static TextBlock CreateCompactTableCell(string value, bool prominent = false, bool accent = false)
+        => new()
+        {
+            Text = value,
+            FontWeight = prominent ? FontWeight.SemiBold : FontWeight.Normal,
+            Foreground = accent ? new SolidColorBrush(Color.Parse("#9BC0FF")) : null,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+
     private async void RefreshProjects_Click(object? sender, RoutedEventArgs e) => await LoadProjectsAsync();
 
     private async void DashboardProjects_Click(object? sender, RoutedEventArgs e)
@@ -273,15 +295,23 @@ public partial class MainWindow : Window
                 return;
             }
 
+            ProjectList.Children.Add(CreateCompactTableHeader("2*,*,Auto", "PROJET", "CLIENT", "STATUT"));
+
             foreach (var project in projects)
             {
+                var row = new Grid { ColumnDefinitions = new ColumnDefinitions("2*,*,Auto"), ColumnSpacing = 16 };
+                var title = CreateCompactTableCell($"{project.Reference} · {project.ProjectName}", prominent: true);
+                var client = CreateCompactTableCell(project.ClientFolderName);
+                var status = CreateCompactTableCell(project.StatusLabel, accent: true);
+                Grid.SetColumn(client, 1); Grid.SetColumn(status, 2);
+                row.Children.Add(title); row.Children.Add(client); row.Children.Add(status);
                 var button = new Button
                 {
                     Tag = project,
-                    Content = $"{project.Reference} · {project.ProjectName}\n{project.ClientFolderName} · {project.StatusLabel}",
+                    Content = row,
                     HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left,
                     HorizontalAlignment = HorizontalAlignment.Stretch,
-                    Classes = { "workspace-card" }
+                    Classes = { "table-row" }
                 };
                 button.Click += ProjectEntry_Click;
                 ProjectList.Children.Add(button);
@@ -729,15 +759,23 @@ public partial class MainWindow : Window
                 return;
             }
 
+            ClientList.Children.Add(CreateCompactTableHeader("2*,*,Auto", "CLIENT", "FICHE", "PROJETS"));
+
             foreach (var client in clients)
             {
+                var row = new Grid { ColumnDefinitions = new ColumnDefinitions("2*,*,Auto"), ColumnSpacing = 16 };
+                var name = CreateCompactTableCell(client.DisplayName, prominent: true);
+                var profile = CreateCompactTableCell(client.ProfileLabel);
+                var projects = CreateCompactTableCell($"{client.ProjectCount} projet(s)", accent: true);
+                Grid.SetColumn(profile, 1); Grid.SetColumn(projects, 2);
+                row.Children.Add(name); row.Children.Add(profile); row.Children.Add(projects);
                 var item = new Button
                 {
-                    Content = $"{client.DisplayName}\n{client.ProfileLabel} · {client.ProjectCount} projet(s)",
+                    Content = row,
                     Tag = client,
                     HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left,
                     HorizontalAlignment = HorizontalAlignment.Stretch,
-                    Classes = { "workspace-card" }
+                    Classes = { "table-row" }
                 };
                 item.Click += ClientEntry_Click;
                 ClientList.Children.Add(item);
@@ -933,19 +971,23 @@ public partial class MainWindow : Window
         {
             var collections = await Task.Run(() => new WorkspaceInventoryReader().LoadAllCollections(workspaceRoot));
             if (collections.Count == 0) { CollectionList.Children.Add(new TextBlock { Text = "Aucune collection trouvée.", Margin = new Avalonia.Thickness(8) }); return; }
+            CollectionList.Children.Add(CreateCompactTableHeader("2*,*,Auto", "COLLECTION", "INFORMATIONS", "ACTIONS"));
             foreach (var item in collections)
             {
-                var content = new StackPanel { Spacing = 6 };
-                content.Children.Add(new TextBlock { Text = item.Name, FontWeight = FontWeight.SemiBold });
-                content.Children.Add(new TextBlock { Text = (item.Profile?.Description ?? "Collection") + $" · Modifié le {item.LastWriteTime:dd/MM/yyyy}", Classes = { "muted" }, TextWrapping = TextWrapping.Wrap });
-                var commands = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+                var row = new Grid { ColumnDefinitions = new ColumnDefinitions("2*,*,Auto"), ColumnSpacing = 16, MinHeight = 48 };
+                var name = CreateCompactTableCell(item.Name, prominent: true);
+                var detail = CreateCompactTableCell((item.Profile?.Description ?? "Collection") + $" · {item.LastWriteTime:dd/MM/yyyy}");
+                Grid.SetColumn(detail, 1);
+                var commands = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
                 var open = new Button { Content = "Ouvrir", Tag = item.Path }; open.Click += OpenFolder_Click;
-                var edit = new Button { Content = "Modifier la fiche", Tag = item }; edit.Click += EditCollection_Click;
+                var edit = new Button { Content = "Modifier", Tag = item }; edit.Click += EditCollection_Click;
                 var rename = new Button { Content = "Renommer", Tag = item }; rename.Click += RenameCollection_Click;
                 var move = new Button { Content = "Déplacer", Tag = item }; move.Click += MoveCollection_Click;
                 var trash = new Button { Content = "Corbeille", Tag = item }; trash.Click += TrashCollection_Click;
-                commands.Children.Add(open); commands.Children.Add(edit); commands.Children.Add(rename); commands.Children.Add(move); commands.Children.Add(trash); content.Children.Add(commands);
-                CollectionList.Children.Add(new Border { Background = new SolidColorBrush(Color.Parse("#141F30")), CornerRadius = new Avalonia.CornerRadius(10), Padding = new Avalonia.Thickness(14), Child = content });
+                commands.Children.Add(open); commands.Children.Add(edit); commands.Children.Add(rename); commands.Children.Add(move); commands.Children.Add(trash);
+                Grid.SetColumn(commands, 2);
+                row.Children.Add(name); row.Children.Add(detail); row.Children.Add(commands);
+                CollectionList.Children.Add(new Border { BorderBrush = new SolidColorBrush(Color.Parse("#263A56")), BorderThickness = new Avalonia.Thickness(0, 0, 0, 1), Padding = new Avalonia.Thickness(14, 8), Child = row });
             }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
@@ -1120,20 +1162,25 @@ public partial class MainWindow : Window
                 PrinterList.Children.Add(new TextBlock { Text = "Aucune imprimante enregistrée.", Margin = new Avalonia.Thickness(8) });
                 return;
             }
+            PrinterList.Children.Add(CreateCompactTableHeader("2*,*,Auto", "IMPRIMANTE", "CAPACITÉ / ÉTAT", "ACTIONS"));
             foreach (var printer in printers)
             {
                 var details = string.IsNullOrWhiteSpace(printer.BuildVolume) ? (printer.IsActive ? "Active" : "Inactive") : $"{printer.BuildVolume} · {(printer.IsActive ? "Active" : "Inactive")}";
-                var edit = new Button { Content = "Modifier", Tag = printer, HorizontalAlignment = HorizontalAlignment.Left };
+                var row = new Grid { ColumnDefinitions = new ColumnDefinitions("2*,*,Auto"), ColumnSpacing = 16, MinHeight = 48 };
+                var identity = new StackPanel { Spacing = 1 };
+                identity.Children.Add(CreateCompactTableCell(printer.Name, prominent: true));
+                identity.Children.Add(CreateCompactTableCell($"{printer.Brand} · {printer.Model} · {printer.HourlyRate:0.00} €/h"));
+                var capacity = CreateCompactTableCell(details, accent: printer.IsActive);
+                Grid.SetColumn(capacity, 1);
+                var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+                var edit = new Button { Content = "Modifier", Tag = printer };
                 edit.Click += EditPrinter_Click;
-                var trash = new Button { Content = "Corbeille", Tag = printer, HorizontalAlignment = HorizontalAlignment.Left };
+                var trash = new Button { Content = "Corbeille", Tag = printer };
                 trash.Click += TrashPrinter_Click;
-                var card = new StackPanel { Spacing = 4 };
-                card.Children.Add(new TextBlock { Text = printer.Name, FontWeight = FontWeight.SemiBold });
-                card.Children.Add(new TextBlock { Text = $"{printer.Brand} · {printer.Model} · {printer.HourlyRate:0.00} €/h", Foreground = Avalonia.Media.Brushes.LightSteelBlue });
-                card.Children.Add(new TextBlock { Text = details, Foreground = Avalonia.Media.Brushes.LightSteelBlue });
-                card.Children.Add(edit);
-                card.Children.Add(trash);
-                PrinterList.Children.Add(new Border { Background = Avalonia.Media.Brushes.Transparent, Padding = new Avalonia.Thickness(14), Child = card });
+                actions.Children.Add(edit); actions.Children.Add(trash);
+                Grid.SetColumn(actions, 2);
+                row.Children.Add(identity); row.Children.Add(capacity); row.Children.Add(actions);
+                PrinterList.Children.Add(new Border { Background = Avalonia.Media.Brushes.Transparent, BorderBrush = new SolidColorBrush(Color.Parse("#263A56")), BorderThickness = new Avalonia.Thickness(0, 0, 0, 1), Padding = new Avalonia.Thickness(14, 8), Child = row });
             }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException)
@@ -1330,15 +1377,19 @@ public partial class MainWindow : Window
         {
             var filaments = await Task.Run(() => new WorkspaceInventoryReader().LoadFilaments(workspaceRoot));
             if (filaments.Count == 0) { FilamentList.Children.Add(new TextBlock { Text = "Aucun filament enregistré.", Margin = new Avalonia.Thickness(8) }); return; }
+            FilamentList.Children.Add(CreateCompactTableHeader("2*,*,Auto", "FILAMENT", "MATIÈRE / PRIX", "ACTIONS"));
             foreach (var filament in filaments)
             {
-                var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-                var button = new Button { Content = $"{filament.Brand} · {filament.Name}\n{filament.Material} · {filament.PricePerKg:0.00} €/kg{(filament.IsAbrasive ? " · Abrasif" : string.Empty)}", Tag = filament, HorizontalContentAlignment = HorizontalAlignment.Left, HorizontalAlignment = HorizontalAlignment.Stretch, Classes = { "workspace-card" } };
+                var row = new Grid { ColumnDefinitions = new ColumnDefinitions("2*,*,Auto"), ColumnSpacing = 16, MinHeight = 48 };
+                var button = new Button { Content = CreateCompactTableCell($"{filament.Brand} · {filament.Name}", prominent: true), Tag = filament, HorizontalContentAlignment = HorizontalAlignment.Left, HorizontalAlignment = HorizontalAlignment.Stretch, Classes = { "table-row" } };
                 button.Click += EditFilament_Click;
+                var material = CreateCompactTableCell($"{filament.Material} · {filament.PricePerKg:0.00} €/kg{(filament.IsAbrasive ? " · Abrasif" : string.Empty)}", accent: filament.IsAbrasive);
+                Grid.SetColumn(material, 1);
                 var trash = new Button { Content = "Corbeille", Tag = filament };
                 trash.Click += TrashFilament_Click;
-                row.Children.Add(button); row.Children.Add(trash);
-                FilamentList.Children.Add(row);
+                Grid.SetColumn(trash, 2);
+                row.Children.Add(button); row.Children.Add(material); row.Children.Add(trash);
+                FilamentList.Children.Add(new Border { BorderBrush = new SolidColorBrush(Color.Parse("#263A56")), BorderThickness = new Avalonia.Thickness(0, 0, 0, 1), Padding = new Avalonia.Thickness(0, 0, 0, 2), Child = row });
             }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
@@ -1370,11 +1421,16 @@ public partial class MainWindow : Window
         {
             var entries = await Task.Run(() => new WorkspaceTrashReader().Load(workspaceRoot));
             if (entries.Count == 0) { TrashList.Children.Add(new TextBlock { Text = "La corbeille est vide.", Margin = new Avalonia.Thickness(8) }); return; }
+            TrashList.Children.Add(CreateCompactTableHeader("*,Auto", "ÉLÉMENT", "ACTION"));
             foreach (var entry in entries)
             {
-                var restore = new Button { Content = $"Restaurer · {entry.Label}", Tag = entry.Id, HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left };
+                var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 16, MinHeight = 48 };
+                row.Children.Add(CreateCompactTableCell(entry.Label, prominent: true));
+                var restore = new Button { Content = "Restaurer", Tag = entry.Id };
                 restore.Click += RestoreTrash_Click;
-                TrashList.Children.Add(restore);
+                Grid.SetColumn(restore, 1);
+                row.Children.Add(restore);
+                TrashList.Children.Add(new Border { BorderBrush = new SolidColorBrush(Color.Parse("#263A56")), BorderThickness = new Avalonia.Thickness(0, 0, 0, 1), Padding = new Avalonia.Thickness(14, 8), Child = row });
             }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
