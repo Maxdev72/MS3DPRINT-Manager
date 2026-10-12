@@ -39,7 +39,7 @@ public sealed class EditProjectWindow : Window
                     new TextBlock { Text = profile.Reference, FontSize = 20, FontWeight = Avalonia.Media.FontWeight.SemiBold },
                     new TextBlock { Text = profile.ProjectName, Classes = { "muted" } },
                     new TextBlock { Text = "Statut" }, _status,
-                    new TextBlock { Text = "Échéance" }, _dueDate,
+                    new TextBlock { Text = "Échéance (AAAA-MM-JJ)" }, _dueDate,
                     new TextBlock { Text = "Description" }, _description,
                     new TextBlock { Text = "Notes" }, _notes, _error, save
                 }

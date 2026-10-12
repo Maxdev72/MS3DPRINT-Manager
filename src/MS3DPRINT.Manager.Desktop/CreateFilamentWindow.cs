@@ -32,7 +32,7 @@ public sealed class CreateFilamentWindow : Window
     public CreateFilamentWindow(FilamentProfile? original = null)
     {
         Original = original;
-        Title = original is null ? "Ajouter un filament" : "Modifier le filament"; Width = 440; Height = 450;
+        Title = original is null ? "Ajouter un filament" : "Modifier le filament"; Width = 440; Height = 610;
         _brand.Text = original?.Brand ?? string.Empty;
         _name.Text = original?.Name ?? string.Empty;
         _material.SelectedItem = original?.Material ?? "PLA";
@@ -42,8 +42,15 @@ public sealed class CreateFilamentWindow : Window
         _abrasive.IsChecked = original?.IsAbrasive ?? false;
         var save = new Button { Content = original is null ? "Ajouter" : "Enregistrer", HorizontalAlignment = HorizontalAlignment.Right };
         save.Click += Save_Click;
-        Content = new StackPanel { Margin = new Avalonia.Thickness(24), Spacing = 12, Children = { new TextBlock { Text = "Nouveau filament", FontSize = 20 }, _brand, _name, _material, _color, _price, _abrasive, _error, save } };
+        Content = new StackPanel { Margin = new Avalonia.Thickness(24), Spacing = 12, Children = { new TextBlock { Text = "Nouveau filament", FontSize = 20 }, Field("Marque", _brand), Field("Nom du filament", _name), Field("Matière", _material), Field("Couleur (optionnelle)", _color), Field("Prix (€/kg, ex. 24,90)", _price), _abrasive, _error, save } };
     }
+    private static StackPanel Field(string label, Control input)
+    {
+        var text = new TextBlock { Text = label };
+        text.Classes.Add("muted");
+        return new StackPanel { Spacing = 4, Children = { text, input } };
+    }
+
     private void Save_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         if (string.IsNullOrWhiteSpace(Brand) || string.IsNullOrWhiteSpace(FilamentName) || !FilamentPrice.TryParse(_price.Text, out var price))
