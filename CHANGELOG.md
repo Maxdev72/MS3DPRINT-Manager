@@ -20,6 +20,7 @@
   de la liste ; dans un projet ou un client déjà ouvert il ne reste que « Modifier la fiche ».
 - Fichiers d’un projet : action « Ouvrir avec… » (choix de l’application Windows) dans le menu « ⋯ ».
 - Aperçu PDF : bouton « Imprimer… » (choix de l’imprimante, exemplaires et pages, ex. 1-3,5) ; la page est centrée dans la fenêtre.
+- Page Projets : bouton « Créer » ; colonnes des tableaux Projets et Clients alignées sur toutes les lignes.
 - Fiche client : bouton « Nouveau projet » (le client est déjà choisi).
 - Filaments : plus de clic sur la ligne, la modification est dans le menu « ⋯ ».
 

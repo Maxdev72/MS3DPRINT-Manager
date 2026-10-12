@@ -277,7 +277,7 @@ public partial class MainWindow : Window
         return cell;
     }
 
-    private const string ActionRowColumns = "2*,*,Auto,64";
+    private const string ActionRowColumns = "2*,*,110,64";
 
     /// <summary>
     /// Table row opened by clicking it, with a separate actions menu on the right.
