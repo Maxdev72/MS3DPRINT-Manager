@@ -31,6 +31,12 @@ public sealed class ModelViewerView : UserControl
     private readonly TextBlock _volumeResult = new() { TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _volumeNote = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
     private MeshMeasures? _measures;
+    private readonly Button _createEstimate = new() { Content = "Créer une estimation avec ce modèle", IsEnabled = false };
+    private string? _modelPath;
+    private double? _estimatedMass;
+
+    /// <summary>Raised when the user wants an estimate prefilled from the displayed model.</summary>
+    public event Action<ModelEstimateSeed>? EstimateRequested;
     private readonly MeasureOverlay _overlay = new();
     private readonly ToggleButton _measureToggle = new() { Content = "Mesurer des distances", IsEnabled = false };
     private readonly TextBlock _measureList = new() { TextWrapping = TextWrapping.Wrap };
@@ -115,6 +121,12 @@ public sealed class ModelViewerView : UserControl
         _measureToggle.IsCheckedChanged += (_, _) => UpdateMeasureMode();
         _clearMeasures.Click += (_, _) => ClearMeasures();
         _scale.TextChanged += (_, _) => RefreshMeasures();
+        _createEstimate.Click += (_, _) =>
+        {
+            if (_modelPath is null) return;
+            var choice = _material.SelectedItem as MaterialChoice;
+            EstimateRequested?.Invoke(new ModelEstimateSeed(Path.GetFileNameWithoutExtension(_modelPath), _estimatedMass, choice?.FilamentKey, _modelPath));
+        };
         _material.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<MaterialChoice>((choice, _) => new TextBlock { Text = choice?.Label ?? string.Empty });
         _material.ItemsSource = MeshVolume.Presets.ToList();
         _material.SelectedIndex = 0;
@@ -159,7 +171,7 @@ public sealed class ModelViewerView : UserControl
                 _measureList, _clearMeasures,
                 FormKit.SectionLabel("Volume et poids"), _volumeResult, Muted("Matière"), _material,
                 new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,*,Auto"), ColumnSpacing = 8, Children = { _infill, Place(Unit("% remplissage"), 1), Place(_walls, 2), Place(Unit("mm parois"), 3) } },
-                _volumeNote,
+                _createEstimate, _volumeNote,
                 FormKit.SectionLabel("Analyse des parois"),
                 new TextBlock { Text = "STL et OBJ n’indiquent pas leurs unités : choisissez le seuil selon votre buse, votre matériau et votre trancheur.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap },
                 limits, _confirmUnits, analysisButtons, _analysisSummary, _analysis
@@ -335,6 +347,7 @@ public sealed class ModelViewerView : UserControl
             _reset.IsEnabled = true;
             _title.Text = Path.GetFileName(path);
             _location.Text = path;
+            _modelPath = path;
             ToolTip.SetTip(_location, path);
             _location.IsVisible = _dimensions.IsVisible = true;
             _dimensions.Text = ModelDimensions.FromMesh(mesh).ToDisplayText();
@@ -362,7 +375,7 @@ public sealed class ModelViewerView : UserControl
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException) { return; }
         var selected = (_material.SelectedItem as MaterialChoice)?.Label;
         var choices = new List<MaterialChoice>(MeshVolume.Presets);
-        choices.AddRange(filaments.Select(f => new MaterialChoice($"{f.Brand} {f.Name} ({f.Material}, {f.PricePerKg:0.##} €/kg)", MeshVolume.DensityFor(f.Material), f.PricePerKg)));
+        choices.AddRange(filaments.Select(f => new MaterialChoice($"{f.Brand} {f.Name} ({f.Material}, {f.PricePerKg:0.##} €/kg)", MeshVolume.DensityFor(f.Material), f.PricePerKg, $"{f.Brand} {f.Name}")));
         _material.ItemsSource = choices;
         _material.SelectedItem = choices.FirstOrDefault(c => c.Label == selected) ?? choices[0];
     }
@@ -383,6 +396,8 @@ public sealed class ModelViewerView : UserControl
 
     private void RefreshVolume()
     {
+        _estimatedMass = null;
+        _createEstimate.IsEnabled = false;
         if (_mesh is null)
         {
             _volumeResult.Text = "Ouvrez un modèle pour estimer son volume et son poids.";
@@ -405,6 +420,8 @@ public sealed class ModelViewerView : UserControl
         {
             var mass = MeshVolume.EstimateMass(volumeCm3, areaCm2, material.Density, infill, walls);
             var solid = volumeCm3 * material.Density;
+            _estimatedMass = mass;
+            _createEstimate.IsEnabled = _modelPath is not null;
             lines.Add($"Poids estimé : {mass.ToString("0.#", french)} g ({infill:0.##} % de remplissage)");
             lines.Add($"Poids plein : {solid.ToString("0.#", french)} g");
             if (material.PricePerKg is { } price)

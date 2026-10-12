@@ -2,6 +2,10 @@
 
 ## 12 octobre 2026
 
+### Du visualiseur à l’estimation
+- Bouton « Créer une estimation avec ce modèle » : ouvre une nouvelle estimation préremplie avec le nom du fichier, le poids estimé, le filament choisi et le projet auquel appartient le fichier.
+- Une nouvelle estimation reprend le taux horaire de l’imprimante sélectionnée au lieu d’une valeur par défaut.
+
 ### Visualiseur 3D : volume et poids
 - Le panneau indique le volume et la surface du modèle, puis le poids estimé selon la matière (PLA, PETG, ABS, ASA, TPU, Nylon, PC, PVA ou l’un de vos filaments), le remplissage et l’épaisseur des parois.
 - Avec un filament de votre catalogue, le coût de matière est calculé ; un maillage ouvert est signalé.

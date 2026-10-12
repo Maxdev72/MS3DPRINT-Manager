@@ -6,7 +6,10 @@ namespace MS3DPRINT.Manager.Desktop.Viewer;
 public readonly record struct MeshMeasures(double Volume, double SurfaceArea, bool? IsClosed);
 
 /// <summary>A material the weight can be estimated for, optionally tied to a catalogue filament and its price.</summary>
-public sealed record MaterialChoice(string Label, double Density, decimal? PricePerKg = null);
+public sealed record MaterialChoice(string Label, double Density, decimal? PricePerKg = null, string? FilamentKey = null);
+
+/// <summary>What the viewer hands to the estimate wizard: the model name, its estimated weight and the chosen filament.</summary>
+public sealed record ModelEstimateSeed(string Name, double? WeightGrams, string? FilamentKey, string ModelPath);
 
 public static class MeshVolume
 {

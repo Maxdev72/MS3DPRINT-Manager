@@ -1857,6 +1857,7 @@ public partial class MainWindow : Window
                 return new WorkspaceInventoryReader().LoadFilaments(root);
             });
             _modelViewer.ModelLoaded += name => PageSubtitle.Text = name;
+            _modelViewer.EstimateRequested += StartEstimateFromModel;
             ViewerWorkspacePanel.Child = _modelViewer;
         }
         _ = _modelViewer.ReloadFilamentsAsync();
@@ -1866,6 +1867,27 @@ public partial class MainWindow : Window
         try { await _modelViewer.LoadModelAsync(path); }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         { Notify("Impossible d’ouvrir ce modèle : " + exception.Message, error: true); }
+    }
+
+    /// <summary>Opens a new estimate prefilled from the model shown in the viewer (name, weight, filament, project).</summary>
+    private async void StartEstimateFromModel(ModelEstimateSeed seed)
+    {
+        CloseModelViewer();
+        ShowWorkspace("Estimations");
+        PageTitle.Text = "Estimations";
+        PageSubtitle.Text = PageSubtitles.GetValueOrDefault("Estimations", string.Empty);
+        await LoadEstimateFilamentsAsync();
+        ResetEstimate_Click(this, new RoutedEventArgs());
+        EstimateName.Text = seed.Name;
+        EstimateScopeIndex = 0;
+        if (seed.WeightGrams is { } grams)
+            EstimateWeight.Text = Math.Max(0.1, grams).ToString("0.#", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        if (seed.FilamentKey is { } key && EstimateFilament.ItemsSource is IEnumerable<MS3DPRINT.Manager.Core.Filaments.FilamentProfile> filaments)
+            EstimateFilament.SelectedItem = filaments.FirstOrDefault(filament => $"{filament.Brand} {filament.Name}" == key) ?? EstimateFilament.SelectedItem;
+        if (EstimateProject.ItemsSource is IEnumerable<ProjectSummary> projects)
+            EstimateProject.SelectedItem = projects.FirstOrDefault(project => seed.ModelPath.StartsWith(project.ProjectPath, StringComparison.OrdinalIgnoreCase));
+        GoToEstimateStep(1);
+        Notify("Estimation préparée à partir du modèle : vérifiez la durée machine.");
     }
 
     private void CloseModelViewer()
@@ -2301,6 +2323,10 @@ public partial class MainWindow : Window
         _loadedEstimate = null;
         EstimateFinal.Text = "—";
         EstimateDetail.Text = "Nouvelle estimation prête.";
+        // the printer chosen in the list drives the hourly rate and the electricity cost, not the generic defaults above
+        if (EstimatePrinter.SelectedItem is PrinterProfile printer)
+            EstimateMachineRate.Text = PrinterCostCalculator.HourlyRate(printer).ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        RecalculateElectricity();
         GoToEstimateStep(0);
     }
 
