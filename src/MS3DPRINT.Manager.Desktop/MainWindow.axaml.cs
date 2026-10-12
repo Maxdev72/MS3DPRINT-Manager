@@ -304,19 +304,24 @@ public partial class MainWindow : Window
     private async Task LoadProjectDirectoryAsync(MS3DPRINT.Manager.Core.Projects.ProjectSummary project, string directory)
     {
         ProjectList.Children.Clear();
+        var toolbar = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), Margin = new Avalonia.Thickness(0, 0, 0, 8) };
         var back = new Button { Content = directory == project.ProjectPath ? "← Retour aux projets" : "← Dossier parent", HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left };
         back.Click += async (_, _) =>
         {
             if (directory == project.ProjectPath) await LoadProjectsAsync();
             else await LoadProjectDirectoryAsync(project, new ProjectWorkspaceBrowser().Parent(project.ProjectPath, directory));
         };
-        ProjectList.Children.Add(back);
-        var createFolder = new Button { Content = "+ Nouveau dossier", Tag = (Project: project, Directory: directory), HorizontalAlignment = HorizontalAlignment.Left };
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right };
+        var createFolder = new Button { Content = "+ Nouveau dossier", Tag = (Project: project, Directory: directory), Classes = { "primary-action" } };
         createFolder.Click += CreateProjectFolder_Click;
-        ProjectList.Children.Add(createFolder);
         var import = new Button { Content = "Importer un fichier", Tag = (Project: project, Directory: directory), HorizontalAlignment = HorizontalAlignment.Left };
         import.Click += ImportProjectFile_Click;
-        ProjectList.Children.Add(import);
+        actions.Children.Add(createFolder);
+        actions.Children.Add(import);
+        Grid.SetColumn(actions, 1);
+        toolbar.Children.Add(back);
+        toolbar.Children.Add(actions);
+        ProjectList.Children.Add(toolbar);
         if (directory == project.ProjectPath)
             AddProjectOverview(project);
         try

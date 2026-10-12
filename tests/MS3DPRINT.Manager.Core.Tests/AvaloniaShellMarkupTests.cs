@@ -114,6 +114,18 @@ public sealed class AvaloniaShellMarkupTests
         Assert.Contains("Classes = { \"workspace-card\" }", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Project_folder_commands_are_grouped_in_a_single_toolbar()
+    {
+        var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
+        var styles = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "Styles", "Controls.axaml"));
+
+        Assert.Contains("var toolbar = new Grid", source, StringComparison.Ordinal);
+        Assert.Contains("Grid.SetColumn(actions, 1)", source, StringComparison.Ordinal);
+        Assert.Contains("Classes = { \"primary-action\" }", source, StringComparison.Ordinal);
+        Assert.Contains("Button.primary-action", styles, StringComparison.Ordinal);
+    }
+
     private static string MainWindowPath()
         => Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml");
 
