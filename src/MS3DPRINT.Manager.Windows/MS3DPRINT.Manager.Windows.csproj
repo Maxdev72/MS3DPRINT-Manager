@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="System.Drawing.Common" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\MS3DPRINT.Manager.Core\MS3DPRINT.Manager.Core.csproj" />
   </ItemGroup>
 

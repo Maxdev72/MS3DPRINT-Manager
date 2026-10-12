@@ -16,7 +16,7 @@ public sealed class DocumentPreviewWindow : Window
     private readonly PreviewFileKind _kind;
     private readonly DispatcherTimer _resizeTimer = new() { Interval = TimeSpan.FromMilliseconds(160) };
     private readonly ScrollViewer _scroll = new() { HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto };
-    private readonly Image _image = new() { Stretch = Stretch.Fill, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(12) };
+    private readonly Image _image = new() { Stretch = Stretch.Fill, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(12) };
     private readonly TextBlock _message = new() { TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _pageText = new() { VerticalAlignment = VerticalAlignment.Center, IsVisible = false };
     private readonly TextBlock _zoomText = new() { Text = "100 %", VerticalAlignment = VerticalAlignment.Center, MinWidth = 48, TextAlignment = TextAlignment.Center };
@@ -24,6 +24,7 @@ public sealed class DocumentPreviewWindow : Window
     private readonly Button _next = new() { Content = "Suivant  →", IsEnabled = false, IsVisible = false };
     private readonly Button _zoomOut = new() { Content = "−" };
     private readonly Button _zoomIn = new() { Content = "+" };
+    private readonly Button _print = new() { Content = "Imprimer…", IsVisible = false };
     private PdfPageRenderer? _pdf;
     private int _pageIndex;
     private int _version;
@@ -55,7 +56,8 @@ public sealed class DocumentPreviewWindow : Window
         _zoomIn.Click += async (_, _) => await ChangeZoomAsync(1.25);
         var fit = new Button { Content = "Ajuster à la largeur" };
         fit.Click += async (_, _) => { _fitWidth = true; await RefreshAsync(); };
-        var toolbar = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { _previous, _pageText, _next, _zoomOut, _zoomText, _zoomIn, fit } };
+        _print.Click += async (_, _) => await PrintAsync();
+        var toolbar = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { _previous, _pageText, _next, _zoomOut, _zoomText, _zoomIn, fit, _print } };
 
         _scroll.Content = _image;
         _scroll.PropertyChanged += (_, e) =>
@@ -99,7 +101,7 @@ public sealed class DocumentPreviewWindow : Window
             if (_closed) return;
             _pdf = pdf;
             if (pdf.PageCount == 0) throw new InvalidDataException("Le PDF ne contient aucune page.");
-            _previous.IsVisible = _next.IsVisible = _pageText.IsVisible = true;
+            _previous.IsVisible = _next.IsVisible = _pageText.IsVisible = _print.IsVisible = true;
             await ShowPageAsync(0);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
@@ -142,6 +144,39 @@ public sealed class DocumentPreviewWindow : Window
                 _previous.IsEnabled = _pageIndex > 0;
                 _next.IsEnabled = _pageIndex < pdf.PageCount - 1;
             }
+        }
+    }
+
+    private async Task PrintAsync()
+    {
+        var pdf = _pdf;
+        if (pdf is null || _closed) return;
+        IReadOnlyList<string> printers;
+        try { printers = PdfPrinter.InstalledPrinters(); }
+        catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            _message.Text = "Impossible de lister les imprimantes : " + exception.Message;
+            return;
+        }
+        if (printers.Count == 0) { _message.Text = "Aucune imprimante n’est installée sur cet ordinateur."; return; }
+
+        var dialog = new PdfPrintWindow(printers, PdfPrinter.DefaultPrinter(), pdf.PageCount, _pageIndex, Path.GetFileName(_path));
+        if (!await dialog.ShowDialog<bool>(this) || dialog.Request is not { } request) return;
+
+        _print.IsEnabled = false;
+        _message.Text = $"Envoi de {request.Pages.Count} page(s) à « {request.PrinterName} »…";
+        try
+        {
+            await Task.Run(() => PdfPrinter.Print(pdf, Path.GetFileName(_path), request));
+            if (!_closed) _message.Text = $"Impression envoyée à « {request.PrinterName} » ({request.Pages.Count} page(s) × {request.Copies}).";
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception or ArgumentException or System.Drawing.Printing.InvalidPrinterException or IOException)
+        {
+            if (!_closed) _message.Text = "Impression impossible : " + exception.Message;
+        }
+        finally
+        {
+            if (!_closed) _print.IsEnabled = true;
         }
     }
 
