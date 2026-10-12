@@ -2,6 +2,11 @@
 
 ## 12 octobre 2026
 
+### Découpage automatique (Bambu Studio / OrcaSlicer)
+- Le logiciel détecte Bambu Studio ou OrcaSlicer et découpe le modèle ouvert dans le visualiseur sans afficher sa fenêtre : durée d’impression, longueur de filament et poids réels sont affichés au chargement.
+- L’imprimante (profil machine) est choisie parmi vos imprimantes du logiciel, la qualité parmi les profils compatibles, et le filament selon la matière ; le remplissage et les parois du panneau sont transmis au découpeur.
+- « Créer une estimation avec ce modèle » reprend maintenant la durée machine, le poids exact, l’imprimante et le filament : on passe du fichier au prix en un clic.
+
 ### Du visualiseur à l’estimation
 - Bouton « Créer une estimation avec ce modèle » : ouvre une nouvelle estimation préremplie avec le nom du fichier, le poids estimé, le filament choisi et le projet auquel appartient le fichier.
 - Une nouvelle estimation reprend le taux horaire de l’imprimante sélectionnée au lieu d’une valeur par défaut.

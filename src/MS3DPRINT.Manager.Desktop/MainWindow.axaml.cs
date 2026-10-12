@@ -1855,6 +1855,10 @@ public partial class MainWindow : Window
             {
                 var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
                 return new WorkspaceInventoryReader().LoadFilaments(root);
+            }, () =>
+            {
+                var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+                return new WorkspaceInventoryReader().LoadPrinters(root).Where(printer => printer.IsActive).Select(printer => printer.DisplayName).ToList();
             });
             _modelViewer.ModelLoaded += name => PageSubtitle.Text = name;
             _modelViewer.EstimateRequested += StartEstimateFromModel;
@@ -1884,10 +1888,17 @@ public partial class MainWindow : Window
             EstimateWeight.Text = Math.Max(0.1, grams).ToString("0.#", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
         if (seed.FilamentKey is { } key && EstimateFilament.ItemsSource is IEnumerable<MS3DPRINT.Manager.Core.Filaments.FilamentProfile> filaments)
             EstimateFilament.SelectedItem = filaments.FirstOrDefault(filament => $"{filament.Brand} {filament.Name}" == key) ?? EstimateFilament.SelectedItem;
+        if (seed.PrinterModel is { } model && EstimatePrinter.ItemsSource is IEnumerable<PrinterProfile> printers)
+            EstimatePrinter.SelectedItem = printers.FirstOrDefault(printer => string.Equals(printer.DisplayName, model, StringComparison.OrdinalIgnoreCase)) ?? EstimatePrinter.SelectedItem;
+        if (seed.DurationHours is { } hours)
+        {
+            EstimateHours.Text = Math.Round(hours, 2).ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+            RecalculateElectricity();
+        }
         if (EstimateProject.ItemsSource is IEnumerable<ProjectSummary> projects)
             EstimateProject.SelectedItem = projects.FirstOrDefault(project => seed.ModelPath.StartsWith(project.ProjectPath, StringComparison.OrdinalIgnoreCase));
         GoToEstimateStep(1);
-        Notify("Estimation préparée à partir du modèle : vérifiez la durée machine.");
+        Notify(seed.DurationHours is null ? "Estimation préparée à partir du modèle : vérifiez la durée machine." : "Estimation préparée : poids et durée viennent du découpeur.");
     }
 
     private void CloseModelViewer()

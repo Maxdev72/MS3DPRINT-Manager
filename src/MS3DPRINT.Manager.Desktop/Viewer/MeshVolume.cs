@@ -6,10 +6,10 @@ namespace MS3DPRINT.Manager.Desktop.Viewer;
 public readonly record struct MeshMeasures(double Volume, double SurfaceArea, bool? IsClosed);
 
 /// <summary>A material the weight can be estimated for, optionally tied to a catalogue filament and its price.</summary>
-public sealed record MaterialChoice(string Label, double Density, decimal? PricePerKg = null, string? FilamentKey = null);
+public sealed record MaterialChoice(string Label, double Density, decimal? PricePerKg = null, string? FilamentKey = null, string? MaterialName = null);
 
 /// <summary>What the viewer hands to the estimate wizard: the model name, its estimated weight and the chosen filament.</summary>
-public sealed record ModelEstimateSeed(string Name, double? WeightGrams, string? FilamentKey, string ModelPath);
+public sealed record ModelEstimateSeed(string Name, double? WeightGrams, string? FilamentKey, string ModelPath, double? DurationHours = null, string? PrinterModel = null);
 
 public static class MeshVolume
 {
@@ -18,8 +18,8 @@ public static class MeshVolume
     /// <summary>Densities in g/cm³ for the usual filaments (typical datasheet values).</summary>
     public static readonly IReadOnlyList<MaterialChoice> Presets =
     [
-        new("PLA (1,24 g/cm³)", 1.24), new("PETG (1,27 g/cm³)", 1.27), new("ABS (1,04 g/cm³)", 1.04), new("ASA (1,07 g/cm³)", 1.07),
-        new("TPU (1,21 g/cm³)", 1.21), new("Nylon PA (1,14 g/cm³)", 1.14), new("PC (1,20 g/cm³)", 1.20), new("PVA (1,23 g/cm³)", 1.23)
+        new("PLA (1,24 g/cm³)", 1.24, MaterialName: "PLA"), new("PETG (1,27 g/cm³)", 1.27, MaterialName: "PETG"), new("ABS (1,04 g/cm³)", 1.04, MaterialName: "ABS"), new("ASA (1,07 g/cm³)", 1.07, MaterialName: "ASA"),
+        new("TPU (1,21 g/cm³)", 1.21, MaterialName: "TPU"), new("Nylon PA (1,14 g/cm³)", 1.14, MaterialName: "PA"), new("PC (1,20 g/cm³)", 1.20, MaterialName: "PC"), new("PVA (1,23 g/cm³)", 1.23, MaterialName: "PVA")
     ];
 
     /// <summary>Density for a catalogue material name such as "PLA+" or "PETG-CF"; PLA when unknown.</summary>

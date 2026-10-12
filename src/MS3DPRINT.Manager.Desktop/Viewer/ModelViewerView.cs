@@ -10,6 +10,7 @@ using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using MS3DPRINT.Manager.Core.Files;
+using MS3DPRINT.Manager.Core.Slicing;
 
 namespace MS3DPRINT.Manager.Desktop.Viewer;
 
@@ -31,6 +32,20 @@ public sealed class ModelViewerView : UserControl
     private readonly TextBlock _volumeResult = new() { TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _volumeNote = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
     private MeshMeasures? _measures;
+    private readonly Func<IReadOnlyList<string>>? _loadPrinterNames;
+    private SlicerInstall? _slicer;
+    private SlicerProfiles? _slicerProfiles;
+    private IReadOnlyList<SlicerMachine> _machines = [];
+    private readonly StackPanel _slicerPanel = new() { Spacing = 10, IsVisible = false };
+    private readonly TextBlock _slicerNote = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
+    private readonly ComboBox _slicerMachine = new() { HorizontalAlignment = HorizontalAlignment.Stretch };
+    private readonly ComboBox _slicerQuality = new() { HorizontalAlignment = HorizontalAlignment.Stretch };
+    private readonly Button _sliceButton = new() { Content = "Recalculer la durée", IsEnabled = false };
+    private readonly TextBlock _sliceStatus = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
+    private readonly DispatcherTimer _sliceDelay = new() { Interval = TimeSpan.FromMilliseconds(900) };
+    private CancellationTokenSource? _sliceCancel;
+    private SliceResult? _slice;
+    private SlicerMachine? _sliceMachineUsed;
     private readonly Button _createEstimate = new() { Content = "Créer une estimation avec ce modèle", IsEnabled = false };
     private string? _modelPath;
     private double? _estimatedMass;
@@ -67,9 +82,10 @@ public sealed class ModelViewerView : UserControl
     private MeshModel? _mesh;
     private int _loadVersion;
 
-    public ModelViewerView(Action close, Func<IReadOnlyList<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>>? loadFilaments = null)
+    public ModelViewerView(Action close, Func<IReadOnlyList<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>>? loadFilaments = null, Func<IReadOnlyList<string>>? loadPrinterNames = null)
     {
         _loadFilaments = loadFilaments;
+        _loadPrinterNames = loadPrinterNames;
         DragDrop.SetAllowDrop(this, true);
         AddHandler(DragDrop.DragOverEvent, View_DragOver);
         AddHandler(DragDrop.DropEvent, View_Drop);
@@ -121,18 +137,29 @@ public sealed class ModelViewerView : UserControl
         _measureToggle.IsCheckedChanged += (_, _) => UpdateMeasureMode();
         _clearMeasures.Click += (_, _) => ClearMeasures();
         _scale.TextChanged += (_, _) => RefreshMeasures();
+        _slicerPanel.Children.Add(_slicerNote);
+        _slicerPanel.Children.Add(Muted("Imprimante"));
+        _slicerPanel.Children.Add(_slicerMachine);
+        _slicerPanel.Children.Add(Muted("Qualité"));
+        _slicerPanel.Children.Add(_slicerQuality);
+        _slicerPanel.Children.Add(_sliceButton);
+        _slicerPanel.Children.Add(_sliceStatus);
+        _slicerMachine.SelectionChanged += (_, _) => { FillQualities(); ScheduleSlice(); };
+        _slicerQuality.SelectionChanged += (_, _) => ScheduleSlice();
+        _sliceButton.Click += async (_, _) => await RunSliceAsync();
+        _sliceDelay.Tick += async (_, _) => { _sliceDelay.Stop(); await RunSliceAsync(); };
         _createEstimate.Click += (_, _) =>
         {
             if (_modelPath is null) return;
             var choice = _material.SelectedItem as MaterialChoice;
-            EstimateRequested?.Invoke(new ModelEstimateSeed(Path.GetFileNameWithoutExtension(_modelPath), _estimatedMass, choice?.FilamentKey, _modelPath));
+            EstimateRequested?.Invoke(new ModelEstimateSeed(Path.GetFileNameWithoutExtension(_modelPath), _estimatedMass, choice?.FilamentKey, _modelPath, _slice?.TimeHours, _slice is null ? null : _sliceMachineUsed?.PrinterModel));
         };
         _material.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<MaterialChoice>((choice, _) => new TextBlock { Text = choice?.Label ?? string.Empty });
         _material.ItemsSource = MeshVolume.Presets.ToList();
         _material.SelectedIndex = 0;
-        _material.SelectionChanged += (_, _) => RefreshVolume();
-        _infill.TextChanged += (_, _) => RefreshVolume();
-        _walls.TextChanged += (_, _) => RefreshVolume();
+        _material.SelectionChanged += (_, _) => { RefreshVolume(); ScheduleSlice(); };
+        _infill.TextChanged += (_, _) => { RefreshVolume(); ScheduleSlice(); };
+        _walls.TextChanged += (_, _) => { RefreshVolume(); ScheduleSlice(); };
         _scale.TextChanged += (_, _) => RefreshVolume();
         RefreshVolume();
         _hex.LostFocus += (_, _) => ApplyColor();
@@ -172,6 +199,7 @@ public sealed class ModelViewerView : UserControl
                 FormKit.SectionLabel("Volume et poids"), _volumeResult, Muted("Matière"), _material,
                 new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,*,Auto"), ColumnSpacing = 8, Children = { _infill, Place(Unit("% remplissage"), 1), Place(_walls, 2), Place(Unit("mm parois"), 3) } },
                 _createEstimate, _volumeNote,
+                FormKit.SectionLabel("Durée d’impression"), _slicerPanel,
                 FormKit.SectionLabel("Analyse des parois"),
                 new TextBlock { Text = "STL et OBJ n’indiquent pas leurs unités : choisissez le seuil selon votre buse, votre matériau et votre trancheur.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap },
                 limits, _confirmUnits, analysisButtons, _analysisSummary, _analysis
@@ -341,6 +369,8 @@ public sealed class ModelViewerView : UserControl
             _measureToggle.IsEnabled = true;
             ClearMeasures();
             _ = ComputeMeasuresAsync(mesh, version);
+            _slice = null;
+            ScheduleSlice();
             _viewport.SetMesh(mesh);
             _emptyState.IsVisible = false;
             _analyze.IsEnabled = _activeAnalysis is null;
@@ -369,6 +399,7 @@ public sealed class ModelViewerView : UserControl
     /// <summary>Loads the catalogue filaments as material choices (their density comes from the material name).</summary>
     public async Task ReloadFilamentsAsync()
     {
+        await EnsureSlicerAsync();
         if (_loadFilaments is null) return;
         IReadOnlyList<MS3DPRINT.Manager.Core.Filaments.FilamentProfile> filaments;
         try { filaments = await Task.Run(_loadFilaments); }
@@ -378,6 +409,92 @@ public sealed class ModelViewerView : UserControl
         choices.AddRange(filaments.Select(f => new MaterialChoice($"{f.Brand} {f.Name} ({f.Material}, {f.PricePerKg:0.##} €/kg)", MeshVolume.DensityFor(f.Material), f.PricePerKg, $"{f.Brand} {f.Name}")));
         _material.ItemsSource = choices;
         _material.SelectedItem = choices.FirstOrDefault(c => c.Label == selected) ?? choices[0];
+    }
+
+    /// <summary>Finds Bambu Studio or OrcaSlicer once and fills the printer list, preferring the printers of the workshop.</summary>
+    private async Task EnsureSlicerAsync()
+    {
+        if (_slicerProfiles is not null) return;
+        var preferred = _loadPrinterNames is null ? [] : await Task.Run(() => { try { return _loadPrinterNames(); } catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException) { return []; } });
+        var found = await Task.Run(() =>
+        {
+            var install = SlicerLocator.Detect();
+            return install is null ? default : (Install: install, Profiles: new SlicerProfiles(install), Machines: new SlicerProfiles(install).Machines());
+        });
+        _slicerPanel.IsVisible = true;
+        if (found.Install is null)
+        {
+            _slicerNote.Text = "Aucun découpeur détecté. Installez Bambu Studio ou OrcaSlicer pour obtenir la durée d’impression réelle sans quitter le logiciel.";
+            _slicerMachine.IsVisible = _slicerQuality.IsVisible = _sliceButton.IsVisible = false;
+            return;
+        }
+        _slicer = found.Install;
+        _slicerProfiles = found.Profiles;
+        _machines = found.Machines;
+        _slicerNote.Text = _slicer.Name + " calcule la durée et le filament sans afficher sa fenêtre.";
+        _slicerMachine.ItemsSource = _machines.Select(machine => machine.Name).ToList();
+        var first = _machines.FirstOrDefault(machine => preferred.Any(name => string.Equals(name, machine.PrinterModel, StringComparison.OrdinalIgnoreCase))) ?? _machines.FirstOrDefault();
+        _slicerMachine.SelectedItem = first?.Name;
+        FillQualities();
+        ScheduleSlice();
+    }
+
+    private SlicerMachine? CurrentMachine => _machines.FirstOrDefault(machine => machine.Name == _slicerMachine.SelectedItem as string);
+
+    private void FillQualities()
+    {
+        if (_slicerProfiles is null || CurrentMachine is not { } machine) return;
+        var processes = _slicerProfiles.Processes(machine);
+        _slicerQuality.ItemsSource = processes;
+        _slicerQuality.SelectedItem = processes.FirstOrDefault(name => name == machine.DefaultProcess) ?? processes.FirstOrDefault();
+    }
+
+    /// <summary>Waits a moment after the last change, then slices again; a new change cancels a running slice.</summary>
+    private void ScheduleSlice()
+    {
+        if (_slicerProfiles is null || _mesh is null) return;
+        _sliceDelay.Stop();
+        _sliceDelay.Start();
+    }
+
+    private async Task RunSliceAsync()
+    {
+        if (_slicer is null || _slicerProfiles is null || _modelPath is null || CurrentMachine is not { } machine || _slicerQuality.SelectedItem is not string quality) return;
+        _sliceCancel?.Cancel();
+        var cancellation = _sliceCancel = new CancellationTokenSource();
+        var material = _material.SelectedItem as MaterialChoice;
+        int? infill = double.TryParse(_infill.Text?.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var infillValue) && infillValue is >= 0 and <= 100 ? (int)Math.Round(infillValue) : null;
+        int? loops = double.TryParse(_walls.Text?.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var wallMm) && wallMm > 0 ? Math.Max(1, (int)Math.Round(wallMm / 0.4)) : null;
+        var request = new SliceRequest(_modelPath, machine, quality, _slicerProfiles.FilamentFor(machine, material?.MaterialName), infill, loops);
+        var path = _modelPath;
+        _sliceButton.IsEnabled = false;
+        _slice = null;
+        RefreshVolume();
+        _sliceStatus.Text = "Découpe en cours avec " + _slicer.Name + "…";
+        try
+        {
+            var result = await new SliceRunner(_slicer).RunAsync(_slicerProfiles, request, cancellation.Token);
+            if (cancellation.IsCancellationRequested || path != _modelPath) return;
+            _slice = result;
+            _sliceMachineUsed = machine;
+            _sliceStatus.Text = $"{machine.Name} · {quality} · couche {result.LayerHeight:0.##} mm · {result.Layers} couches · {result.InfillPercent:0.#} % de remplissage";
+        }
+        catch (OperationCanceledException) { return; }
+        catch (Exception exception) when (exception is InvalidOperationException or IOException or System.ComponentModel.Win32Exception or System.Text.Json.JsonException or FileNotFoundException)
+        {
+            if (!cancellation.IsCancellationRequested) _sliceStatus.Text = exception.Message;
+        }
+        finally
+        {
+            if (ReferenceEquals(_sliceCancel, cancellation)) _sliceButton.IsEnabled = true;
+        }
+        RefreshVolume();
+    }
+
+    private static string FormatDuration(double hours)
+    {
+        var total = TimeSpan.FromHours(hours);
+        return total.TotalHours >= 1 ? $"{(int)total.TotalHours} h {total.Minutes:00} min" : $"{Math.Max(1, total.Minutes)} min";
     }
 
     private async Task ComputeMeasuresAsync(MeshModel mesh, int version)
@@ -420,9 +537,15 @@ public sealed class ModelViewerView : UserControl
         {
             var mass = MeshVolume.EstimateMass(volumeCm3, areaCm2, material.Density, infill, walls);
             var solid = volumeCm3 * material.Density;
+            if (_slice is { } sliced)
+            {
+                mass = sliced.WeightGrams(material.Density);
+                lines.Add($"Durée d’impression : {FormatDuration(sliced.TimeHours)}");
+                lines.Add($"Poids : {mass.ToString("0.#", french)} g, {(sliced.FilamentLengthMm / 1000).ToString("0.##", french)} m de filament");
+            }
+            else lines.Add($"Poids estimé : {mass.ToString("0.#", french)} g ({infill:0.##} % de remplissage)");
             _estimatedMass = mass;
             _createEstimate.IsEnabled = _modelPath is not null;
-            lines.Add($"Poids estimé : {mass.ToString("0.#", french)} g ({infill:0.##} % de remplissage)");
             lines.Add($"Poids plein : {solid.ToString("0.#", french)} g");
             if (material.PricePerKg is { } price)
                 lines.Add($"Matière : {(decimal)mass * price / 1000m:0.00} €");
@@ -434,7 +557,7 @@ public sealed class ModelViewerView : UserControl
             false => "Maillage ouvert : le volume n’est qu’approximatif, corrigez le maillage avant de vous y fier. ",
             null => "Fermeture du maillage non vérifiée (modèle très volumineux). ",
             _ => string.Empty
-        }) + "Estimation indicative : le trancheur (supports, jupes, remplissage réel) donnera le poids exact. L’échelle est celle de la section Analyse des parois.";
+        }) + (_slice is null ? "Estimation indicative : le découpeur donnera le poids et la durée exacts. " : "Durée et poids calculés par le découpeur. ") + "L’échelle du modèle est celle de la section Analyse des parois.";
     }
 
     private void UpdateMeasureMode()
