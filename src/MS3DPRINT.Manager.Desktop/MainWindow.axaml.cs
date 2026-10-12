@@ -535,7 +535,10 @@ public partial class MainWindow : Window
         {
             try
             {
-                new WorkspaceProjectCreator().Create(client.ClientPath, client.ClientCode, DateTime.Today.Year, dialog.ProjectName);
+                var projectName = dialog.ProjectName;
+                BeginBusy();
+                try { await Task.Run(() => new WorkspaceProjectCreator().Create(client.ClientPath, client.ClientCode, DateTime.Today.Year, projectName)); }
+                finally { EndBusy(); }
                 PageTitle.Text = "Projets";
                 Notify("Projet créé.");
                 ShowWorkspace("Projets");
@@ -1139,9 +1142,16 @@ public partial class MainWindow : Window
         var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
         try
         {
-            var created = dialog.IsIndividual
-                ? new WorkspaceClientCreator().CreateIndividual(root, dialog.FirstName, dialog.LastName, null, dialog.Address)
-                : new WorkspaceClientCreator().CreateProfessional(root, dialog.ClientName, null, dialog.Siret, dialog.Address);
+            var (individual, firstName, lastName, clientName, siret, address) = (dialog.IsIndividual, dialog.FirstName, dialog.LastName, dialog.ClientName, dialog.Siret, dialog.Address);
+            BeginBusy();
+            ClientProfile created;
+            try
+            {
+                created = await Task.Run(() => individual
+                    ? new WorkspaceClientCreator().CreateIndividual(root, firstName, lastName, null, address)
+                    : new WorkspaceClientCreator().CreateProfessional(root, clientName, null, siret, address));
+            }
+            finally { EndBusy(); }
             PageTitle.Text = "Clients";
             Notify($"Client créé (code {created.ClientCode}).");
             ShowWorkspace("Clients");

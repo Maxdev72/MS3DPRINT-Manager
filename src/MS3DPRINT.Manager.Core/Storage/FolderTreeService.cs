@@ -104,7 +104,7 @@ public sealed class FolderTreeService
 
             try
             {
-                Directory.Move(staging, destinationPath);
+                MoveDirectoryWithRetry(staging, destinationPath);
                 moved = true;
             }
             catch (IOException exception) when (PathExists(destinationPath))
@@ -129,6 +129,31 @@ public sealed class FolderTreeService
         }
 
         return new FolderCreationResult(destinationPath, template.ToArray());
+    }
+
+    /// <summary>
+    /// A synced folder (Nextcloud, antivirus) may briefly hold a handle on the freshly created staging directory,
+    /// which makes the rename fail with "access denied". Retrying for a few seconds lets the other process let go.
+    /// </summary>
+    private static void MoveDirectoryWithRetry(string source, string destination)
+    {
+        const int attempts = 8;
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                Directory.Move(source, destination);
+                return;
+            }
+            catch (UnauthorizedAccessException) when (attempt < attempts)
+            {
+                Thread.Sleep(150 * attempt);
+            }
+            catch (IOException) when (attempt < attempts && !PathExists(destination))
+            {
+                Thread.Sleep(150 * attempt);
+            }
+        }
     }
 
     private static string[] SplitAndValidate(string folder)

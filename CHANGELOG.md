@@ -44,6 +44,8 @@
 - Imprimantes : le volume d’impression est grisé pour l’instant et l’option « Imprimante active » est retirée.
 
 ### Corrections
+- Création d’un client ou d’un projet : plus d’erreur « accès refusé » sur le dossier temporaire (la synchronisation
+  Nextcloud retenait brièvement le dossier). Le renommage est réessayé quelques secondes, et l’interface ne se fige plus.
 - Création de projet depuis une fiche client : plus d’erreur « le thread appelant ne peut pas accéder à cet objet »
   (même défaut corrigé pour le renommage, les dossiers, les collections et les fiches projet/client).
 - Depuis une fiche client, ouvrir un projet affiche bien le projet (la page ne restait plus sur le contact),
