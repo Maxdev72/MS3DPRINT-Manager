@@ -5,6 +5,8 @@ namespace MS3DPRINT.Manager.Desktop;
 
 public partial class App : Application
 {
+    private const int SplashDurationMs = 5000;
+
     public override void OnFrameworkInitializationCompleted()
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
@@ -19,13 +21,20 @@ public partial class App : Application
 
     private static async Task StartAsync(IClassicDesktopStyleApplicationLifetime desktop, SplashWindow splash)
     {
-        splash.Report(15, "Chargement de l’interface…");
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        splash.Report(0, "Chargement de l’interface…");
         await Task.Yield();
         var main = new MainWindow();
-        splash.Report(55, "Lecture de l’espace de travail…");
-        await main.PreloadAsync();
+        var preload = main.PreloadAsync();
+        while (clock.ElapsedMilliseconds < SplashDurationMs)
+        {
+            var percent = clock.ElapsedMilliseconds * 100.0 / SplashDurationMs;
+            splash.Report(Math.Min(percent, 99), percent < 40 ? "Chargement de l’interface…" : percent < 80 ? "Lecture de l’espace de travail…" : "Finalisation…");
+            await Task.Delay(40);
+        }
+        await preload;
         splash.Report(100, "Prêt");
-        await Task.Delay(250);
+        await Task.Delay(150);
         desktop.MainWindow = main;
         main.Show();
         splash.Close();

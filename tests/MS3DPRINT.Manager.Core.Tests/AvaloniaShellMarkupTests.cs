@@ -68,7 +68,7 @@ public sealed class AvaloniaShellMarkupTests
         Assert.Contains("EstimateScope", markup, StringComparison.Ordinal);
         Assert.Contains("Modélisation seule", markup, StringComparison.Ordinal);
         Assert.Contains("EstimatePrintInputs", markup, StringComparison.Ordinal);
-        Assert.Contains("EstimateScope_SelectionChanged", source, StringComparison.Ordinal);
+        Assert.Contains("EstimateScope_Click", source, StringComparison.Ordinal);
     }
 
     [Fact]

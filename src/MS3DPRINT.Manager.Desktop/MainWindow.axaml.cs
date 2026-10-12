@@ -1196,18 +1196,48 @@ public partial class MainWindow : Window
 
     private void EstimatePrinter_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (EstimatePrinter.SelectedItem is not PrinterProfile printer) return;
-        EstimateMachineRate.Text = PrinterCostCalculator.HourlyRate(printer).ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        if (EstimatePrinter.SelectedItem is PrinterProfile printer)
+            EstimateMachineRate.Text = PrinterCostCalculator.HourlyRate(printer).ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        RecalculateElectricity();
     }
 
-    private void EstimateScope_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    private void EstimateElectricityInputs_Changed(object? sender, TextChangedEventArgs e) => RecalculateElectricity();
+
+    /// <summary>Keeps the electricity cost in sync with machine time, printer power and kWh price.</summary>
+    private void RecalculateElectricity()
     {
-        // Déclenché pendant le chargement du XAML, avant que les contrôles nommés soient résolus.
-        if (sender is not ComboBox scope || EstimatePrintInputs is null || EstimateDetail is null)
-            return;
-        var modellingOnly = scope.SelectedIndex == 1;
-        EstimatePrintInputs.IsVisible = !modellingOnly;
-        if (modellingOnly)
+        // Raised while the XAML is still loading, before the named controls exist.
+        if (EstimateElectricity is null || EstimateHours is null || EstimateKwhPrice is null || EstimatePrinter is null || EstimateElectricityLabel is null) return;
+        var printer = EstimatePrinter.SelectedItem as PrinterProfile;
+        var automatic = printer?.PowerWatts is > 0;
+        EstimateElectricity.IsReadOnly = automatic;
+        EstimateElectricityLabel.Text = automatic ? "Électricité estimée (calculée automatiquement)" : "Électricité estimée (saisie manuelle : puissance de l’imprimante non renseignée)";
+        if (!automatic || !TryEstimateValue(EstimateHours.Text, out var hours) || !TryEstimateValue(EstimateKwhPrice.Text, out var pricePerKwh) || hours < 0 || pricePerKwh < 0) return;
+        EstimateElectricity.Text = PrinterCostCalculator.ElectricityCost(printer!, hours, pricePerKwh).ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+    }
+
+    private int _estimateScopeIndex;
+
+    /// <summary>0 = impression, 1 = modélisation seule, 2 = impression + modélisation.</summary>
+    private int EstimateScopeIndex
+    {
+        get => _estimateScopeIndex;
+        set
+        {
+            _estimateScopeIndex = value;
+            foreach (var choice in EstimateScope.Children.OfType<Button>())
+            {
+                if (choice.Tag as string == value.ToString()) choice.Classes.Add("selected"); else choice.Classes.Remove("selected");
+            }
+            EstimatePrintInputs.IsVisible = value != 1;
+        }
+    }
+
+    private void EstimateScope_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string tag } || !int.TryParse(tag, out var index)) return;
+        EstimateScopeIndex = index;
+        if (index == 1)
             EstimateDetail.Text = "Renseignez le coût de modélisation puis calculez.";
     }
 
@@ -1344,8 +1374,7 @@ public partial class MainWindow : Window
         var inputs = estimate.Inputs;
         _loadedEstimate = estimate;
         EstimateName.Text = estimate.Name;
-        EstimateScope.SelectedIndex = string.Equals(estimate.FilamentName, "Modélisation seule", StringComparison.Ordinal) ? 1 : 0;
-        EstimatePrintInputs.IsVisible = EstimateScope.SelectedIndex != 1;
+        EstimateScopeIndex = string.Equals(estimate.FilamentName, "Modélisation seule", StringComparison.Ordinal) ? 1 : 0;
         EstimateProject.SelectedItem = (EstimateProject.ItemsSource as IEnumerable<ProjectSummary>)?.FirstOrDefault(project => project.Reference == estimate.ProjectReference && project.ClientFolderName == estimate.ClientName);
         EstimateFilament.SelectedItem = (EstimateFilament.ItemsSource as IEnumerable<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>)?.FirstOrDefault(filament => $"{filament.Brand} {filament.Name}" == estimate.FilamentName);
         EstimatePrinter.SelectedItem = (EstimatePrinter.ItemsSource as IEnumerable<PrinterProfile>)?.FirstOrDefault(printer => printer.Name == estimate.PrinterName || printer.DisplayName == estimate.PrinterName);
@@ -1372,8 +1401,7 @@ public partial class MainWindow : Window
     private void ResetEstimate_Click(object? sender, RoutedEventArgs e)
     {
         EstimateName.Text = "Nouvelle estimation";
-        EstimateScope.SelectedIndex = 0;
-        EstimatePrintInputs.IsVisible = true;
+        EstimateScopeIndex = 0;
         EstimateWeight.Text = "100";
         EstimateHours.Text = "2";
         EstimateMachineRate.Text = "2";
@@ -1415,7 +1443,7 @@ public partial class MainWindow : Window
 
     private void CalculateEstimate_Click(object? sender, RoutedEventArgs e)
     {
-        var modellingOnly = EstimateScope.SelectedIndex == 1;
+        var modellingOnly = EstimateScopeIndex == 1;
         var filament = EstimateFilament.SelectedItem as MS3DPRINT.Manager.Core.Filaments.FilamentProfile;
         if (!modellingOnly && filament is null)
         {
