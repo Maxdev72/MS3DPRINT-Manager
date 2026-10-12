@@ -108,7 +108,10 @@ public sealed class AvaloniaShellMarkupTests
 
         Assert.Contains("<ScrollViewer Grid.Row=\"1\" HorizontalScrollBarVisibility=\"Disabled\" HorizontalContentAlignment=\"Stretch\">", markup, StringComparison.Ordinal);
         Assert.Contains("<StackPanel x:Name=\"ProjectList\" HorizontalAlignment=\"Stretch\"", markup, StringComparison.Ordinal);
+        Assert.Contains("<ScrollViewer Grid.Row=\"1\" HorizontalScrollBarVisibility=\"Disabled\" HorizontalContentAlignment=\"Stretch\"><StackPanel x:Name=\"ClientList\" HorizontalAlignment=\"Stretch\"", markup, StringComparison.Ordinal);
         Assert.Contains("button.Click += ProjectEntry_Click", source, StringComparison.Ordinal);
+        Assert.Contains("projectButton.Click += ProjectEntry_Click", source, StringComparison.Ordinal);
+        Assert.Contains("Classes = { \"workspace-card\" }", source, StringComparison.Ordinal);
     }
 
     private static string MainWindowPath()

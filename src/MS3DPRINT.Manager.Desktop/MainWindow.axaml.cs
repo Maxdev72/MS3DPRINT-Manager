@@ -783,7 +783,14 @@ public partial class MainWindow : Window
             if (projects.Length > 0) ClientList.Children.Add(new TextBlock { Text = "Projets", FontWeight = FontWeight.SemiBold, Margin = new Avalonia.Thickness(0, 10, 0, 0) });
             foreach (var project in projects)
             {
-                var projectButton = new Button { Content = $"{project.Reference} · {project.ProjectName}\n{project.StatusLabel}", Tag = project, HorizontalContentAlignment = HorizontalAlignment.Left };
+                var projectButton = new Button
+                {
+                    Content = $"{project.Reference} · {project.ProjectName}\n{project.StatusLabel}",
+                    Tag = project,
+                    HorizontalContentAlignment = HorizontalAlignment.Left,
+                    HorizontalAlignment = HorizontalAlignment.Stretch,
+                    Classes = { "workspace-card" }
+                };
                 projectButton.Click += ProjectEntry_Click;
                 ClientList.Children.Add(projectButton);
             }

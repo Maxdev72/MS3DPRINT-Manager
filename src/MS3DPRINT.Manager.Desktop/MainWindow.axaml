@@ -95,7 +95,7 @@
             <StackPanel Spacing="4"><TextBlock Text="Tous les clients" FontSize="18" FontWeight="SemiBold" /><TextBlock Text="Catalogue lu depuis votre espace de travail." Classes="muted" /></StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"><Button Content="Créer" Click="CreateClient_Click" /><Button Content="Actualiser" Click="RefreshClients_Click" VerticalAlignment="Center" /></StackPanel>
           </Grid>
-          <ScrollViewer Grid.Row="1"><StackPanel x:Name="ClientList" Spacing="8" /></ScrollViewer>
+          <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel x:Name="ClientList" HorizontalAlignment="Stretch" Spacing="8" /></ScrollViewer>
         </Grid>
       </Border>
       <Border x:Name="CollectionsWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="20">
