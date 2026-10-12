@@ -28,6 +28,18 @@ public sealed class AvaloniaShellMarkupTests
     }
 
     [Fact]
+    public void Estimate_workspace_updates_the_loaded_estimate_without_creating_a_duplicate()
+    {
+        var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
+
+        Assert.Contains("_loadedEstimate", source, StringComparison.Ordinal);
+        Assert.Contains("store.Update", source, StringComparison.Ordinal);
+        Assert.Contains("EstimateProject.SelectedItem", source, StringComparison.Ordinal);
+        Assert.Contains("EstimateFilament.SelectedItem", source, StringComparison.Ordinal);
+        Assert.Contains("EstimatePrinter.SelectedItem", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Estimate_workspace_templates_tolerate_empty_items()
     {
         var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
@@ -63,6 +75,17 @@ public sealed class AvaloniaShellMarkupTests
         Assert.Contains("Window_KeyDown", markup, StringComparison.Ordinal);
         Assert.Contains("SearchBox", markup, StringComparison.Ordinal);
         Assert.Contains("SearchBox_KeyUp", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Main_window_browses_non_project_folders_inside_the_main_workspace()
+    {
+        var markup = File.ReadAllText(MainWindowPath());
+        var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
+
+        Assert.Contains("FolderWorkspacePanel", markup, StringComparison.Ordinal);
+        Assert.Contains("LoadFolderWorkspaceAsync", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("new FolderBrowserWindow", source, StringComparison.Ordinal);
     }
 
     private static string MainWindowPath()

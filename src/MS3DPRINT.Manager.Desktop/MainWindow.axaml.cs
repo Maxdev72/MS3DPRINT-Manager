@@ -21,6 +21,11 @@ public partial class MainWindow : Window
     private Button? _selectedNavigationButton;
     private EstimateInputs? _latestEstimateInputs;
     private EstimateResult? _latestEstimateResult;
+    private EstimateProfile? _loadedEstimate;
+    private string? _folderWorkspaceRoot;
+    private string? _folderWorkspaceDirectory;
+    private string? _folderWorkspaceReturnTitle;
+    private string? _folderWorkspaceReturnSubtitle;
 
     public MainWindow() => InitializeComponent();
 
@@ -74,6 +79,7 @@ public partial class MainWindow : Window
         PrintersWorkspacePanel.IsVisible = printersVisible;
         TrashWorkspacePanel.IsVisible = trashVisible;
         SettingsWorkspacePanel.IsVisible = settingsVisible;
+        FolderWorkspacePanel.IsVisible = false;
 
         if (projectsVisible)
             await LoadProjectsAsync();
@@ -537,15 +543,83 @@ public partial class MainWindow : Window
     private async void OpenFolder_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: string path } || !Directory.Exists(path)) return;
-        var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
-        var project = (await Task.Run(() => new WorkspaceProjectReader().Load(root))).FirstOrDefault(item => path.StartsWith(item.ProjectPath, StringComparison.OrdinalIgnoreCase));
-        if (project is not null)
+        try
         {
-            PageTitle.Text = project.ProjectName;
-            await LoadProjectDirectoryAsync(project, path);
-            return;
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var project = (await Task.Run(() => new WorkspaceProjectReader().Load(root))).FirstOrDefault(item => path.StartsWith(item.ProjectPath, StringComparison.OrdinalIgnoreCase));
+            if (project is not null)
+            {
+                PageTitle.Text = project.ProjectName;
+                await LoadProjectDirectoryAsync(project, path);
+                return;
+            }
+
+            _folderWorkspaceRoot = Path.GetFullPath(path);
+            _folderWorkspaceDirectory = _folderWorkspaceRoot;
+            _folderWorkspaceReturnTitle = PageTitle.Text;
+            _folderWorkspaceReturnSubtitle = PageSubtitle.Text;
+            FolderWorkspacePanel.IsVisible = true;
+            await LoadFolderWorkspaceAsync();
         }
-        await new FolderBrowserWindow(path, OpenFileAsync).ShowDialog(this);
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        { PageSubtitle.Text = "Impossible d’ouvrir ce dossier : " + exception.Message; }
+    }
+
+    private async Task LoadFolderWorkspaceAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_folderWorkspaceRoot) || string.IsNullOrWhiteSpace(_folderWorkspaceDirectory)) return;
+        var root = _folderWorkspaceRoot;
+        var directory = _folderWorkspaceDirectory;
+        FolderWorkspaceTitle.Text = string.Equals(root, directory, StringComparison.OrdinalIgnoreCase) ? "Contenu du dossier" : Path.GetFileName(directory);
+        FolderWorkspaceLocation.Text = directory;
+        FolderWorkspaceList.Children.Clear();
+
+        var back = new Button
+        {
+            Content = string.Equals(root, directory, StringComparison.OrdinalIgnoreCase) ? "← Retour" : "← Dossier parent",
+            HorizontalAlignment = HorizontalAlignment.Left
+        };
+        back.Click += async (_, _) =>
+        {
+            if (string.Equals(root, directory, StringComparison.OrdinalIgnoreCase))
+            {
+                FolderWorkspacePanel.IsVisible = false;
+                PageTitle.Text = _folderWorkspaceReturnTitle ?? "Vue d’ensemble";
+                PageSubtitle.Text = _folderWorkspaceReturnSubtitle ?? string.Empty;
+                return;
+            }
+
+            _folderWorkspaceDirectory = new ProjectWorkspaceBrowser().Parent(root, directory);
+            await LoadFolderWorkspaceAsync();
+        };
+        FolderWorkspaceList.Children.Add(back);
+        try
+        {
+            var entries = await Task.Run(() => new ProjectWorkspaceBrowser().List(root, directory));
+            if (entries.Count == 0)
+            {
+                FolderWorkspaceList.Children.Add(new TextBlock { Text = "Ce dossier est vide.", Classes = { "muted" }, Margin = new Avalonia.Thickness(8) });
+                return;
+            }
+
+            foreach (var entry in entries)
+            {
+                var item = new Button
+                {
+                    Content = entry.IsDirectory ? $"▸  {entry.Name}\nDossier" : $"Fichier · {entry.Name}\n{entry.TypeLabel} · {entry.SizeLabel}",
+                    HorizontalAlignment = HorizontalAlignment.Stretch,
+                    HorizontalContentAlignment = HorizontalAlignment.Left,
+                    Classes = { "workspace-card" }
+                };
+                if (entry.IsDirectory)
+                    item.Click += async (_, _) => { _folderWorkspaceDirectory = entry.FullPath; await LoadFolderWorkspaceAsync(); };
+                else
+                    item.Click += async (_, _) => await OpenFileAsync(entry.FullPath);
+                FolderWorkspaceList.Children.Add(item);
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        { FolderWorkspaceList.Children.Add(new TextBlock { Text = "Impossible de lire ce dossier : " + exception.Message, Classes = { "muted" }, TextWrapping = TextWrapping.Wrap, Margin = new Avalonia.Thickness(8) }); }
     }
 
     private async void TrashProject_Click(object? sender, RoutedEventArgs e)
@@ -1000,9 +1074,15 @@ public partial class MainWindow : Window
     {
         if (sender is not Button { Tag: PrinterProfile printer }) return;
         if (!await new ConfirmTrashWindow(printer.Name, "Cette imprimante pourra être restaurée depuis la corbeille.").ShowDialog<bool>(this)) return;
-        var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
-        new PrinterStore(root).Trash(printer.Id);
-        await LoadPrintersAsync();
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            await Task.Run(() => new PrinterStore(root).Trash(printer.Id));
+            await LoadPrintersAsync();
+            PageSubtitle.Text = "Imprimante envoyée dans la corbeille.";
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException)
+        { PageSubtitle.Text = exception.Message; }
     }
 
     private async Task LoadPrintersAsync()
@@ -1041,37 +1121,53 @@ public partial class MainWindow : Window
     private async Task LoadSavedEstimatesAsync(string root)
     {
         SavedEstimateList.Children.Clear();
-        var estimates = await Task.Run(() => new EstimateStore(root).LoadAll());
-        if (estimates.Count == 0)
+        try
         {
-            SavedEstimateList.Children.Add(new TextBlock { Text = "Aucune estimation enregistrée.", Classes = { "muted" } });
-            return;
+            var estimates = await Task.Run(() => new EstimateStore(root).LoadAll());
+            if (estimates.Count == 0)
+            {
+                SavedEstimateList.Children.Add(new TextBlock { Text = "Aucune estimation enregistrée.", Classes = { "muted" } });
+                return;
+            }
+            foreach (var estimate in estimates.Take(4))
+            {
+                var button = new Button { Content = $"{estimate.Name} · {estimate.Result.FinalPrice:0.00} €", Tag = estimate, HorizontalContentAlignment = HorizontalAlignment.Left };
+                button.Click += LoadSavedEstimate_Click;
+                var trash = new Button { Content = "Corbeille", Tag = estimate };
+                trash.Click += TrashEstimate_Click;
+                SavedEstimateList.Children.Add(button);
+                SavedEstimateList.Children.Add(trash);
+            }
         }
-        foreach (var estimate in estimates.Take(4))
-        {
-            var button = new Button { Content = $"{estimate.Name} · {estimate.Result.FinalPrice:0.00} €", Tag = estimate, HorizontalContentAlignment = HorizontalAlignment.Left };
-            button.Click += LoadSavedEstimate_Click;
-            var trash = new Button { Content = "Corbeille", Tag = estimate };
-            trash.Click += TrashEstimate_Click;
-            SavedEstimateList.Children.Add(button);
-            SavedEstimateList.Children.Add(trash);
-        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException)
+        { SavedEstimateList.Children.Add(new TextBlock { Text = "Impossible de lire les estimations : " + exception.Message, Classes = { "muted" } }); }
     }
 
     private async void TrashEstimate_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: EstimateProfile estimate }) return;
         if (!await new ConfirmTrashWindow(estimate.Name, "Cette estimation pourra être restaurée depuis la corbeille.").ShowDialog<bool>(this)) return;
-        var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
-        new EstimateStore(root).Trash(estimate.Id);
-        await LoadSavedEstimatesAsync(root);
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            await Task.Run(() => new EstimateStore(root).Trash(estimate.Id));
+            if (_loadedEstimate?.Id == estimate.Id) ResetEstimate_Click(sender, e);
+            await LoadSavedEstimatesAsync(root);
+            EstimateDetail.Text = "Estimation envoyée dans la corbeille.";
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException)
+        { EstimateDetail.Text = exception.Message; }
     }
 
     private void LoadSavedEstimate_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: EstimateProfile estimate }) return;
         var inputs = estimate.Inputs;
+        _loadedEstimate = estimate;
         EstimateName.Text = estimate.Name;
+        EstimateProject.SelectedItem = (EstimateProject.ItemsSource as IEnumerable<ProjectSummary>)?.FirstOrDefault(project => project.Reference == estimate.ProjectReference && project.ClientFolderName == estimate.ClientName);
+        EstimateFilament.SelectedItem = (EstimateFilament.ItemsSource as IEnumerable<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>)?.FirstOrDefault(filament => $"{filament.Brand} {filament.Name}" == estimate.FilamentName);
+        EstimatePrinter.SelectedItem = (EstimatePrinter.ItemsSource as IEnumerable<PrinterProfile>)?.FirstOrDefault(printer => printer.Name == estimate.PrinterName);
         EstimateWeight.Text = estimate.WeightGrams.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
         EstimateHours.Text = estimate.MachineHours.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
         EstimateMachineRate.Text = estimate.MachineHourlyRate.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
@@ -1088,7 +1184,7 @@ public partial class MainWindow : Window
         _latestEstimateInputs = inputs;
         _latestEstimateResult = estimate.Result;
         EstimateFinal.Text = estimate.Result.FinalPrice.ToString("0.00") + " €";
-        EstimateDetail.Text = "Estimation chargée. Ajustez les valeurs puis recalculez.";
+        EstimateDetail.Text = "Estimation chargée. Ajustez les valeurs, recalculez puis enregistrez la mise à jour.";
     }
 
     private void ResetEstimate_Click(object? sender, RoutedEventArgs e)
@@ -1102,6 +1198,7 @@ public partial class MainWindow : Window
         EstimateFailure.Text = "5";
         _latestEstimateInputs = null;
         _latestEstimateResult = null;
+        _loadedEstimate = null;
         EstimateFinal.Text = "—";
         EstimateDetail.Text = "Nouvelle estimation prête.";
     }
@@ -1118,7 +1215,11 @@ public partial class MainWindow : Window
             TryEstimateValue(EstimateHours.Text, out var savedHours);
             TryEstimateValue(EstimateMachineRate.Text, out var savedRate);
             var project = EstimateProject.SelectedItem as ProjectSummary;
-            new EstimateStore(root).Create(new EstimateProfile(Guid.NewGuid(), string.IsNullOrWhiteSpace(EstimateName.Text) ? "Nouvelle estimation" : EstimateName.Text.Trim(), $"{filament.Brand} {filament.Name}", printer?.Name ?? "Coût machine manuel", _latestEstimateInputs, _latestEstimateResult, DateTimeOffset.UtcNow, savedWeight, savedHours, savedRate, project?.Reference, project?.ClientFolderName));
+            var profile = new EstimateProfile(_loadedEstimate?.Id ?? Guid.NewGuid(), string.IsNullOrWhiteSpace(EstimateName.Text) ? "Nouvelle estimation" : EstimateName.Text.Trim(), $"{filament.Brand} {filament.Name}", printer?.Name ?? "Coût machine manuel", _latestEstimateInputs, _latestEstimateResult, _loadedEstimate?.CreatedAt ?? DateTimeOffset.UtcNow, savedWeight, savedHours, savedRate, project?.Reference, project?.ClientFolderName);
+            var store = new EstimateStore(root);
+            if (_loadedEstimate is null) store.Create(profile);
+            else store.Update(profile);
+            _loadedEstimate = profile;
             EstimateDetail.Text = "Estimation enregistrée.";
             await LoadSavedEstimatesAsync(root);
         }
