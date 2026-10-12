@@ -1,4 +1,5 @@
 using MS3DPRINT.Manager.Core.Clients;
+using MS3DPRINT.Manager.Core.Naming;
 using MS3DPRINT.Manager.Core.Storage;
 using MS3DPRINT.Manager.Core.Workspace;
 
@@ -29,8 +30,9 @@ public sealed class WorkspaceClientCreator
     {
         var paths = new WorkspaceMetadataPaths(workspaceRoot);
         var now = DateTimeOffset.UtcNow;
-        var profile = new ClientProfile(Guid.NewGuid(), ClientKind.Professional, name, code, name, null, null, null, null,
-            new PrimaryContact(null, null, null, null, null), now, now, RelativePath: Path.Combine("01_CLIENTS", name));
+        var folderName = NameNormalizer.Normalize(name);
+        var profile = new ClientProfile(Guid.NewGuid(), ClientKind.Professional, folderName, code.Trim().ToUpperInvariant(), name.Trim(), null, null, null, null,
+            new PrimaryContact(null, null, null, null, null), now, now, RelativePath: Path.Combine("01_CLIENTS", folderName));
         return new ClientCreationService(paths.RootPath, new FolderTreeService(), new ClientProfileStore(paths), new ClientCodeRegistry(Path.Combine(paths.RootPath, "data"))).Create(profile);
     }
 
@@ -38,8 +40,8 @@ public sealed class WorkspaceClientCreator
     {
         var paths = new WorkspaceMetadataPaths(workspaceRoot);
         var now = DateTimeOffset.UtcNow;
-        var folderName = (lastName.Trim() + " " + firstName.Trim()).Trim();
-        var profile = new ClientProfile(Guid.NewGuid(), ClientKind.Individual, folderName, code, null, firstName.Trim(), lastName.Trim(), null, null,
+        var folderName = NameNormalizer.Normalize($"{firstName} {lastName}");
+        var profile = new ClientProfile(Guid.NewGuid(), ClientKind.Individual, folderName, code.Trim().ToUpperInvariant(), null, firstName.Trim(), lastName.Trim(), null, null,
             new PrimaryContact(firstName.Trim(), lastName.Trim(), null, null, null), now, now, RelativePath: Path.Combine("01_CLIENTS", folderName));
         return new ClientCreationService(paths.RootPath, new FolderTreeService(), new ClientProfileStore(paths), new ClientCodeRegistry(Path.Combine(paths.RootPath, "data"))).Create(profile);
     }

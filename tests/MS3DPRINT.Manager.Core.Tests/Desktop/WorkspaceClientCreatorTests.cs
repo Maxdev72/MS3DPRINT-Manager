@@ -19,6 +19,40 @@ public sealed class WorkspaceClientCreatorTests
         finally { Directory.Delete(root, true); }
     }
 
+    [Theory]
+    [InlineData("Fell agency", "FELL_AGENCY")]
+    [InlineData("Société Générale & Fils", "SOCIETE_GENERALE_FILS")]
+    public void Create_professional_normalizes_the_folder_name(string name, string expectedFolder)
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"ms3dprint-client-name-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(root, "01_CLIENTS"));
+        try
+        {
+            var profile = new WorkspaceClientCreator().CreateProfessional(root, name, "fa");
+
+            Assert.Equal(expectedFolder, profile.FolderName);
+            Assert.Equal("FA", profile.ClientCode);
+            Assert.Equal(name, profile.CompanyName);
+            Assert.True(Directory.Exists(Path.Combine(root, "01_CLIENTS", expectedFolder)));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public void Create_individual_names_the_folder_firstname_then_lastname_like_existing_clients()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"ms3dprint-person-name-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(root, "01_CLIENTS"));
+        try
+        {
+            var profile = new WorkspaceClientCreator().CreateIndividual(root, "Jean-Noël", "Roisné", "jnr");
+
+            Assert.Equal("JEAN_NOEL_ROISNE", profile.FolderName);
+            Assert.Equal("JNR", profile.ClientCode);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
     [Fact]
     public void Create_individual_creates_a_personal_client_profile()
     {
