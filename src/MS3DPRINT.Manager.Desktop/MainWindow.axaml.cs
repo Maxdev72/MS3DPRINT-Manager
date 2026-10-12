@@ -988,6 +988,15 @@ public partial class MainWindow : Window
         { PageSubtitle.Text = exception.Message; }
     }
 
+    private async void TrashPrinter_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: PrinterProfile printer }) return;
+        if (!await new ConfirmTrashWindow(printer.Name, "Cette imprimante pourra être restaurée depuis la corbeille.").ShowDialog<bool>(this)) return;
+        var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        new PrinterStore(root).Trash(printer.Id);
+        await LoadPrintersAsync();
+    }
+
     private async Task LoadPrintersAsync()
     {
         var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
@@ -1005,11 +1014,14 @@ public partial class MainWindow : Window
                 var details = string.IsNullOrWhiteSpace(printer.BuildVolume) ? (printer.IsActive ? "Active" : "Inactive") : $"{printer.BuildVolume} · {(printer.IsActive ? "Active" : "Inactive")}";
                 var edit = new Button { Content = "Modifier", Tag = printer, HorizontalAlignment = HorizontalAlignment.Left };
                 edit.Click += EditPrinter_Click;
+                var trash = new Button { Content = "Corbeille", Tag = printer, HorizontalAlignment = HorizontalAlignment.Left };
+                trash.Click += TrashPrinter_Click;
                 var card = new StackPanel { Spacing = 4 };
                 card.Children.Add(new TextBlock { Text = printer.Name, FontWeight = FontWeight.SemiBold });
                 card.Children.Add(new TextBlock { Text = $"{printer.Brand} · {printer.Model} · {printer.HourlyRate:0.00} €/h", Foreground = Avalonia.Media.Brushes.LightSteelBlue });
                 card.Children.Add(new TextBlock { Text = details, Foreground = Avalonia.Media.Brushes.LightSteelBlue });
                 card.Children.Add(edit);
+                card.Children.Add(trash);
                 PrinterList.Children.Add(new Border { Background = Avalonia.Media.Brushes.Transparent, Padding = new Avalonia.Thickness(14), Child = card });
             }
         }
@@ -1031,8 +1043,20 @@ public partial class MainWindow : Window
         {
             var button = new Button { Content = $"{estimate.Name} · {estimate.Result.FinalPrice:0.00} €", Tag = estimate, HorizontalContentAlignment = HorizontalAlignment.Left };
             button.Click += LoadSavedEstimate_Click;
+            var trash = new Button { Content = "Corbeille", Tag = estimate };
+            trash.Click += TrashEstimate_Click;
             SavedEstimateList.Children.Add(button);
+            SavedEstimateList.Children.Add(trash);
         }
+    }
+
+    private async void TrashEstimate_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: EstimateProfile estimate }) return;
+        if (!await new ConfirmTrashWindow(estimate.Name, "Cette estimation pourra être restaurée depuis la corbeille.").ShowDialog<bool>(this)) return;
+        var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        new EstimateStore(root).Trash(estimate.Id);
+        await LoadSavedEstimatesAsync(root);
     }
 
     private void LoadSavedEstimate_Click(object? sender, RoutedEventArgs e)
