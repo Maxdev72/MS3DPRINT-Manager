@@ -2,6 +2,12 @@
 
 ## 12 octobre 2026
 
+### Visualiseur 3D : nouvelle interface
+- La vue 3D reste au centre ; une barre d’outils flottante en haut à gauche regroupe recentrer, filaire, mesurer, couper et comparer, chacun avec son icône et son raccourci.
+- Le panneau de droite passe de neuf sections empilées à quatre onglets : Infos (modèle, unités, résultats, matière, durée d’impression), Affichage, Outils (réglages de l’outil actif) et Analyse.
+- Les résultats sont présentés en lignes alignées, durée, poids et coût d’abord, puis volume, surface et filament ; le bouton « Créer une estimation avec ce modèle » reste toujours visible en bas du panneau.
+- Activer un outil ouvre son onglet ; les réglages d’un outil inactif ne s’affichent plus.
+
 ### Accents des noms de projets et de clients
 - Les noms de dossier perdent leurs accents (« EPEE_FOURREAU_REPLIQUE ») : l’affichage les retrouve pour les mots usuels (« Épée Fourreau Réplique », « Pions d’Échecs », « MV Créations », « Gâchette de Tronçonneuse »). Les dossiers sur le disque ne sont pas renommés.
 - Un projet créé depuis le logiciel garde désormais le nom tel que saisi (accents, espaces, majuscules) dans sa fiche, au lieu de la version normalisée du dossier ; la fiche est créée dès la création pour un client qui a une fiche.

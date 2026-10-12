@@ -301,6 +301,32 @@
     <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     <Setter Property="TextElement.Foreground" Value="{DynamicResource TextBrush}" />
   </Style>
+  <!-- Floating toolbar over the 3D view -->
+  <Style Selector="Border.toolbar">
+    <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="4" />
+  </Style>
+  <Style Selector="Button.tool, ToggleButton.tool">
+    <Setter Property="Width" Value="36" />
+    <Setter Property="Height" Value="36" />
+    <Setter Property="MinWidth" Value="36" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.tool:pointerover /template/ ContentPresenter#PART_ContentPresenter, ToggleButton.tool:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.tool:checked Path.icon"><Setter Property="Stroke" Value="{DynamicResource AccentBrush}" /></Style>
+  <Style Selector="Button.tool:disabled Path.icon, ToggleButton.tool:disabled Path.icon"><Setter Property="Opacity" Value="0.4" /></Style>
+
   <!-- The operating system asks for fewer animations: state changes stay, the easing goes -->
   <Style Selector="Window.reduce-motion Button"><Setter Property="Transitions" Value="{x:Null}" /></Style>
   <Style Selector="Window.reduce-motion Border"><Setter Property="Transitions" Value="{x:Null}" /></Style>

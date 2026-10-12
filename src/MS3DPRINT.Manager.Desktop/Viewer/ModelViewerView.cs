@@ -30,6 +30,7 @@ public sealed class ModelViewerView : UserControl
     private readonly TextBox _infill = new() { Text = "15" };
     private readonly TextBox _walls = new() { Text = "1,2" };
     private readonly TextBlock _volumeResult = new() { TextWrapping = TextWrapping.Wrap };
+    private readonly StackPanel _volumeRows = new() { Spacing = 6 };
     private readonly TextBlock _volumeNote = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
     private MeshMeasures? _measures;
     private readonly Button _compareButton = new() { Content = "Comparer avec une autre version…", IsEnabled = false };
@@ -42,7 +43,7 @@ public sealed class ModelViewerView : UserControl
     private MeshModel? _second;
     private MeshMeasures? _secondMeasures;
     private string? _secondName;
-    private readonly ToggleButton _cutToggle = new() { Content = "Activer la coupe", IsEnabled = false };
+    private readonly ToggleButton _cutToggle = new() { IsEnabled = false };
     private readonly ComboBox _cutAxis = new() { ItemsSource = new[] { "Horizontale (hauteur, axe Z)", "Verticale, axe X", "Verticale, axe Y" }, SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch };
     private readonly Slider _cutSlider = new() { Minimum = 0, Maximum = 100, Value = 50, IsEnabled = false };
     private readonly CheckBox _cutFlip = new() { Content = "Voir l’autre côté" };
@@ -61,14 +62,19 @@ public sealed class ModelViewerView : UserControl
     private CancellationTokenSource? _sliceCancel;
     private SliceResult? _slice;
     private SlicerMachine? _sliceMachineUsed;
-    private readonly Button _createEstimate = new() { Content = "Créer une estimation avec ce modèle", IsEnabled = false };
+    private readonly Button _createEstimate = new() { Content = "Créer une estimation avec ce modèle", IsEnabled = false, HorizontalAlignment = HorizontalAlignment.Stretch, Classes = { "primary-action" } };
+    private readonly StackPanel _measureGroup = new() { Spacing = 10, IsVisible = false };
+    private readonly StackPanel _cutGroup = new() { Spacing = 10, IsVisible = false };
+    private readonly TextBlock _toolsHint = new() { Text = "Mesurer, couper ou comparer : choisissez un outil dans la barre au-dessus de la vue.", Classes = { "muted" }, TextWrapping = TextWrapping.Wrap };
+    private StackPanel[] _tabs = [];
+    private Button[] _tabButtons = [];
     private string? _modelPath;
     private double? _estimatedMass;
 
     /// <summary>Raised when the user wants an estimate prefilled from the displayed model.</summary>
     public event Action<ModelEstimateSeed>? EstimateRequested;
     private readonly MeasureOverlay _overlay = new();
-    private readonly ToggleButton _measureToggle = new() { Content = "Mesurer des distances", IsEnabled = false };
+    private readonly ToggleButton _measureToggle = new() { IsEnabled = false };
     private readonly TextBlock _measureList = new() { TextWrapping = TextWrapping.Wrap };
     private readonly Button _clearMeasures = new() { Content = "Effacer les mesures", IsEnabled = false };
     private readonly List<(System.Numerics.Vector3 A, System.Numerics.Vector3 B)> _segments = [];
@@ -92,7 +98,8 @@ public sealed class ModelViewerView : UserControl
     private bool _applyingUnit;
     private readonly Button _analyze = new() { Content = "Analyser les parois", IsEnabled = false };
     private readonly Button _cancelAnalysis = new() { Content = "Annuler", IsEnabled = false };
-    private readonly Button _reset = new() { Content = "Recentrer", IsEnabled = false };
+    private readonly Button _reset = new() { IsEnabled = false };
+    private readonly ToggleButton _wireToggle = new();
     private readonly StackPanel _emptyState = new() { Spacing = 10, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
     private CancellationTokenSource? _activeLoad;
     private CancellationTokenSource? _activeAnalysis;
@@ -125,18 +132,42 @@ public sealed class ModelViewerView : UserControl
         UseViewport(CreateGpuViewport() ?? new MeshViewport());
         _renderer.SelectionChanged += (_, _) => UseViewport(_renderer.SelectedIndex == 0 ? CreateGpuViewport() ?? new MeshViewport() : new MeshViewport());
 
-        // side panel
+        // floating toolbar over the 3D view: one icon per tool, each with its shortcut
+        static void Tool(Button button, string icon, string tip)
+        {
+            button.Content = Icons.Glyph(icon, 18);
+            button.Classes.Add("tool");
+            ToolTip.SetTip(button, tip);
+            AutomationProperties.SetName(button, tip);
+        }
+        Tool(_reset, "IconRecenter", "Recentrer la vue (R)");
+        Tool(_wireToggle, "IconWireframe", "Affichage filaire (W)");
+        Tool(_measureToggle, "IconMeasure", "Mesurer des distances (M)");
+        Tool(_cutToggle, "IconCut", "Plan de coupe (C)");
+        var compareTool = new Button { IsEnabled = false };
+        Tool(compareTool, "IconCompare", "Comparer avec une autre version");
+        _compareButton.PropertyChanged += (_, e) => { if (e.Property == IsEnabledProperty) compareTool.IsEnabled = _compareButton.IsEnabled; };
+        compareTool.Click += async (_, _) => { ShowTab(2); await CompareAsync(); };
+        _reset.Click += (_, _) => _viewport.ResetView();
+        _wireToggle.IsCheckedChanged += (_, _) => _mode.SelectedIndex = _wireToggle.IsChecked == true ? 1 : 0;
+        var divider = new Border { Width = 1, Margin = new Thickness(4, 6), Background = (IBrush?)Application.Current?.FindResource("BorderBrush") };
+        _stage.Children.Add(new Border
+        {
+            Classes = { "toolbar" }, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(12),
+            Child = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2, Children = { _reset, _wireToggle, divider, _measureToggle, _cutToggle, compareTool } }
+        });
+
+        // side panel: back and open on top, four tabs, the estimate action always in reach
         var back = new Button { Content = Icons.Label("IconArrowLeft", "Retour"), Classes = { "ghost" }, HorizontalAlignment = HorizontalAlignment.Left };
         back.Click += (_, _) => close();
-        var browse = new Button { Content = Icons.Label("IconOpen", "Ouvrir un fichier"), Classes = { "primary-action" } };
+        var browse = new Button { Content = Icons.Label("IconOpen", "Ouvrir un fichier") };
         browse.Click += async (_, _) => await BrowseAsync();
-        _reset.Click += (_, _) => _viewport.ResetView();
-        var fileButtons = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 8 };
-        fileButtons.Children.Add(browse);
-        Grid.SetColumn(_reset, 1);
-        fileButtons.Children.Add(_reset);
+        var topBar = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 8 };
+        topBar.Children.Add(back);
+        Grid.SetColumn(browse, 1);
+        topBar.Children.Add(browse);
 
-        _mode.SelectionChanged += (_, _) => { _viewport.Wireframe = _mode.SelectedIndex == 1; UpdateModeMessage(); _viewport.RequestRender(false); };
+        _mode.SelectionChanged += (_, _) => { _viewport.Wireframe = _mode.SelectedIndex == 1; _wireToggle.IsChecked = _mode.SelectedIndex == 1; UpdateModeMessage(); _viewport.RequestRender(false); };
         foreach (var (name, hex) in Palette)
         {
             var color = Color.Parse(hex);
@@ -155,11 +186,11 @@ public sealed class ModelViewerView : UserControl
         _showFirst.IsCheckedChanged += (_, _) => ApplyComparison();
         _showSecond.IsCheckedChanged += (_, _) => ApplyComparison();
         _alignCentres.IsCheckedChanged += (_, _) => ApplyComparison();
-        _cutToggle.IsCheckedChanged += (_, _) => UpdateCut();
+        _cutToggle.IsCheckedChanged += (_, _) => { if (_cutToggle.IsChecked == true) ShowTab(2); UpdateCut(); UpdateToolPanels(); };
         _cutAxis.SelectionChanged += (_, _) => UpdateCut();
         _cutSlider.PropertyChanged += (_, e) => { if (e.Property == Slider.ValueProperty) UpdateCut(); };
         _cutFlip.IsCheckedChanged += (_, _) => UpdateCut();
-        _measureToggle.IsCheckedChanged += (_, _) => UpdateMeasureMode();
+        _measureToggle.IsCheckedChanged += (_, _) => { if (_measureToggle.IsChecked == true) ShowTab(2); UpdateMeasureMode(); };
         _clearMeasures.Click += (_, _) => ClearMeasures();
         _scale.IsVisible = false;
         _units.ItemsSource = ModelUnits.All.Select(unit => unit.Label).Append("Personnalisé…").ToList();
@@ -211,39 +242,90 @@ public sealed class ModelViewerView : UserControl
         Grid.SetColumn(_hex, 1);
         hexRow.Children.Add(_hex);
 
-        var side = new StackPanel
+        _measureGroup.Children.Add(FormKit.SectionLabel("Mesures"));
+        _measureGroup.Children.Add(new TextBlock { Text = "Cliquez deux points du modèle : ils s’accrochent aux sommets proches. Les longueurs sont en mm selon les unités du modèle. Échap annule le point en cours.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap });
+        _measureGroup.Children.Add(_measureList);
+        _measureGroup.Children.Add(_clearMeasures);
+        _cutGroup.Children.Add(FormKit.SectionLabel("Plan de coupe"));
+        _cutGroup.Children.Add(_cutAxis);
+        _cutGroup.Children.Add(_cutSlider);
+        _cutGroup.Children.Add(_cutFlip);
+        _cutGroup.Children.Add(_cutLabel);
+        var compareGroup = new StackPanel { Spacing = 10, Children = { FormKit.SectionLabel("Comparer deux versions"), _compareButton, _compareDetails } };
+
+        var infoTab = new StackPanel
         {
             Spacing = 10,
             Children =
             {
-                back,
-                _title, _location, _dimensions, _message, fileButtons,
+                _title, _location, _dimensions, _message,
                 Muted("Unités du modèle"), _units, _scale, _unitsNote,
-                FormKit.SectionLabel("Affichage"), _mode, _swatches, hexRow, Muted("Rendu"), _renderer, _rendererNote,
-                FormKit.SectionLabel("Mesures"), _measureToggle,
-                new TextBlock { Text = "Cliquez deux points du modèle : ils s’accrochent aux sommets proches. Les longueurs sont en mm selon les unités du modèle. M active, Échap annule le point en cours.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap },
-                _measureList, _clearMeasures,
-                FormKit.SectionLabel("Comparer deux versions"), _compareButton, _compareDetails,
-                FormKit.SectionLabel("Plan de coupe"), _cutToggle, _cutAxis, _cutSlider, _cutFlip, _cutLabel,
-                FormKit.SectionLabel("Volume et poids"), _volumeResult, Muted("Matière"), _material,
+                FormKit.SectionLabel("Résultats"), _volumeResult, _volumeRows, Muted("Matière"), _material,
                 new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,*,Auto"), ColumnSpacing = 8, Children = { _infill, Place(Unit("% remplissage"), 1), Place(_walls, 2), Place(Unit("mm parois"), 3) } },
-                _createEstimate, _volumeNote,
-                FormKit.SectionLabel("Durée d’impression"), _slicerPanel,
-                FormKit.SectionLabel("Analyse des parois"),
-                new TextBlock { Text = "Choisissez le seuil selon votre buse, votre matériau et votre trancheur ; la mesure suit les unités du modèle choisies plus haut.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap },
+                _volumeNote,
+                FormKit.SectionLabel("Durée d’impression"), _slicerPanel
+            }
+        };
+        var displayTab = new StackPanel { Spacing = 10, Children = { Muted("Mode d’affichage"), _mode, Muted("Couleur du modèle"), _swatches, hexRow, Muted("Rendu"), _renderer, _rendererNote } };
+        var toolsTab = new StackPanel { Spacing = 14, Children = { _toolsHint, _measureGroup, _cutGroup, compareGroup } };
+        var analysisTab = new StackPanel
+        {
+            Spacing = 10,
+            Children =
+            {
+                new TextBlock { Text = "Repère les parois plus fines que votre seuil. Choisissez-le selon votre buse, votre matériau et votre trancheur ; la mesure suit les unités du modèle.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap },
                 limits, analysisButtons, _analysisSummary, _analysis
             }
         };
-        var panel = new ScrollViewer
+        _tabs = [infoTab, displayTab, toolsTab, analysisTab];
+        var tabRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+        _tabButtons = new[] { "Infos", "Affichage", "Outils", "Analyse" }.Select((name, index) =>
+        {
+            var chip = new Button { Content = name, Classes = { "filter-chip" } };
+            chip.Click += (_, _) => ShowTab(index);
+            tabRow.Children.Add(chip);
+            return chip;
+        }).ToArray();
+
+        var tabBody = new Panel();
+        foreach (var tab in _tabs) tabBody.Children.Add(tab);
+        var scroller = new ScrollViewer
         {
             HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
-            Content = new Border { Padding = new Thickness(0, 0, 10, 0), Child = side }
+            Content = new Border { Padding = new Thickness(0, 4, 10, 4), Child = tabBody }
         };
+        var panel = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,*,Auto"), RowSpacing = 12 };
+        panel.Children.Add(topBar);
+        Grid.SetRow(tabRow, 1);
+        panel.Children.Add(tabRow);
+        Grid.SetRow(scroller, 2);
+        panel.Children.Add(scroller);
+        Grid.SetRow(_createEstimate, 3);
+        panel.Children.Add(_createEstimate);
+        ShowTab(0);
         var root = new Grid { ColumnDefinitions = new ColumnDefinitions("*,340"), ColumnSpacing = 16 };
         root.Children.Add(stage);
         Grid.SetColumn(panel, 1);
         root.Children.Add(panel);
         Content = root;
+    }
+
+    /// <summary>Shows one tab of the side panel (0 info, 1 display, 2 tools, 3 analysis).</summary>
+    private void ShowTab(int index)
+    {
+        for (var i = 0; i < _tabs.Length; i++)
+        {
+            _tabs[i].IsVisible = i == index;
+            _tabButtons[i].Classes.Set("selected", i == index);
+        }
+    }
+
+    /// <summary>Shows the settings of the tools that are in use; a hint while none is.</summary>
+    private void UpdateToolPanels()
+    {
+        _measureGroup.IsVisible = _measureToggle.IsChecked == true || _segments.Count > 0 || _pendingPoint is not null;
+        _cutGroup.IsVisible = _cutToggle.IsChecked == true;
+        _toolsHint.IsVisible = !_measureGroup.IsVisible && !_cutGroup.IsVisible && _second is null;
     }
 
     /// <summary>Raised with the file name once a model is displayed.</summary>
@@ -562,9 +644,11 @@ public sealed class ModelViewerView : UserControl
     {
         _estimatedMass = null;
         _createEstimate.IsEnabled = false;
+        _volumeRows.Children.Clear();
+        _volumeResult.IsVisible = true;
         if (_mesh is null)
         {
-            _volumeResult.Text = "Ouvrez un modèle pour estimer son volume et son poids.";
+            _volumeResult.Text = "Ouvrez un modèle pour estimer son volume, son poids et sa durée d’impression.";
             _volumeNote.Text = string.Empty;
             return;
         }
@@ -577,7 +661,10 @@ public sealed class ModelViewerView : UserControl
         var volumeCm3 = measures.Volume * scale * scale * scale / 1000.0;
         var areaCm2 = measures.SurfaceArea * scale * scale / 100.0;
         var french = CultureInfo.GetCultureInfo("fr-FR");
-        var lines = new List<string> { $"Volume : {volumeCm3.ToString("0.##", french)} cm³", $"Surface : {areaCm2.ToString("0.##", french)} cm²" };
+        // what the user came for first (time, weight, cost), then the geometry
+        var main = new List<(string Label, string Value)>();
+        var details = new List<(string Label, string Value)>();
+        string message = string.Empty;
         if (_material.SelectedItem is MaterialChoice material
             && double.TryParse(_infill.Text?.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var infill)
             && double.TryParse(_walls.Text?.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var walls) && infill >= 0 && walls >= 0)
@@ -587,24 +674,41 @@ public sealed class ModelViewerView : UserControl
             if (_slice is { } sliced)
             {
                 mass = sliced.WeightGrams(material.Density);
-                lines.Add($"Durée d’impression : {FormatDuration(sliced.TimeHours)}");
-                lines.Add($"Poids : {mass.ToString("0.#", french)} g, {(sliced.FilamentLengthMm / 1000).ToString("0.##", french)} m de filament");
+                main.Add(("Durée d’impression", FormatDuration(sliced.TimeHours)));
+                main.Add(("Poids", mass.ToString("0.#", french) + " g"));
+                details.Add(("Filament", (sliced.FilamentLengthMm / 1000).ToString("0.##", french) + " m"));
             }
-            else lines.Add($"Poids estimé : {mass.ToString("0.#", french)} g ({infill:0.##} % de remplissage)");
+            else main.Add(("Poids estimé", $"{mass.ToString("0.#", french)} g à {infill:0.##} %"));
+            if (material.PricePerKg is { } price) main.Add(("Coût matière", $"{(decimal)mass * price / 1000m:0.00} €"));
             _estimatedMass = mass;
             _createEstimate.IsEnabled = _modelPath is not null;
-            lines.Add($"Poids plein : {solid.ToString("0.#", french)} g");
-            if (material.PricePerKg is { } price)
-                lines.Add($"Matière : {(decimal)mass * price / 1000m:0.00} €");
+            details.Add(("Poids plein", solid.ToString("0.#", french) + " g"));
         }
-        else lines.Add("Saisissez un remplissage et une épaisseur de parois valides pour estimer le poids.");
-        _volumeResult.Text = string.Join(Environment.NewLine, lines);
+        else message = "Saisissez un remplissage et une épaisseur de parois valides pour estimer le poids.";
+        details.Insert(0, ("Volume", volumeCm3.ToString("0.##", french) + " cm³"));
+        details.Insert(1, ("Surface", areaCm2.ToString("0.##", french) + " cm²"));
+
+        void Row(string label, string value, bool strong)
+        {
+            var labelText = new TextBlock { Text = label, Classes = { "muted" } };
+            var valueText = new TextBlock { Text = value, FontWeight = strong ? FontWeight.SemiBold : FontWeight.Normal, FontSize = strong ? 15 : 13, HorizontalAlignment = HorizontalAlignment.Right, TextAlignment = TextAlignment.Right };
+            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
+            Grid.SetColumn(valueText, 1);
+            row.Children.Add(labelText);
+            row.Children.Add(valueText);
+            _volumeRows.Children.Add(row);
+        }
+        foreach (var (label, value) in main) Row(label, value, strong: true);
+        if (main.Count > 0) _volumeRows.Children.Add(new Border { Height = 1, Margin = new Thickness(0, 4), Background = (IBrush?)Application.Current?.FindResource("SubtleBorderBrush") });
+        foreach (var (label, value) in details) Row(label, value, strong: false);
+        _volumeResult.IsVisible = message.Length > 0;
+        _volumeResult.Text = message;
         _volumeNote.Text = (measures.IsClosed switch
         {
             false => "Maillage ouvert : le volume n’est qu’approximatif, corrigez le maillage avant de vous y fier. ",
             null => "Fermeture du maillage non vérifiée (modèle très volumineux). ",
             _ => string.Empty
-        }) + (_slice is null ? "Estimation indicative : le découpeur donnera le poids et la durée exacts. " : "Durée et poids calculés par le découpeur. ") + "Les valeurs suivent les unités du modèle choisies en haut du panneau.";
+        }) + (_slice is null ? "Estimation indicative : le découpeur donnera le poids et la durée exacts." : "Durée et poids calculés par le découpeur.");
     }
 
     /// <summary>Applies the cutting plane to the 3D view and says where it cuts, in millimetres from the base of the model.</summary>
@@ -667,6 +771,7 @@ public sealed class ModelViewerView : UserControl
             if (_renderer.SelectedIndex != 0) _renderer.SelectedIndex = 0;
             _message.Text = $"{mesh.TriangleCount:N0} triangles chargés pour la comparaison.";
             RebuildComparison();
+            ShowTab(2);
         }
         catch (Exception exception) when (exception is IOException or InvalidDataException or NotSupportedException or FormatException or UnauthorizedAccessException or ArgumentException or FileNotFoundException)
         {
@@ -707,11 +812,13 @@ public sealed class ModelViewerView : UserControl
 
         void Cells(string label, string a, string b, string difference, bool header)
         {
-            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("1.3*,*,*,1.6*"), ColumnSpacing = 6 };
+            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("1.2*,*,*,1.5*"), ColumnSpacing = 6 };
             string[] values = [label, a, b, difference];
             for (var column = 0; column < 4; column++)
             {
-                var text = new TextBlock { Text = values[column], FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis, FontWeight = header ? FontWeight.SemiBold : FontWeight.Normal };
+                var text = new TextBlock { Text = values[column], FontSize = 12, FontWeight = header ? FontWeight.SemiBold : FontWeight.Normal };
+                // the last column holds the longest text (difference and percentage): let it wrap rather than cut it
+                if (column == 3) text.TextWrapping = TextWrapping.Wrap; else text.TextTrimming = TextTrimming.CharacterEllipsis;
                 if (header || column == 0) text.Classes.Add("muted");
                 ToolTip.SetTip(text, values[column]);
                 Grid.SetColumn(text, column);
@@ -740,6 +847,7 @@ public sealed class ModelViewerView : UserControl
 
     private void ApplyComparison(IMeshViewport viewport)
     {
+        UpdateToolPanels();
         viewport.SecondMesh = _second;
         viewport.ShowFirst = _showFirst.IsChecked != false;
         viewport.ShowSecond = _showSecond.IsChecked != false;
@@ -829,6 +937,7 @@ public sealed class ModelViewerView : UserControl
 
     private void RefreshMeasures()
     {
+        UpdateToolPanels();
         _overlay.Segments = _segments.ToArray();
         _overlay.Pending = _pendingPoint;
         _overlay.Scale = MeasureScale;
