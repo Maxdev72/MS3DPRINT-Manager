@@ -6,6 +6,7 @@
 - Boutons à icône et lignes de listes nommés pour les lecteurs d’écran ; boutons d’action agrandis (36 px).
 - Textes de 10 et 11 px portés à 12 px ; couleurs restantes passées en jetons de thème.
 - La page Estimations et le choix de dossier d’import ne figent plus la fenêtre pendant la lecture du disque.
+- Les animations sont coupées quand Windows demande moins d’animations ; l’étape terminée de l’estimation affiche une icône dessinée.
 - Ajout de `PRODUCT.md` et `DESIGN.md` pour cadrer les prochaines évolutions.
 
 ### Passe Impeccable

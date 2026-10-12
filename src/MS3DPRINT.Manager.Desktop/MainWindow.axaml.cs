@@ -35,6 +35,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        if (DesktopApplication.ReduceMotion) Classes.Add("reduce-motion");
         if (_placement.Load() is { } saved)
         {
             Width = Math.Max(MinWidth, saved.Width);
@@ -2238,8 +2239,18 @@ public partial class MainWindow : Window
             chip.Classes.Set("active", index == _estimateStep);
             chip.Classes.Set("done", index < _estimateStep && !(index == 1 && EstimateScopeIndex == 1));
             chip.IsEnabled = !(index == 1 && EstimateScopeIndex == 1);
-            if (chip.Content is StackPanel { Children: [Border { Child: TextBlock number }, ..] })
-                number.Text = index < _estimateStep && chip.IsEnabled ? "✓" : (index + 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (chip.Content is StackPanel { Children: [Border dot, ..] })
+            {
+                if (dot.Child is TextBlock firstNumber)
+                    dot.Child = new Panel { Children = { firstNumber, Icons.Glyph("IconCheck", 14) } };
+                if (dot.Child is Panel { Children: [TextBlock number, Control check] })
+                {
+                    var finished = index < _estimateStep && chip.IsEnabled;
+                    number.Text = (index + 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    number.IsVisible = !finished;
+                    check.IsVisible = finished;
+                }
+            }
         }
     }
 
