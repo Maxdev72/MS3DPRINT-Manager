@@ -2,6 +2,11 @@
 
 ## 12 octobre 2026
 
+### Visualiseur 3D : volume et poids
+- Le panneau indique le volume et la surface du modèle, puis le poids estimé selon la matière (PLA, PETG, ABS, ASA, TPU, Nylon, PC, PVA ou l’un de vos filaments), le remplissage et l’épaisseur des parois.
+- Avec un filament de votre catalogue, le coût de matière est calculé ; un maillage ouvert est signalé.
+- Correction : la rotation, le déplacement, le zoom et les clics de mesure fonctionnent de nouveau avec le rendu par carte graphique.
+
 ### Visualiseur 3D : mesures
 - Nouvel outil « Mesurer des distances » (touche `M`) : cliquez deux points du modèle, la longueur s’affiche sur la vue et dans le panneau avec ses écarts en X, Y et Z.
 - Les points s’accrochent aux sommets proches ; plusieurs mesures peuvent être gardées, `Échap` annule le point en cours.

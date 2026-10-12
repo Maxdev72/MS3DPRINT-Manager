@@ -24,6 +24,13 @@ public sealed class ModelViewerView : UserControl
     private IMeshViewport _viewport = new MeshViewport();
     private readonly Grid _stage = new();
     private AxesGizmo? _gizmo;
+    private readonly Func<IReadOnlyList<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>>? _loadFilaments;
+    private readonly ComboBox _material = new() { HorizontalAlignment = HorizontalAlignment.Stretch };
+    private readonly TextBox _infill = new() { Text = "15" };
+    private readonly TextBox _walls = new() { Text = "1,2" };
+    private readonly TextBlock _volumeResult = new() { TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _volumeNote = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
+    private MeshMeasures? _measures;
     private readonly MeasureOverlay _overlay = new();
     private readonly ToggleButton _measureToggle = new() { Content = "Mesurer des distances", IsEnabled = false };
     private readonly TextBlock _measureList = new() { TextWrapping = TextWrapping.Wrap };
@@ -54,8 +61,9 @@ public sealed class ModelViewerView : UserControl
     private MeshModel? _mesh;
     private int _loadVersion;
 
-    public ModelViewerView(Action close)
+    public ModelViewerView(Action close, Func<IReadOnlyList<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>>? loadFilaments = null)
     {
+        _loadFilaments = loadFilaments;
         DragDrop.SetAllowDrop(this, true);
         AddHandler(DragDrop.DragOverEvent, View_DragOver);
         AddHandler(DragDrop.DropEvent, View_Drop);
@@ -107,6 +115,14 @@ public sealed class ModelViewerView : UserControl
         _measureToggle.IsCheckedChanged += (_, _) => UpdateMeasureMode();
         _clearMeasures.Click += (_, _) => ClearMeasures();
         _scale.TextChanged += (_, _) => RefreshMeasures();
+        _material.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<MaterialChoice>((choice, _) => new TextBlock { Text = choice?.Label ?? string.Empty });
+        _material.ItemsSource = MeshVolume.Presets.ToList();
+        _material.SelectedIndex = 0;
+        _material.SelectionChanged += (_, _) => RefreshVolume();
+        _infill.TextChanged += (_, _) => RefreshVolume();
+        _walls.TextChanged += (_, _) => RefreshVolume();
+        _scale.TextChanged += (_, _) => RefreshVolume();
+        RefreshVolume();
         _hex.LostFocus += (_, _) => ApplyColor();
         _hex.KeyDown += (_, e) => { if (e.Key == Key.Enter) { ApplyColor(); e.Handled = true; } };
         UpdateSwatches();
@@ -141,6 +157,9 @@ public sealed class ModelViewerView : UserControl
                 FormKit.SectionLabel("Mesures"), _measureToggle,
                 new TextBlock { Text = "Cliquez deux points du modèle : ils s’accrochent aux sommets proches. Les longueurs utilisent l’échelle indiquée plus bas. M active, Échap annule le point en cours.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap },
                 _measureList, _clearMeasures,
+                FormKit.SectionLabel("Volume et poids"), _volumeResult, Muted("Matière"), _material,
+                new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,*,Auto"), ColumnSpacing = 8, Children = { _infill, Place(Unit("% remplissage"), 1), Place(_walls, 2), Place(Unit("mm parois"), 3) } },
+                _volumeNote,
                 FormKit.SectionLabel("Analyse des parois"),
                 new TextBlock { Text = "STL et OBJ n’indiquent pas leurs unités : choisissez le seuil selon votre buse, votre matériau et votre trancheur.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap },
                 limits, _confirmUnits, analysisButtons, _analysisSummary, _analysis
@@ -168,6 +187,8 @@ public sealed class ModelViewerView : UserControl
         _activeLoad?.Cancel();
         _activeAnalysis?.Cancel();
     }
+
+    private static Control Place(Control control, int column) { Grid.SetColumn(control, column); return control; }
 
     private static TextBlock Muted(string text) => new() { Text = text, Classes = { "muted" }, VerticalAlignment = VerticalAlignment.Center };
     private static TextBlock Unit(string text) => new() { Text = text, Classes = { "muted" }, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 10) };
@@ -307,6 +328,7 @@ public sealed class ModelViewerView : UserControl
             _overlay.Mesh = mesh;
             _measureToggle.IsEnabled = true;
             ClearMeasures();
+            _ = ComputeMeasuresAsync(mesh, version);
             _viewport.SetMesh(mesh);
             _emptyState.IsVisible = false;
             _analyze.IsEnabled = _activeAnalysis is null;
@@ -329,6 +351,73 @@ public sealed class ModelViewerView : UserControl
         {
             if (ReferenceEquals(_activeLoad, load)) _activeLoad = null;
         }
+    }
+
+    /// <summary>Loads the catalogue filaments as material choices (their density comes from the material name).</summary>
+    public async Task ReloadFilamentsAsync()
+    {
+        if (_loadFilaments is null) return;
+        IReadOnlyList<MS3DPRINT.Manager.Core.Filaments.FilamentProfile> filaments;
+        try { filaments = await Task.Run(_loadFilaments); }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException) { return; }
+        var selected = (_material.SelectedItem as MaterialChoice)?.Label;
+        var choices = new List<MaterialChoice>(MeshVolume.Presets);
+        choices.AddRange(filaments.Select(f => new MaterialChoice($"{f.Brand} {f.Name} ({f.Material}, {f.PricePerKg:0.##} €/kg)", MeshVolume.DensityFor(f.Material), f.PricePerKg)));
+        _material.ItemsSource = choices;
+        _material.SelectedItem = choices.FirstOrDefault(c => c.Label == selected) ?? choices[0];
+    }
+
+    private async Task ComputeMeasuresAsync(MeshModel mesh, int version)
+    {
+        _measures = null;
+        RefreshVolume();
+        try
+        {
+            var measures = await Task.Run(() => MeshVolume.Compute(mesh));
+            if (version != _loadVersion) return;
+            _measures = measures;
+        }
+        catch (OperationCanceledException) { return; }
+        RefreshVolume();
+    }
+
+    private void RefreshVolume()
+    {
+        if (_mesh is null)
+        {
+            _volumeResult.Text = "Ouvrez un modèle pour estimer son volume et son poids.";
+            _volumeNote.Text = string.Empty;
+            return;
+        }
+        if (_measures is not { } measures)
+        {
+            _volumeResult.Text = "Calcul du volume…";
+            return;
+        }
+        var scale = TryNumber(_scale.Text, out var s) ? s : 1;
+        var volumeCm3 = measures.Volume * scale * scale * scale / 1000.0;
+        var areaCm2 = measures.SurfaceArea * scale * scale / 100.0;
+        var french = CultureInfo.GetCultureInfo("fr-FR");
+        var lines = new List<string> { $"Volume : {volumeCm3.ToString("0.##", french)} cm³", $"Surface : {areaCm2.ToString("0.##", french)} cm²" };
+        if (_material.SelectedItem is MaterialChoice material
+            && double.TryParse(_infill.Text?.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var infill)
+            && double.TryParse(_walls.Text?.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var walls) && infill >= 0 && walls >= 0)
+        {
+            var mass = MeshVolume.EstimateMass(volumeCm3, areaCm2, material.Density, infill, walls);
+            var solid = volumeCm3 * material.Density;
+            lines.Add($"Poids estimé : {mass.ToString("0.#", french)} g ({infill:0.##} % de remplissage)");
+            lines.Add($"Poids plein : {solid.ToString("0.#", french)} g");
+            if (material.PricePerKg is { } price)
+                lines.Add($"Matière : {(decimal)mass * price / 1000m:0.00} €");
+        }
+        else lines.Add("Saisissez un remplissage et une épaisseur de parois valides pour estimer le poids.");
+        _volumeResult.Text = string.Join(Environment.NewLine, lines);
+        _volumeNote.Text = (measures.IsClosed switch
+        {
+            false => "Maillage ouvert : le volume n’est qu’approximatif, corrigez le maillage avant de vous y fier. ",
+            null => "Fermeture du maillage non vérifiée (modèle très volumineux). ",
+            _ => string.Empty
+        }) + "Estimation indicative : le trancheur (supports, jupes, remplissage réel) donnera le poids exact. L’échelle est celle de la section Analyse des parois.";
     }
 
     private void UpdateMeasureMode()

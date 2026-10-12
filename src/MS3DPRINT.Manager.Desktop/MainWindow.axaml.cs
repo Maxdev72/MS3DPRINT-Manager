@@ -1851,10 +1851,15 @@ public partial class MainWindow : Window
         }
         if (_modelViewer is null)
         {
-            _modelViewer = new ModelViewerView(CloseModelViewer);
+            _modelViewer = new ModelViewerView(CloseModelViewer, () =>
+            {
+                var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+                return new WorkspaceInventoryReader().LoadFilaments(root);
+            });
             _modelViewer.ModelLoaded += name => PageSubtitle.Text = name;
             ViewerWorkspacePanel.Child = _modelViewer;
         }
+        _ = _modelViewer.ReloadFilamentsAsync();
         PageTitle.Text = "Visualiseur 3D";
         PageSubtitle.Text = "Déposez un STL ou un OBJ, ou ouvrez un fichier.";
         if (path is null) return;
