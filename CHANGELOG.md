@@ -2,6 +2,11 @@
 
 ## 12 octobre 2026
 
+### Visualiseur 3D accéléré
+- Rendu par la carte graphique (OpenGL via ANGLE) : le modèle reste sur le GPU, rotation fluide même avec plusieurs millions de triangles, bords lissés (multi-échantillonnage 4x), points d’analyse des parois affichés par le GPU.
+- Choix du rendu (carte graphique ou processeur) dans le panneau ; bascule automatique vers le processeur si aucun contexte graphique n’est disponible.
+- Le visualiseur occupe toute la largeur de la fenêtre.
+
 ### Visualiseur 3D intégré
 - Le visualiseur 3D s’ouvre dans la fenêtre du logiciel (plus de fenêtre séparée), avec un bouton Retour qui ramène à la page précédente.
 - Vue plus grande, panneau latéral (modèle, affichage, analyse), pastilles de couleur, raccourcis `R` (recentrer) et `W` (filaire), dépôt de fichier directement sur la vue.

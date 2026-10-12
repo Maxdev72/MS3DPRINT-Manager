@@ -134,15 +134,24 @@ public partial class MainWindow : Window
     private void Window_SizeChanged(object? sender, SizeChangedEventArgs e)
         => UpdateCentralWorkspaceWidth(e.NewSize.Width);
 
+    private double _lastWindowWidth;
+
+    /// <summary>The 3D viewer uses the whole width; every other page keeps its comfortable reading width.</summary>
+    private void RefreshCentralWidth() => UpdateCentralWorkspaceWidth(_lastWindowWidth > 0 ? _lastWindowWidth : Width);
+
     private void UpdateCentralWorkspaceWidth(double windowWidth)
     {
+        _lastWindowWidth = windowWidth;
         // Below 1100 px the sidebar shrinks to an icon rail so the content keeps its room.
         var compact = windowWidth < 1100;
         if (compact) Classes.Add("compact"); else Classes.Remove("compact");
         var sidebarWidth = compact ? 68d : 232d;
         RootGrid.ColumnDefinitions[0].Width = new GridLength(sidebarWidth);
         const double centralMargins = 68;
-        CentralWorkspace.Width = Math.Min(1200, Math.Max(0, windowWidth - sidebarWidth - centralMargins));
+        var available = Math.Max(0, windowWidth - sidebarWidth - centralMargins);
+        var wide = ViewerWorkspacePanel.IsVisible;
+        CentralWorkspace.MaxWidth = wide ? double.PositiveInfinity : 1200;
+        CentralWorkspace.Width = wide ? available : Math.Min(1200, available);
     }
 
     private ClientSummary? _projectOriginClient;
@@ -168,7 +177,7 @@ public partial class MainWindow : Window
         TrashWorkspacePanel.IsVisible = destination == "Corbeille";
         SettingsWorkspacePanel.IsVisible = destination == "Paramètres";
         FolderWorkspacePanel.IsVisible = false;
-        if (ViewerWorkspacePanel.IsVisible) { _modelViewer?.Release(); ViewerWorkspacePanel.IsVisible = false; _hiddenByViewer = []; }
+        if (ViewerWorkspacePanel.IsVisible) { _modelViewer?.Release(); ViewerWorkspacePanel.IsVisible = false; _hiddenByViewer = []; RefreshCentralWidth(); }
         ClearBreadcrumb();
         FadeIn(destination switch
         {
@@ -1836,6 +1845,7 @@ public partial class MainWindow : Window
             _viewerReturnTitle = PageTitle.Text;
             _viewerReturnSubtitle = PageSubtitle.Text;
             ViewerWorkspacePanel.IsVisible = true;
+            RefreshCentralWidth();
         }
         if (_modelViewer is null)
         {
@@ -1855,6 +1865,7 @@ public partial class MainWindow : Window
     {
         _modelViewer?.Release();
         ViewerWorkspacePanel.IsVisible = false;
+        RefreshCentralWidth();
         foreach (var panel in _hiddenByViewer) panel.IsVisible = true;
         _hiddenByViewer = [];
         PageTitle.Text = _viewerReturnTitle ?? "Vue d’ensemble";

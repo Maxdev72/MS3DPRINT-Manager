@@ -7,6 +7,7 @@ using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using MS3DPRINT.Manager.Core.Files;
 
 namespace MS3DPRINT.Manager.Desktop.Viewer;
@@ -19,7 +20,12 @@ public sealed class ModelViewerView : UserControl
         ("Bleu", "#58A6FF"), ("Gris", "#B8C2CC"), ("Vert", "#66CC99"), ("Orange", "#FFB454"), ("Rouge", "#FF6B6B"), ("Blanc", "#FFFFFF")
     ];
 
-    private readonly MeshViewport _viewport = new();
+    private IMeshViewport _viewport = new MeshViewport();
+    private readonly Grid _stage = new();
+    private AxesGizmo? _gizmo;
+    private readonly ComboBox _renderer = new() { ItemsSource = new[] { "Accéléré (carte graphique)", "Logiciel (processeur)" }, SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch };
+    private readonly TextBlock _rendererNote = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
+    private DispatcherTimer? _gpuWatch;
     private readonly TextBlock _title = new() { Text = "Aucun modèle", FontSize = 16, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis };
     private readonly TextBlock _location = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _dimensions = new() { FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap };
@@ -54,10 +60,12 @@ public sealed class ModelViewerView : UserControl
         {
             CornerRadius = new CornerRadius(10), ClipToBounds = true, BorderThickness = new Thickness(1),
             BorderBrush = (IBrush?)Application.Current?.FindResource("SubtleBorderBrush"),
-            Child = new Grid { Children = { _viewport, _emptyState, hint } }
+            Child = _stage
         };
-        _viewport.KeyDown += Viewport_KeyDown;
-        _viewport.PointerPressed += (_, _) => _viewport.Focus();
+        _stage.Children.Add(_emptyState);
+        _stage.Children.Add(hint);
+        UseViewport(CreateGpuViewport() ?? new MeshViewport());
+        _renderer.SelectionChanged += (_, _) => UseViewport(_renderer.SelectedIndex == 0 ? CreateGpuViewport() ?? new MeshViewport() : new MeshViewport());
 
         // side panel
         var back = new Button { Content = Icons.Label("IconArrowLeft", "Retour"), Classes = { "ghost" }, HorizontalAlignment = HorizontalAlignment.Left };
@@ -114,7 +122,7 @@ public sealed class ModelViewerView : UserControl
             {
                 back,
                 FormKit.SectionLabel("Modèle"), _title, _location, _dimensions, _message, fileButtons,
-                FormKit.SectionLabel("Affichage"), _mode, _swatches, hexRow,
+                FormKit.SectionLabel("Affichage"), _mode, _swatches, hexRow, Muted("Rendu"), _renderer, _rendererNote,
                 FormKit.SectionLabel("Analyse des parois"),
                 new TextBlock { Text = "STL et OBJ n’indiquent pas leurs unités : choisissez le seuil selon votre buse, votre matériau et votre trancheur.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap },
                 limits, _confirmUnits, analysisButtons, _analysis
@@ -145,6 +153,67 @@ public sealed class ModelViewerView : UserControl
 
     private static TextBlock Muted(string text) => new() { Text = text, Classes = { "muted" }, VerticalAlignment = VerticalAlignment.Center };
     private static TextBlock Unit(string text) => new() { Text = text, Classes = { "muted" }, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 10) };
+
+    private IMeshViewport? CreateGpuViewport()
+    {
+        try
+        {
+            var gpu = new GpuMeshViewport();
+            gpu.Failed += message => Dispatcher.UIThread.Post(() => FallBackToSoftware(message));
+            return gpu;
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or NotSupportedException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Swaps the 3D view (graphics card or processor), keeping the model, camera, colour and display mode.</summary>
+    private void UseViewport(IMeshViewport next)
+    {
+        var previous = _viewport;
+        var hadPrevious = _stage.Children.Contains(previous.Visual);
+        var camera = previous.Camera;
+        if (hadPrevious) _stage.Children.Remove(previous.Visual);
+        if (_gizmo is not null) { _stage.Children.Remove(_gizmo); _gizmo = null; }
+        _gpuWatch?.Stop();
+        _viewport = next;
+        _stage.Children.Insert(0, next.Visual);
+        next.Wireframe = _mode.SelectedIndex == 1;
+        if (PreviewColorParser.TryParse(_hex.Text, out var color)) next.ModelColor = color;
+        next.Visual.KeyDown += Viewport_KeyDown;
+        next.Visual.PointerPressed += (_, _) => next.Visual.Focus();
+        if (_mesh is not null)
+        {
+            next.SetMesh(_mesh);
+            next.Camera.Yaw = camera.Yaw; next.Camera.Pitch = camera.Pitch; next.Camera.Zoom = camera.Zoom; next.Camera.PanX = camera.PanX; next.Camera.PanY = camera.PanY;
+        }
+        if (next is GpuMeshViewport gpu)
+        {
+            _gizmo = new AxesGizmo(gpu.Camera) { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom };
+            _stage.Children.Add(_gizmo);
+            gpu.CameraChanged += () => _gizmo?.InvalidateVisual();
+            _rendererNote.Text = "Rendu par la carte graphique : fluide même sur de gros modèles, bords lissés.";
+            // No graphics context after a few seconds (remote desktop, old driver): use the processor instead.
+            _gpuWatch = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
+            _gpuWatch.Tick += (_, _) =>
+            {
+                _gpuWatch?.Stop();
+                if (ReferenceEquals(_viewport, gpu) && !gpu.IsReady && gpu.IsEffectivelyVisible) FallBackToSoftware("Aucun contexte graphique disponible.");
+            };
+            _gpuWatch.Start();
+        }
+        else _rendererNote.Text = "Rendu par le processeur : fonctionne partout, plus lent sur les gros modèles.";
+        next.RequestRender(false);
+    }
+
+    private void FallBackToSoftware(string reason)
+    {
+        if (_viewport is not GpuMeshViewport) return;
+        UseViewport(new MeshViewport());
+        _renderer.SelectedIndex = 1;
+        _rendererNote.Text = "Rendu par le processeur (carte graphique indisponible : " + reason + ")";
+    }
 
     private void Viewport_KeyDown(object? sender, KeyEventArgs e)
     {
@@ -215,7 +284,7 @@ public sealed class ModelViewerView : UserControl
             _dimensions.Text = ModelDimensions.FromMesh(mesh).ToDisplayText();
             _message.Text = $"{mesh.TriangleCount:N0} triangles · chargé en {stopwatch.Elapsed.TotalSeconds:N1} s.";
             ModelLoaded?.Invoke(Path.GetFileName(path));
-            _viewport.Focus();
+            _viewport.Visual.Focus();
         }
         catch (OperationCanceledException) when (load.IsCancellationRequested) { }
         catch (Exception exception) when (exception is IOException or InvalidDataException or NotSupportedException or FormatException or UnauthorizedAccessException)

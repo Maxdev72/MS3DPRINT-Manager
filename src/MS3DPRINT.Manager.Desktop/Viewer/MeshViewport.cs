@@ -12,7 +12,7 @@ using Avalonia.Threading;
 namespace MS3DPRINT.Manager.Desktop.Viewer;
 
 /// <summary>Interactive 3D view: left drag rotates, right/middle drag pans, wheel zooms.</summary>
-public sealed class MeshViewport : Control
+public sealed class MeshViewport : Control, IMeshViewport
 {
     private const uint BackgroundColor = 0xFF101923;
     private readonly DispatcherTimer _settle = new() { Interval = TimeSpan.FromMilliseconds(200) };
@@ -31,6 +31,7 @@ public sealed class MeshViewport : Control
         _settle.Tick += (_, _) => { _settle.Stop(); RequestRender(interactive: false); };
     }
 
+    public Control Visual => this;
     public ViewCamera Camera { get; } = new();
     public bool Wireframe { get; set; }
     public Color ModelColor { get; set; } = Color.FromRgb(0x58, 0xA6, 0xFF);
