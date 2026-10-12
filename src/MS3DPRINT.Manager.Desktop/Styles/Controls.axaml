@@ -51,4 +51,23 @@
     <Setter Property="Foreground" Value="#09111F" />
   </Style>
   <Style Selector="Button.primary-action:pointerover"><Setter Property="Background" Value="{DynamicResource FocusBorderBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource FocusBorderBrush}" /></Style>
+  <Style Selector="Button.icon-action">
+    <Setter Property="MinWidth" Value="34" />
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="Padding" Value="7,2" />
+    <Setter Property="FontSize" Value="20" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.menu-action">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Padding" Value="10,8" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+  </Style>
+  <Style Selector="Button.menu-action:pointerover">
+    <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+  </Style>
 </Styles>

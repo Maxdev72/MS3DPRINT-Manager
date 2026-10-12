@@ -139,6 +139,18 @@ public sealed class AvaloniaShellMarkupTests
         Assert.Contains("Button.table-row", styles, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Workspace_action_sets_use_a_compact_overflow_menu()
+    {
+        var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
+        var styles = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "Styles", "Controls.axaml"));
+
+        Assert.Contains("CreateOverflowActions", source, StringComparison.Ordinal);
+        Assert.Contains("Content = \"⋯\"", source, StringComparison.Ordinal);
+        Assert.Contains("Button.icon-action", styles, StringComparison.Ordinal);
+        Assert.Contains("Button.menu-action", styles, StringComparison.Ordinal);
+    }
+
     private static string MainWindowPath()
         => Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml");
 

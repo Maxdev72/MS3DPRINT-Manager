@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
@@ -236,14 +237,50 @@ public partial class MainWindow : Window
     }
 
     private static TextBlock CreateCompactTableCell(string value, bool prominent = false, bool accent = false)
-        => new()
+    {
+        var cell = new TextBlock
         {
             Text = value,
             FontWeight = prominent ? FontWeight.SemiBold : FontWeight.Normal,
-            Foreground = accent ? new SolidColorBrush(Color.Parse("#9BC0FF")) : null,
             TextTrimming = TextTrimming.CharacterEllipsis,
             VerticalAlignment = VerticalAlignment.Center
         };
+
+        if (accent)
+            cell.Foreground = new SolidColorBrush(Color.Parse("#9BC0FF"));
+
+        return cell;
+    }
+
+    private static Button CreateOverflowActions(params Button[] actions)
+    {
+        var menu = new StackPanel { Spacing = 2, MinWidth = 184 };
+        foreach (var action in actions)
+        {
+            action.Classes.Add("menu-action");
+            action.HorizontalAlignment = HorizontalAlignment.Stretch;
+            action.HorizontalContentAlignment = HorizontalAlignment.Left;
+            menu.Children.Add(action);
+        }
+
+        var flyout = new Flyout
+        {
+            Placement = PlacementMode.BottomEdgeAlignedRight,
+            Content = new Border
+            {
+                Background = new SolidColorBrush(Color.Parse("#141F30")),
+                BorderBrush = new SolidColorBrush(Color.Parse("#2D4D75")),
+                BorderThickness = new Avalonia.Thickness(1),
+                CornerRadius = new Avalonia.CornerRadius(10),
+                Padding = new Avalonia.Thickness(6),
+                Child = menu
+            }
+        };
+        var overflow = new Button { Content = "⋯", Classes = { "icon-action" } };
+        ToolTip.SetTip(overflow, "Actions");
+        overflow.Click += (_, _) => flyout.ShowAt(overflow);
+        return overflow;
+    }
 
     private async void RefreshProjects_Click(object? sender, RoutedEventArgs e) => await LoadProjectsAsync();
 
@@ -373,16 +410,25 @@ public partial class MainWindow : Window
                 }
                 else
                 {
-                    var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-                    var file = new Button { Content = $"Fichier · {entry.Name}", Tag = entry.FullPath, HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left };
+                    var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 8 };
+                    var file = new Button
+                    {
+                        Content = $"Fichier · {entry.Name}",
+                        Tag = entry.FullPath,
+                        HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left,
+                        HorizontalAlignment = HorizontalAlignment.Stretch,
+                        Classes = { "table-row" }
+                    };
                     file.Click += FileEntry_Click;
-                    var rename = new Button { Content = "Renommer", Tag = new ProjectDirectoryContext(project, directory, entry.FullPath) };
+                    var rename = new Button { Content = "↻  Renommer", Tag = new ProjectDirectoryContext(project, directory, entry.FullPath) };
                     rename.Click += RenameProjectFile_Click;
-                    var move = new Button { Content = "Déplacer", Tag = new ProjectDirectoryContext(project, directory, entry.FullPath) };
+                    var move = new Button { Content = "⇄  Déplacer", Tag = new ProjectDirectoryContext(project, directory, entry.FullPath) };
                     move.Click += MoveProjectEntry_Click;
-                    var trash = new Button { Content = "Corbeille", Tag = new ProjectDirectoryContext(project, directory, entry.FullPath) };
+                    var trash = new Button { Content = "⌫  Corbeille", Tag = new ProjectDirectoryContext(project, directory, entry.FullPath) };
                     trash.Click += TrashProjectFile_Click;
-                    row.Children.Add(file); row.Children.Add(rename); row.Children.Add(move); row.Children.Add(trash);
+                    var overflow = CreateOverflowActions(rename, move, trash);
+                    Grid.SetColumn(overflow, 1);
+                    row.Children.Add(file); row.Children.Add(overflow);
                     ProjectList.Children.Add(row);
                 }
             }
@@ -526,23 +572,17 @@ public partial class MainWindow : Window
         content.Children.Add(new TextBlock { Text = details, Classes = { "muted" }, TextWrapping = TextWrapping.Wrap });
         if (!string.IsNullOrWhiteSpace(project.Profile?.Description))
             content.Children.Add(new TextBlock { Text = project.Profile.Description, TextWrapping = TextWrapping.Wrap });
-        var commands = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        var edit = new Button { Content = "Modifier la fiche", Tag = project };
+        var edit = new Button { Content = "✎  Modifier la fiche", Tag = project };
         edit.Click += EditProject_Click;
-        var open = new Button { Content = "Ouvrir le dossier", Tag = project.ProjectPath };
+        var open = new Button { Content = "↗  Ouvrir le dossier", Tag = project.ProjectPath };
         open.Click += OpenFolder_Click;
-        var rename = new Button { Content = "Renommer", Tag = project };
+        var rename = new Button { Content = "↻  Renommer", Tag = project };
         rename.Click += RenameProject_Click;
-        var move = new Button { Content = "Déplacer", Tag = project };
+        var move = new Button { Content = "⇄  Déplacer", Tag = project };
         move.Click += MoveProject_Click;
-        var trash = new Button { Content = "Corbeille", Tag = project };
+        var trash = new Button { Content = "⌫  Corbeille", Tag = project };
         trash.Click += TrashProject_Click;
-        commands.Children.Add(edit);
-        commands.Children.Add(open);
-        commands.Children.Add(rename);
-        commands.Children.Add(move);
-        commands.Children.Add(trash);
-        content.Children.Add(commands);
+        content.Children.Add(CreateOverflowActions(open, edit, rename, move, trash));
         ProjectList.Children.Add(new Border
         {
             Background = new SolidColorBrush(Color.Parse("#141F30")), CornerRadius = new Avalonia.CornerRadius(10), Padding = new Avalonia.Thickness(16), Child = content
@@ -805,18 +845,17 @@ public partial class MainWindow : Window
         card.Children.Add(new TextBlock { Text = $"{client.ProfileLabel} · {client.ClientCode} · {client.ProjectCount} projet(s)", Classes = { "muted" } });
         if (!string.IsNullOrWhiteSpace(client.Profile?.Address)) card.Children.Add(new TextBlock { Text = client.Profile.Address, TextWrapping = TextWrapping.Wrap });
         if (!string.IsNullOrWhiteSpace(client.Profile?.Notes)) card.Children.Add(new TextBlock { Text = client.Profile.Notes, TextWrapping = TextWrapping.Wrap });
-        var commands = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        var edit = new Button { Content = "Modifier la fiche", Tag = client };
+        var edit = new Button { Content = "✎  Modifier la fiche", Tag = client };
         edit.Click += EditClient_Click;
-        var open = new Button { Content = "Ouvrir le dossier", Tag = client.ClientPath };
+        var open = new Button { Content = "↗  Ouvrir le dossier", Tag = client.ClientPath };
         open.Click += OpenFolder_Click;
-        var rename = new Button { Content = "Renommer", Tag = client };
+        var rename = new Button { Content = "↻  Renommer", Tag = client };
         rename.Click += RenameClient_Click;
-        var move = new Button { Content = "Déplacer", Tag = client };
+        var move = new Button { Content = "⇄  Déplacer", Tag = client };
         move.Click += MoveClient_Click;
-        var trash = new Button { Content = "Corbeille", Tag = client };
+        var trash = new Button { Content = "⌫  Corbeille", Tag = client };
         trash.Click += TrashClient_Click;
-        commands.Children.Add(edit); commands.Children.Add(open); commands.Children.Add(rename); commands.Children.Add(move); commands.Children.Add(trash); card.Children.Add(commands);
+        card.Children.Add(CreateOverflowActions(open, edit, rename, move, trash));
         ClientList.Children.Add(new Border { Background = new SolidColorBrush(Color.Parse("#141F30")), CornerRadius = new Avalonia.CornerRadius(10), Padding = new Avalonia.Thickness(16), Child = card });
         try
         {
@@ -978,15 +1017,14 @@ public partial class MainWindow : Window
                 var name = CreateCompactTableCell(item.Name, prominent: true);
                 var detail = CreateCompactTableCell((item.Profile?.Description ?? "Collection") + $" · {item.LastWriteTime:dd/MM/yyyy}");
                 Grid.SetColumn(detail, 1);
-                var commands = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
-                var open = new Button { Content = "Ouvrir", Tag = item.Path }; open.Click += OpenFolder_Click;
-                var edit = new Button { Content = "Modifier", Tag = item }; edit.Click += EditCollection_Click;
-                var rename = new Button { Content = "Renommer", Tag = item }; rename.Click += RenameCollection_Click;
-                var move = new Button { Content = "Déplacer", Tag = item }; move.Click += MoveCollection_Click;
-                var trash = new Button { Content = "Corbeille", Tag = item }; trash.Click += TrashCollection_Click;
-                commands.Children.Add(open); commands.Children.Add(edit); commands.Children.Add(rename); commands.Children.Add(move); commands.Children.Add(trash);
-                Grid.SetColumn(commands, 2);
-                row.Children.Add(name); row.Children.Add(detail); row.Children.Add(commands);
+                var open = new Button { Content = "↗  Ouvrir", Tag = item.Path }; open.Click += OpenFolder_Click;
+                var edit = new Button { Content = "✎  Modifier", Tag = item }; edit.Click += EditCollection_Click;
+                var rename = new Button { Content = "↻  Renommer", Tag = item }; rename.Click += RenameCollection_Click;
+                var move = new Button { Content = "⇄  Déplacer", Tag = item }; move.Click += MoveCollection_Click;
+                var trash = new Button { Content = "⌫  Corbeille", Tag = item }; trash.Click += TrashCollection_Click;
+                var actions = CreateOverflowActions(open, edit, rename, move, trash);
+                Grid.SetColumn(actions, 2);
+                row.Children.Add(name); row.Children.Add(detail); row.Children.Add(actions);
                 CollectionList.Children.Add(new Border { BorderBrush = new SolidColorBrush(Color.Parse("#263A56")), BorderThickness = new Avalonia.Thickness(0, 0, 0, 1), Padding = new Avalonia.Thickness(14, 8), Child = row });
             }
         }
@@ -1172,12 +1210,11 @@ public partial class MainWindow : Window
                 identity.Children.Add(CreateCompactTableCell($"{printer.Brand} · {printer.Model} · {printer.HourlyRate:0.00} €/h"));
                 var capacity = CreateCompactTableCell(details, accent: printer.IsActive);
                 Grid.SetColumn(capacity, 1);
-                var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
-                var edit = new Button { Content = "Modifier", Tag = printer };
+                var edit = new Button { Content = "✎  Modifier", Tag = printer };
                 edit.Click += EditPrinter_Click;
-                var trash = new Button { Content = "Corbeille", Tag = printer };
+                var trash = new Button { Content = "⌫  Corbeille", Tag = printer };
                 trash.Click += TrashPrinter_Click;
-                actions.Children.Add(edit); actions.Children.Add(trash);
+                var actions = CreateOverflowActions(edit, trash);
                 Grid.SetColumn(actions, 2);
                 row.Children.Add(identity); row.Children.Add(capacity); row.Children.Add(actions);
                 PrinterList.Children.Add(new Border { Background = Avalonia.Media.Brushes.Transparent, BorderBrush = new SolidColorBrush(Color.Parse("#263A56")), BorderThickness = new Avalonia.Thickness(0, 0, 0, 1), Padding = new Avalonia.Thickness(14, 8), Child = row });
@@ -1385,10 +1422,11 @@ public partial class MainWindow : Window
                 button.Click += EditFilament_Click;
                 var material = CreateCompactTableCell($"{filament.Material} · {filament.PricePerKg:0.00} €/kg{(filament.IsAbrasive ? " · Abrasif" : string.Empty)}", accent: filament.IsAbrasive);
                 Grid.SetColumn(material, 1);
-                var trash = new Button { Content = "Corbeille", Tag = filament };
+                var trash = new Button { Content = "⌫  Corbeille", Tag = filament };
                 trash.Click += TrashFilament_Click;
-                Grid.SetColumn(trash, 2);
-                row.Children.Add(button); row.Children.Add(material); row.Children.Add(trash);
+                var actions = CreateOverflowActions(trash);
+                Grid.SetColumn(actions, 2);
+                row.Children.Add(button); row.Children.Add(material); row.Children.Add(actions);
                 FilamentList.Children.Add(new Border { BorderBrush = new SolidColorBrush(Color.Parse("#263A56")), BorderThickness = new Avalonia.Thickness(0, 0, 0, 1), Padding = new Avalonia.Thickness(0, 0, 0, 2), Child = row });
             }
         }
