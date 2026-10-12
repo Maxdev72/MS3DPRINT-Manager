@@ -42,7 +42,7 @@ public sealed class CreatePrinterWindow : Window
     public CreatePrinterWindow(PrinterProfile? original = null)
     {
         Original = original;
-        Title = original is null ? "Ajouter une imprimante" : "Modifier l’imprimante"; Width = 440; Height = 500;
+        Title = original is null ? "Ajouter une imprimante" : "Modifier l’imprimante"; Width = 440; Height = 700;
         _brand.Text = original?.Brand ?? string.Empty;
         _brand.SelectedItem = KnownBrands.Contains(original?.Brand ?? string.Empty, StringComparer.OrdinalIgnoreCase) ? original?.Brand : null;
         _model.Text = original?.Model ?? string.Empty;
@@ -52,7 +52,14 @@ public sealed class CreatePrinterWindow : Window
         _volume.Text = original?.BuildVolume ?? string.Empty; _active.IsChecked = original?.IsActive ?? true;
         var save = new Button { Content = original is null ? "Ajouter" : "Enregistrer", HorizontalAlignment = HorizontalAlignment.Right };
         save.Click += Save_Click;
-        Content = new StackPanel { Margin = new Avalonia.Thickness(24), Spacing = 12, Children = { new TextBlock { Text = "Nouvelle imprimante", FontSize = 20 }, _brand, _model, _purchasePrice, _lifetimeHours, _powerWatts, _volume, _active, _error, save } };
+        Content = new StackPanel { Margin = new Avalonia.Thickness(24), Spacing = 12, Children = { new TextBlock { Text = "Nouvelle imprimante", FontSize = 20 }, Field("Marque", _brand), Field("Modèle", _model), Field("Prix d’achat (€)", _purchasePrice), Field("Durée de vie estimée (h)", _lifetimeHours), Field("Puissance (W, optionnelle)", _powerWatts), Field("Volume d’impression (mm, ex. 256 × 256 × 256)", _volume), _active, _error, save } };
+    }
+
+    private static StackPanel Field(string label, Control input)
+    {
+        var text = new TextBlock { Text = label };
+        text.Classes.Add("muted");
+        return new StackPanel { Spacing = 4, Children = { text, input } };
     }
 
     private void Save_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
