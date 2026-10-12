@@ -175,7 +175,7 @@ public partial class MainWindow
                 else
                     open.Click += async (_, _) => await OpenFileAsync(entry.FullPath);
                 FolderWorkspaceList.Children.Add(CreateActionRow(open, CreateOverflowActions(EntryActions(FolderContext(entry.FullPath), isFile: !entry.IsDirectory)),
-                    CreateNameCell(entry.IsDirectory ? "IconProjects" : "IconFile", entry.Name, accentIcon: entry.IsDirectory),
+                    CreateNameCell(entry.IsDirectory ? "IconProjects" : "IconFile", entry.Name, accentIcon: entry.IsDirectory, modelPath: entry.IsDirectory ? null : entry.FullPath),
                     CreateCompactTableCell(entry.TypeLabel), CreateCompactTableCell(entry.IsDirectory ? "—" : entry.SizeLabel)));
             }
         }

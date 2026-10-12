@@ -2,6 +2,10 @@
 
 ## 12 octobre 2026
 
+### Image de la vue 3D et vignettes
+- Nouveau bouton « Enregistrer une image » (touche `P`) dans la barre d’outils du visualiseur : la vue, telle qu’elle est à l’écran (coupe, comparaison, couleur), est enregistrée en PNG dans le dossier `06_PHOTOS_RENDUS` du projet du modèle ; hors d’un projet, le logiciel demande où l’enregistrer.
+- Les fichiers STL et OBJ des projets et des dossiers s’affichent avec une vignette du modèle au lieu d’une icône ; les vignettes sont calculées en arrière-plan, gardées sur le disque jusqu’à ce que le fichier change, et ignorées au-delà de 40 Mo.
+
 ### Changer le code d’un client
 - Nouveau bouton « Changer le code » dans la fiche client et dans le menu de sa ligne : il propose un code (initiales du nom, ex. FA pour Fell Agency) et montre, à mesure que vous tapez, les dossiers de projet qui seront renommés (F-2026-001_SAMURAI_70CM devient FA-2026-001_SAMURAI_70CM).
 - Au changement, les dossiers, les fiches projet, les références réservées et les estimations liées suivent ; en cas d’erreur tout est remis en l’état. Rien n’est modifié avant la confirmation.

@@ -22,6 +22,9 @@ public readonly record struct ClipPlane(int Axis, float Offset, bool Flip)
     }
 }
 
+/// <summary>A picture of the 3D view: RGBA bytes, top row first.</summary>
+public sealed record CapturedImage(int Width, int Height, byte[] Rgba);
+
 /// <summary>What the viewer page needs from a 3D view, so the GPU view and the CPU fallback are interchangeable.</summary>
 public interface IMeshViewport
 {
@@ -40,6 +43,8 @@ public interface IMeshViewport
     bool ShowSecond { get; set; }
     /// <summary>Translation applied to the second model, for example to put its centre on the first one's.</summary>
     Vector3 SecondOffset { get; set; }
+    /// <summary>The view as it is drawn now (null when nothing could be captured).</summary>
+    Task<CapturedImage?> CaptureAsync();
     void SetMesh(MeshModel? mesh);
     void ResetView();
     void RequestRender(bool interactive);
@@ -85,6 +90,30 @@ public sealed class GpuMeshViewport : OpenGlControlBase
     public bool ShowFirst { get; set; } = true;
     public bool ShowSecond { get; set; } = true;
     public Vector3 SecondOffset { get; set; }
+
+    private TaskCompletionSource<CapturedImage?>? _capture;
+
+    /// <summary>Asks for the next frame to be read back from the graphics card.</summary>
+    public Task<CapturedImage?> CaptureAsync()
+    {
+        var source = new TaskCompletionSource<CapturedImage?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _capture = source;
+        RequestNextFrameRendering();
+        // a view that is hidden or whose context was lost never renders: do not wait for ever
+        _ = Task.Delay(4000).ContinueWith(_ => source.TrySetResult(null), TaskScheduler.Default);
+        return source.Task;
+    }
+
+    private CapturedImage ReadBack(int width, int height)
+    {
+        var rows = _gl!.ReadRgba(width, height);
+        var flipped = new byte[rows.Length];
+        var stride = width * 4;
+        for (var y = 0; y < height; y++)
+            Buffer.BlockCopy(rows, (height - 1 - y) * stride, flipped, y * stride, stride);
+        for (var i = 3; i < flipped.Length; i += 4) flipped[i] = 255;
+        return new CapturedImage(width, height, flipped);
+    }
 
     private MeshModel? _second;
     private int _secondVao, _secondWireVao, _secondPosition, _secondIndex, _secondWire, _secondIndexCount, _secondWireCount;
@@ -210,6 +239,7 @@ public sealed class GpuMeshViewport : OpenGlControlBase
                 _gl.Resolve(width, height);
             }
             _gl.BindFramebuffer(GlApi.Framebuffer, framebuffer);
+            if (_capture is { } pending) { _capture = null; pending.TrySetResult(ReadBack(width, height)); }
         }
         catch (Exception exception) when (exception is InvalidOperationException or NotSupportedException or OutOfMemoryException)
         {

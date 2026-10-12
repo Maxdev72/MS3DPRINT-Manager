@@ -100,6 +100,7 @@ public sealed class ModelViewerView : UserControl
     private readonly Button _cancelAnalysis = new() { Content = "Annuler", IsEnabled = false };
     private readonly Button _reset = new() { IsEnabled = false };
     private readonly ToggleButton _wireToggle = new();
+    private readonly Button _captureTool = new() { IsEnabled = false };
     private readonly StackPanel _emptyState = new() { Spacing = 10, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
     private CancellationTokenSource? _activeLoad;
     private CancellationTokenSource? _activeAnalysis;
@@ -115,7 +116,7 @@ public sealed class ModelViewerView : UserControl
         AddHandler(DragDrop.DropEvent, View_Drop);
 
         // viewport with its empty state and a navigation hint
-        var hint = new TextBlock { Text = "Clic gauche : tourner · Clic droit : déplacer · Molette : zoom · R : recentrer · W : filaire", Classes = { "caption" }, Margin = new Thickness(14, 0, 14, 10), VerticalAlignment = VerticalAlignment.Bottom, IsHitTestVisible = false };
+        var hint = new TextBlock { Text = "Clic gauche : tourner · Clic droit : déplacer · Molette : zoom · R : recentrer · W : filaire · P : image", Classes = { "caption" }, Margin = new Thickness(14, 0, 14, 10), VerticalAlignment = VerticalAlignment.Bottom, IsHitTestVisible = false };
         _emptyState.Children.Add(new TextBlock { Text = "Déposez un fichier STL ou OBJ ici", FontSize = 16, FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Center });
         _emptyState.Children.Add(new TextBlock { Text = "ou choisissez-en un sur votre ordinateur", Classes = { "muted" }, HorizontalAlignment = HorizontalAlignment.Center });
         var emptyBrowse = new Button { Content = Icons.Label("IconOpen", "Ouvrir un fichier"), Classes = { "primary-action" }, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 6, 0, 0) };
@@ -144,17 +145,19 @@ public sealed class ModelViewerView : UserControl
         Tool(_wireToggle, "IconWireframe", "Affichage filaire (W)");
         Tool(_measureToggle, "IconMeasure", "Mesurer des distances (M)");
         Tool(_cutToggle, "IconCut", "Plan de coupe (C)");
+        Tool(_captureTool, "IconCamera", "Enregistrer une image de la vue (P)");
         var compareTool = new Button { IsEnabled = false };
         Tool(compareTool, "IconCompare", "Comparer avec une autre version");
         _compareButton.PropertyChanged += (_, e) => { if (e.Property == IsEnabledProperty) compareTool.IsEnabled = _compareButton.IsEnabled; };
         compareTool.Click += async (_, _) => { ShowTab(2); await CompareAsync(); };
         _reset.Click += (_, _) => _viewport.ResetView();
+        _captureTool.Click += async (_, _) => await CaptureViewAsync();
         _wireToggle.IsCheckedChanged += (_, _) => _mode.SelectedIndex = _wireToggle.IsChecked == true ? 1 : 0;
         var divider = new Border { Width = 1, Margin = new Thickness(4, 6), Background = (IBrush?)Application.Current?.FindResource("BorderBrush") };
         _stage.Children.Add(new Border
         {
             Classes = { "toolbar" }, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(12),
-            Child = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2, Children = { _reset, _wireToggle, divider, _measureToggle, _cutToggle, compareTool } }
+            Child = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2, Children = { _reset, _wireToggle, divider, _measureToggle, _cutToggle, compareTool, _captureTool } }
         });
 
         // side panel: back and open on top, four tabs, the estimate action always in reach
@@ -328,6 +331,33 @@ public sealed class ModelViewerView : UserControl
         _toolsHint.IsVisible = !_measureGroup.IsVisible && !_cutGroup.IsVisible && _second is null;
     }
 
+    /// <summary>Raised with a PNG written to a temporary file and the model path, when the user saves a picture of the view.</summary>
+    public event Action<string, string>? ImageCaptured;
+
+    private async Task CaptureViewAsync()
+    {
+        if (_modelPath is null) return;
+        var image = await _viewport.CaptureAsync();
+        if (image is null) { _message.Text = "Impossible de capturer la vue."; return; }
+        var temporary = Path.Combine(Path.GetTempPath(), $"{Path.GetFileNameWithoutExtension(_modelPath)}_{DateTime.Now:yyyyMMdd-HHmmss}.png");
+        try
+        {
+            await Task.Run(() =>
+            {
+                using var bitmap = new Avalonia.Media.Imaging.WriteableBitmap(new PixelSize(image.Width, image.Height), new Vector(96, 96), Avalonia.Platform.PixelFormat.Rgba8888, Avalonia.Platform.AlphaFormat.Opaque);
+                using (var buffer = bitmap.Lock())
+                    for (var row = 0; row < image.Height; row++)
+                        System.Runtime.InteropServices.Marshal.Copy(image.Rgba, row * image.Width * 4, buffer.Address + row * buffer.RowBytes, image.Width * 4);
+                bitmap.Save(temporary, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
+            });
+            ImageCaptured?.Invoke(temporary, _modelPath);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            _message.Text = "Impossible d’enregistrer l’image : " + exception.Message;
+        }
+    }
+
     /// <summary>Raised with the file name once a model is displayed.</summary>
     public event Action<string>? ModelLoaded;
 
@@ -419,6 +449,7 @@ public sealed class ModelViewerView : UserControl
     {
         if (e.Key == Key.R) { _viewport.ResetView(); e.Handled = true; }
         else if (e.Key == Key.M && _measureToggle.IsEnabled) { _measureToggle.IsChecked = _measureToggle.IsChecked != true; e.Handled = true; }
+        else if (e.Key == Key.P && _captureTool.IsEnabled) { _ = CaptureViewAsync(); e.Handled = true; }
         else if (e.Key == Key.C && _cutToggle.IsEnabled) { _cutToggle.IsChecked = _cutToggle.IsChecked != true; e.Handled = true; }
         else if (e.Key == Key.Escape && _pendingPoint is not null) { _pendingPoint = null; RefreshMeasures(); e.Handled = true; }
         else if (e.Key == Key.W) { _mode.SelectedIndex = _mode.SelectedIndex == 1 ? 0 : 1; e.Handled = true; }
@@ -481,6 +512,7 @@ public sealed class ModelViewerView : UserControl
             _overlay.Mesh = mesh;
             _measureToggle.IsEnabled = true;
             _cutToggle.IsEnabled = true;
+            _captureTool.IsEnabled = true;
             _compareButton.IsEnabled = true;
             ClearComparison();
             _cutToggle.IsChecked = false;

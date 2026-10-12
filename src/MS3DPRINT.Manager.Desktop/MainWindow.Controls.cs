@@ -90,15 +90,33 @@ public partial class MainWindow
     }
 
     /// <summary>Name with a leading icon, for file and folder rows.</summary>
-    private static Control CreateNameCell(string iconKey, string text, bool accentIcon)
+    private static Control CreateNameCell(string iconKey, string text, bool accentIcon, string? modelPath = null)
     {
         var icon = new Avalonia.Controls.Shapes.Path { Classes = { "icon" }, Width = 17, Height = 17 };
         if (accentIcon) icon.Classes.Add("icon-accent");
         if (Avalonia.Application.Current?.TryFindResource(iconKey, out var geometry) == true && geometry is Geometry data) icon.Data = data;
         var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, VerticalAlignment = VerticalAlignment.Center };
-        row.Children.Add(icon);
+        if (modelPath is not null && MS3DPRINT.Manager.Desktop.Viewer.ModelThumbnails.IsEligible(modelPath))
+        {
+            // the icon stands in until the picture of the model is ready
+            var picture = new Avalonia.Controls.Image { Stretch = Stretch.UniformToFill };
+            var frame = new Border { Width = 32, Height = 32, CornerRadius = new Avalonia.CornerRadius(6), ClipToBounds = true, IsVisible = false, Child = picture };
+            var slot = new Panel { Width = 32, Height = 32, Children = { icon, frame } };
+            icon.HorizontalAlignment = HorizontalAlignment.Center;
+            icon.VerticalAlignment = VerticalAlignment.Center;
+            row.Children.Add(slot);
+            _ = ShowThumbnailAsync(modelPath, picture, frame, icon);
+        }
+        else row.Children.Add(icon);
         row.Children.Add(new TextBlock { Text = text, FontWeight = accentIcon ? FontWeight.SemiBold : FontWeight.Normal, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center });
         return row;
+    }
+
+    private static async Task ShowThumbnailAsync(string modelPath, Avalonia.Controls.Image picture, Control frame, Control icon)
+    {
+        var bitmap = await MS3DPRINT.Manager.Desktop.Viewer.ModelThumbnails.GetAsync(modelPath);
+        if (bitmap is null) return;
+        Dispatcher.UIThread.Post(() => { picture.Source = bitmap; frame.IsVisible = true; icon.IsVisible = false; });
     }
 
     private static TextBlock CreateCompactTableCell(string value, bool prominent = false, bool accent = false)

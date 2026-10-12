@@ -116,7 +116,7 @@ public partial class MainWindow
                     var trash = new Button { Content = Icons.Label("IconTrash", "Corbeille"), Tag = new ProjectDirectoryContext(project, directory, entry.FullPath) };
                     trash.Click += TrashProjectFile_Click;
                     ProjectList.Children.Add(CreateActionRow(file, CreateOverflowActions(openWith, rename, move, trash),
-                        CreateNameCell("IconFile", entry.Name, accentIcon: false),
+                        CreateNameCell("IconFile", entry.Name, accentIcon: false, modelPath: entry.FullPath),
                         CreateCompactTableCell(entry.TypeLabel), CreateCompactTableCell(entry.SizeLabel)));
                 }
             }

@@ -56,6 +56,26 @@ public sealed class MeshViewport : Control, IMeshViewport
         RequestRender(interactive: false);
     }
 
+    public async Task<CapturedImage?> CaptureAsync()
+    {
+        var mesh = _mesh;
+        if (mesh is null || Bounds.Width < 2 || Bounds.Height < 2) return null;
+        var scale = TopLevel.GetTopLevel(this)?.RenderScaling ?? 1;
+        var width = Math.Max(2, (int)(Bounds.Width * scale));
+        var height = Math.Max(2, (int)(Bounds.Height * scale));
+        var options = new RenderOptions(width, height, Wireframe, 0xFF000000u | ((uint)ModelColor.R << 16) | ((uint)ModelColor.G << 8) | ModelColor.B, BackgroundColor, CutPlane);
+        var camera = new ViewCamera { Yaw = Camera.Yaw, Pitch = Camera.Pitch, Zoom = Camera.Zoom, PanX = Camera.PanX, PanY = Camera.PanY };
+        var markers = Markers;
+        var pixels = await Task.Run(() => SoftwareRenderer.Render(mesh, camera, options, markers));
+        var rgba = new byte[pixels.Length * 4];
+        for (var i = 0; i < pixels.Length; i++)
+        {
+            var pixel = pixels[i]; // 0xAARRGGBB
+            rgba[i * 4] = (byte)(pixel >> 16); rgba[i * 4 + 1] = (byte)(pixel >> 8); rgba[i * 4 + 2] = (byte)pixel; rgba[i * 4 + 3] = 255;
+        }
+        return new CapturedImage(width, height, rgba);
+    }
+
     public void ResetView()
     {
         Camera.Reset();

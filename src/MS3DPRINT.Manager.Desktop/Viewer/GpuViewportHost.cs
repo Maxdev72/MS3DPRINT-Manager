@@ -43,6 +43,7 @@ public sealed class GpuViewportHost : Panel, IMeshViewport
     public event Action? CameraChanged;
     public event Action<Point>? Clicked;
 
+    public Task<CapturedImage?> CaptureAsync() => _gpu.CaptureAsync();
     public void SetMesh(MeshModel? mesh) => _gpu.SetMesh(mesh);
     public void ResetView() => _gpu.ResetView();
     public void RequestRender(bool interactive) => _gpu.RequestRender(interactive);

@@ -56,6 +56,7 @@ public partial class MainWindow
             });
             _modelViewer.ModelLoaded += name => PageSubtitle.Text = name;
             _modelViewer.EstimateRequested += StartEstimateFromModel;
+            _modelViewer.ImageCaptured += SaveViewerCapture;
             ViewerWorkspacePanel.Child = _modelViewer;
         }
         _ = _modelViewer.ReloadFilamentsAsync();
@@ -93,6 +94,42 @@ public partial class MainWindow
             EstimateProject.SelectedItem = projects.FirstOrDefault(project => seed.ModelPath.StartsWith(project.ProjectPath, StringComparison.OrdinalIgnoreCase));
         GoToEstimateStep(1);
         Notify(seed.DurationHours is null ? "Estimation préparée à partir du modèle : vérifiez la durée machine." : "Estimation préparée : poids et durée viennent du découpeur.");
+    }
+
+    /// <summary>
+    /// Files the picture of the 3D view in the photos and renders folder of the model's project; for a model outside any project,
+    /// asks where to save it.
+    /// </summary>
+    private async void SaveViewerCapture(string temporaryPng, string modelPath)
+    {
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            if (MS3DPRINT.Manager.Core.Projects.ProjectLocator.PhotosFolder(modelPath) is { } photos && Path.GetFullPath(photos).StartsWith(Path.GetFullPath(root), StringComparison.OrdinalIgnoreCase))
+            {
+                var saved = await Task.Run(() =>
+                {
+                    var files = new MS3DPRINT.Manager.Core.Workspace.ManagedFileService(root);
+                    if (!Directory.Exists(photos)) files.CreateFolder(Path.GetDirectoryName(photos)!, Path.GetFileName(photos));
+                    return files.Import(temporaryPng, photos);
+                });
+                Notify("Image enregistrée dans " + Path.GetRelativePath(root, saved) + ".");
+                return;
+            }
+            var target = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = "Enregistrer l’image de la vue",
+                SuggestedFileName = Path.GetFileName(temporaryPng),
+                DefaultExtension = "png",
+                FileTypeChoices = [new FilePickerFileType("Image PNG") { Patterns = ["*.png"] }]
+            });
+            if (target?.TryGetLocalPath() is not { } local) return;
+            await Task.Run(() => File.Copy(temporaryPng, local, overwrite: true));
+            Notify("Image enregistrée : " + local);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { Notify(exception.Message, error: true); }
+        finally { try { File.Delete(temporaryPng); } catch (IOException) { } }
     }
 
     private void CloseModelViewer()
