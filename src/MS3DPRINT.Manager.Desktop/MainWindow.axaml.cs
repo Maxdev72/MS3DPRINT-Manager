@@ -76,7 +76,19 @@ public partial class MainWindow : Window
                 await LoadProjectDirectoryAsync(found, found.ProjectPath);
             }
         }
-        // MS3DPRINT_START_DIALOG=client|project|printer|filament|collection|toast opens that dialog (screenshots, demos).
+        // MS3DPRINT_START_CLIENT=<code> opens that client sheet (screenshots, demos).
+        if (Environment.GetEnvironmentVariable("MS3DPRINT_START_CLIENT") is { Length: > 0 } clientCode)
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var clients = await Task.Run(() => new WorkspaceClientReader().Load(root));
+            if (clients.FirstOrDefault(client => client.ClientCode == clientCode) is { } found)
+            {
+                ShowWorkspace("Clients");
+                PageTitle.Text = "Clients";
+                await LoadClientDetailAsync(found);
+            }
+        }
+        // MS3DPRINT_START_DIALOG=client|project|printer|filament|collection|viewer|toast opens that dialog (screenshots, demos).
         switch (Environment.GetEnvironmentVariable("MS3DPRINT_START_DIALOG"))
         {
             case "client": CreateClient_Click(this, new RoutedEventArgs()); break;
@@ -84,6 +96,7 @@ public partial class MainWindow : Window
             case "printer": CreatePrinter_Click(this, new RoutedEventArgs()); break;
             case "filament": CreateFilament_Click(this, new RoutedEventArgs()); break;
             case "collection": CreateCollection_Click(this, new RoutedEventArgs()); break;
+            case "viewer": new ModelViewerWindow().Show(this); break;
             case "toast":
                 Notify("Projet créé avec succès.");
                 Notify("Impossible d’écrire dans ce dossier : accès refusé.", error: true);
@@ -494,7 +507,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>Friendly empty state: icon, explanation and, when useful, the action that fills the list.</summary>
-    private static Control CreateEmptyState(string iconKey, string title, string message, string? actionLabel = null, EventHandler<RoutedEventArgs>? action = null)
+    private static Control CreateEmptyState(string iconKey, string title, string message, string? actionLabel = null, EventHandler<RoutedEventArgs>? action = null, object? actionTag = null)
     {
         var stack = new StackPanel { Spacing = 8, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Avalonia.Thickness(0, 36) };
         var icon = new Avalonia.Controls.Shapes.Path { Classes = { "icon", "icon-accent" }, Width = 30, Height = 30 };
@@ -504,11 +517,25 @@ public partial class MainWindow : Window
         stack.Children.Add(new TextBlock { Text = message, Classes = { "caption" }, HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxWidth = 360 });
         if (actionLabel is not null && action is not null)
         {
-            var button = new Button { Content = actionLabel, Classes = { "primary-action" }, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Avalonia.Thickness(0, 6, 0, 0) };
+            var button = new Button { Content = actionLabel, Tag = actionTag, Classes = { "primary-action" }, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Avalonia.Thickness(0, 6, 0, 0) };
             button.Click += action;
             stack.Children.Add(button);
         }
         return stack;
+    }
+
+    /// <summary>Last line of defence: an unexpected error is shown and logged, and the work in progress stays open.</summary>
+    public void ReportUnexpectedError(Exception exception)
+    {
+        ErrorLog.Write(exception);
+        Notify("Une erreur inattendue s’est produite : " + exception.Message, error: true);
+        EndBusyAll();
+    }
+
+    private void EndBusyAll()
+    {
+        _busy = 0;
+        BusyBar.IsVisible = false;
     }
 
     private int _busy;
@@ -626,8 +653,9 @@ public partial class MainWindow : Window
             VerticalAlignment = VerticalAlignment.Center
         };
 
+        ToolTip.SetTip(cell, value);
         if (accent)
-            cell.Foreground = new SolidColorBrush(Color.Parse("#9BC0FF"));
+            cell.Foreground = (IBrush?)Avalonia.Application.Current?.FindResource("AccentBrush") ?? Brushes.CornflowerBlue;
 
         return cell;
     }
@@ -672,6 +700,7 @@ public partial class MainWindow : Window
         return new Border { BorderBrush = (IBrush?)Avalonia.Application.Current?.FindResource("SubtleBorderBrush"), BorderThickness = new Avalonia.Thickness(0, 0, 0, 1), Child = row };
     }
 
+    private const string TrashRowColumns = "2*,*,130";
     private const string ClientRowColumns = "2*,80,*,110,64";
 
     private bool _projectListMode;
@@ -707,6 +736,7 @@ public partial class MainWindow : Window
         flyout.FlyoutPresenterClasses.Add("action-menu-flyout");
         var overflow = new Button { Content = "⋯", Classes = { "icon-action" } };
         ToolTip.SetTip(overflow, "Actions");
+        Avalonia.Automation.AutomationProperties.SetName(overflow, "Actions");
         overflow.Click += (_, _) => flyout.ShowAt(overflow);
         overflow.Tag = flyout; // lets the row open the same menu on right click
         return overflow;
@@ -1302,6 +1332,7 @@ public partial class MainWindow : Window
         var back = new Button
         {
             Content = string.Equals(root, directory, StringComparison.OrdinalIgnoreCase) ? "← Retour" : "← Dossier parent",
+            Classes = { "ghost" },
             HorizontalAlignment = HorizontalAlignment.Left
         };
         back.Click += async (_, _) =>
@@ -1323,24 +1354,22 @@ public partial class MainWindow : Window
             var entries = await Task.Run(() => new ProjectWorkspaceBrowser().List(root, directory));
             if (entries.Count == 0)
             {
-                FolderWorkspaceList.Children.Add(new TextBlock { Text = "Ce dossier est vide.", Classes = { "muted" }, Margin = new Avalonia.Thickness(8) });
+                FolderWorkspaceList.Children.Add(CreateEmptyState("IconFile", "Ce dossier est vide", "Aucun fichier ni sous-dossier à afficher."));
                 return;
             }
 
+            FolderWorkspaceList.Spacing = 0;
+            FolderWorkspaceList.Children.Add(CreateCompactTableHeader(ActionRowColumns, "NOM", "TYPE", "TAILLE", ""));
             foreach (var entry in entries)
             {
-                var item = new Button
-                {
-                    Content = entry.IsDirectory ? $"▸  {entry.Name}\nDossier" : $"Fichier · {entry.Name}\n{entry.TypeLabel} · {entry.SizeLabel}",
-                    HorizontalAlignment = HorizontalAlignment.Stretch,
-                    HorizontalContentAlignment = HorizontalAlignment.Left,
-                    Classes = { "workspace-card" }
-                };
+                var open = new Button { HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch };
                 if (entry.IsDirectory)
-                    item.Click += async (_, _) => { _folderWorkspaceDirectory = entry.FullPath; await LoadFolderWorkspaceAsync(); };
+                    open.Click += async (_, _) => { _folderWorkspaceDirectory = entry.FullPath; await LoadFolderWorkspaceAsync(); };
                 else
-                    item.Click += async (_, _) => await OpenFileAsync(entry.FullPath);
-                FolderWorkspaceList.Children.Add(item);
+                    open.Click += async (_, _) => await OpenFileAsync(entry.FullPath);
+                FolderWorkspaceList.Children.Add(CreateActionRow(open, null,
+                    CreateNameCell(entry.IsDirectory ? "IconProjects" : "IconFile", entry.Name, accentIcon: entry.IsDirectory),
+                    CreateCompactTableCell(entry.TypeLabel), CreateCompactTableCell(entry.IsDirectory ? "—" : entry.SizeLabel)));
             }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
@@ -1565,25 +1594,27 @@ public partial class MainWindow : Window
         var newProject = new Button { Content = "+  Nouveau projet", Tag = client, Classes = { "primary-action" } };
         newProject.Click += CreateProjectForClient_Click;
         card.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { newProject, edit } });
-        ClientList.Children.Add(new Border { Background = new SolidColorBrush(Color.Parse("#141F30")), CornerRadius = new Avalonia.CornerRadius(10), Padding = new Avalonia.Thickness(16), Child = card });
+        ClientList.Children.Add(new Border { Classes = { "card-raised" }, Padding = new Avalonia.Thickness(18), Child = card });
         try
         {
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
             var projects = await Task.Run(() => new WorkspaceProjectReader().Load(root)
                 .Where(project => string.Equals(project.ClientPath, client.ClientPath, StringComparison.OrdinalIgnoreCase)).ToArray());
-            if (projects.Length > 0) ClientList.Children.Add(new TextBlock { Text = "Projets", FontWeight = FontWeight.SemiBold, Margin = new Avalonia.Thickness(0, 10, 0, 0) });
+            if (projects.Length == 0)
+            {
+                ClientList.Children.Add(CreateEmptyState("IconProjects", "Aucun projet pour ce client", "Créez son premier projet avec le bouton « Nouveau projet ».", "Nouveau projet", CreateProjectForClient_Click, client));
+                return;
+            }
+            ClientList.Children.Add(new TextBlock { Text = "PROJETS", Classes = { "overline" }, Margin = new Avalonia.Thickness(14, 12, 0, 0) });
+            ClientList.Children.Add(CreateCompactTableHeader(ActionRowColumns, "PROJET", "STATUT", "ÉCHÉANCE", ""));
             foreach (var project in projects)
             {
-                var projectButton = new Button
-                {
-                    Content = $"{project.Reference} · {project.Title()}\n{project.StatusLabel}",
-                    Tag = project,
-                    HorizontalContentAlignment = HorizontalAlignment.Left,
-                    HorizontalAlignment = HorizontalAlignment.Stretch,
-                    Classes = { "workspace-card" }
-                };
-                projectButton.Click += ProjectEntry_Click;
-                ClientList.Children.Add(projectButton);
+                var open = new Button { Tag = project, HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch };
+                open.Click += ProjectEntry_Click;
+                ClientList.Children.Add(CreateActionRow(open, null,
+                    CreateCompactTableCell($"{project.Reference} · {project.Title()}", prominent: true),
+                    CreateStatusBadge(project.Profile is null ? "À compléter" : project.StatusLabel),
+                    CreateCompactTableCell(project.Profile?.DueDate is { } due ? $"{due:dd/MM/yyyy}" : "—")));
             }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
@@ -2249,16 +2280,14 @@ public partial class MainWindow : Window
         {
             var entries = await Task.Run(() => new WorkspaceTrashReader().Load(workspaceRoot));
             if (entries.Count == 0) { TrashList.Children.Add(CreateEmptyState("IconTrash", "La corbeille est vide", "Les éléments supprimés apparaissent ici et peuvent être restaurés.")); return; }
-            TrashList.Children.Add(CreateCompactTableHeader("*,Auto", "ÉLÉMENT", "ACTION"));
+            TrashList.Children.Add(CreateCompactTableHeader(TrashRowColumns, "ÉLÉMENT", "SUPPRIMÉ LE", "", ""));
             foreach (var entry in entries)
             {
-                var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 16, MinHeight = 44 };
-                row.Children.Add(CreateCompactTableCell(entry.Label, prominent: true));
                 var restore = new Button { Content = "Restaurer", Tag = entry.Id };
                 restore.Click += RestoreTrash_Click;
-                Grid.SetColumn(restore, 1);
-                row.Children.Add(restore);
-                TrashList.Children.Add(new Border { BorderBrush = new SolidColorBrush(Color.Parse("#263A56")), BorderThickness = new Avalonia.Thickness(0, 0, 0, 1), Padding = new Avalonia.Thickness(14, 6), Child = row });
+                TrashList.Children.Add(CreateActionRow(TrashRowColumns, null, restore,
+                    CreateCompactTableCell(entry.Label, prominent: true),
+                    CreateCompactTableCell($"{entry.LocalDeletedAt:dd/MM/yyyy HH:mm}")));
             }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)

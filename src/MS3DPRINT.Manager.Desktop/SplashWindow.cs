@@ -11,7 +11,7 @@ namespace MS3DPRINT.Manager.Desktop;
 public sealed class SplashWindow : Window
 {
     private readonly ProgressBar _progress = new() { Minimum = 0, Maximum = 100, Height = 6, Value = 0 };
-    private readonly TextBlock _status = new() { Text = "Démarrage…", FontSize = 12, Foreground = new SolidColorBrush(Color.Parse("#94A7C4")), HorizontalAlignment = HorizontalAlignment.Center };
+    private readonly TextBlock _status = new() { Text = "Démarrage…", FontSize = 12, Foreground = Token("MutedTextBrush", "#94A7C4"), HorizontalAlignment = HorizontalAlignment.Center };
 
     public SplashWindow()
     {
@@ -21,18 +21,22 @@ public sealed class SplashWindow : Window
         ShowInTaskbar = false;
         WindowDecorations = WindowDecorations.None;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
-        Background = new SolidColorBrush(Color.Parse("#090D14"));
+        Background = Token("CanvasBrush", "#080C14");
 
         var stack = new StackPanel { Spacing = 14, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(40, 0) };
         if (LoadLogo() is { } logo)
             stack.Children.Add(new Image { Source = logo, Width = 96, Height = 96, HorizontalAlignment = HorizontalAlignment.Center });
-        stack.Children.Add(new TextBlock { Text = "MS3DPRINT", FontSize = 26, FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Center, Foreground = new SolidColorBrush(Color.Parse("#E9EFFB")) });
-        stack.Children.Add(new TextBlock { Text = "MANAGER", FontSize = 12, LetterSpacing = 4, HorizontalAlignment = HorizontalAlignment.Center, Foreground = new SolidColorBrush(Color.Parse("#6698F5")) });
+        stack.Children.Add(new TextBlock { Text = "MS3DPRINT", FontSize = 26, FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Center, Foreground = Token("TextBrush", "#EAF0FC") });
+        stack.Children.Add(new TextBlock { Text = "MANAGER", FontSize = 12, LetterSpacing = 4, HorizontalAlignment = HorizontalAlignment.Center, Foreground = Token("AccentBrush", "#6B9BFF") });
         stack.Children.Add(new Border { Height = 8 });
         stack.Children.Add(_progress);
         stack.Children.Add(_status);
-        Content = new Border { BorderBrush = new SolidColorBrush(Color.Parse("#263A56")), BorderThickness = new Thickness(1), Child = stack };
+        Content = new Border { BorderBrush = Token("BorderBrush", "#243247"), BorderThickness = new Thickness(1), Child = stack };
     }
+
+    private static IBrush Token(string key, string fallback)
+        => Application.Current?.TryFindResource(key, Application.Current.ActualThemeVariant, out var value) == true && value is IBrush brush
+            ? brush : new SolidColorBrush(Color.Parse(fallback));
 
     public void Report(double percent, string status)
     {

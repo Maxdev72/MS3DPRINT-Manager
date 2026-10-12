@@ -2,6 +2,13 @@
 
 ## 12 octobre 2026
 
+### Passe de finition
+- Fiche client, explorateur de dossiers et corbeille repris dans le même style de tableau (icônes, badges, dates).
+- Une erreur inattendue ne ferme plus le logiciel : elle s’affiche en bas à droite et est consignée dans
+  `%LOCALAPPDATA%\MS3DPRINT Manager\erreurs.log`.
+- Textes complets en infobulle quand une cellule est tronquée, noms accessibles pour les boutons à icône.
+- README réécrit pour décrire le logiciel actuel (navigation, clients, projets, estimations, aperçus, dépannage).
+
 ### Deuxième passe sur l’interface
 - Fil d’Ariane cliquable (Projets › Projet › sous-dossier, ou Clients › Client › Projet) pour remonter en un clic.
 - Colonnes triables en cliquant sur l’en-tête (Projets et Clients), clic droit sur une ligne pour ouvrir ses actions.

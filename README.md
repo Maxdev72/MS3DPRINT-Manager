@@ -34,61 +34,55 @@ registre local nécessaire pour retrouver ces codes.
 
 ## Utilisation
 
-- L’interface utilise Material Design. Dans **Paramètres > Apparence**,
-  choisissez un fond blanc, gris, noir AMOLED ou papier crème, ou le mode
-  automatique selon Windows (blanc ou gris). La couleur d’accent est indépendante :
-  bleu, vert, violet, rouge, orange ou jaune. Les deux choix restent enregistrés
-  pour les prochaines ouvertures. Le mode noir AMOLED utilise des fonds noirs
-  pour les pages, cartes et menus ; les bordures et survols restent visibles.
-- **Clients** : ouvrez une fiche pour modifier la raison sociale ou le nom du
-  particulier, l’adresse, le contact principal et les notes. Le code client
-  reste inchangé. Les actions **Renommer**, **Déplacer** et **Supprimer**
-  gèrent le dossier avec ses projets, documents et fiches. Un client peut être
-  déplacé dans un dossier de classement sous `01_CLIENTS`.
-- **Projets** : modifiez la fiche, renommez le projet ou déplacez-le vers un
-  autre client. Sa référence et son identifiant restent conservés.
-- **Fournisseurs, modèles et produits** : chaque dossier peut recevoir une
-  fiche avec nom, description et notes. Les fournisseurs proposent également
-  contact, adresse, téléphone, courriel et site web. Les fiches restent
-  accessibles après déplacement dans leur catégorie.
-- Dans les documents d’une fiche, utilisez **Nouveau dossier**, **Importer**
-  et **Renommer un fichier…**. Le bouton de renommage ouvre le dossier courant
-  pour choisir un fichier déjà importé, puis demande son nouveau nom complet
-  (avec son extension). Le clic droit permet aussi d’ouvrir, renommer,
-  déplacer ou supprimer un élément.
-  Les destinations doivent rester dans l’espace géré. Un élément existant
-  à destination n’est jamais écrasé.
-- **Corbeille** : les suppressions conservent les documents et leurs fiches.
-  Sélectionnez un élément puis **Restaurer** pour le remettre à son emplacement
-  d’origine. Si cet emplacement est occupé, libérez-le avant de restaurer.
-  Les références des projets restent réservées après une suppression.
-- **Filaments** : ajoutez, modifiez, dupliquez ou supprimez vos références.
-  Chaque fiche contient la marque, le nom, le type de matière, le prix au
-  kilogramme et le caractère abrasif. Le type accepte aussi une saisie libre
-  (par exemple PA-CF). Les filtres portent sur marque, matière et abrasivité.
-  Les fiches supprimées sont restaurables depuis la corbeille.
-- Pour un client professionnel, la recherche d'entreprise propose une aide à
-  la saisie du nom et du SIRET ; l'adresse peut ensuite être complétée. Un
-  particulier n'a pas de champ SIRET. La connexion Internet n'est nécessaire
-  que pour ces suggestions.
-- Les listes de clients et de projets se rafraîchissent lorsque leurs données
-  changent sur le disque, sans recherche ou indexation permanente.
-- **Rechercher** : saisissez un nom, un code client, une référence de projet
-  ou un nom de fichier, puis appuyez sur Entrée ou sur « Rechercher ». La
-  recherche s’exécute à la demande, sans indexation en arrière-plan. Les 200
-  premiers résultats sont affichés ; affinez le terme si nécessaire.
-- Un résultat client ou projet ouvre sa fiche. Un fichier STL ou OBJ ouvre
-  le visualiseur 3D. Les images PNG, JPEG, BMP, GIF et TIFF ainsi que les PDF
-  s’affichent en lecture seule dans l’application ; les autres formats
-  s’ouvrent via Windows.
-- Le visualiseur 3D peut s’ouvrir sans projet : déposez un seul STL ou OBJ
-  dans sa fenêtre, ou utilisez « Choisir un fichier… ». Il affiche les
-  dimensions X/Y/Z en unités du modèle, sans présumer qu’il s’agit de mm.
-- Son test de parois est facultatif : indiquez explicitement l'échelle en
-  millimètres et le seuil voulu. Il signale des zones potentiellement fines,
-  pas une garantie d'imprimabilité. La mesure est suspendue si le maillage est
-  ouvert, non-manifold ou incohérent ; vérifiez toujours le modèle dans le
-  trancheur.
+**Navigation.** Le menu de gauche donne accès à l’Accueil, aux Projets, Clients, Collections, Filaments,
+Estimations, Imprimantes, à la Corbeille et aux Paramètres. `Ctrl+1` à `Ctrl+9` changent de page, `Ctrl+N`
+crée un projet et `Ctrl+K` ouvre la recherche. Sous 1100 px de large, le menu se réduit à une barre d’icônes.
+Le logiciel retient la taille de sa fenêtre. Un fil d’Ariane cliquable indique où l’on se trouve dans un projet
+ou une fiche client.
 
-L’aperçu PDF utilise le moteur intégré à Windows 10 version 2004 ou plus
-récent. Aucun runtime de navigateur séparé n’est nécessaire.
+**Accueil.** Indicateurs (projets, devis, en cours), cinq projets récents, actions rapides et bloc « À surveiller »
+(échéances proches ou dépassées, fiches à compléter).
+
+**Projets.** La liste se filtre par texte et par statut, et se trie en cliquant sur un en-tête. Le menu « ⋯ » de
+chaque ligne (ou un clic droit) permet d’ouvrir le dossier, modifier la fiche, renommer, déplacer vers un autre
+client ou envoyer à la corbeille. Dans un projet : **Nouveau dossier**, **Importer un fichier** (à la racine du
+projet, le dossier de destination se choisit ; dans un dossier, le fichier y est importé directement ; un nom
+`nom__RÉFÉRENCE` est proposé), puis pour chaque fichier **Ouvrir avec…**, **Renommer**, **Déplacer** et
+**Corbeille**. Rien n’est jamais écrasé à destination.
+
+**Clients.** À la création, le **code client est attribué automatiquement** (initiales du nom, puis `AL2`, `AL3`…
+en cas de doublon) et s’affiche en direct dans la fenêtre. On peut renseigner le SIRET, l’e-mail, le portable et
+l’adresse. Pour un professionnel, la recherche d’entreprise (annuaire public des entreprises) et la recherche
+d’adresse proposent des suggestions : la connexion Internet n’est nécessaire que pour elles. La liste affiche le
+code, le type de fiche et le nombre de projets ; les clients historiques sans fiche gardent leur code lu dans les
+références de leurs projets et se complètent depuis « Modifier la fiche ». Depuis une fiche client, **Nouveau
+projet** crée un projet pour ce client.
+
+**Collections, filaments, imprimantes.** Les collections regroupent modèles 3D, produits et fournisseurs (filtre
+par type). Un filament a une marque, un nom, une matière, une couleur, un prix au kilo et un indicateur abrasif.
+Une imprimante a un prix d’achat, une durée de vie et une puissance : son coût horaire alimente les estimations.
+
+**Estimations.** Choisissez le type de prestation (impression 3D, modélisation seule, ou les deux), le filament
+et l’imprimante. L’électricité se calcule en direct à partir de la durée machine, de la puissance de l’imprimante
+et du prix du kWh. Calculez, enregistrez, rechargez ou envoyez à la corbeille une estimation.
+
+**Corbeille.** Les suppressions sont réversibles : **Restaurer** remet l’élément à son emplacement d’origine (si
+cet emplacement est occupé, libérez-le d’abord). Les références de projet restent réservées.
+
+**Recherche (`Ctrl+K`).** Elle porte sur les noms, codes clients, références de projet, noms de fichiers, e-mails
+et téléphones, à la demande et sans indexation. `↑` `↓` puis `Entrée` ouvrent un résultat.
+
+**Aperçus.** Les images s’affichent dans le logiciel. Les PDF s’ouvrent dans une fenêtre intégrée (pages, zoom,
+ajustement à la largeur) avec un bouton **Imprimer…** qui ouvre la boîte d’impression de Windows. Les fichiers
+STL et OBJ s’ouvrent dans le **visualiseur 3D** (rotation, zoom, déplacement, solide ou filaire, couleur,
+dimensions en unités du modèle) ; son test de parois est facultatif et indicatif : il demande l’échelle en
+millimètres et un seuil, signale des zones potentiellement fines et n’est pas une garantie d’imprimabilité.
+Les autres formats s’ouvrent avec l’application Windows associée (**Ouvrir avec…** pour en choisir une).
+
+**Paramètres.** Emplacement de l’espace de travail, vérification de l’arborescence, état des stockages et
+journal des modifications.
+
+**Dépannage.** Une erreur inattendue s’affiche en bas à droite sans fermer le logiciel et est consignée dans
+`%LOCALAPPDATA%\MS3DPRINT Manager\erreurs.log`. L’aperçu PDF utilise le moteur intégré à Windows 10 (version
+2004 ou plus récente) : aucun navigateur séparé n’est nécessaire. Le journal des modifications est dans
+`CHANGELOG.md`.
