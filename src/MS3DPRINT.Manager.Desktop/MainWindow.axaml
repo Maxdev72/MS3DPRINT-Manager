@@ -37,7 +37,7 @@
             <Button Classes="nav-item" Tag="Imprimantes" Click="NavigationButton_Click" AutomationProperties.Name="Imprimantes"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconPrinters}" /><TextBlock Classes="nav-label" Text="Imprimantes" /></StackPanel></Button>
             <Button Classes="nav-item" Tag="Corbeille" Click="NavigationButton_Click" AutomationProperties.Name="Corbeille"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconTrash}" /><TextBlock Classes="nav-label" Text="Corbeille" /></StackPanel></Button>
             <TextBlock Text="OUTILS" Classes="overline nav-label" Margin="12,20,0,8" />
-            <Button Classes="nav-item" Click="OpenThreeDViewer_Click" AutomationProperties.Name="Visualiseur 3D"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconCube}" /><TextBlock Classes="nav-label" Text="Visualiseur 3D" /></StackPanel></Button>
+            <Button x:Name="ViewerNavButton" Classes="nav-item" Click="OpenThreeDViewer_Click" AutomationProperties.Name="Visualiseur 3D"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconCube}" /><TextBlock Classes="nav-label" Text="Visualiseur 3D" /></StackPanel></Button>
           </StackPanel>
         </ScrollViewer>
         <StackPanel Grid.Row="2" Spacing="10">

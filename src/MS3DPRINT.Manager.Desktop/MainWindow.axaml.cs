@@ -177,7 +177,7 @@ public partial class MainWindow : Window
         TrashWorkspacePanel.IsVisible = destination == "Corbeille";
         SettingsWorkspacePanel.IsVisible = destination == "Paramètres";
         FolderWorkspacePanel.IsVisible = false;
-        if (ViewerWorkspacePanel.IsVisible) { _modelViewer?.Release(); ViewerWorkspacePanel.IsVisible = false; _hiddenByViewer = []; RefreshCentralWidth(); }
+        if (ViewerWorkspacePanel.IsVisible) { _modelViewer?.Release(); ViewerWorkspacePanel.IsVisible = false; ViewerNavButton.Classes.Remove("selected"); _hiddenByViewer = []; RefreshCentralWidth(); }
         ClearBreadcrumb();
         FadeIn(destination switch
         {
@@ -1845,6 +1845,8 @@ public partial class MainWindow : Window
             _viewerReturnTitle = PageTitle.Text;
             _viewerReturnSubtitle = PageSubtitle.Text;
             ViewerWorkspacePanel.IsVisible = true;
+            _selectedNavigationButton?.Classes.Remove("selected");
+            ViewerNavButton.Classes.Add("selected");
             RefreshCentralWidth();
         }
         if (_modelViewer is null)
@@ -1865,6 +1867,8 @@ public partial class MainWindow : Window
     {
         _modelViewer?.Release();
         ViewerWorkspacePanel.IsVisible = false;
+        ViewerNavButton.Classes.Remove("selected");
+        _selectedNavigationButton?.Classes.Add("selected");
         RefreshCentralWidth();
         foreach (var panel in _hiddenByViewer) panel.IsVisible = true;
         _hiddenByViewer = [];

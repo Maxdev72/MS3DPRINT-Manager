@@ -27,10 +27,11 @@ public sealed class ModelViewerView : UserControl
     private readonly TextBlock _rendererNote = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
     private DispatcherTimer? _gpuWatch;
     private readonly TextBlock _title = new() { Text = "Aucun modèle", FontSize = 16, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis };
-    private readonly TextBlock _location = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
-    private readonly TextBlock _dimensions = new() { FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _location = new() { Classes = { "caption" }, TextTrimming = TextTrimming.PrefixCharacterEllipsis, IsVisible = false };
+    private readonly TextBlock _dimensions = new() { FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap, IsVisible = false };
     private readonly TextBlock _message = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _analysis = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap, Text = "Analyse indicative sur échantillons, sans certification d’imprimabilité. Aucun fichier n’est modifié." };
+    private readonly TextBlock _analysisSummary = new() { FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap, IsVisible = false };
     private readonly ComboBox _mode = new() { ItemsSource = new[] { "Solide", "Filaire" }, SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch };
     private readonly TextBox _hex = new() { Text = Palette[0].Hex };
     private readonly StackPanel _swatches = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
@@ -40,7 +41,7 @@ public sealed class ModelViewerView : UserControl
     private readonly Button _analyze = new() { Content = "Analyser les parois", IsEnabled = false };
     private readonly Button _cancelAnalysis = new() { Content = "Annuler", IsEnabled = false };
     private readonly Button _reset = new() { Content = "Recentrer", IsEnabled = false };
-    private readonly StackPanel _emptyState = new() { Spacing = 10, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, IsHitTestVisible = false };
+    private readonly StackPanel _emptyState = new() { Spacing = 10, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
     private CancellationTokenSource? _activeLoad;
     private CancellationTokenSource? _activeAnalysis;
     private MeshModel? _mesh;
@@ -55,7 +56,10 @@ public sealed class ModelViewerView : UserControl
         // viewport with its empty state and a navigation hint
         var hint = new TextBlock { Text = "Clic gauche : tourner · Clic droit : déplacer · Molette : zoom · R : recentrer · W : filaire", Classes = { "caption" }, Margin = new Thickness(14, 0, 14, 10), VerticalAlignment = VerticalAlignment.Bottom, IsHitTestVisible = false };
         _emptyState.Children.Add(new TextBlock { Text = "Déposez un fichier STL ou OBJ ici", FontSize = 16, FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Center });
-        _emptyState.Children.Add(new TextBlock { Text = "ou choisissez-en un avec « Ouvrir un fichier »", Classes = { "muted" }, HorizontalAlignment = HorizontalAlignment.Center });
+        _emptyState.Children.Add(new TextBlock { Text = "ou choisissez-en un sur votre ordinateur", Classes = { "muted" }, HorizontalAlignment = HorizontalAlignment.Center });
+        var emptyBrowse = new Button { Content = Icons.Label("IconOpen", "Ouvrir un fichier"), Classes = { "primary-action" }, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 6, 0, 0) };
+        emptyBrowse.Click += async (_, _) => await BrowseAsync();
+        _emptyState.Children.Add(emptyBrowse);
         var stage = new Border
         {
             CornerRadius = new CornerRadius(10), ClipToBounds = true, BorderThickness = new Thickness(1),
@@ -84,8 +88,9 @@ public sealed class ModelViewerView : UserControl
             var color = Color.Parse(hex);
             var swatch = new Button
             {
-                Tag = hex, Width = 28, Height = 28, MinWidth = 28, MinHeight = 28, Padding = new Thickness(0), CornerRadius = new CornerRadius(14),
-                Background = new SolidColorBrush(color), BorderThickness = new Thickness(2)
+                Tag = hex, Width = 32, Height = 32, MinWidth = 32, MinHeight = 32, Padding = new Thickness(4), CornerRadius = new CornerRadius(16),
+                Background = Brushes.Transparent, BorderThickness = new Thickness(2),
+                Content = new Border { Width = 20, Height = 20, CornerRadius = new CornerRadius(10), Background = new SolidColorBrush(color) }
             };
             ToolTip.SetTip(swatch, name);
             AutomationProperties.SetName(swatch, "Couleur " + name.ToLowerInvariant());
@@ -121,11 +126,11 @@ public sealed class ModelViewerView : UserControl
             Children =
             {
                 back,
-                FormKit.SectionLabel("Modèle"), _title, _location, _dimensions, _message, fileButtons,
+                _title, _location, _dimensions, _message, fileButtons,
                 FormKit.SectionLabel("Affichage"), _mode, _swatches, hexRow, Muted("Rendu"), _renderer, _rendererNote,
                 FormKit.SectionLabel("Analyse des parois"),
                 new TextBlock { Text = "STL et OBJ n’indiquent pas leurs unités : choisissez le seuil selon votre buse, votre matériau et votre trancheur.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap },
-                limits, _confirmUnits, analysisButtons, _analysis
+                limits, _confirmUnits, analysisButtons, _analysisSummary, _analysis
             }
         };
         var panel = new ScrollViewer
@@ -133,7 +138,7 @@ public sealed class ModelViewerView : UserControl
             HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
             Content = new Border { Padding = new Thickness(0, 0, 10, 0), Child = side }
         };
-        var root = new Grid { ColumnDefinitions = new ColumnDefinitions("*,320"), ColumnSpacing = 16 };
+        var root = new Grid { ColumnDefinitions = new ColumnDefinitions("*,340"), ColumnSpacing = 16 };
         root.Children.Add(stage);
         Grid.SetColumn(panel, 1);
         root.Children.Add(panel);
@@ -181,6 +186,7 @@ public sealed class ModelViewerView : UserControl
         _stage.Children.Insert(0, next.Visual);
         next.Wireframe = _mode.SelectedIndex == 1;
         if (PreviewColorParser.TryParse(_hex.Text, out var color)) next.ModelColor = color;
+        AutomationProperties.SetName(next.Visual, "Vue 3D du modèle : souris pour tourner, déplacer et zoomer, touche R pour recentrer, W pour le mode filaire");
         next.Visual.KeyDown += Viewport_KeyDown;
         next.Visual.PointerPressed += (_, _) => next.Visual.Focus();
         if (_mesh is not null)
@@ -265,6 +271,7 @@ public sealed class ModelViewerView : UserControl
         _activeLoad?.Cancel();
         _analyze.IsEnabled = false;
         _confirmUnits.IsChecked = false;
+        _analysisSummary.IsVisible = false;
         _analysis.Text = "Confirmez l’échelle du nouveau modèle avant l’analyse.";
         using var load = new CancellationTokenSource();
         _activeLoad = load;
@@ -281,6 +288,8 @@ public sealed class ModelViewerView : UserControl
             _reset.IsEnabled = true;
             _title.Text = Path.GetFileName(path);
             _location.Text = path;
+            ToolTip.SetTip(_location, path);
+            _location.IsVisible = _dimensions.IsVisible = true;
             _dimensions.Text = ModelDimensions.FromMesh(mesh).ToDisplayText();
             _message.Text = $"{mesh.TriangleCount:N0} triangles · chargé en {stopwatch.Elapsed.TotalSeconds:N1} s.";
             ModelLoaded?.Invoke(Path.GetFileName(path));
@@ -344,6 +353,7 @@ public sealed class ModelViewerView : UserControl
         _cancelAnalysis.IsEnabled = true;
         _viewport.Markers = null;
         _viewport.RequestRender(false);
+        _analysisSummary.IsVisible = false;
         _analysis.Text = "Analyse en cours… La navigation reste disponible.";
         try
         {
@@ -362,11 +372,15 @@ public sealed class ModelViewerView : UserControl
             _viewport.Markers = result.ThinSamples.Select(sample => sample.Position).ToArray();
             _viewport.RequestRender(false);
             var topologyBlocksAnalysis = result.BoundaryEdges != 0 || result.NonManifoldEdges != 0 || result.InconsistentEdges != 0 || result.InvalidTriangles != 0;
-            _analysis.Text = $"Seuil {threshold:G} mm · échelle {scale:G} mm/unité : {result.ThinSamples.Count} zones potentiellement fines (points orange), {result.SampleCount:N0}/{result.TriangleCount:N0} centres de faces sondés. " +
+            _analysisSummary.Text = topologyBlocksAnalysis ? "Maillage à corriger avant mesure des parois"
+                : result.ThinSamples.Count == 0 ? "Aucune zone fine détectée"
+                : $"{result.ThinSamples.Count} zones potentiellement fines (points orange)";
+            _analysisSummary.IsVisible = true;
+            _analysis.Text = $"Seuil {threshold:G} mm, échelle {scale:G} mm/unité, {result.SampleCount:N0} faces sondées sur {result.TriangleCount:N0}. " +
                 $"Arêtes ouvertes : {result.BoundaryEdges:N0} ; non-manifold : {result.NonManifoldEdges:N0} ; orientations incohérentes : {result.InconsistentEdges:N0} ; triangles invalides : {result.InvalidTriangles:N0}. " +
-                (topologyBlocksAnalysis ? "Mesure de paroi non effectuée : corrigez d’abord le maillage pour distinguer matière et vide. " : "") +
+                (topologyBlocksAnalysis ? "La mesure de paroi n’a pas été faite : corrigez d’abord le maillage. " : "") +
                 (result.BudgetExhausted ? "Budget atteint : analyse partielle. " : "") +
-                "Sondage non exhaustif selon les normales : détails fins et parois obliques peuvent être manqués. Soudures exactes ; auto-intersections et défauts aux sommets non vérifiés. L’absence d’alerte ne garantit pas l’imprimabilité ; vérifier dans le trancheur.";
+                "Sondage non exhaustif : détails fins et parois obliques peuvent être manqués, auto-intersections non vérifiées. L’absence d’alerte ne garantit pas l’imprimabilité ; vérifiez dans le trancheur.";
         }
         catch (OperationCanceledException) { if (version == _loadVersion) _analysis.Text = "Analyse annulée."; }
         catch (ArgumentException exception) { if (version == _loadVersion) _analysis.Text = "Analyse indisponible : " + exception.Message; }
