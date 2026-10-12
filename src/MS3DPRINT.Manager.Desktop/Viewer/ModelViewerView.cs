@@ -3,6 +3,7 @@ using System.Globalization;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -23,6 +24,12 @@ public sealed class ModelViewerView : UserControl
     private IMeshViewport _viewport = new MeshViewport();
     private readonly Grid _stage = new();
     private AxesGizmo? _gizmo;
+    private readonly MeasureOverlay _overlay = new();
+    private readonly ToggleButton _measureToggle = new() { Content = "Mesurer des distances", IsEnabled = false };
+    private readonly TextBlock _measureList = new() { TextWrapping = TextWrapping.Wrap };
+    private readonly Button _clearMeasures = new() { Content = "Effacer les mesures", IsEnabled = false };
+    private readonly List<(System.Numerics.Vector3 A, System.Numerics.Vector3 B)> _segments = [];
+    private System.Numerics.Vector3? _pendingPoint;
     private readonly ComboBox _renderer = new() { ItemsSource = new[] { "Accéléré (carte graphique)", "Logiciel (processeur)" }, SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch };
     private readonly TextBlock _rendererNote = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
     private DispatcherTimer? _gpuWatch;
@@ -97,6 +104,9 @@ public sealed class ModelViewerView : UserControl
             swatch.Click += (_, _) => { _hex.Text = hex; ApplyColor(); };
             _swatches.Children.Add(swatch);
         }
+        _measureToggle.IsCheckedChanged += (_, _) => UpdateMeasureMode();
+        _clearMeasures.Click += (_, _) => ClearMeasures();
+        _scale.TextChanged += (_, _) => RefreshMeasures();
         _hex.LostFocus += (_, _) => ApplyColor();
         _hex.KeyDown += (_, e) => { if (e.Key == Key.Enter) { ApplyColor(); e.Handled = true; } };
         UpdateSwatches();
@@ -128,6 +138,9 @@ public sealed class ModelViewerView : UserControl
                 back,
                 _title, _location, _dimensions, _message, fileButtons,
                 FormKit.SectionLabel("Affichage"), _mode, _swatches, hexRow, Muted("Rendu"), _renderer, _rendererNote,
+                FormKit.SectionLabel("Mesures"), _measureToggle,
+                new TextBlock { Text = "Cliquez deux points du modèle : ils s’accrochent aux sommets proches. Les longueurs utilisent l’échelle indiquée plus bas. M active, Échap annule le point en cours.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap },
+                _measureList, _clearMeasures,
                 FormKit.SectionLabel("Analyse des parois"),
                 new TextBlock { Text = "STL et OBJ n’indiquent pas leurs unités : choisissez le seuil selon votre buse, votre matériau et votre trancheur.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap },
                 limits, _confirmUnits, analysisButtons, _analysisSummary, _analysis
@@ -187,6 +200,13 @@ public sealed class ModelViewerView : UserControl
         next.Wireframe = _mode.SelectedIndex == 1;
         if (PreviewColorParser.TryParse(_hex.Text, out var color)) next.ModelColor = color;
         AutomationProperties.SetName(next.Visual, "Vue 3D du modèle : souris pour tourner, déplacer et zoomer, touche R pour recentrer, W pour le mode filaire");
+        if (_stage.Children.Contains(_overlay)) _stage.Children.Remove(_overlay);
+        _overlay.Camera = next.Camera;
+        _overlay.Mesh = _mesh;
+        _stage.Children.Insert(1, _overlay);
+        next.CameraChanged += () => _overlay.InvalidateVisual();
+        next.Clicked += point => _ = MeasureClickAsync(point);
+        next.Visual.Cursor = _measureToggle.IsChecked == true ? new Cursor(StandardCursorType.Cross) : null;
         next.Visual.KeyDown += Viewport_KeyDown;
         next.Visual.PointerPressed += (_, _) => next.Visual.Focus();
         if (_mesh is not null)
@@ -224,6 +244,8 @@ public sealed class ModelViewerView : UserControl
     private void Viewport_KeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key == Key.R) { _viewport.ResetView(); e.Handled = true; }
+        else if (e.Key == Key.M && _measureToggle.IsEnabled) { _measureToggle.IsChecked = _measureToggle.IsChecked != true; e.Handled = true; }
+        else if (e.Key == Key.Escape && _pendingPoint is not null) { _pendingPoint = null; RefreshMeasures(); e.Handled = true; }
         else if (e.Key == Key.W) { _mode.SelectedIndex = _mode.SelectedIndex == 1 ? 0 : 1; e.Handled = true; }
     }
 
@@ -282,6 +304,9 @@ public sealed class ModelViewerView : UserControl
             var mesh = await Task.Run(() => MeshLoader.Load(path, load.Token), load.Token);
             if (version != _loadVersion) return;
             _mesh = mesh;
+            _overlay.Mesh = mesh;
+            _measureToggle.IsEnabled = true;
+            ClearMeasures();
             _viewport.SetMesh(mesh);
             _emptyState.IsVisible = false;
             _analyze.IsEnabled = _activeAnalysis is null;
@@ -304,6 +329,83 @@ public sealed class ModelViewerView : UserControl
         {
             if (ReferenceEquals(_activeLoad, load)) _activeLoad = null;
         }
+    }
+
+    private void UpdateMeasureMode()
+    {
+        var on = _measureToggle.IsChecked == true;
+        _viewport.Visual.Cursor = on ? new Cursor(StandardCursorType.Cross) : null;
+        if (!on) _pendingPoint = null;
+        _message.Text = on ? "Mesure : cliquez le premier point sur le modèle." : _message.Text;
+        RefreshMeasures();
+    }
+
+    private void ClearMeasures()
+    {
+        _segments.Clear();
+        _pendingPoint = null;
+        RefreshMeasures();
+    }
+
+    private double MeasureScale => TryNumber(_scale.Text, out var value) ? value : 1;
+
+    private void RefreshMeasures()
+    {
+        _overlay.Segments = _segments.ToArray();
+        _overlay.Pending = _pendingPoint;
+        _overlay.Scale = MeasureScale;
+        _overlay.InvalidateVisual();
+        _clearMeasures.IsEnabled = _segments.Count > 0 || _pendingPoint is not null;
+        var french = CultureInfo.GetCultureInfo("fr-FR");
+        _measureList.IsVisible = _segments.Count > 0;
+        _measureList.Text = string.Join(Environment.NewLine, _segments.Select((segment, index) =>
+        {
+            var delta = segment.B - segment.A;
+            string Part(float value) => (Math.Abs(value) * MeasureScale).ToString("0.##", french);
+            return $"{index + 1} · {MeasureOverlay.FormatLength(System.Numerics.Vector3.Distance(segment.A, segment.B), MeasureScale)}   ΔX {Part(delta.X)} · ΔY {Part(delta.Y)} · ΔZ {Part(delta.Z)}";
+        }));
+    }
+
+    /// <summary>Picks the point under a click (snapping to a nearby vertex) and adds it to the current measure.</summary>
+    private async Task MeasureClickAsync(Point click)
+    {
+        if (_measureToggle.IsChecked != true || _mesh is not { } mesh) return;
+        var bounds = _viewport.Visual.Bounds;
+        var camera = new ViewCamera { Yaw = _viewport.Camera.Yaw, Pitch = _viewport.Camera.Pitch, Zoom = _viewport.Camera.Zoom, PanX = _viewport.Camera.PanX, PanY = _viewport.Camera.PanY };
+        var point = await Task.Run(() =>
+        {
+            var (origin, direction) = ViewMath.Ray(mesh, camera, bounds.Width, bounds.Height, click.X, click.Y);
+            if (!MeshPicker.TryPick(mesh, origin, direction, out var hit, out var triangle)) return (System.Numerics.Vector3?)null;
+            // snap to the closest corner of the triangle when it is within a few pixels of the click
+            var best = hit;
+            var bestDistance = 14.0;
+            for (var corner = 0; corner < 3; corner++)
+            {
+                var vertex = mesh.Positions[mesh.Indices[triangle * 3 + corner]];
+                if (!ViewMath.TryProject(mesh, camera, bounds.Width, bounds.Height, vertex, out var x, out var y)) continue;
+                var distance = Math.Sqrt((x - click.X) * (x - click.X) + (y - click.Y) * (y - click.Y));
+                if (distance < bestDistance) { bestDistance = distance; best = vertex; }
+            }
+            return best;
+        });
+        if (_measureToggle.IsChecked != true || !ReferenceEquals(_mesh, mesh)) return;
+        if (point is not { } picked)
+        {
+            _message.Text = "Aucun point du modèle à cet endroit.";
+            return;
+        }
+        if (_pendingPoint is { } start)
+        {
+            _segments.Add((start, picked));
+            _pendingPoint = null;
+            _message.Text = "Distance : " + MeasureOverlay.FormatLength(System.Numerics.Vector3.Distance(start, picked), MeasureScale) + ". Cliquez un nouveau point pour continuer.";
+        }
+        else
+        {
+            _pendingPoint = picked;
+            _message.Text = "Cliquez le second point.";
+        }
+        RefreshMeasures();
     }
 
     private void UpdateModeMessage()

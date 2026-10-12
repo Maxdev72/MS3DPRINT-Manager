@@ -32,6 +32,10 @@ public sealed class MeshViewport : Control, IMeshViewport
     }
 
     public Control Visual => this;
+    public event Action? CameraChanged;
+    public event Action<Point>? Clicked;
+    private Point _pressPoint;
+    private bool _moved;
     public ViewCamera Camera { get; } = new();
     public bool Wireframe { get; set; }
     public Color ModelColor { get; set; } = Color.FromRgb(0x58, 0xA6, 0xFF);
@@ -53,6 +57,7 @@ public sealed class MeshViewport : Control, IMeshViewport
 
     public void RequestRender(bool interactive)
     {
+        CameraChanged?.Invoke();
         if (interactive) { _settle.Stop(); _settle.Start(); }
         var mesh = _mesh;
         if (mesh is null || Bounds.Width < 2 || Bounds.Height < 2) { InvalidateVisual(); return; }
@@ -123,7 +128,8 @@ public sealed class MeshViewport : Control, IMeshViewport
     {
         base.OnPointerPressed(e);
         var point = e.GetCurrentPoint(this);
-        _last = point.Position;
+        _last = _pressPoint = point.Position;
+        _moved = false;
         _rotating = point.Properties.IsLeftButtonPressed;
         _panning = point.Properties.IsRightButtonPressed || point.Properties.IsMiddleButtonPressed;
         if (_rotating || _panning) { e.Pointer.Capture(this); e.Handled = true; }
@@ -136,6 +142,7 @@ public sealed class MeshViewport : Control, IMeshViewport
         var position = e.GetPosition(this);
         var dx = position.X - _last.X; var dy = position.Y - _last.Y;
         _last = position;
+        if (Math.Abs(position.X - _pressPoint.X) + Math.Abs(position.Y - _pressPoint.Y) > 4) _moved = true;
         if (_rotating)
         {
             Camera.Yaw -= dx * 0.01;
@@ -153,8 +160,10 @@ public sealed class MeshViewport : Control, IMeshViewport
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
         base.OnPointerReleased(e);
+        var wasClick = _rotating && !_moved;
         _rotating = _panning = false;
         e.Pointer.Capture(null);
+        if (wasClick) Clicked?.Invoke(e.GetPosition(this));
         RequestRender(interactive: false);
     }
 

@@ -130,4 +130,41 @@ public sealed class MeshViewerTests : IDisposable
         Assert.Throws<OperationCanceledException>(() =>
             SoftwareRenderer.Render(Cube(), new ViewCamera(), new RenderOptions(64, 64, false, 0xFFFFFFFF, 0xFF000000), null, cancellation.Token));
     }
+
+    [Fact]
+    public void Pick_FindsThePointUnderTheScreenCentreOnTheFrontFace()
+    {
+        var mesh = Cube();
+        var camera = new ViewCamera { Yaw = 0, Pitch = 0 };
+        var (origin, direction) = ViewMath.Ray(mesh, camera, 800, 600, 400, 300);
+
+        Assert.True(MeshPicker.TryPick(mesh, origin, direction, out var hit, out _));
+        // looking straight along +Y at the cube centre: the hit is on the near face, on the centre line
+        Assert.Equal(mesh.Center.X, hit.X, 3);
+        Assert.Equal(mesh.Center.Z, hit.Z, 3);
+        Assert.Equal(mesh.Min.Y, hit.Y, 3);
+    }
+
+    [Fact]
+    public void Project_AndRay_AreInverseOfEachOther()
+    {
+        var mesh = Cube();
+        var camera = new ViewCamera { Yaw = -0.6, Pitch = 0.45, Zoom = 1.3, PanX = 40, PanY = -25 };
+        var point = mesh.Center + new Vector3(0.2f, -0.1f, 0.3f) * mesh.Radius;
+        Assert.True(ViewMath.TryProject(mesh, camera, 1000, 700, point, out var x, out var y));
+
+        var (origin, direction) = ViewMath.Ray(mesh, camera, 1000, 700, x, y);
+        var toPoint = Vector3.Normalize(point - origin);
+
+        Assert.True(Vector3.Dot(toPoint, direction) > 0.99999f);
+    }
+
+    [Fact]
+    public void Pick_MissesWhenTheRayLeavesTheModel()
+    {
+        var mesh = Cube();
+        var (origin, direction) = ViewMath.Ray(mesh, new ViewCamera(), 800, 600, 5, 5);
+
+        Assert.False(MeshPicker.TryPick(mesh, origin, direction, out _, out _));
+    }
 }

@@ -20,6 +20,10 @@ public interface IMeshViewport
     void SetMesh(MeshModel? mesh);
     void ResetView();
     void RequestRender(bool interactive);
+    /// <summary>Raised on the UI thread when the camera moved.</summary>
+    event Action? CameraChanged;
+    /// <summary>A left click that was not a drag, in the control's own coordinates.</summary>
+    event Action<Point>? Clicked;
 }
 
 /// <summary>
@@ -68,8 +72,10 @@ public sealed class GpuMeshViewport : OpenGlControlBase, IMeshViewport
     /// <summary>Raised when the graphics context is unavailable or lost, so the page can fall back to the CPU view.</summary>
     public event Action<string>? Failed;
 
-    /// <summary>Raised on the UI thread when the camera moved, for the axis gizmo.</summary>
     public event Action? CameraChanged;
+    public event Action<Point>? Clicked;
+    private Point _pressPoint;
+    private bool _moved;
 
     public void SetMesh(MeshModel? mesh)
     {
@@ -341,7 +347,8 @@ public sealed class GpuMeshViewport : OpenGlControlBase, IMeshViewport
     {
         base.OnPointerPressed(e);
         var point = e.GetCurrentPoint(this);
-        _last = point.Position;
+        _last = _pressPoint = point.Position;
+        _moved = false;
         _rotating = point.Properties.IsLeftButtonPressed;
         _panning = point.Properties.IsRightButtonPressed || point.Properties.IsMiddleButtonPressed;
         if (_rotating || _panning) { e.Pointer.Capture(this); e.Handled = true; }
@@ -354,6 +361,7 @@ public sealed class GpuMeshViewport : OpenGlControlBase, IMeshViewport
         var position = e.GetPosition(this);
         var dx = position.X - _last.X; var dy = position.Y - _last.Y;
         _last = position;
+        if (Math.Abs(position.X - _pressPoint.X) + Math.Abs(position.Y - _pressPoint.Y) > 4) _moved = true;
         if (_rotating)
         {
             Camera.Yaw -= dx * 0.01;
@@ -371,8 +379,10 @@ public sealed class GpuMeshViewport : OpenGlControlBase, IMeshViewport
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
         base.OnPointerReleased(e);
+        var wasClick = _rotating && !_moved;
         _rotating = _panning = false;
         e.Pointer.Capture(null);
+        if (wasClick) Clicked?.Invoke(e.GetPosition(this));
     }
 
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)

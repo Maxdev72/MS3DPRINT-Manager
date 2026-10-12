@@ -2,6 +2,11 @@
 
 ## 12 octobre 2026
 
+### Visualiseur 3D : mesures
+- Nouvel outil « Mesurer des distances » (touche `M`) : cliquez deux points du modèle, la longueur s’affiche sur la vue et dans le panneau avec ses écarts en X, Y et Z.
+- Les points s’accrochent aux sommets proches ; plusieurs mesures peuvent être gardées, `Échap` annule le point en cours.
+- Les longueurs sont exprimées en mm avec l’échelle (mm par unité du modèle) indiquée dans le panneau.
+
 ### Visualiseur 3D : finition
 - Le menu « Visualiseur 3D » est mis en évidence quand il est ouvert ; bouton « Ouvrir un fichier » au centre de la vue vide.
 - Pastilles de couleur avec anneau de sélection, chemin du fichier abrégé (infobulle complète), résultat de l’analyse des parois résumé en une ligne avec le détail dessous.
