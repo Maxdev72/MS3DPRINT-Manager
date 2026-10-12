@@ -3,7 +3,38 @@ using MS3DPRINT.Manager.Core.Workspace;
 
 namespace MS3DPRINT.Manager.Core.Printers;
 
-public sealed record PrinterProfile(Guid Id, string Brand, string Model, string Name, decimal HourlyRate, string BuildVolume, bool IsActive, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
+public sealed record PrinterProfile(Guid Id, string Brand, string Model, string Name, decimal HourlyRate, string BuildVolume, bool IsActive,
+    DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, decimal PurchasePrice = 0, int LifetimeHours = 0, int? PowerWatts = null)
+{
+    public string DisplayName => string.IsNullOrWhiteSpace(Brand) || string.IsNullOrWhiteSpace(Model) ? Name : $"{Brand} {Model}";
+}
+
+public static class PrinterCostCalculator
+{
+    public static decimal HourlyRate(PrinterProfile printer)
+    {
+        ArgumentNullException.ThrowIfNull(printer);
+        return printer.PurchasePrice > 0 && printer.LifetimeHours > 0
+            ? Math.Round(printer.PurchasePrice / printer.LifetimeHours, 2, MidpointRounding.AwayFromZero)
+            : printer.HourlyRate;
+    }
+
+    public static decimal MachineCost(PrinterProfile printer, decimal durationHours)
+    {
+        if (durationHours < 0) throw new ArgumentOutOfRangeException(nameof(durationHours));
+        return Math.Round(HourlyRate(printer) * durationHours, 2, MidpointRounding.AwayFromZero);
+    }
+
+    public static decimal ElectricityCost(PrinterProfile printer, decimal durationHours, decimal pricePerKwh)
+    {
+        ArgumentNullException.ThrowIfNull(printer);
+        if (durationHours < 0) throw new ArgumentOutOfRangeException(nameof(durationHours));
+        if (pricePerKwh < 0) throw new ArgumentOutOfRangeException(nameof(pricePerKwh));
+        return printer.PowerWatts is > 0
+            ? Math.Round(durationHours * printer.PowerWatts.Value / 1000m * pricePerKwh, 2, MidpointRounding.AwayFromZero)
+            : 0m;
+    }
+}
 
 public sealed class PrinterStore
 {
@@ -76,6 +107,7 @@ public sealed class PrinterStore
         ArgumentNullException.ThrowIfNull(profile);
         if (profile.Id == Guid.Empty) throw new ArgumentException("L’identifiant de l’imprimante est requis.");
         if (string.IsNullOrWhiteSpace(profile.Brand) || string.IsNullOrWhiteSpace(profile.Model) || string.IsNullOrWhiteSpace(profile.Name)) throw new ArgumentException("La marque, le modèle et le nom sont requis.");
-        if (profile.HourlyRate < 0) throw new ArgumentException("Le coût horaire doit être positif.");
+        if (profile.HourlyRate < 0 || profile.PurchasePrice < 0 || profile.LifetimeHours < 0 || profile.PowerWatts < 0)
+            throw new ArgumentException("Les coûts et caractéristiques de l’imprimante doivent être positifs.");
     }
 }

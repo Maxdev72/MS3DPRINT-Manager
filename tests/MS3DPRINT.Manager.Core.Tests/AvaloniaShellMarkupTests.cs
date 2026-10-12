@@ -45,7 +45,8 @@ public sealed class AvaloniaShellMarkupTests
         var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
 
         Assert.Contains("f?.Brand", source, StringComparison.Ordinal);
-        Assert.Contains("printer?.Name", source, StringComparison.Ordinal);
+        Assert.Contains("printer is null", source, StringComparison.Ordinal);
+        Assert.Contains("printer.DisplayName", source, StringComparison.Ordinal);
     }
 
     [Fact]

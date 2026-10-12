@@ -1119,7 +1119,7 @@ public partial class MainWindow : Window
             EstimateFilament.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>((f, _) => new TextBlock { Text = f is null ? "Filament indisponible" : $"{f?.Brand} · {f?.Name} ({f?.PricePerKg:0.00} €/kg)" });
             EstimateFilament.SelectedIndex = filaments.Count > 0 ? 0 : -1;
             EstimatePrinter.ItemsSource = printers.Where(printer => printer.IsActive).ToArray();
-            EstimatePrinter.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<PrinterProfile>((printer, _) => new TextBlock { Text = printer is null ? "Imprimante indisponible" : $"{printer?.Name} · {printer?.HourlyRate:0.00} €/h" });
+            EstimatePrinter.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<PrinterProfile>((printer, _) => new TextBlock { Text = printer is null ? "Imprimante indisponible" : $"{printer.DisplayName} · {PrinterCostCalculator.HourlyRate(printer):0.00} €/h" });
             EstimatePrinter.SelectedIndex = printers.Any(printer => printer.IsActive) ? 0 : -1;
             EstimateDetail.Text = filaments.Count == 0 ? "Ajoutez un filament dans la page Filaments pour démarrer." : "Renseignez vos paramètres puis calculez.";
             await LoadSavedEstimatesAsync(root);
@@ -1136,7 +1136,7 @@ public partial class MainWindow : Window
     private void EstimatePrinter_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (EstimatePrinter.SelectedItem is not PrinterProfile printer) return;
-        EstimateMachineRate.Text = printer.HourlyRate.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        EstimateMachineRate.Text = PrinterCostCalculator.HourlyRate(printer).ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
     }
 
     private async void RefreshPrinters_Click(object? sender, RoutedEventArgs e) => await LoadPrintersAsync();
@@ -1149,7 +1149,8 @@ public partial class MainWindow : Window
         {
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
             var now = DateTimeOffset.UtcNow;
-            new PrinterStore(root).Create(new PrinterProfile(Guid.NewGuid(), dialog.Brand, dialog.Model, dialog.PrinterName, dialog.HourlyRate, dialog.BuildVolume, dialog.PrinterIsActive, now, now));
+            new PrinterStore(root).Create(new PrinterProfile(Guid.NewGuid(), dialog.Brand, dialog.Model, dialog.PrinterName, dialog.HourlyRate, dialog.BuildVolume, dialog.PrinterIsActive, now, now,
+                dialog.PurchasePrice, dialog.LifetimeHours, dialog.PowerWatts));
             PageSubtitle.Text = "Imprimante ajoutée.";
             await LoadPrintersAsync();
         }
@@ -1165,7 +1166,8 @@ public partial class MainWindow : Window
         try
         {
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
-            new PrinterStore(root).Update(original with { Brand = dialog.Brand, Model = dialog.Model, Name = dialog.PrinterName, HourlyRate = dialog.HourlyRate, BuildVolume = dialog.BuildVolume, IsActive = dialog.PrinterIsActive }, original.UpdatedAt);
+            new PrinterStore(root).Update(original with { Brand = dialog.Brand, Model = dialog.Model, Name = dialog.PrinterName, HourlyRate = dialog.HourlyRate, BuildVolume = dialog.BuildVolume,
+                IsActive = dialog.PrinterIsActive, PurchasePrice = dialog.PurchasePrice, LifetimeHours = dialog.LifetimeHours, PowerWatts = dialog.PowerWatts }, original.UpdatedAt);
             await LoadPrintersAsync();
             PageSubtitle.Text = "Imprimante enregistrée.";
         }
@@ -1206,8 +1208,8 @@ public partial class MainWindow : Window
                 var details = string.IsNullOrWhiteSpace(printer.BuildVolume) ? (printer.IsActive ? "Active" : "Inactive") : $"{printer.BuildVolume} · {(printer.IsActive ? "Active" : "Inactive")}";
                 var row = new Grid { ColumnDefinitions = new ColumnDefinitions("2*,*,Auto"), ColumnSpacing = 16, MinHeight = 48 };
                 var identity = new StackPanel { Spacing = 1 };
-                identity.Children.Add(CreateCompactTableCell(printer.Name, prominent: true));
-                identity.Children.Add(CreateCompactTableCell($"{printer.Brand} · {printer.Model} · {printer.HourlyRate:0.00} €/h"));
+                identity.Children.Add(CreateCompactTableCell(printer.DisplayName, prominent: true));
+                identity.Children.Add(CreateCompactTableCell($"{printer.BuildVolume} · {PrinterCostCalculator.HourlyRate(printer):0.00} €/h"));
                 var capacity = CreateCompactTableCell(details, accent: printer.IsActive);
                 Grid.SetColumn(capacity, 1);
                 var edit = new Button { Content = "✎  Modifier", Tag = printer };
@@ -1274,10 +1276,11 @@ public partial class MainWindow : Window
         EstimateName.Text = estimate.Name;
         EstimateProject.SelectedItem = (EstimateProject.ItemsSource as IEnumerable<ProjectSummary>)?.FirstOrDefault(project => project.Reference == estimate.ProjectReference && project.ClientFolderName == estimate.ClientName);
         EstimateFilament.SelectedItem = (EstimateFilament.ItemsSource as IEnumerable<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>)?.FirstOrDefault(filament => $"{filament.Brand} {filament.Name}" == estimate.FilamentName);
-        EstimatePrinter.SelectedItem = (EstimatePrinter.ItemsSource as IEnumerable<PrinterProfile>)?.FirstOrDefault(printer => printer.Name == estimate.PrinterName);
+        EstimatePrinter.SelectedItem = (EstimatePrinter.ItemsSource as IEnumerable<PrinterProfile>)?.FirstOrDefault(printer => printer.Name == estimate.PrinterName || printer.DisplayName == estimate.PrinterName);
         EstimateWeight.Text = estimate.WeightGrams.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
         EstimateHours.Text = estimate.MachineHours.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
         EstimateMachineRate.Text = estimate.MachineHourlyRate.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        EstimateKwhPrice.Text = "0,25";
         EstimateElectricity.Text = inputs.ElectricityCost.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
         EstimateDesign.Text = inputs.DesignCost.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
         EstimateLabor.Text = inputs.LaborCost.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
@@ -1300,6 +1303,7 @@ public partial class MainWindow : Window
         EstimateWeight.Text = "100";
         EstimateHours.Text = "2";
         EstimateMachineRate.Text = "2";
+        EstimateKwhPrice.Text = "0,25";
         EstimateElectricity.Text = EstimateDesign.Text = EstimateLabor.Text = EstimatePostProcessing.Text = EstimateConsumables.Text = EstimatePackaging.Text = EstimateMisc.Text = EstimateDiscount.Text = "0";
         EstimateMargin.Text = "30";
         EstimateFailure.Text = "5";
@@ -1322,7 +1326,7 @@ public partial class MainWindow : Window
             TryEstimateValue(EstimateHours.Text, out var savedHours);
             TryEstimateValue(EstimateMachineRate.Text, out var savedRate);
             var project = EstimateProject.SelectedItem as ProjectSummary;
-            var profile = new EstimateProfile(_loadedEstimate?.Id ?? Guid.NewGuid(), string.IsNullOrWhiteSpace(EstimateName.Text) ? "Nouvelle estimation" : EstimateName.Text.Trim(), $"{filament.Brand} {filament.Name}", printer?.Name ?? "Coût machine manuel", _latestEstimateInputs, _latestEstimateResult, _loadedEstimate?.CreatedAt ?? DateTimeOffset.UtcNow, savedWeight, savedHours, savedRate, project?.Reference, project?.ClientFolderName);
+            var profile = new EstimateProfile(_loadedEstimate?.Id ?? Guid.NewGuid(), string.IsNullOrWhiteSpace(EstimateName.Text) ? "Nouvelle estimation" : EstimateName.Text.Trim(), $"{filament.Brand} {filament.Name}", printer?.DisplayName ?? "Coût machine manuel", _latestEstimateInputs, _latestEstimateResult, _loadedEstimate?.CreatedAt ?? DateTimeOffset.UtcNow, savedWeight, savedHours, savedRate, project?.Reference, project?.ClientFolderName);
             var store = new EstimateStore(root);
             if (_loadedEstimate is null) store.Create(profile);
             else store.Update(profile);
@@ -1343,12 +1347,12 @@ public partial class MainWindow : Window
         }
 
         if (!TryEstimateValue(EstimateWeight.Text, out var grams) || !TryEstimateValue(EstimateHours.Text, out var hours) ||
-            !TryEstimateValue(EstimateMachineRate.Text, out var rate) || !TryEstimateValue(EstimateElectricity.Text, out var electricity) ||
+            !TryEstimateValue(EstimateMachineRate.Text, out var rate) || !TryEstimateValue(EstimateKwhPrice.Text, out var pricePerKwh) || !TryEstimateValue(EstimateElectricity.Text, out var electricity) ||
             !TryEstimateValue(EstimateDesign.Text, out var design) || !TryEstimateValue(EstimateLabor.Text, out var labor) ||
             !TryEstimateValue(EstimatePostProcessing.Text, out var postProcessing) || !TryEstimateValue(EstimateConsumables.Text, out var consumables) ||
             !TryEstimateValue(EstimatePackaging.Text, out var packaging) || !TryEstimateValue(EstimateMisc.Text, out var misc) ||
             !TryEstimateValue(EstimateMargin.Text, out var margin) || !TryEstimateValue(EstimateFailure.Text, out var failure) || !TryEstimateValue(EstimateDiscount.Text, out var discount) ||
-            grams < 0 || hours < 0 || rate < 0 || electricity < 0 || design < 0 || labor < 0 || postProcessing < 0 || consumables < 0 || packaging < 0 || misc < 0)
+            grams < 0 || hours < 0 || rate < 0 || pricePerKwh < 0 || electricity < 0 || design < 0 || labor < 0 || postProcessing < 0 || consumables < 0 || packaging < 0 || misc < 0)
         {
             EstimateDetail.Text = "Saisissez des montants positifs, avec une virgule ou un point.";
             return;
@@ -1356,8 +1360,13 @@ public partial class MainWindow : Window
 
         try
         {
+            var printer = EstimatePrinter.SelectedItem as PrinterProfile;
+            var machineCost = printer is null ? hours * rate : PrinterCostCalculator.MachineCost(printer, hours);
+            var electricityCost = printer?.PowerWatts is > 0 ? PrinterCostCalculator.ElectricityCost(printer, hours, pricePerKwh) : electricity;
+            EstimateMachineRate.Text = (printer is null ? rate : PrinterCostCalculator.HourlyRate(printer)).ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+            EstimateElectricity.Text = electricityCost.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
             var inputs = new EstimateInputs(
-                MaterialCost: filament.PricePerKg * grams / 1000m, MachineCost: hours * rate, ElectricityCost: electricity,
+                MaterialCost: filament.PricePerKg * grams / 1000m, MachineCost: machineCost, ElectricityCost: electricityCost,
                 DesignCost: design, LaborCost: labor, PostProcessingCost: postProcessing, ConsumablesCost: consumables,
                 PackagingShippingCost: packaging, MiscCost: misc, MarginPercent: margin, FailureRatePercent: failure, DiscountPercent: discount);
             var result = EstimateCalculator.Calculate(inputs);
@@ -1382,7 +1391,7 @@ public partial class MainWindow : Window
         try
         {
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
-            new WorkspaceFilamentEditor().Create(root, dialog.Brand, dialog.FilamentName, dialog.Material, dialog.Price, dialog.IsAbrasive);
+            new WorkspaceFilamentEditor().Create(root, dialog.Brand, dialog.FilamentName, dialog.Material, dialog.Price, dialog.IsAbrasive, dialog.Color);
             PageSubtitle.Text = "Filament ajouté.";
             await LoadFilamentsAsync();
         }
@@ -1398,7 +1407,7 @@ public partial class MainWindow : Window
         try
         {
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
-            new WorkspaceFilamentEditor().Update(root, original, dialog.Brand, dialog.FilamentName, dialog.Material, dialog.Price, dialog.IsAbrasive);
+            new WorkspaceFilamentEditor().Update(root, original, dialog.Brand, dialog.FilamentName, dialog.Material, dialog.Price, dialog.IsAbrasive, dialog.Color);
             PageSubtitle.Text = "Fiche filament enregistrée.";
             await LoadFilamentsAsync();
         }
@@ -1420,7 +1429,8 @@ public partial class MainWindow : Window
                 var row = new Grid { ColumnDefinitions = new ColumnDefinitions("2*,*,Auto"), ColumnSpacing = 16, MinHeight = 48 };
                 var button = new Button { Content = CreateCompactTableCell($"{filament.Brand} · {filament.Name}", prominent: true), Tag = filament, HorizontalContentAlignment = HorizontalAlignment.Left, HorizontalAlignment = HorizontalAlignment.Stretch, Classes = { "table-row" } };
                 button.Click += EditFilament_Click;
-                var material = CreateCompactTableCell($"{filament.Material} · {filament.PricePerKg:0.00} €/kg{(filament.IsAbrasive ? " · Abrasif" : string.Empty)}", accent: filament.IsAbrasive);
+                var color = string.IsNullOrWhiteSpace(filament.Color) ? string.Empty : $" · {filament.Color}";
+                var material = CreateCompactTableCell($"{filament.Material}{color} · {filament.PricePerKg:0.00} €/kg{(filament.IsAbrasive ? " · Abrasif" : string.Empty)}", accent: filament.IsAbrasive);
                 Grid.SetColumn(material, 1);
                 var trash = new Button { Content = "⌫  Corbeille", Tag = filament };
                 trash.Click += TrashFilament_Click;
