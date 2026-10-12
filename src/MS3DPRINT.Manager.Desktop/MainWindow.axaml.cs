@@ -972,6 +972,22 @@ public partial class MainWindow : Window
         { PageSubtitle.Text = exception.Message; }
     }
 
+    private async void EditPrinter_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: PrinterProfile original }) return;
+        var dialog = new CreatePrinterWindow(original);
+        if (!await dialog.ShowDialog<bool>(this)) return;
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            new PrinterStore(root).Update(original with { Brand = dialog.Brand, Model = dialog.Model, Name = dialog.PrinterName, HourlyRate = dialog.HourlyRate, BuildVolume = dialog.BuildVolume, IsActive = dialog.PrinterIsActive }, original.UpdatedAt);
+            await LoadPrintersAsync();
+            PageSubtitle.Text = "Imprimante enregistrée.";
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { PageSubtitle.Text = exception.Message; }
+    }
+
     private async Task LoadPrintersAsync()
     {
         var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
@@ -987,21 +1003,14 @@ public partial class MainWindow : Window
             foreach (var printer in printers)
             {
                 var details = string.IsNullOrWhiteSpace(printer.BuildVolume) ? (printer.IsActive ? "Active" : "Inactive") : $"{printer.BuildVolume} · {(printer.IsActive ? "Active" : "Inactive")}";
-                PrinterList.Children.Add(new Border
-                {
-                    Background = Avalonia.Media.Brushes.Transparent,
-                    Padding = new Avalonia.Thickness(14),
-                    Child = new StackPanel
-                    {
-                        Spacing = 4,
-                        Children =
-                        {
-                            new TextBlock { Text = printer.Name, FontWeight = FontWeight.SemiBold },
-                            new TextBlock { Text = $"{printer.Brand} · {printer.Model} · {printer.HourlyRate:0.00} €/h", Foreground = Avalonia.Media.Brushes.LightSteelBlue },
-                            new TextBlock { Text = details, Foreground = Avalonia.Media.Brushes.LightSteelBlue }
-                        }
-                    }
-                });
+                var edit = new Button { Content = "Modifier", Tag = printer, HorizontalAlignment = HorizontalAlignment.Left };
+                edit.Click += EditPrinter_Click;
+                var card = new StackPanel { Spacing = 4 };
+                card.Children.Add(new TextBlock { Text = printer.Name, FontWeight = FontWeight.SemiBold });
+                card.Children.Add(new TextBlock { Text = $"{printer.Brand} · {printer.Model} · {printer.HourlyRate:0.00} €/h", Foreground = Avalonia.Media.Brushes.LightSteelBlue });
+                card.Children.Add(new TextBlock { Text = details, Foreground = Avalonia.Media.Brushes.LightSteelBlue });
+                card.Children.Add(edit);
+                PrinterList.Children.Add(new Border { Background = Avalonia.Media.Brushes.Transparent, Padding = new Avalonia.Thickness(14), Child = card });
             }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException)
