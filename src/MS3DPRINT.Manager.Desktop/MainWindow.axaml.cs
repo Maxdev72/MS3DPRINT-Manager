@@ -390,7 +390,8 @@ public partial class MainWindow : Window
         if (!await dialog.ShowDialog<bool>(this) || dialog.Client is not { } selected) return;
         try
         {
-            await Task.Run(() => new WorkspaceProjectCreator().Create(selected.ClientPath, selected.ClientCode, DateTime.Today.Year, dialog.ProjectName));
+            var projectName = dialog.ProjectName;
+            await Task.Run(() => new WorkspaceProjectCreator().Create(selected.ClientPath, selected.ClientCode, DateTime.Today.Year, projectName));
             PageSubtitle.Text = "Projet créé.";
             await LoadClientDetailAsync(client with { ProjectCount = client.ProjectCount + 1 });
         }
@@ -551,12 +552,27 @@ public partial class MainWindow : Window
         try
         {
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
-            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.ManagedFileService(root).CreateFolder(context.Item2, dialog.Value));
+            var folderName = dialog.Value;
+            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.ManagedFileService(root).CreateFolder(context.Item2, folderName));
             PageSubtitle.Text = "Dossier créé.";
             await LoadProjectDirectoryAsync(context.Item1, context.Item2);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         { PageSubtitle.Text = exception.Message; }
+    }
+
+    /// <summary>Project sub-folders (two levels) that can receive an imported file.</summary>
+    private static IReadOnlyList<ImportDestination> ImportDestinations(string projectPath)
+    {
+        var folders = new List<ImportDestination>();
+        foreach (var first in Directory.EnumerateDirectories(projectPath).OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+        {
+            if (Path.GetFileName(first).StartsWith('.')) continue;
+            folders.Add(new ImportDestination(Path.GetFileName(first), first));
+            foreach (var second in Directory.EnumerateDirectories(first).OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+                folders.Add(new ImportDestination(Path.GetFileName(first) + " / " + Path.GetFileName(second), second));
+        }
+        return folders;
     }
 
     private async void ImportProjectFile_Click(object? sender, RoutedEventArgs e)
@@ -566,14 +582,26 @@ public partial class MainWindow : Window
         var source = files.FirstOrDefault()?.TryGetLocalPath();
         if (string.IsNullOrWhiteSpace(source)) return;
         var originalName = Path.GetFileName(source);
-        var naming = new ImportNameWindow(originalName, ProjectFileClassifier.SuggestImportName(originalName, context.Item1.Reference), context.Item1.Reference);
+        // From the project root the destination is a choice; inside a folder the file simply goes there.
+        var atRoot = string.Equals(Path.GetFullPath(context.Item2).TrimEnd(Path.DirectorySeparatorChar), Path.GetFullPath(context.Item1.ProjectPath).TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase);
+        IReadOnlyList<ImportDestination>? destinations = null;
+        string? suggestedFolder = null;
+        if (atRoot)
+        {
+            destinations = ImportDestinations(context.Item1.ProjectPath);
+            try { suggestedFolder = Path.Combine(context.Item1.ProjectPath, ProjectFileClassifier.Suggest(originalName, context.Item1.FolderName).RelativeDirectory); }
+            catch (ArgumentException) { }
+        }
+        var naming = new ImportNameWindow(originalName, ProjectFileClassifier.SuggestImportName(originalName, context.Item1.Reference), context.Item1.Reference, destinations, suggestedFolder);
         if (!await naming.ShowDialog<bool>(this)) return;
         try
         {
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
             var finalName = naming.FileName;
-            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.ManagedFileService(root).Import(source, context.Item2, finalName));
-            PageSubtitle.Text = string.Equals(finalName, originalName, StringComparison.Ordinal) ? "Fichier importé." : $"Fichier importé sous le nom {finalName}.";
+            var targetDirectory = naming.DestinationDirectory ?? context.Item2;
+            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.ManagedFileService(root).Import(source, targetDirectory, finalName));
+            var where = naming.DestinationDirectory is null ? string.Empty : $" dans {Path.GetRelativePath(context.Item1.ProjectPath, targetDirectory)}";
+            PageSubtitle.Text = (string.Equals(finalName, originalName, StringComparison.Ordinal) ? "Fichier importé" : $"Fichier importé sous le nom {finalName}") + where + ".";
             await LoadProjectDirectoryAsync(context.Item1, context.Item2);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
@@ -607,7 +635,8 @@ public partial class MainWindow : Window
         try
         {
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
-            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).RenamePath(context.Path, dialog.Value));
+            var newName = dialog.Value;
+            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).RenamePath(context.Path, newName));
             PageSubtitle.Text = isDirectory ? "Dossier renommé." : "Fichier renommé.";
             await LoadProjectDirectoryAsync(context.Project, context.Directory);
         }
@@ -720,7 +749,8 @@ public partial class MainWindow : Window
             if (!await completion.ShowDialog<bool>(this)) return;
             try
             {
-                var completed = await Task.Run(() => new WorkspaceProjectCreator().CompleteExisting(root, project, client.Profile, completion.Value));
+                var completedName = completion.Value;
+                var completed = await Task.Run(() => new WorkspaceProjectCreator().CompleteExisting(root, project, client.Profile, completedName));
                 PageSubtitle.Text = "Fiche projet historique complétée.";
                 if (_projectListMode) await LoadProjectsAsync();
                 else await LoadProjectDirectoryAsync(project with { Profile = completed }, project.ProjectPath);
@@ -735,7 +765,8 @@ public partial class MainWindow : Window
         try
         {
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
-            var updated = await Task.Run(() => new WorkspaceProfileEditor().UpdateProject(root, profile, dialog.Status, dialog.DueDate, dialog.Description, dialog.Notes));
+            var (status, dueDate, description, notes) = (dialog.Status, dialog.DueDate, dialog.Description, dialog.Notes);
+            var updated = await Task.Run(() => new WorkspaceProfileEditor().UpdateProject(root, profile, status, dueDate, description, notes));
             PageSubtitle.Text = "Fiche projet enregistrée.";
             if (_projectListMode) await LoadProjectsAsync();
             else await LoadProjectDirectoryAsync(project with { Profile = updated }, project.ProjectPath);
@@ -852,7 +883,8 @@ public partial class MainWindow : Window
         try
         {
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
-            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).RenameProject(project, dialog.Value));
+            var newName = dialog.Value;
+            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).RenameProject(project, newName));
             PageTitle.Text = "Projets";
             PageSubtitle.Text = "Projet renommé.";
             await LoadProjectsAsync();
@@ -889,12 +921,11 @@ public partial class MainWindow : Window
         var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
         try
         {
-            if (dialog.IsIndividual)
-                new WorkspaceClientCreator().CreateIndividual(root, dialog.FirstName, dialog.LastName, dialog.Code, dialog.Address);
-            else
-                new WorkspaceClientCreator().CreateProfessional(root, dialog.ClientName, dialog.Code, dialog.Siret, dialog.Address);
+            var created = dialog.IsIndividual
+                ? new WorkspaceClientCreator().CreateIndividual(root, dialog.FirstName, dialog.LastName, null, dialog.Address)
+                : new WorkspaceClientCreator().CreateProfessional(root, dialog.ClientName, null, dialog.Siret, dialog.Address);
             PageTitle.Text = "Clients";
-            PageSubtitle.Text = "Client créé.";
+            PageSubtitle.Text = $"Client créé (code {created.ClientCode}).";
             ShowWorkspace("Clients");
             await LoadClientsAsync();
         }
@@ -1017,9 +1048,11 @@ public partial class MainWindow : Window
             try
             {
                 var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+                var (individual, lastName, clientName, code) = (completion.IsIndividual, completion.LastName, completion.ClientName, completion.Code);
+                var (firstName, siret, address) = (completion.FirstName, completion.Siret, completion.Address);
                 var completedProfile = await Task.Run(() => new WorkspaceClientCreator().CompleteExisting(root, client.ClientPath,
-                    completion.IsIndividual ? ClientKind.Individual : ClientKind.Professional,
-                    completion.IsIndividual ? completion.LastName : completion.ClientName, completion.Code, completion.FirstName, completion.LastName, completion.Siret, completion.Address));
+                    individual ? ClientKind.Individual : ClientKind.Professional,
+                    individual ? lastName : clientName, code, firstName, lastName, siret, address));
                 PageSubtitle.Text = "Fiche client historique complétée.";
                 if (_clientListMode) await LoadClientsAsync();
                 else await LoadClientDetailAsync(client with { Profile = completedProfile });
@@ -1034,9 +1067,11 @@ public partial class MainWindow : Window
         try
         {
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
-            var updated = await Task.Run(() => new WorkspaceProfileEditor().UpdateClient(root, profile, dialog.Address, dialog.Notes,
-                dialog.ContactFirstName, dialog.ContactLastName, dialog.ContactRole, dialog.ContactPhone, dialog.ContactEmail,
-                dialog.CompanyName, dialog.Siret, dialog.IdentityFirstName, dialog.IdentityLastName));
+            var (address, notes, contactFirst, contactLast, contactRole) = (dialog.Address, dialog.Notes, dialog.ContactFirstName, dialog.ContactLastName, dialog.ContactRole);
+            var (contactPhone, contactEmail, companyName, siret, firstName, lastName) = (dialog.ContactPhone, dialog.ContactEmail, dialog.CompanyName, dialog.Siret, dialog.IdentityFirstName, dialog.IdentityLastName);
+            var updated = await Task.Run(() => new WorkspaceProfileEditor().UpdateClient(root, profile, address, notes,
+                contactFirst, contactLast, contactRole, contactPhone, contactEmail,
+                companyName, siret, firstName, lastName));
             PageSubtitle.Text = "Fiche client enregistrée.";
             if (_clientListMode) await LoadClientsAsync();
             else await LoadClientDetailAsync(client with { Profile = updated });
@@ -1071,7 +1106,8 @@ public partial class MainWindow : Window
         try
         {
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
-            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).RenameClient(client, dialog.Value));
+            var newName = dialog.Value;
+            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).RenameClient(client, newName));
             PageTitle.Text = "Clients";
             PageSubtitle.Text = "Client renommé.";
             await LoadClientsAsync();
@@ -1113,8 +1149,9 @@ public partial class MainWindow : Window
         try
         {
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
-            var item = await Task.Run(() => new WorkspaceCollectionCreator().Create(root, dialog.Category, dialog.NameValue));
-            await Task.Run(() => new WorkspaceCollectionEditor().Save(root, item, dialog.Category, item.Name, null, null));
+            var (newCategory, newName) = (dialog.Category, dialog.NameValue);
+            var item = await Task.Run(() => new WorkspaceCollectionCreator().Create(root, newCategory, newName));
+            await Task.Run(() => new WorkspaceCollectionEditor().Save(root, item, newCategory, item.Name, null, null));
             PageSubtitle.Text = "Collection créée.";
             await LoadCollectionsAsync();
         }
@@ -1165,8 +1202,10 @@ public partial class MainWindow : Window
         {
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
             var category = Path.GetRelativePath(root, item.Path).Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)[0];
-            await Task.Run(() => new WorkspaceCollectionEditor().Save(root, item, category, dialog.NameValue, dialog.Description, dialog.Notes,
-                dialog.Contact, dialog.Address, dialog.Phone, dialog.Email, dialog.Website));
+            var (name, description, notes, contact) = (dialog.NameValue, dialog.Description, dialog.Notes, dialog.Contact);
+            var (address, phone, email, website) = (dialog.Address, dialog.Phone, dialog.Email, dialog.Website);
+            await Task.Run(() => new WorkspaceCollectionEditor().Save(root, item, category, name, description, notes,
+                contact, address, phone, email, website));
             PageSubtitle.Text = "Fiche collection enregistrée.";
             await LoadCollectionsAsync();
         }
@@ -1204,7 +1243,8 @@ public partial class MainWindow : Window
         try
         {
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
-            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).RenameCollection(item, CollectionCategory(root, item), dialog.Value));
+            var newName = dialog.Value;
+            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).RenameCollection(item, CollectionCategory(root, item), newName));
             PageSubtitle.Text = "Collection renommée.";
             await LoadCollectionsAsync();
         }

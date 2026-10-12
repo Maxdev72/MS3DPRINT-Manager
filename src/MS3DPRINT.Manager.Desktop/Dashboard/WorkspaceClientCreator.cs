@@ -27,8 +27,23 @@ public sealed class WorkspaceClientCreator
         return profile;
     }
 
-    public ClientProfile CreateProfessional(string workspaceRoot, string name, string code, string? siret = null, string? address = null)
+    /// <summary>First free code for a client: the initials of its name ("Alexis Leroy" gives AL), then AL2, AL3...</summary>
+    public string GenerateCode(string workspaceRoot, string identity)
     {
+        var baseCode = ClientCodeSuggester.Suggest(identity);
+        if (baseCode.Length == 0) throw new ArgumentException("Le nom du client ne permet pas de générer un code.", nameof(identity));
+        var used = new WorkspaceClientReader().Load(workspaceRoot)
+            .Select(client => client.ClientCode)
+            .Where(code => !string.IsNullOrWhiteSpace(code))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (!used.Contains(baseCode)) return baseCode;
+        for (var number = 2; ; number++)
+            if (!used.Contains(baseCode + number)) return baseCode + number;
+    }
+
+    public ClientProfile CreateProfessional(string workspaceRoot, string name, string? code = null, string? siret = null, string? address = null)
+    {
+        if (string.IsNullOrWhiteSpace(code)) code = GenerateCode(workspaceRoot, name);
         var paths = new WorkspaceMetadataPaths(workspaceRoot);
         var now = DateTimeOffset.UtcNow;
         var folderName = NameNormalizer.Normalize(name);
@@ -37,8 +52,9 @@ public sealed class WorkspaceClientCreator
         return new ClientCreationService(paths.RootPath, new FolderTreeService(), new ClientProfileStore(paths), new ClientCodeRegistry(Path.Combine(paths.RootPath, "data"))).Create(profile);
     }
 
-    public ClientProfile CreateIndividual(string workspaceRoot, string firstName, string lastName, string code, string? address = null)
+    public ClientProfile CreateIndividual(string workspaceRoot, string firstName, string lastName, string? code = null, string? address = null)
     {
+        if (string.IsNullOrWhiteSpace(code)) code = GenerateCode(workspaceRoot, $"{firstName} {lastName}");
         var paths = new WorkspaceMetadataPaths(workspaceRoot);
         var now = DateTimeOffset.UtcNow;
         var folderName = NameNormalizer.Normalize($"{firstName} {lastName}");

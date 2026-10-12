@@ -151,17 +151,17 @@ public sealed class DocumentPreviewWindow : Window
     {
         var pdf = _pdf;
         if (pdf is null || _closed) return;
-        IReadOnlyList<string> printers;
-        try { printers = PdfPrinter.InstalledPrinters(); }
-        catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
+        PdfPrintRequest? request;
+        try
         {
-            _message.Text = "Impossible de lister les imprimantes : " + exception.Message;
+            request = SystemPrintDialog.Show(TryGetPlatformHandle()?.Handle ?? IntPtr.Zero, pdf.PageCount, _pageIndex);
+        }
+        catch (InvalidOperationException exception)
+        {
+            _message.Text = exception.Message;
             return;
         }
-        if (printers.Count == 0) { _message.Text = "Aucune imprimante n’est installée sur cet ordinateur."; return; }
-
-        var dialog = new PdfPrintWindow(printers, PdfPrinter.DefaultPrinter(), pdf.PageCount, _pageIndex, Path.GetFileName(_path));
-        if (!await dialog.ShowDialog<bool>(this) || dialog.Request is not { } request) return;
+        if (request is null) return;
 
         _print.IsEnabled = false;
         _message.Text = $"Envoi de {request.Pages.Count} page(s) à « {request.PrinterName} »…";

@@ -69,6 +69,26 @@ public sealed class WorkspaceClientCreatorTests
     }
 
     [Fact]
+    public void Create_without_a_code_generates_initials_then_numbers_on_collision()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"ms3dprint-client-code-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(root, "01_CLIENTS"));
+        try
+        {
+            var creator = new WorkspaceClientCreator();
+
+            var first = creator.CreateIndividual(root, "Alexis", "Leroy");
+            var second = creator.CreateIndividual(root, "Alice", "Lambert");
+            var company = creator.CreateProfessional(root, "Fell agency");
+
+            Assert.Equal("AL", first.ClientCode);
+            Assert.Equal("AL2", second.ClientCode);
+            Assert.Equal("FA", company.ClientCode);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
     public void Create_individual_creates_a_personal_client_profile()
     {
         var root = Path.Combine(Path.GetTempPath(), $"ms3dprint-person-{Guid.NewGuid():N}");

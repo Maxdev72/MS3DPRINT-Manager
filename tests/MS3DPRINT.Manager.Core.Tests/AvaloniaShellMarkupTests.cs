@@ -72,6 +72,27 @@ public sealed class AvaloniaShellMarkupTests
     }
 
     [Fact]
+    public void Dialog_values_are_read_on_the_ui_thread_before_background_work()
+    {
+        var lines = File.ReadAllLines(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
+        var offenders = new List<string>();
+        for (var index = 0; index < lines.Length; index++)
+        {
+            if (!lines[index].Contains("Task.Run(", StringComparison.Ordinal)) continue;
+            // Inspect only the lines of this Task.Run statement, up to the one that closes it.
+            for (var offset = 0; offset < 4 && index + offset < lines.Length; offset++)
+            {
+                var line = lines[index + offset];
+                if (System.Text.RegularExpressions.Regex.IsMatch(line, @"\b(dialog|completion|naming)\.[A-Z]"))
+                    offenders.Add($"ligne {index + offset + 1}: {line.Trim()}");
+                if (line.TrimEnd().EndsWith(");", StringComparison.Ordinal)) break;
+            }
+        }
+
+        Assert.True(offenders.Count == 0, "Lecture d'un contrôle de fenêtre dans Task.Run : " + string.Join(" | ", offenders));
+    }
+
+    [Fact]
     public void Client_sheet_can_create_a_project_for_that_client()
     {
         var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));

@@ -14,12 +14,13 @@
   couleur au choix et analyse indicative des parois fines.
 
 - Création de client : recherche d’entreprise sur Internet pendant la saisie du nom (SIRET et adresse repris
-  automatiquement), suggestions d’adresse, code client proposé automatiquement et dossier au format `NOM_CLIENT`.
+  automatiquement), suggestions d’adresse, code client généré automatiquement (initiales, puis AL2, AL3… en cas de doublon) et dossier au format `NOM_CLIENT`.
+- Import de fichier depuis la racine d’un projet : choix du dossier de destination (proposé selon le type de fichier) ; depuis un dossier, le fichier y est importé directement.
 - Import de fichier : proposition de renommage `nom__RÉFÉRENCE-PROJET.ext` (modifiable), ou conservation du nom d’origine.
 - Projets et Clients : le menu d’actions « ⋯ » (ouvrir, modifier, renommer, déplacer, corbeille) est sur chaque ligne
   de la liste ; dans un projet ou un client déjà ouvert il ne reste que « Modifier la fiche ».
 - Fichiers d’un projet : action « Ouvrir avec… » (choix de l’application Windows) dans le menu « ⋯ ».
-- Aperçu PDF : bouton « Imprimer… » (choix de l’imprimante, exemplaires et pages, ex. 1-3,5) ; la page est centrée dans la fenêtre.
+- Aperçu PDF : bouton « Imprimer… » qui ouvre la boîte d’impression de Windows (imprimante, propriétés, exemplaires, pages) ; la page est centrée dans la fenêtre.
 - Page Projets : bouton « Créer » ; colonnes des tableaux Projets et Clients alignées sur toutes les lignes.
 - Fiche client : bouton « Nouveau projet » (le client est déjà choisi).
 - Filaments : plus de clic sur la ligne, la modification est dans le menu « ⋯ ».
@@ -31,6 +32,8 @@
 - Imprimantes : le volume d’impression est grisé pour l’instant et l’option « Imprimante active » est retirée.
 
 ### Corrections
+- Création de projet depuis une fiche client : plus d’erreur « le thread appelant ne peut pas accéder à cet objet »
+  (même défaut corrigé pour le renommage, les dossiers, les collections et les fiches projet/client).
 - Depuis une fiche client, ouvrir un projet affiche bien le projet (la page ne restait plus sur le contact),
   et « Retour » ramène à la fiche client. Les boutons « Créer » et « Actualiser » de la liste des clients ne
   s’affichent plus dans une fiche.

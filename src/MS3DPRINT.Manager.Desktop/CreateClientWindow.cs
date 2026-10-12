@@ -18,7 +18,6 @@ public sealed class CreateClientWindow : Window
     private readonly TextBox _name = new() { PlaceholderText = "Nom de l’entreprise (suggestions automatiques)" };
     private readonly TextBox _firstName = new() { PlaceholderText = "Prénom" };
     private readonly TextBox _lastName = new() { PlaceholderText = "Nom" };
-    private readonly TextBox _code = new() { PlaceholderText = "Code client" };
     private readonly TextBox _siret = new() { PlaceholderText = "SIRET (optionnel)" };
     private readonly TextBox _address = new() { PlaceholderText = "Adresse (suggestions automatiques)" };
     private readonly ListBox _companyResults = new() { IsVisible = false, MaxHeight = 150 };
@@ -28,14 +27,14 @@ public sealed class CreateClientWindow : Window
     private readonly CheckBox _individual = new() { Content = "Client particulier" };
     private CancellationTokenSource? _companySearch;
     private CancellationTokenSource? _addressSearch;
-    private bool _codeEdited;
-    private bool _suggestingCode;
+    private readonly string _existingCode;
     private bool _applyingSuggestion;
 
     public string ClientName => _name.Text?.Trim() ?? string.Empty;
     public string FirstName => _firstName.Text?.Trim() ?? string.Empty;
     public string LastName => _lastName.Text?.Trim() ?? string.Empty;
-    public string Code => _code.Text?.Trim().ToUpperInvariant() ?? string.Empty;
+    /// <summary>Code of the client being completed; empty for a new client (the code is then generated automatically).</summary>
+    public string Code => _existingCode;
     public string? Siret => string.IsNullOrWhiteSpace(_siret.Text) || IsIndividual ? null : _siret.Text.Trim();
     public string? Address => string.IsNullOrWhiteSpace(_address.Text) ? null : _address.Text.Trim();
     public bool IsIndividual => _individual.IsChecked == true;
@@ -43,11 +42,11 @@ public sealed class CreateClientWindow : Window
     public CreateClientWindow(ClientSummary? existingClient = null, IClientLookup? lookup = null)
     {
         _lookup = lookup ?? new PublicClientLookup(LookupHttp);
-        _codeEdited = existingClient is not null;
+        _existingCode = existingClient?.ClientCode ?? string.Empty;
         Title = existingClient is null ? "Créer un client" : "Compléter la fiche client";
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        Width = 480; Height = 720; MinHeight = 520;
-        if (existingClient is not null) { _name.Text = existingClient.DisplayName; _code.Text = existingClient.ClientCode; }
+        Width = 480; Height = 680; MinHeight = 480;
+        if (existingClient is not null) _name.Text = existingClient.DisplayName;
 
         var create = new Button { Content = existingClient is null ? "Créer" : "Enregistrer la fiche", HorizontalAlignment = HorizontalAlignment.Right };
         create.Click += (_, _) => TryClose();
@@ -59,18 +58,13 @@ public sealed class CreateClientWindow : Window
             _firstName.IsVisible = IsIndividual;
             _lastName.IsVisible = IsIndividual;
             HideSuggestions();
-            SuggestCode();
         };
         _firstName.IsVisible = _lastName.IsVisible = false;
 
         _name.TextChanged += async (_, _) =>
         {
-            SuggestCode();
             if (!_applyingSuggestion && !IsIndividual) await SearchCompaniesAsync(ClientName);
         };
-        _firstName.TextChanged += (_, _) => SuggestCode();
-        _lastName.TextChanged += (_, _) => SuggestCode();
-        _code.TextChanged += (_, _) => { if (!_suggestingCode) _codeEdited = true; };
         _address.TextChanged += async (_, _) =>
         {
             if (!_applyingSuggestion) await SearchAddressesAsync(_address.Text?.Trim() ?? string.Empty);
@@ -101,12 +95,13 @@ public sealed class CreateClientWindow : Window
 
         var title = new TextBlock { Text = existingClient is null ? "Nouveau client" : "Compléter la fiche client", FontSize = 20 };
         var hint = new TextBlock { Text = existingClient is null ? string.Empty : "Le dossier et les fichiers existants sont conservés.", Classes = { "muted" } };
+        var codeNote = new TextBlock { Text = existingClient is null ? "Le code client est généré automatiquement à la création." : string.Empty, FontSize = 12, Classes = { "muted" }, TextWrapping = TextWrapping.Wrap };
         Content = new ScrollViewer
         {
             Content = new StackPanel
             {
                 Margin = new Thickness(24), Spacing = 12,
-                Children = { title, hint, _individual, _name, _companyResults, _firstName, _lastName, _code, _siret, _address, _addressResults, _status, _error, create }
+                Children = { title, hint, _individual, _name, _companyResults, _firstName, _lastName, _siret, _address, _addressResults, codeNote, _status, _error, create }
             }
         };
         Closed += (_, _) => { _companySearch?.Cancel(); _addressSearch?.Cancel(); };
@@ -117,23 +112,15 @@ public sealed class CreateClientWindow : Window
         var identityOk = IsIndividual
             ? NameNormalizer.Normalize(FirstName).Length > 0 && NameNormalizer.Normalize(LastName).Length > 0
             : NameNormalizer.Normalize(ClientName).Length > 0;
-        if (!identityOk || NameNormalizer.Normalize(Code).Length == 0)
+        if (!identityOk)
         {
             _error.Text = IsIndividual
-                ? "Renseignez le prénom, le nom et le code client."
-                : "Renseignez le nom de l’entreprise et le code client.";
+                ? "Renseignez le prénom et le nom du client."
+                : "Renseignez le nom de l’entreprise.";
             _error.IsVisible = true;
             return;
         }
         Close(true);
-    }
-
-    private void SuggestCode()
-    {
-        if (_codeEdited) return;
-        _suggestingCode = true;
-        _code.Text = ClientCodeSuggester.Suggest(IsIndividual ? $"{FirstName} {LastName}" : ClientName);
-        _suggestingCode = false;
     }
 
     private void HideSuggestions()
@@ -153,7 +140,6 @@ public sealed class CreateClientWindow : Window
         _siret.Text = suggestion.Siret ?? string.Empty;
         if (!string.IsNullOrWhiteSpace(suggestion.Address)) _address.Text = suggestion.Address;
         _applyingSuggestion = false;
-        SuggestCode();
         _companyResults.IsVisible = false;
         _addressResults.IsVisible = false;
         _companyResults.SelectedItem = null;
