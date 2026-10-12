@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
 using MS3DPRINT.Manager.App.Views;
 using MS3DPRINT.Manager.Desktop;
 
@@ -23,7 +24,12 @@ internal static class Program
     public static void Main(string[] args)
     {
         DesktopPreviewLauncher.OpenThreeD = path => { EnsureWpfResources(); ModelPreviewLauncher.Show(path, null); };
-        DesktopPreviewLauncher.OpenDocument = path => { EnsureWpfResources(); new DocumentPreviewWindow(path).ShowDialog(); };
+        DesktopPreviewLauncher.OpenDocument = path =>
+        {
+            var preview = new DocumentPreviewWindow(path);
+            var owner = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+            if (owner is not null) preview.Show(owner); else preview.Show();
+        };
         DesktopApplication.BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
 }
