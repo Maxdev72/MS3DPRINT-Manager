@@ -31,6 +31,8 @@ public sealed class GpuViewportHost : Panel, IMeshViewport
     public bool Wireframe { get => _gpu.Wireframe; set => _gpu.Wireframe = value; }
     public Color ModelColor { get => _gpu.ModelColor; set => _gpu.ModelColor = value; }
     public IReadOnlyList<Vector3>? Markers { get => _gpu.Markers; set => _gpu.Markers = value; }
+    public ClipPlane? CutPlane { get => _gpu.CutPlane; set => _gpu.CutPlane = value; }
+    public bool WindingInverted { get => _gpu.WindingInverted; set => _gpu.WindingInverted = value; }
     public bool IsReady => _gpu.IsReady;
     public event Action<string>? Failed;
     public event Action? CameraChanged;

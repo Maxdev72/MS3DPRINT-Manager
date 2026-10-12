@@ -295,6 +295,12 @@
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
   </Style>
+  <!-- Switched-on toggle buttons (measure, cut): the app accent instead of the system accent -->
+  <Style Selector="ToggleButton:checked /template/ ContentPresenter#PART_ContentPresenter, ToggleButton:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter, ToggleButton:checked:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource TextBrush}" />
+  </Style>
   <!-- The operating system asks for fewer animations: state changes stay, the easing goes -->
   <Style Selector="Window.reduce-motion Button"><Setter Property="Transitions" Value="{x:Null}" /></Style>
   <Style Selector="Window.reduce-motion Border"><Setter Property="Transitions" Value="{x:Null}" /></Style>

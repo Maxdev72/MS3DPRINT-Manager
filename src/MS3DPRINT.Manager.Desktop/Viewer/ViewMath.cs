@@ -43,7 +43,7 @@ public static class ViewMath
 /// <summary>Finds where a ray meets the mesh (front-most triangle, either side).</summary>
 public static class MeshPicker
 {
-    public static bool TryPick(MeshModel mesh, Vector3 origin, Vector3 direction, out Vector3 hit, out int triangle)
+    public static bool TryPick(MeshModel mesh, Vector3 origin, Vector3 direction, out Vector3 hit, out int triangle, ClipPlane? clip = null)
     {
         var positions = mesh.Positions;
         var indices = mesh.Indices;
@@ -59,6 +59,7 @@ public static class MeshPicker
             for (var t = block * 8192; t < end; t++)
             {
                 var a = positions[indices[t * 3]];
+                if (clip is { } plane && plane.Clips((a + positions[indices[t * 3 + 1]] + positions[indices[t * 3 + 2]]) / 3f)) continue;
                 var edge1 = positions[indices[t * 3 + 1]] - a;
                 var edge2 = positions[indices[t * 3 + 2]] - a;
                 var p = Vector3.Cross(direction, edge2);

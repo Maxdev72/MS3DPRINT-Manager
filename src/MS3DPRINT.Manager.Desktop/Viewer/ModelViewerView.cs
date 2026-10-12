@@ -32,6 +32,11 @@ public sealed class ModelViewerView : UserControl
     private readonly TextBlock _volumeResult = new() { TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _volumeNote = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
     private MeshMeasures? _measures;
+    private readonly ToggleButton _cutToggle = new() { Content = "Activer la coupe", IsEnabled = false };
+    private readonly ComboBox _cutAxis = new() { ItemsSource = new[] { "Horizontale (hauteur, axe Z)", "Verticale, axe X", "Verticale, axe Y" }, SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch };
+    private readonly Slider _cutSlider = new() { Minimum = 0, Maximum = 100, Value = 50, IsEnabled = false };
+    private readonly CheckBox _cutFlip = new() { Content = "Voir l’autre côté" };
+    private readonly TextBlock _cutLabel = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
     private readonly Func<IReadOnlyList<string>>? _loadPrinterNames;
     private SlicerInstall? _slicer;
     private SlicerProfiles? _slicerProfiles;
@@ -136,6 +141,10 @@ public sealed class ModelViewerView : UserControl
             swatch.Click += (_, _) => { _hex.Text = hex; ApplyColor(); };
             _swatches.Children.Add(swatch);
         }
+        _cutToggle.IsCheckedChanged += (_, _) => UpdateCut();
+        _cutAxis.SelectionChanged += (_, _) => UpdateCut();
+        _cutSlider.PropertyChanged += (_, e) => { if (e.Property == Slider.ValueProperty) UpdateCut(); };
+        _cutFlip.IsCheckedChanged += (_, _) => UpdateCut();
         _measureToggle.IsCheckedChanged += (_, _) => UpdateMeasureMode();
         _clearMeasures.Click += (_, _) => ClearMeasures();
         _scale.IsVisible = false;
@@ -200,6 +209,7 @@ public sealed class ModelViewerView : UserControl
                 FormKit.SectionLabel("Mesures"), _measureToggle,
                 new TextBlock { Text = "Cliquez deux points du modèle : ils s’accrochent aux sommets proches. Les longueurs sont en mm selon les unités du modèle. M active, Échap annule le point en cours.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap },
                 _measureList, _clearMeasures,
+                FormKit.SectionLabel("Plan de coupe"), _cutToggle, _cutAxis, _cutSlider, _cutFlip, _cutLabel,
                 FormKit.SectionLabel("Volume et poids"), _volumeResult, Muted("Matière"), _material,
                 new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,*,Auto"), ColumnSpacing = 8, Children = { _infill, Place(Unit("% remplissage"), 1), Place(_walls, 2), Place(Unit("mm parois"), 3) } },
                 _createEstimate, _volumeNote,
@@ -263,6 +273,7 @@ public sealed class ModelViewerView : UserControl
         _viewport = next;
         _stage.Children.Insert(0, next.Visual);
         next.Wireframe = _mode.SelectedIndex == 1;
+        next.WindingInverted = _measures?.Inverted == true;
         if (PreviewColorParser.TryParse(_hex.Text, out var color)) next.ModelColor = color;
         AutomationProperties.SetName(next.Visual, "Vue 3D du modèle : souris pour tourner, déplacer et zoomer, touche R pour recentrer, W pour le mode filaire");
         if (_stage.Children.Contains(_overlay)) _stage.Children.Remove(_overlay);
@@ -310,6 +321,7 @@ public sealed class ModelViewerView : UserControl
     {
         if (e.Key == Key.R) { _viewport.ResetView(); e.Handled = true; }
         else if (e.Key == Key.M && _measureToggle.IsEnabled) { _measureToggle.IsChecked = _measureToggle.IsChecked != true; e.Handled = true; }
+        else if (e.Key == Key.C && _cutToggle.IsEnabled) { _cutToggle.IsChecked = _cutToggle.IsChecked != true; e.Handled = true; }
         else if (e.Key == Key.Escape && _pendingPoint is not null) { _pendingPoint = null; RefreshMeasures(); e.Handled = true; }
         else if (e.Key == Key.W) { _mode.SelectedIndex = _mode.SelectedIndex == 1 ? 0 : 1; e.Handled = true; }
     }
@@ -370,6 +382,15 @@ public sealed class ModelViewerView : UserControl
             _mesh = mesh;
             _overlay.Mesh = mesh;
             _measureToggle.IsEnabled = true;
+            _cutToggle.IsEnabled = true;
+            _cutToggle.IsChecked = false;
+            // development hook, like the other MS3DPRINT_START_* variables: open with a cut at this percentage
+            if (double.TryParse(Environment.GetEnvironmentVariable("MS3DPRINT_START_CUT"), NumberStyles.Float, CultureInfo.InvariantCulture, out var startCut))
+            {
+                _cutSlider.Value = startCut;
+                _cutToggle.IsChecked = true;
+            }
+            UpdateCut();
             ClearMeasures();
             _ = ComputeMeasuresAsync(mesh, version);
             _slice = null;
@@ -509,6 +530,8 @@ public sealed class ModelViewerView : UserControl
             var measures = await Task.Run(() => MeshVolume.Compute(mesh));
             if (version != _loadVersion) return;
             _measures = measures;
+            _viewport.WindingInverted = measures.Inverted;
+            _viewport.RequestRender(false);
         }
         catch (OperationCanceledException) { return; }
         RefreshVolume();
@@ -561,6 +584,28 @@ public sealed class ModelViewerView : UserControl
             null => "Fermeture du maillage non vérifiée (modèle très volumineux). ",
             _ => string.Empty
         }) + (_slice is null ? "Estimation indicative : le découpeur donnera le poids et la durée exacts. " : "Durée et poids calculés par le découpeur. ") + "Les valeurs suivent les unités du modèle choisies en haut du panneau.";
+    }
+
+    /// <summary>Applies the cutting plane to the 3D view and says where it cuts, in millimetres from the base of the model.</summary>
+    private void UpdateCut()
+    {
+        var on = _cutToggle.IsChecked == true && _mesh is not null;
+        _cutAxis.IsEnabled = _cutSlider.IsEnabled = _cutFlip.IsEnabled = on;
+        if (_mesh is not { } mesh || !on)
+        {
+            _viewport.CutPlane = null;
+            _cutLabel.Text = _mesh is null ? string.Empty : "Coupe désactivée. Touche C pour l’activer.";
+            _viewport.RequestRender(false);
+            return;
+        }
+        var axis = Math.Max(0, _cutAxis.SelectedIndex) switch { 1 => 0, 2 => 1, _ => 2 };
+        var min = axis == 0 ? mesh.Min.X : axis == 1 ? mesh.Min.Y : mesh.Min.Z;
+        var max = axis == 0 ? mesh.Max.X : axis == 1 ? mesh.Max.Y : mesh.Max.Z;
+        var offset = min + (max - min) * (float)(_cutSlider.Value / 100.0);
+        _viewport.CutPlane = new ClipPlane(axis, offset, _cutFlip.IsChecked == true);
+        var name = axis == 0 ? "X" : axis == 1 ? "Y" : "Z";
+        _cutLabel.Text = $"Coupe à {name} = {ModelUnits.Format((offset - min) * MeasureScale)} mm sur {ModelUnits.Format((max - min) * MeasureScale)} mm. La face coupée apparaît en orange.";
+        _viewport.RequestRender(false);
     }
 
     private void UpdateMeasureMode()
@@ -666,10 +711,11 @@ public sealed class ModelViewerView : UserControl
         if (_measureToggle.IsChecked != true || _mesh is not { } mesh) return;
         var bounds = _viewport.Visual.Bounds;
         var camera = new ViewCamera { Yaw = _viewport.Camera.Yaw, Pitch = _viewport.Camera.Pitch, Zoom = _viewport.Camera.Zoom, PanX = _viewport.Camera.PanX, PanY = _viewport.Camera.PanY };
+        var cutPlane = _viewport.CutPlane;
         var point = await Task.Run(() =>
         {
             var (origin, direction) = ViewMath.Ray(mesh, camera, bounds.Width, bounds.Height, click.X, click.Y);
-            if (!MeshPicker.TryPick(mesh, origin, direction, out var hit, out var triangle)) return (System.Numerics.Vector3?)null;
+            if (!MeshPicker.TryPick(mesh, origin, direction, out var hit, out var triangle, cutPlane)) return (System.Numerics.Vector3?)null;
             // snap to the closest corner of the triangle when it is within a few pixels of the click
             var best = hit;
             var bestDistance = 14.0;

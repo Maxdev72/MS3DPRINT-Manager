@@ -30,6 +30,20 @@
       <SolidColorBrush x:Key="WarningSoftBrush" Color="#392D12" />
       <SolidColorBrush x:Key="DangerBrush" Color="#F57F7F" />
       <SolidColorBrush x:Key="DangerSoftBrush" Color="#3A1A1F" />
+      <!-- Fluent's own accent-coloured parts (slider, check box) follow the app accent -->
+      <StaticResource x:Key="SliderTrackValueFill" ResourceKey="AccentBrush" />
+      <StaticResource x:Key="SliderTrackValueFillPointerOver" ResourceKey="AccentBrush" />
+      <StaticResource x:Key="SliderTrackValueFillPressed" ResourceKey="AccentBrush" />
+      <StaticResource x:Key="SliderThumbBackground" ResourceKey="AccentBrush" />
+      <StaticResource x:Key="SliderThumbBackgroundPointerOver" ResourceKey="FocusBorderBrush" />
+      <StaticResource x:Key="SliderThumbBackgroundPressed" ResourceKey="AccentBrush" />
+      <StaticResource x:Key="CheckBoxCheckBackgroundFillChecked" ResourceKey="AccentBrush" />
+      <StaticResource x:Key="CheckBoxCheckBackgroundFillCheckedPointerOver" ResourceKey="FocusBorderBrush" />
+      <StaticResource x:Key="CheckBoxCheckBackgroundFillCheckedPressed" ResourceKey="AccentBrush" />
+      <StaticResource x:Key="CheckBoxCheckBackgroundStrokeChecked" ResourceKey="AccentBrush" />
+      <StaticResource x:Key="CheckBoxCheckBackgroundStrokeCheckedPointerOver" ResourceKey="FocusBorderBrush" />
+      <StaticResource x:Key="CheckBoxCheckBackgroundStrokeCheckedPressed" ResourceKey="AccentBrush" />
+      <StaticResource x:Key="CheckBoxCheckGlyphForegroundChecked" ResourceKey="AccentForegroundBrush" />
       <SolidColorBrush x:Key="NeutralSoftBrush" Color="#1D283B" />
 
       <!-- Spacing, radius and type scale -->

@@ -38,6 +38,8 @@ public sealed class MeshViewport : Control, IMeshViewport
     private bool _moved;
     public ViewCamera Camera { get; } = new();
     public bool Wireframe { get; set; }
+    public ClipPlane? CutPlane { get; set; }
+    public bool WindingInverted { get; set; }
     public Color ModelColor { get; set; } = Color.FromRgb(0x58, 0xA6, 0xFF);
     public IReadOnlyList<Vector3>? Markers { get; set; }
 
@@ -67,7 +69,7 @@ public sealed class MeshViewport : Control, IMeshViewport
         var scale = (TopLevel.GetTopLevel(this)?.RenderScaling ?? 1) * (interactive ? 0.5 : 1);
         var width = Math.Max(2, (int)(Bounds.Width * scale));
         var height = Math.Max(2, (int)(Bounds.Height * scale));
-        var options = new RenderOptions(width, height, Wireframe, 0xFF000000u | ((uint)ModelColor.R << 16) | ((uint)ModelColor.G << 8) | ModelColor.B, BackgroundColor);
+        var options = new RenderOptions(width, height, Wireframe, 0xFF000000u | ((uint)ModelColor.R << 16) | ((uint)ModelColor.G << 8) | ModelColor.B, BackgroundColor, CutPlane);
         var camera = new ViewCamera { Yaw = Camera.Yaw, Pitch = Camera.Pitch, Zoom = Camera.Zoom, PanX = Camera.PanX, PanY = Camera.PanY };
         var markers = Markers;
         _ = Task.Run(() =>

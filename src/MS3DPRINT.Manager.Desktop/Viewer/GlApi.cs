@@ -36,6 +36,7 @@ internal sealed class GlApi
     [UnmanagedFunctionPointer(CallingConvention.Winapi)] private delegate void UniformMatrix4Fn(int location, int count, byte transpose, float[] value);
     [UnmanagedFunctionPointer(CallingConvention.Winapi)] private delegate void Uniform3Fn(int location, float x, float y, float z);
     [UnmanagedFunctionPointer(CallingConvention.Winapi)] private delegate void Uniform1Fn(int location, float x);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)] private delegate void Uniform4Fn(int location, float x, float y, float z, float w);
     [UnmanagedFunctionPointer(CallingConvention.Winapi)] private delegate void VertexAttribPointerFn(int index, int size, int type, byte normalized, int stride, IntPtr pointer);
     [UnmanagedFunctionPointer(CallingConvention.Winapi)] private delegate void DrawArraysFn(int mode, int first, int count);
     [UnmanagedFunctionPointer(CallingConvention.Winapi)] private delegate void DrawElementsFn(int mode, int count, int type, IntPtr indices);
@@ -67,6 +68,7 @@ internal sealed class GlApi
     private readonly UniformMatrix4Fn _uniformMatrix4;
     private readonly Uniform3Fn _uniform3;
     private readonly Uniform1Fn _uniform1;
+    private readonly Uniform4Fn _uniform4;
     private readonly VertexAttribPointerFn _vertexAttribPointer;
     private readonly DrawArraysFn _drawArrays;
     private readonly DrawElementsFn _drawElements;
@@ -108,7 +110,7 @@ internal sealed class GlApi
         _attachShader = Load<AttachShaderFn>("glAttachShader");
         _getUniformLocation = Load<GetUniformLocationFn>("glGetUniformLocation");
         _uniformMatrix4 = Load<UniformMatrix4Fn>("glUniformMatrix4fv");
-        _uniform3 = Load<Uniform3Fn>("glUniform3f"); _uniform1 = Load<Uniform1Fn>("glUniform1f");
+        _uniform3 = Load<Uniform3Fn>("glUniform3f"); _uniform1 = Load<Uniform1Fn>("glUniform1f"); _uniform4 = Load<Uniform4Fn>("glUniform4f");
         _vertexAttribPointer = Load<VertexAttribPointerFn>("glVertexAttribPointer");
         _drawArrays = Load<DrawArraysFn>("glDrawArrays"); _drawElements = Load<DrawElementsFn>("glDrawElements");
         _enable = Load<CapFn>("glEnable"); _disable = Load<CapFn>("glDisable");
@@ -154,6 +156,7 @@ internal sealed class GlApi
     public void Resolve(int width, int height) => _blitFramebuffer(0, 0, width, height, 0, 0, width, height, ColorBufferBit, Nearest);
     public int GetUniformLocation(int program, string name) => _getUniformLocation(program, name);
     public void Uniform3(int location, float x, float y, float z) => _uniform3(location, x, y, z);
+    public void Uniform4(int location, float x, float y, float z, float w) => _uniform4(location, x, y, z, w);
     public void UniformMatrix(int location, float[] columnMajor) => _uniformMatrix4(location, 1, 0, columnMajor);
 
     /// <summary>Uploads raw bytes to the buffer currently bound to <paramref name="target"/>.</summary>

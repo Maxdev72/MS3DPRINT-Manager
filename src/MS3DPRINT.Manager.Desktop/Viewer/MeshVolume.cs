@@ -3,7 +3,7 @@ using System.Numerics;
 namespace MS3DPRINT.Manager.Desktop.Viewer;
 
 /// <summary>Volume and surface of a mesh, in model units (cubed and squared); <see cref="IsClosed"/> is null when the check was skipped because the mesh is very large.</summary>
-public readonly record struct MeshMeasures(double Volume, double SurfaceArea, bool? IsClosed);
+public readonly record struct MeshMeasures(double Volume, double SurfaceArea, bool? IsClosed, bool Inverted = false);
 
 /// <summary>A material the weight can be estimated for, optionally tied to a catalogue filament and its price.</summary>
 public sealed record MaterialChoice(string Label, double Density, decimal? PricePerKg = null, string? FilamentKey = null, string? MaterialName = null);
@@ -51,7 +51,7 @@ public static class MeshVolume
             area += Vector3.Cross(b - a, c - a).Length() / 2.0;
         }
 
-        if (indices.Length / 3 > MaxClosureCheckTriangles) return new MeshMeasures(Math.Abs(volume), area, null);
+        if (indices.Length / 3 > MaxClosureCheckTriangles) return new MeshMeasures(Math.Abs(volume), area, null, volume < 0);
 
         // STL stores every triangle with its own corners: weld identical positions before looking at shared edges.
         var ids = new Dictionary<Vector3, int>(positions.Length / 2);
@@ -81,7 +81,7 @@ public static class MeshVolume
             if (next - i != 2) closed = false;
             i = next;
         }
-        return new MeshMeasures(Math.Abs(volume), area, closed);
+        return new MeshMeasures(Math.Abs(volume), area, closed, volume < 0);
     }
 
     private static ulong Key(int a, int b) => a < b ? ((ulong)(uint)a << 32) | (uint)b : ((ulong)(uint)b << 32) | (uint)a;

@@ -2,6 +2,11 @@
 
 ## 12 octobre 2026
 
+### Plan de coupe
+- Nouvelle section « Plan de coupe » (touche `C`) : une coupe horizontale (hauteur) ou verticale selon X ou Y, réglée au curseur, avec le choix du côté conservé et la position affichée en mm.
+- La face coupée apparaît en orange pour lire les parois et les cavités ; mesures et sélection de points ignorent la partie coupée.
+- Les boutons à bascule, curseurs et cases à cocher reprennent la couleur d’accent de l’application.
+
 ### Unités du modèle mémorisées
 - Un seul choix d’unité (mm, cm, m, pouces ou personnalisée) remplace l’échelle à saisir et la case de confirmation ; il est mémorisé pour chaque fichier.
 - Les dimensions s’affichent dans l’unité choisie et en mm, une alerte signale un modèle de taille improbable, et mesures, volume, poids, analyse des parois et découpage suivent l’unité.

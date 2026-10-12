@@ -9,6 +9,19 @@ using Avalonia.OpenGL.Controls;
 
 namespace MS3DPRINT.Manager.Desktop.Viewer;
 
+/// <summary>
+/// Cutting plane perpendicular to a model axis (0 = X, 1 = Y, 2 = Z): what lies beyond <see cref="Offset"/> is cut away,
+/// or what lies before it when <see cref="Flip"/> is set.
+/// </summary>
+public readonly record struct ClipPlane(int Axis, float Offset, bool Flip)
+{
+    public bool Clips(Vector3 point)
+    {
+        var coordinate = Axis == 0 ? point.X : Axis == 1 ? point.Y : point.Z;
+        return Flip ? coordinate < Offset : coordinate > Offset;
+    }
+}
+
 /// <summary>What the viewer page needs from a 3D view, so the GPU view and the CPU fallback are interchangeable.</summary>
 public interface IMeshViewport
 {
@@ -17,6 +30,9 @@ public interface IMeshViewport
     bool Wireframe { get; set; }
     Color ModelColor { get; set; }
     IReadOnlyList<Vector3>? Markers { get; set; }
+    ClipPlane? CutPlane { get; set; }
+    /// <summary>True when the file lists its triangles inside out; the cut section is then coloured on the other face.</summary>
+    bool WindingInverted { get; set; }
     void SetMesh(MeshModel? mesh);
     void ResetView();
     void RequestRender(bool interactive);
@@ -55,6 +71,9 @@ public sealed class GpuMeshViewport : OpenGlControlBase
     public ViewCamera Camera { get; } = new();
     public bool Wireframe { get; set; }
     public Color ModelColor { get; set; } = Color.FromRgb(0x58, 0xA6, 0xFF);
+
+    public ClipPlane? CutPlane { get; set; }
+    public bool WindingInverted { get; set; }
 
     private IReadOnlyList<Vector3>? _markers;
     public IReadOnlyList<Vector3>? Markers
@@ -182,7 +201,14 @@ public sealed class GpuMeshViewport : OpenGlControlBase
         _gl.UniformMatrix(_gl.GetUniformLocation(_solidProgram, "uView"), view);
         _gl.UniformMatrix(_gl.GetUniformLocation(_solidProgram, "uProj"), projection);
         _gl.Uniform3(_gl.GetUniformLocation(_solidProgram, "uColor"), color.R / 255f, color.G / 255f, color.B / 255f);
-        _gl.Uniform3(_gl.GetUniformLocation(_solidProgram, "uShaded"), Wireframe ? 0 : 1, 0, 0);
+        _gl.Uniform3(_gl.GetUniformLocation(_solidProgram, "uShaded"), Wireframe ? 0 : 1, CutPlane is null ? 0 : 1, WindingInverted ? 1 : 0);
+        // plane as dot(position, normal) > limit: the side to cut away; a huge limit when there is no cut
+        if (CutPlane is { } clip)
+        {
+            var sign = clip.Flip ? -1f : 1f;
+            _gl.Uniform4(_gl.GetUniformLocation(_solidProgram, "uClip"), clip.Axis == 0 ? sign : 0, clip.Axis == 1 ? sign : 0, clip.Axis == 2 ? sign : 0, clip.Offset * sign);
+        }
+        else _gl.Uniform4(_gl.GetUniformLocation(_solidProgram, "uClip"), 0, 0, 1, 1e30f);
         if (Wireframe)
         {
             _gl.BindVertexArray(_wireVao);
@@ -343,19 +369,29 @@ layout(location = 0) in vec3 aPos;
 uniform mat4 uView;
 uniform mat4 uProj;
 out vec3 vView;
+out vec3 vModel;
 void main() {
     vec4 v = uView * vec4(aPos, 1.0);
     vView = v.xyz;
+    vModel = aPos;
     gl_Position = uProj * v;
 }";
 
     // Flat shading from screen-space derivatives: no per-face normals to store or upload.
     private const string SolidFragment = @"
 in vec3 vView;
+in vec3 vModel;
 uniform vec3 uColor;
 uniform vec3 uShaded;
+uniform vec4 uClip;
 out vec4 outColor;
 void main() {
+    if (dot(vModel, uClip.xyz) > uClip.w) discard;
+    // inside faces seen through the cut are drawn flat orange: it reads as the cut section
+    if (uShaded.y > 0.5 && uShaded.x > 0.5 && (gl_FrontFacing == (uShaded.z > 0.5))) {
+        outColor = vec4(1.0, 0.62, 0.26, 1.0);
+        return;
+    }
     float shade = 1.0;
     if (uShaded.x > 0.5) {
         vec3 n = normalize(cross(dFdx(vView), dFdy(vView)));

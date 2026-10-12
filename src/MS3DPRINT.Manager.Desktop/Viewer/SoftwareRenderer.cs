@@ -18,7 +18,7 @@ public sealed class ViewCamera
     }
 }
 
-public readonly record struct RenderOptions(int Width, int Height, bool Wireframe, uint BaseColor, uint BackgroundColor);
+public readonly record struct RenderOptions(int Width, int Height, bool Wireframe, uint BaseColor, uint BackgroundColor, ClipPlane? Clip = null);
 
 /// <summary>
 /// CPU rasteriser with a z-buffer and flat shading. It needs no GPU driver, so the viewer behaves the same
@@ -40,8 +40,8 @@ public static class SoftwareRenderer
         var projection = Project(mesh, camera, width, height);
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (options.Wireframe) DrawWireframe(mesh, projection, pixels, width, height, options.BaseColor, cancellationToken);
-        else FillTriangles(mesh, camera, projection, pixels, width, height, options.BaseColor, cancellationToken);
+        if (options.Wireframe) DrawWireframe(mesh, projection, pixels, width, height, options.BaseColor, options.Clip, cancellationToken);
+        else FillTriangles(mesh, camera, projection, pixels, width, height, options.BaseColor, options.Clip, cancellationToken);
 
         if (markers is not null)
             foreach (var marker in markers)
@@ -129,7 +129,7 @@ public static class SoftwareRenderer
     }
 
     private static void FillTriangles(MeshModel mesh, ViewCamera camera, Projection projection, uint[] pixels,
-        int width, int height, uint baseColor, CancellationToken cancellationToken)
+        int width, int height, uint baseColor, ClipPlane? clip, CancellationToken cancellationToken)
     {
         var indices = mesh.Indices;
         var triangleCount = mesh.TriangleCount;
@@ -148,7 +148,7 @@ public static class SoftwareRenderer
             {
                 var a = indices[t * 3]; var b = indices[t * 3 + 1]; var c = indices[t * 3 + 2];
                 var normal = mesh.Normals[t];
-                if (iz[a] <= 0 || iz[b] <= 0 || iz[c] <= 0 || normal == Vector3.Zero) { maxRow[t] = -1; continue; }
+                if (iz[a] <= 0 || iz[b] <= 0 || iz[c] <= 0 || normal == Vector3.Zero || IsCut(mesh, clip, a, b, c)) { maxRow[t] = -1; continue; }
                 var top = MathF.Min(sy[a], MathF.Min(sy[b], sy[c]));
                 var bottom = MathF.Max(sy[a], MathF.Max(sy[b], sy[c]));
                 var left = MathF.Min(sx[a], MathF.Min(sx[b], sx[c]));
@@ -205,7 +205,7 @@ public static class SoftwareRenderer
     }
 
     private static void DrawWireframe(MeshModel mesh, Projection projection, uint[] pixels, int width, int height,
-        uint baseColor, CancellationToken cancellationToken)
+        uint baseColor, ClipPlane? clip, CancellationToken cancellationToken)
     {
         var indices = mesh.Indices;
         var triangleCount = mesh.TriangleCount;
@@ -216,12 +216,16 @@ public static class SoftwareRenderer
         {
             if ((t & 8191) == 0) cancellationToken.ThrowIfCancellationRequested();
             var a = indices[t * 3]; var b = indices[t * 3 + 1]; var c = indices[t * 3 + 2];
-            if (iz[a] <= 0 || iz[b] <= 0 || iz[c] <= 0) continue;
+            if (iz[a] <= 0 || iz[b] <= 0 || iz[c] <= 0 || IsCut(mesh, clip, a, b, c)) continue;
             DrawLine(pixels, width, height, sx[a], sy[a], sx[b], sy[b], color);
             DrawLine(pixels, width, height, sx[b], sy[b], sx[c], sy[c], color);
             DrawLine(pixels, width, height, sx[c], sy[c], sx[a], sy[a], color);
         }
     }
+
+    /// <summary>A triangle is cut away when its centre lies on the removed side of the plane (no cap is drawn on the CPU view).</summary>
+    private static bool IsCut(MeshModel mesh, ClipPlane? clip, int a, int b, int c)
+        => clip is { } plane && plane.Clips((mesh.Positions[a] + mesh.Positions[b] + mesh.Positions[c]) / 3f);
 
     private static void DrawLine(uint[] pixels, int width, int height, float x0, float y0, float x1, float y1, uint color)
     {
