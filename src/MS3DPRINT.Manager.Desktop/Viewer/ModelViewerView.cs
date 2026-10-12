@@ -1,0 +1,311 @@
+using System.Diagnostics;
+using System.Globalization;
+using Avalonia;
+using Avalonia.Automation;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Layout;
+using Avalonia.Media;
+using Avalonia.Platform.Storage;
+using MS3DPRINT.Manager.Core.Files;
+
+namespace MS3DPRINT.Manager.Desktop.Viewer;
+
+/// <summary>Native 3D viewer for STL and OBJ files, shown inside the main window, with a thin-wall advisory analysis.</summary>
+public sealed class ModelViewerView : UserControl
+{
+    private static readonly (string Name, string Hex)[] Palette =
+    [
+        ("Bleu", "#58A6FF"), ("Gris", "#B8C2CC"), ("Vert", "#66CC99"), ("Orange", "#FFB454"), ("Rouge", "#FF6B6B"), ("Blanc", "#FFFFFF")
+    ];
+
+    private readonly MeshViewport _viewport = new();
+    private readonly TextBlock _title = new() { Text = "Aucun modèle", FontSize = 16, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis };
+    private readonly TextBlock _location = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _dimensions = new() { FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _message = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _analysis = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap, Text = "Analyse indicative sur échantillons, sans certification d’imprimabilité. Aucun fichier n’est modifié." };
+    private readonly ComboBox _mode = new() { ItemsSource = new[] { "Solide", "Filaire" }, SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch };
+    private readonly TextBox _hex = new() { Text = Palette[0].Hex };
+    private readonly StackPanel _swatches = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
+    private readonly TextBox _threshold = new() { Text = "1" };
+    private readonly TextBox _scale = new() { Text = "1" };
+    private readonly CheckBox _confirmUnits = new() { Content = "Je confirme cette échelle" };
+    private readonly Button _analyze = new() { Content = "Analyser les parois", IsEnabled = false };
+    private readonly Button _cancelAnalysis = new() { Content = "Annuler", IsEnabled = false };
+    private readonly Button _reset = new() { Content = "Recentrer", IsEnabled = false };
+    private readonly StackPanel _emptyState = new() { Spacing = 10, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, IsHitTestVisible = false };
+    private CancellationTokenSource? _activeLoad;
+    private CancellationTokenSource? _activeAnalysis;
+    private MeshModel? _mesh;
+    private int _loadVersion;
+
+    public ModelViewerView(Action close)
+    {
+        DragDrop.SetAllowDrop(this, true);
+        AddHandler(DragDrop.DragOverEvent, View_DragOver);
+        AddHandler(DragDrop.DropEvent, View_Drop);
+
+        // viewport with its empty state and a navigation hint
+        var hint = new TextBlock { Text = "Clic gauche : tourner · Clic droit : déplacer · Molette : zoom · R : recentrer · W : filaire", Classes = { "caption" }, Margin = new Thickness(14, 0, 14, 10), VerticalAlignment = VerticalAlignment.Bottom, IsHitTestVisible = false };
+        _emptyState.Children.Add(new TextBlock { Text = "Déposez un fichier STL ou OBJ ici", FontSize = 16, FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Center });
+        _emptyState.Children.Add(new TextBlock { Text = "ou choisissez-en un avec « Ouvrir un fichier »", Classes = { "muted" }, HorizontalAlignment = HorizontalAlignment.Center });
+        var stage = new Border
+        {
+            CornerRadius = new CornerRadius(10), ClipToBounds = true, BorderThickness = new Thickness(1),
+            BorderBrush = (IBrush?)Application.Current?.FindResource("SubtleBorderBrush"),
+            Child = new Grid { Children = { _viewport, _emptyState, hint } }
+        };
+        _viewport.KeyDown += Viewport_KeyDown;
+        _viewport.PointerPressed += (_, _) => _viewport.Focus();
+
+        // side panel
+        var back = new Button { Content = Icons.Label("IconArrowLeft", "Retour"), Classes = { "ghost" }, HorizontalAlignment = HorizontalAlignment.Left };
+        back.Click += (_, _) => close();
+        var browse = new Button { Content = Icons.Label("IconOpen", "Ouvrir un fichier"), Classes = { "primary-action" } };
+        browse.Click += async (_, _) => await BrowseAsync();
+        _reset.Click += (_, _) => _viewport.ResetView();
+        var fileButtons = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 8 };
+        fileButtons.Children.Add(browse);
+        Grid.SetColumn(_reset, 1);
+        fileButtons.Children.Add(_reset);
+
+        _mode.SelectionChanged += (_, _) => { _viewport.Wireframe = _mode.SelectedIndex == 1; UpdateModeMessage(); _viewport.RequestRender(false); };
+        foreach (var (name, hex) in Palette)
+        {
+            var color = Color.Parse(hex);
+            var swatch = new Button
+            {
+                Tag = hex, Width = 28, Height = 28, MinWidth = 28, MinHeight = 28, Padding = new Thickness(0), CornerRadius = new CornerRadius(14),
+                Background = new SolidColorBrush(color), BorderThickness = new Thickness(2)
+            };
+            ToolTip.SetTip(swatch, name);
+            AutomationProperties.SetName(swatch, "Couleur " + name.ToLowerInvariant());
+            swatch.Click += (_, _) => { _hex.Text = hex; ApplyColor(); };
+            _swatches.Children.Add(swatch);
+        }
+        _hex.LostFocus += (_, _) => ApplyColor();
+        _hex.KeyDown += (_, e) => { if (e.Key == Key.Enter) { ApplyColor(); e.Handled = true; } };
+        UpdateSwatches();
+
+        _analyze.Click += async (_, _) => await AnalyzeAsync();
+        _cancelAnalysis.Click += (_, _) => _activeAnalysis?.Cancel();
+        var limits = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,*,Auto"), ColumnSpacing = 8, RowDefinitions = new RowDefinitions("Auto,Auto"), RowSpacing = 4 };
+        void Cell(Control control, int row, int column) { Grid.SetRow(control, row); Grid.SetColumn(control, column); limits.Children.Add(control); }
+        Cell(Muted("Seuil de paroi"), 0, 0);
+        Cell(Muted("Échelle"), 0, 2);
+        Cell(_threshold, 1, 0);
+        Cell(Unit("mm"), 1, 1);
+        Cell(_scale, 1, 2);
+        Cell(Unit("mm / unité"), 1, 3);
+        var analysisButtons = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 8 };
+        analysisButtons.Children.Add(_analyze);
+        Grid.SetColumn(_cancelAnalysis, 1);
+        analysisButtons.Children.Add(_cancelAnalysis);
+        var hexRow = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 8 };
+        hexRow.Children.Add(Muted("Hex"));
+        Grid.SetColumn(_hex, 1);
+        hexRow.Children.Add(_hex);
+
+        var side = new StackPanel
+        {
+            Spacing = 10,
+            Children =
+            {
+                back,
+                FormKit.SectionLabel("Modèle"), _title, _location, _dimensions, _message, fileButtons,
+                FormKit.SectionLabel("Affichage"), _mode, _swatches, hexRow,
+                FormKit.SectionLabel("Analyse des parois"),
+                new TextBlock { Text = "STL et OBJ n’indiquent pas leurs unités : choisissez le seuil selon votre buse, votre matériau et votre trancheur.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap },
+                limits, _confirmUnits, analysisButtons, _analysis
+            }
+        };
+        var panel = new ScrollViewer
+        {
+            HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
+            Content = new Border { Padding = new Thickness(0, 0, 10, 0), Child = side }
+        };
+        var root = new Grid { ColumnDefinitions = new ColumnDefinitions("*,320"), ColumnSpacing = 16 };
+        root.Children.Add(stage);
+        Grid.SetColumn(panel, 1);
+        root.Children.Add(panel);
+        Content = root;
+    }
+
+    /// <summary>Raised with the file name once a model is displayed.</summary>
+    public event Action<string>? ModelLoaded;
+
+    /// <summary>Stops running loads and analyses when the viewer is left.</summary>
+    public void Release()
+    {
+        _loadVersion++;
+        _activeLoad?.Cancel();
+        _activeAnalysis?.Cancel();
+    }
+
+    private static TextBlock Muted(string text) => new() { Text = text, Classes = { "muted" }, VerticalAlignment = VerticalAlignment.Center };
+    private static TextBlock Unit(string text) => new() { Text = text, Classes = { "muted" }, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 10) };
+
+    private void Viewport_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.R) { _viewport.ResetView(); e.Handled = true; }
+        else if (e.Key == Key.W) { _mode.SelectedIndex = _mode.SelectedIndex == 1 ? 0 : 1; e.Handled = true; }
+    }
+
+    private async Task BrowseAsync()
+    {
+        var storage = TopLevel.GetTopLevel(this)?.StorageProvider;
+        if (storage is null) return;
+        var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Choisir un fichier 3D",
+            AllowMultiple = false,
+            FileTypeFilter = [new FilePickerFileType("Modèles 3D (STL, OBJ)") { Patterns = ["*.stl", "*.obj"] }]
+        });
+        var local = files.FirstOrDefault()?.TryGetLocalPath();
+        if (string.IsNullOrWhiteSpace(local)) return;
+        try { await LoadModelAsync(ModelFileSelection.Select([local])); }
+        catch (Exception exception) when (exception is ArgumentException or NotSupportedException or FileNotFoundException)
+        { _message.Text = exception.Message; }
+    }
+
+    private void View_DragOver(object? sender, DragEventArgs e)
+    {
+        var path = e.DataTransfer.TryGetFiles()?.FirstOrDefault()?.TryGetLocalPath();
+        e.DragEffects = path is not null && ThreeDFileSupport.IsPreviewable(path) ? DragDropEffects.Copy : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private async void View_Drop(object? sender, DragEventArgs e)
+    {
+        e.Handled = true;
+        try
+        {
+            var paths = e.DataTransfer.TryGetFiles()?.Select(item => item.TryGetLocalPath()).OfType<string>().ToArray() ?? [];
+            await LoadModelAsync(ModelFileSelection.Select(paths));
+        }
+        catch (Exception exception) when (exception is ArgumentException or NotSupportedException or FileNotFoundException)
+        { _message.Text = exception.Message; }
+    }
+
+    public async Task LoadModelAsync(string path)
+    {
+        path = Path.GetFullPath(path);
+        var version = ++_loadVersion;
+        _activeAnalysis?.Cancel();
+        _activeLoad?.Cancel();
+        _analyze.IsEnabled = false;
+        _confirmUnits.IsChecked = false;
+        _analysis.Text = "Confirmez l’échelle du nouveau modèle avant l’analyse.";
+        using var load = new CancellationTokenSource();
+        _activeLoad = load;
+        _message.Text = "Chargement du modèle…";
+        var stopwatch = Stopwatch.StartNew();
+        try
+        {
+            var mesh = await Task.Run(() => MeshLoader.Load(path, load.Token), load.Token);
+            if (version != _loadVersion) return;
+            _mesh = mesh;
+            _viewport.SetMesh(mesh);
+            _emptyState.IsVisible = false;
+            _analyze.IsEnabled = _activeAnalysis is null;
+            _reset.IsEnabled = true;
+            _title.Text = Path.GetFileName(path);
+            _location.Text = path;
+            _dimensions.Text = ModelDimensions.FromMesh(mesh).ToDisplayText();
+            _message.Text = $"{mesh.TriangleCount:N0} triangles · chargé en {stopwatch.Elapsed.TotalSeconds:N1} s.";
+            ModelLoaded?.Invoke(Path.GetFileName(path));
+            _viewport.Focus();
+        }
+        catch (OperationCanceledException) when (load.IsCancellationRequested) { }
+        catch (Exception exception) when (exception is IOException or InvalidDataException or NotSupportedException or FormatException or UnauthorizedAccessException)
+        {
+            if (version == _loadVersion) _message.Text = "Impossible d’ouvrir ce modèle : " + exception.Message;
+        }
+        finally
+        {
+            if (ReferenceEquals(_activeLoad, load)) _activeLoad = null;
+        }
+    }
+
+    private void UpdateModeMessage()
+    {
+        if (_mesh is not null)
+            _message.Text = $"{_mesh.TriangleCount:N0} triangles · mode {(_viewport.Wireframe ? "filaire" : "solide")}.";
+    }
+
+    private void UpdateSwatches()
+    {
+        var accent = (IBrush?)Application.Current?.FindResource("FocusBorderBrush") ?? Brushes.White;
+        foreach (var swatch in _swatches.Children.OfType<Button>())
+        {
+            var selected = string.Equals(swatch.Tag as string, _hex.Text?.Trim(), StringComparison.OrdinalIgnoreCase);
+            swatch.BorderBrush = selected ? accent : Brushes.Transparent;
+        }
+    }
+
+    private void ApplyColor()
+    {
+        if (!PreviewColorParser.TryParse(_hex.Text, out var color))
+        {
+            _message.Text = "Couleur invalide : utilisez #RRGGBB (ex. #58A6FF).";
+            return;
+        }
+        _viewport.ModelColor = color;
+        UpdateSwatches();
+        _viewport.RequestRender(false);
+    }
+
+    private static bool TryNumber(string? text, out double value) =>
+        double.TryParse(text?.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out value) && double.IsFinite(value) && value > 0;
+
+    private async Task AnalyzeAsync()
+    {
+        var mesh = _mesh;
+        if (mesh is null || _activeAnalysis is not null) return;
+        if (_confirmUnits.IsChecked != true || !TryNumber(_scale.Text, out var scale) || !TryNumber(_threshold.Text, out var threshold))
+        {
+            _analysis.Text = "Saisissez une échelle et un seuil positifs, puis confirmez l’échelle (ex. 1 pour mm, 25,4 pour pouces).";
+            return;
+        }
+        var version = _loadVersion;
+        using var cancellation = new CancellationTokenSource();
+        _activeAnalysis = cancellation;
+        _analyze.IsEnabled = false;
+        _cancelAnalysis.IsEnabled = true;
+        _viewport.Markers = null;
+        _viewport.RequestRender(false);
+        _analysis.Text = "Analyse en cours… La navigation reste disponible.";
+        try
+        {
+            var result = await Task.Run(() =>
+            {
+                if (mesh.TriangleCount > 2_000_000) throw new ArgumentException("Analyse limitée à 2 millions de triangles.");
+                var triangles = new List<WallTriangle>(mesh.TriangleCount);
+                for (var i = 0; i + 2 < mesh.Indices.Length; i += 3)
+                {
+                    if ((i & 1023) == 0) cancellation.Token.ThrowIfCancellationRequested();
+                    triangles.Add(new(mesh.Positions[mesh.Indices[i]], mesh.Positions[mesh.Indices[i + 1]], mesh.Positions[mesh.Indices[i + 2]]));
+                }
+                return WallThicknessAnalyzer.Analyze(triangles, scale, threshold, cancellation.Token);
+            }, cancellation.Token);
+            if (version != _loadVersion || cancellation.IsCancellationRequested) return;
+            _viewport.Markers = result.ThinSamples.Select(sample => sample.Position).ToArray();
+            _viewport.RequestRender(false);
+            var topologyBlocksAnalysis = result.BoundaryEdges != 0 || result.NonManifoldEdges != 0 || result.InconsistentEdges != 0 || result.InvalidTriangles != 0;
+            _analysis.Text = $"Seuil {threshold:G} mm · échelle {scale:G} mm/unité : {result.ThinSamples.Count} zones potentiellement fines (points orange), {result.SampleCount:N0}/{result.TriangleCount:N0} centres de faces sondés. " +
+                $"Arêtes ouvertes : {result.BoundaryEdges:N0} ; non-manifold : {result.NonManifoldEdges:N0} ; orientations incohérentes : {result.InconsistentEdges:N0} ; triangles invalides : {result.InvalidTriangles:N0}. " +
+                (topologyBlocksAnalysis ? "Mesure de paroi non effectuée : corrigez d’abord le maillage pour distinguer matière et vide. " : "") +
+                (result.BudgetExhausted ? "Budget atteint : analyse partielle. " : "") +
+                "Sondage non exhaustif selon les normales : détails fins et parois obliques peuvent être manqués. Soudures exactes ; auto-intersections et défauts aux sommets non vérifiés. L’absence d’alerte ne garantit pas l’imprimabilité ; vérifier dans le trancheur.";
+        }
+        catch (OperationCanceledException) { if (version == _loadVersion) _analysis.Text = "Analyse annulée."; }
+        catch (ArgumentException exception) { if (version == _loadVersion) _analysis.Text = "Analyse indisponible : " + exception.Message; }
+        finally
+        {
+            if (ReferenceEquals(_activeAnalysis, cancellation)) _activeAnalysis = null;
+            _cancelAnalysis.IsEnabled = false;
+            _analyze.IsEnabled = _mesh is not null && _activeLoad is null;
+        }
+    }
+}

@@ -2,6 +2,10 @@
 
 ## 12 octobre 2026
 
+### Visualiseur 3D intégré
+- Le visualiseur 3D s’ouvre dans la fenêtre du logiciel (plus de fenêtre séparée), avec un bouton Retour qui ramène à la page précédente.
+- Vue plus grande, panneau latéral (modèle, affichage, analyse), pastilles de couleur, raccourcis `R` (recentrer) et `W` (filaire), dépôt de fichier directement sur la vue.
+
 ### Dossiers modifiables
 - Dans le contenu d’un dossier de collection : **Nouveau dossier**, **Importer un fichier**, et pour chaque ligne un menu « ⋯ » (renommer, déplacer, corbeille, ouvrir avec…).
 - Dans un projet, les sous-dossiers ont aussi leur menu d’actions.

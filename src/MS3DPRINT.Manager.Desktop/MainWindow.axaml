@@ -219,6 +219,7 @@
           <ScrollViewer Grid.Row="1"><StackPanel x:Name="FolderWorkspaceList" Spacing="0" Margin="0,0,10,0" /></ScrollViewer>
         </Grid>
       </Border>
+      <Border x:Name="ViewerWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="panel" />
       <Border x:Name="SearchResultsPanel" Grid.RowSpan="3" IsVisible="False" HorizontalAlignment="Right" VerticalAlignment="Top" Width="440" MaxHeight="460" Margin="0,46,0,0" ZIndex="10" Background="{DynamicResource RaisedSurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="8">
       <ScrollViewer MaxHeight="440">
         <StackPanel x:Name="SearchResults" Spacing="4" />

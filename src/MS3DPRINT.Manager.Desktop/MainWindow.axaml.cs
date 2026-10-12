@@ -97,7 +97,7 @@ public partial class MainWindow : Window
             case "printer": CreatePrinter_Click(this, new RoutedEventArgs()); break;
             case "filament": CreateFilament_Click(this, new RoutedEventArgs()); break;
             case "collection": CreateCollection_Click(this, new RoutedEventArgs()); break;
-            case "viewer": new ModelViewerWindow().Show(this); break;
+            case "viewer": ShowModelViewer(Environment.GetEnvironmentVariable("MS3DPRINT_START_MODEL")); break;
             case "toast":
                 Notify("Projet créé avec succès.");
                 Notify("Impossible d’écrire dans ce dossier : accès refusé.", error: true);
@@ -168,6 +168,7 @@ public partial class MainWindow : Window
         TrashWorkspacePanel.IsVisible = destination == "Corbeille";
         SettingsWorkspacePanel.IsVisible = destination == "Paramètres";
         FolderWorkspacePanel.IsVisible = false;
+        if (ViewerWorkspacePanel.IsVisible) { _modelViewer?.Release(); ViewerWorkspacePanel.IsVisible = false; _hiddenByViewer = []; }
         ClearBreadcrumb();
         FadeIn(destination switch
         {
@@ -1279,7 +1280,7 @@ public partial class MainWindow : Window
 
             if (ThreeDFileSupport.IsPreviewable(path))
             {
-                new ModelViewerWindow(path).Show(this);
+                ShowModelViewer(path);
                 return;
             }
 
@@ -1818,8 +1819,47 @@ public partial class MainWindow : Window
 
     private async void RefreshCollections_Click(object? sender, RoutedEventArgs e) => await LoadCollectionsAsync();
 
-    private void OpenThreeDViewer_Click(object? sender, RoutedEventArgs e)
-        => new ModelViewerWindow().Show(this);
+    private void OpenThreeDViewer_Click(object? sender, RoutedEventArgs e) => ShowModelViewer(null);
+
+    private ModelViewerView? _modelViewer;
+    private List<Control> _hiddenByViewer = [];
+    private string? _viewerReturnTitle;
+    private string? _viewerReturnSubtitle;
+
+    /// <summary>Shows the 3D viewer inside the main window, over the current page, and loads a model when a path is given.</summary>
+    private async void ShowModelViewer(string? path)
+    {
+        if (!ViewerWorkspacePanel.IsVisible)
+        {
+            _hiddenByViewer = WorkspacePanels().Append(FolderWorkspacePanel).Where(panel => panel.IsVisible).ToList();
+            foreach (var panel in _hiddenByViewer) panel.IsVisible = false;
+            _viewerReturnTitle = PageTitle.Text;
+            _viewerReturnSubtitle = PageSubtitle.Text;
+            ViewerWorkspacePanel.IsVisible = true;
+        }
+        if (_modelViewer is null)
+        {
+            _modelViewer = new ModelViewerView(CloseModelViewer);
+            _modelViewer.ModelLoaded += name => PageSubtitle.Text = name;
+            ViewerWorkspacePanel.Child = _modelViewer;
+        }
+        PageTitle.Text = "Visualiseur 3D";
+        PageSubtitle.Text = "Déposez un STL ou un OBJ, ou ouvrez un fichier.";
+        if (path is null) return;
+        try { await _modelViewer.LoadModelAsync(path); }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        { Notify("Impossible d’ouvrir ce modèle : " + exception.Message, error: true); }
+    }
+
+    private void CloseModelViewer()
+    {
+        _modelViewer?.Release();
+        ViewerWorkspacePanel.IsVisible = false;
+        foreach (var panel in _hiddenByViewer) panel.IsVisible = true;
+        _hiddenByViewer = [];
+        PageTitle.Text = _viewerReturnTitle ?? "Vue d’ensemble";
+        PageSubtitle.Text = _viewerReturnSubtitle ?? string.Empty;
+    }
 
     private async void Changelog_Click(object? sender, RoutedEventArgs e)
         => await new ChangelogWindow().ShowDialog(this);
