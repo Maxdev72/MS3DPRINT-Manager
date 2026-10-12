@@ -24,6 +24,14 @@
     <Setter Property="CornerRadius" Value="14" />
     <Setter Property="Padding" Value="20" />
   </Style>
+  <!-- Workspace pages sit on the canvas: cards inside them are never nested in another card. -->
+  <Style Selector="Border.panel">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Transitions"><Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.2" /></Transitions></Setter>
+  </Style>
+  <Style Selector="Button.sort-head TextBlock"><Setter Property="Foreground" Value="{Binding $parent[Button].Foreground}" /></Style>
+  <Style Selector="Button.sort-head Path.icon"><Setter Property="Stroke" Value="{Binding $parent[Button].Foreground}" /></Style>
   <Style Selector="Border.card-raised">
     <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" />
@@ -107,7 +115,7 @@
   <Style Selector="Button.nav-item">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
-    <Setter Property="BorderThickness" Value="3,0,0,0" />
+    <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
     <Setter Property="Padding" Value="12,9" />
     <Setter Property="FontWeight" Value="Medium" />
@@ -117,7 +125,7 @@
   </Style>
   <Style Selector="Button.nav-item:pointerover"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="BorderBrush" Value="Transparent" /><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Style>
   <Style Selector="Button.nav-item:pointerover Path.icon"><Setter Property="Stroke" Value="{DynamicResource TextBrush}" /></Style>
-  <Style Selector="Button.nav-item.selected"><Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" /><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
+  <Style Selector="Button.nav-item.selected"><Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" /><Setter Property="BorderBrush" Value="Transparent" /><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
   <Style Selector="Button.nav-item.selected Path.icon"><Setter Property="Stroke" Value="{DynamicResource AccentBrush}" /></Style>
   <Style Selector="Button.nav-item TextBlock"><Setter Property="Foreground" Value="{Binding $parent[Button].Foreground}" /></Style>
 
@@ -259,6 +267,17 @@
   <Style Selector="Button.scope-choice Path"><Setter Property="Stroke" Value="{DynamicResource MutedTextBrush}" /></Style>
   <Style Selector="Button.scope-choice.selected"><Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" /><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Style>
   <Style Selector="Button.scope-choice.selected Path"><Setter Property="Stroke" Value="{DynamicResource AccentBrush}" /></Style>
+  <!-- Wizard stepper (Estimations) -->
+  <Style Selector="Button.step-chip"><Setter Property="Padding" Value="8,8" /><Setter Property="HorizontalContentAlignment" Value="Left" /></Style>
+  <Style Selector="Button.step-chip Border.step-dot">
+    <Setter Property="Width" Value="26" /><Setter Property="Height" Value="26" /><Setter Property="CornerRadius" Value="13" />
+    <Setter Property="BorderThickness" Value="1" /><Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+  </Style>
+  <Style Selector="Button.step-chip Border.step-dot TextBlock"><Setter Property="FontSize" Value="12" /><Setter Property="FontWeight" Value="SemiBold" /><Setter Property="HorizontalAlignment" Value="Center" /><Setter Property="VerticalAlignment" Value="Center" /></Style>
+  <Style Selector="Button.step-chip.done Border.step-dot"><Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Style>
+  <Style Selector="Button.step-chip.active"><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Style>
+  <Style Selector="Button.step-chip.active Border.step-dot"><Setter Property="Background" Value="{DynamicResource AccentBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Style>
+  <Style Selector="Button.step-chip.active Border.step-dot TextBlock"><Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}" /></Style>
   <Style Selector="Border.toast">
     <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
@@ -266,7 +285,6 @@
     <Setter Property="CornerRadius" Value="12" />
     <Setter Property="Padding" Value="14,12" />
     <Setter Property="MaxWidth" Value="420" />
-    <Setter Property="BoxShadow" Value="0 8 24 0 #66000000" />
   </Style>
   <Style Selector="Border.toast.success"><Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}" /></Style>
   <Style Selector="Border.toast.error"><Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" /></Style>

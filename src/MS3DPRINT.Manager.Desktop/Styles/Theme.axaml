@@ -58,6 +58,17 @@
       <StreamGeometry x:Key="IconInfo">M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17Z M12 11v5.5 M12 7.6h.01</StreamGeometry>
       <StreamGeometry x:Key="IconClose">M6 6l12 12 M18 6 6 18</StreamGeometry>
       <StreamGeometry x:Key="IconFile">M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10.5a.5.5 0 0 1-.5-.5v-16a.5.5 0 0 1 .5-.5Z M14 3.5v4h4 M9 12.5h6 M9 16h6</StreamGeometry>
+      <StreamGeometry x:Key="IconOpen">M14 4h6v6 M20 4l-9 9 M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5</StreamGeometry>
+      <StreamGeometry x:Key="IconEdit">M4 20l4-1 11-11a2.1 2.1 0 0 0-3-3L5 16Z M14 7l3 3</StreamGeometry>
+      <StreamGeometry x:Key="IconRename">M5 7h14 M12 7v12 M9 19h6</StreamGeometry>
+      <StreamGeometry x:Key="IconMove">M4 8h13 M14 5l3 3-3 3 M20 16H7 M10 13l-3 3 3 3</StreamGeometry>
+      <StreamGeometry x:Key="IconMore">M6 12h.01 M12 12h.01 M18 12h.01</StreamGeometry>
+      <StreamGeometry x:Key="IconArrowLeft">M19 12H5 M11 6l-6 6 6 6</StreamGeometry>
+      <StreamGeometry x:Key="IconArrowRight">M5 12h14 M13 6l6 6-6 6</StreamGeometry>
+      <StreamGeometry x:Key="IconMinus">M5 12h14</StreamGeometry>
+      <StreamGeometry x:Key="IconChevronUp">M6 15l6-6 6 6</StreamGeometry>
+      <StreamGeometry x:Key="IconChevronDown">M6 9l6 6 6-6</StreamGeometry>
+      <StreamGeometry x:Key="IconUpload">M12 16V4 M7 9l5-5 5 5 M5 20h14</StreamGeometry>
       <StreamGeometry x:Key="IconActivity">M3 12h4l3-7 4 14 3-7h4</StreamGeometry>
     </ResourceDictionary>
   </Styles.Resources>

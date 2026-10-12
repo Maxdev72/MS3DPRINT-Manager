@@ -224,7 +224,7 @@ public sealed class AvaloniaShellMarkupTests
         var styles = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "Styles", "Controls.axaml"));
 
         Assert.Contains("CreateOverflowActions", source, StringComparison.Ordinal);
-        Assert.Contains("Content = \"⋯\"", source, StringComparison.Ordinal);
+        Assert.Contains("IconMore", source, StringComparison.Ordinal);
         Assert.Contains("Button.icon-action", styles, StringComparison.Ordinal);
         Assert.Contains("Button.menu-action", styles, StringComparison.Ordinal);
     }

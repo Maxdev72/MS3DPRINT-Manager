@@ -528,7 +528,7 @@ public partial class MainWindow : Window
     public void ReportUnexpectedError(Exception exception)
     {
         ErrorLog.Write(exception);
-        Notify("Une erreur inattendue s’est produite : " + exception.Message, error: true);
+        Notify("Une erreur inattendue s’est produite. Réessayez ; si elle persiste, le détail est dans erreurs.log. (" + exception.Message + ")", error: true);
         EndBusyAll();
     }
 
@@ -557,7 +557,7 @@ public partial class MainWindow : Window
         var icon = new Avalonia.Controls.Shapes.Path { Classes = { "icon", error ? "icon-danger" : "icon-success" }, Width = 18, Height = 18, VerticalAlignment = VerticalAlignment.Top, Margin = new Avalonia.Thickness(0, 1, 0, 0) };
         if (Avalonia.Application.Current?.TryFindResource(error ? "IconAlert" : "IconCheck", out var geometry) == true && geometry is Geometry data) icon.Data = data;
         var text = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap, MaxWidth = 340 };
-        var close = new Button { Content = "✕", Classes = { "icon-action" }, MinWidth = 24, MinHeight = 24, Padding = new Avalonia.Thickness(4, 0), FontSize = 11, VerticalAlignment = VerticalAlignment.Top };
+        var close = new Button { Content = Icons.Glyph("IconClose", 14), Classes = { "icon-action" }, MinWidth = 24, MinHeight = 24, Padding = new Avalonia.Thickness(4, 0), FontSize = 11, VerticalAlignment = VerticalAlignment.Top };
         ToolTip.SetTip(close, "Fermer");
         var layout = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 10 };
         Grid.SetColumn(text, 1); Grid.SetColumn(close, 2);
@@ -606,7 +606,9 @@ public partial class MainWindow : Window
             else
             {
                 var column = index;
-                var label = headings[index] + (index == active ? (ascending ? "  ▲" : "  ▼") : string.Empty);
+                var label = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
+                label.Children.Add(new TextBlock { Text = headings[index] });
+                if (index == active) label.Children.Add(Icons.Glyph(ascending ? "IconChevronUp" : "IconChevronDown", 11));
                 var button = new Button { Content = label, Classes = { "sort-head" } };
                 if (index == active) button.Classes.Add("active");
                 ToolTip.SetTip(button, "Trier par " + headings[index].ToLowerInvariant());
@@ -734,7 +736,7 @@ public partial class MainWindow : Window
             }
         };
         flyout.FlyoutPresenterClasses.Add("action-menu-flyout");
-        var overflow = new Button { Content = "⋯", Classes = { "icon-action" } };
+        var overflow = new Button { Content = Icons.Glyph("IconMore", 18, dots: true), Classes = { "icon-action" } };
         ToolTip.SetTip(overflow, "Actions");
         Avalonia.Automation.AutomationProperties.SetName(overflow, "Actions");
         overflow.Click += (_, _) => flyout.ShowAt(overflow);
@@ -879,11 +881,11 @@ public partial class MainWindow : Window
         {
             var open = new Button { Tag = project, HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch };
             open.Click += ProjectEntry_Click;
-            var folder = new Button { Content = "↗  Ouvrir le dossier", Tag = project.ProjectPath }; folder.Click += OpenFolder_Click;
-            var edit = new Button { Content = "✎  Modifier la fiche", Tag = project }; edit.Click += EditProject_Click;
-            var rename = new Button { Content = "↻  Renommer", Tag = project }; rename.Click += RenameProject_Click;
-            var move = new Button { Content = "⇄  Déplacer", Tag = project }; move.Click += MoveProject_Click;
-            var trash = new Button { Content = "⌫  Corbeille", Tag = project }; trash.Click += TrashProject_Click;
+            var folder = new Button { Content = Icons.Label("IconOpen", "Ouvrir le dossier"), Tag = project.ProjectPath }; folder.Click += OpenFolder_Click;
+            var edit = new Button { Content = Icons.Label("IconEdit", "Modifier la fiche"), Tag = project }; edit.Click += EditProject_Click;
+            var rename = new Button { Content = Icons.Label("IconRename", "Renommer"), Tag = project }; rename.Click += RenameProject_Click;
+            var move = new Button { Content = Icons.Label("IconMove", "Déplacer"), Tag = project }; move.Click += MoveProject_Click;
+            var trash = new Button { Content = Icons.Label("IconTrash", "Corbeille"), Tag = project }; trash.Click += TrashProject_Click;
             ProjectList.Children.Add(CreateActionRow(open, CreateOverflowActions(folder, edit, rename, move, trash),
                 CreateCompactTableCell($"{project.Reference} · {project.Title()}", prominent: true),
                 CreateCompactTableCell(project.ClientTitle()),
@@ -960,7 +962,7 @@ public partial class MainWindow : Window
         ProjectFilterBar.IsVisible = false;
         var toolbar = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), Margin = new Avalonia.Thickness(0, 0, 0, 8) };
         var origin = _projectOriginClient;
-        var back = new Button { Content = directory != project.ProjectPath ? "← Dossier parent" : origin is null ? "← Retour aux projets" : "← Retour au client", Classes = { "ghost" }, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left };
+        var back = new Button { Content = Icons.Label("IconArrowLeft", directory != project.ProjectPath ? "Dossier parent" : origin is null ? "Retour aux projets" : "Retour au client"), Classes = { "ghost" }, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left };
         back.Click += async (_, _) =>
         {
             if (directory == project.ProjectPath && origin is not null)
@@ -980,9 +982,9 @@ public partial class MainWindow : Window
             else await LoadProjectDirectoryAsync(project, new ProjectWorkspaceBrowser().Parent(project.ProjectPath, directory));
         };
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right };
-        var createFolder = new Button { Content = "+ Nouveau dossier", Tag = (Project: project, Directory: directory), Classes = { "primary-action" } };
+        var createFolder = new Button { Content = Icons.Label("IconPlus", "Nouveau dossier"), Tag = (Project: project, Directory: directory), Classes = { "primary-action" } };
         createFolder.Click += CreateProjectFolder_Click;
-        var import = new Button { Content = "Importer un fichier", Tag = (Project: project, Directory: directory), HorizontalAlignment = HorizontalAlignment.Left };
+        var import = new Button { Content = Icons.Label("IconUpload", "Importer un fichier"), Tag = (Project: project, Directory: directory), HorizontalAlignment = HorizontalAlignment.Left };
         import.Click += ImportProjectFile_Click;
         actions.Children.Add(createFolder);
         actions.Children.Add(import);
@@ -1036,13 +1038,13 @@ public partial class MainWindow : Window
                 {
                     var file = new Button { Tag = entry.FullPath, HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch };
                     file.Click += FileEntry_Click;
-                    var openWith = new Button { Content = "↗  Ouvrir avec…", Tag = entry.FullPath };
+                    var openWith = new Button { Content = Icons.Label("IconOpen", "Ouvrir avec…"), Tag = entry.FullPath };
                     openWith.Click += OpenWithFile_Click;
-                    var rename = new Button { Content = "↻  Renommer", Tag = new ProjectDirectoryContext(project, directory, entry.FullPath) };
+                    var rename = new Button { Content = Icons.Label("IconRename", "Renommer"), Tag = new ProjectDirectoryContext(project, directory, entry.FullPath) };
                     rename.Click += RenameProjectFile_Click;
-                    var move = new Button { Content = "⇄  Déplacer", Tag = new ProjectDirectoryContext(project, directory, entry.FullPath) };
+                    var move = new Button { Content = Icons.Label("IconMove", "Déplacer"), Tag = new ProjectDirectoryContext(project, directory, entry.FullPath) };
                     move.Click += MoveProjectEntry_Click;
-                    var trash = new Button { Content = "⌫  Corbeille", Tag = new ProjectDirectoryContext(project, directory, entry.FullPath) };
+                    var trash = new Button { Content = Icons.Label("IconTrash", "Corbeille"), Tag = new ProjectDirectoryContext(project, directory, entry.FullPath) };
                     trash.Click += TrashProjectFile_Click;
                     ProjectList.Children.Add(CreateActionRow(file, CreateOverflowActions(openWith, rename, move, trash),
                         CreateNameCell("IconFile", entry.Name, accentIcon: false),
@@ -1228,7 +1230,7 @@ public partial class MainWindow : Window
 
     private void AddProjectOverview(ProjectSummary project)
     {
-        var edit = new Button { Content = "✎  Modifier la fiche", Tag = project, VerticalAlignment = VerticalAlignment.Center };
+        var edit = new Button { Content = Icons.Label("IconEdit", "Modifier la fiche"), Tag = project, VerticalAlignment = VerticalAlignment.Center };
         edit.Click += EditProject_Click;
         var badge = CreateStatusBadge(project.Profile is null ? "À compléter" : project.StatusLabel);
 
@@ -1331,7 +1333,7 @@ public partial class MainWindow : Window
 
         var back = new Button
         {
-            Content = string.Equals(root, directory, StringComparison.OrdinalIgnoreCase) ? "← Retour" : "← Dossier parent",
+            Content = Icons.Label("IconArrowLeft", string.Equals(root, directory, StringComparison.OrdinalIgnoreCase) ? "Retour" : "Dossier parent"),
             Classes = { "ghost" },
             HorizontalAlignment = HorizontalAlignment.Left
         };
@@ -1522,11 +1524,11 @@ public partial class MainWindow : Window
         {
             var open = new Button { Tag = client, HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch };
             open.Click += ClientEntry_Click;
-            var folder = new Button { Content = "↗  Ouvrir le dossier", Tag = client.ClientPath }; folder.Click += OpenFolder_Click;
-            var edit = new Button { Content = "✎  Modifier la fiche", Tag = client }; edit.Click += EditClient_Click;
-            var rename = new Button { Content = "↻  Renommer", Tag = client }; rename.Click += RenameClient_Click;
-            var move = new Button { Content = "⇄  Déplacer", Tag = client }; move.Click += MoveClient_Click;
-            var trash = new Button { Content = "⌫  Corbeille", Tag = client }; trash.Click += TrashClient_Click;
+            var folder = new Button { Content = Icons.Label("IconOpen", "Ouvrir le dossier"), Tag = client.ClientPath }; folder.Click += OpenFolder_Click;
+            var edit = new Button { Content = Icons.Label("IconEdit", "Modifier la fiche"), Tag = client }; edit.Click += EditClient_Click;
+            var rename = new Button { Content = Icons.Label("IconRename", "Renommer"), Tag = client }; rename.Click += RenameClient_Click;
+            var move = new Button { Content = Icons.Label("IconMove", "Déplacer"), Tag = client }; move.Click += MoveClient_Click;
+            var trash = new Button { Content = Icons.Label("IconTrash", "Corbeille"), Tag = client }; trash.Click += TrashClient_Click;
             var kindVariant = client.IsProfileMissing ? "warning" : client.Kind == ClientKind.Individual ? "neutral" : "info";
             ClientList.Children.Add(CreateActionRow(ClientRowColumns, open, CreateOverflowActions(folder, edit, rename, move, trash),
                 CreateCompactTableCell(client.Title(), prominent: true),
@@ -1566,7 +1568,7 @@ public partial class MainWindow : Window
         ClientsPanelActions.IsVisible = false;
         ClientsPanelHeader.IsVisible = false;
         ClientFilterBar.IsVisible = false;
-        var back = new Button { Content = "← Retour aux clients", Classes = { "ghost" }, HorizontalAlignment = HorizontalAlignment.Left };
+        var back = new Button { Content = Icons.Label("IconArrowLeft", "Retour aux clients"), Classes = { "ghost" }, HorizontalAlignment = HorizontalAlignment.Left };
         back.Click += async (_, _) =>
         {
             PageTitle.Text = "Clients";
@@ -1589,7 +1591,7 @@ public partial class MainWindow : Window
         }
         if (!string.IsNullOrWhiteSpace(client.Profile?.Address)) card.Children.Add(new TextBlock { Text = client.Profile.Address, TextWrapping = TextWrapping.Wrap });
         if (!string.IsNullOrWhiteSpace(client.Profile?.Notes)) card.Children.Add(new TextBlock { Text = client.Profile.Notes, TextWrapping = TextWrapping.Wrap });
-        var edit = new Button { Content = "✎  Modifier la fiche", Tag = client };
+        var edit = new Button { Content = Icons.Label("IconEdit", "Modifier la fiche"), Tag = client };
         edit.Click += EditClient_Click;
         var newProject = new Button { Content = "+  Nouveau projet", Tag = client, Classes = { "primary-action" } };
         newProject.Click += CreateProjectForClient_Click;
@@ -1605,7 +1607,6 @@ public partial class MainWindow : Window
                 ClientList.Children.Add(CreateEmptyState("IconProjects", "Aucun projet pour ce client", "Créez son premier projet avec le bouton « Nouveau projet ».", "Nouveau projet", CreateProjectForClient_Click, client));
                 return;
             }
-            ClientList.Children.Add(new TextBlock { Text = "PROJETS", Classes = { "overline" }, Margin = new Avalonia.Thickness(14, 12, 0, 0) });
             ClientList.Children.Add(CreateCompactTableHeader(ActionRowColumns, "PROJET", "STATUT", "ÉCHÉANCE", ""));
             foreach (var project in projects)
             {
@@ -1763,11 +1764,11 @@ public partial class MainWindow : Window
                 var category = CollectionCategory(workspaceRoot, item);
                 var open = new Button { Tag = item.Path, HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch };
                 open.Click += OpenFolder_Click;
-                var openMenu = new Button { Content = "↗  Ouvrir", Tag = item.Path }; openMenu.Click += OpenFolder_Click;
-                var edit = new Button { Content = "✎  Modifier", Tag = item }; edit.Click += EditCollection_Click;
-                var rename = new Button { Content = "↻  Renommer", Tag = item }; rename.Click += RenameCollection_Click;
-                var move = new Button { Content = "⇄  Déplacer", Tag = item }; move.Click += MoveCollection_Click;
-                var trash = new Button { Content = "⌫  Corbeille", Tag = item }; trash.Click += TrashCollection_Click;
+                var openMenu = new Button { Content = Icons.Label("IconOpen", "Ouvrir"), Tag = item.Path }; openMenu.Click += OpenFolder_Click;
+                var edit = new Button { Content = Icons.Label("IconEdit", "Modifier"), Tag = item }; edit.Click += EditCollection_Click;
+                var rename = new Button { Content = Icons.Label("IconRename", "Renommer"), Tag = item }; rename.Click += RenameCollection_Click;
+                var move = new Button { Content = Icons.Label("IconMove", "Déplacer"), Tag = item }; move.Click += MoveCollection_Click;
+                var trash = new Button { Content = Icons.Label("IconTrash", "Corbeille"), Tag = item }; trash.Click += TrashCollection_Click;
                 var title = new StackPanel { Spacing = 1 };
                 title.Children.Add(CreateCompactTableCell(item.Name, prominent: true));
                 if (!string.IsNullOrWhiteSpace(item.Profile?.Description))
@@ -1940,6 +1941,7 @@ public partial class MainWindow : Window
                 if (choice.Tag as string == value.ToString()) choice.Classes.Add("selected"); else choice.Classes.Remove("selected");
             }
             EstimatePrintInputs.IsVisible = value != 1;
+            UpdateEstimateStepper();
         }
     }
 
@@ -2017,8 +2019,8 @@ public partial class MainWindow : Window
             PrinterList.Children.Add(CreateCompactTableHeader(ActionRowColumns, "IMPRIMANTE", "COÛT HORAIRE", "PUISSANCE", "ACTIONS"));
             foreach (var printer in printers)
             {
-                var edit = new Button { Content = "✎  Modifier", Tag = printer }; edit.Click += EditPrinter_Click;
-                var trash = new Button { Content = "⌫  Corbeille", Tag = printer }; trash.Click += TrashPrinter_Click;
+                var edit = new Button { Content = Icons.Label("IconEdit", "Modifier"), Tag = printer }; edit.Click += EditPrinter_Click;
+                var trash = new Button { Content = Icons.Label("IconTrash", "Corbeille"), Tag = printer }; trash.Click += TrashPrinter_Click;
                 PrinterList.Children.Add(CreateActionRow(null, CreateOverflowActions(edit, trash),
                     CreateCompactTableCell(printer.DisplayName, prominent: true),
                     CreateCompactTableCell($"{PrinterCostCalculator.HourlyRate(printer):0.00} €/h"),
@@ -2048,7 +2050,7 @@ public partial class MainWindow : Window
                 text.Children.Add(new TextBlock { Text = $"{estimate.Result.FinalPrice:0.00} €", Classes = { "caption" } });
                 var button = new Button { Content = text, Tag = estimate, Classes = { "workspace-card" }, MinHeight = 52, Padding = new Avalonia.Thickness(12, 8) };
                 button.Click += LoadSavedEstimate_Click;
-                var trash = new Button { Content = "⌫", Tag = estimate, Classes = { "icon-action" } };
+                var trash = new Button { Content = Icons.Glyph("IconTrash"), Tag = estimate, Classes = { "icon-action" } };
                 ToolTip.SetTip(trash, "Envoyer à la corbeille");
                 trash.Click += TrashEstimate_Click;
                 var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 6 };
@@ -2105,7 +2107,8 @@ public partial class MainWindow : Window
         _latestEstimateInputs = inputs;
         _latestEstimateResult = estimate.Result;
         EstimateFinal.Text = estimate.Result.FinalPrice.ToString("0.00") + " €";
-        EstimateDetail.Text = "Estimation chargée. Ajustez les valeurs, recalculez puis enregistrez la mise à jour.";
+        EstimateDetail.Text = "Estimation chargée. Revenez sur une étape pour ajuster les valeurs, puis enregistrez la mise à jour.";
+        ShowEstimateStep(3);
     }
 
     private void ResetEstimate_Click(object? sender, RoutedEventArgs e)
@@ -2124,6 +2127,7 @@ public partial class MainWindow : Window
         _loadedEstimate = null;
         EstimateFinal.Text = "—";
         EstimateDetail.Text = "Nouvelle estimation prête.";
+        GoToEstimateStep(0);
     }
 
     private async void SaveEstimate_Click(object? sender, RoutedEventArgs e)
@@ -2151,14 +2155,107 @@ public partial class MainWindow : Window
         { EstimateDetail.Text = exception.Message; }
     }
 
-    private void CalculateEstimate_Click(object? sender, RoutedEventArgs e)
+    private int _estimateStep;
+
+    private void EstimateStep_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string tag } && int.TryParse(tag, out var index)) GoToEstimateStep(index);
+    }
+
+    private void EstimateBack_Click(object? sender, RoutedEventArgs e) =>
+        GoToEstimateStep(_estimateStep == 2 && EstimateScopeIndex == 1 ? 0 : _estimateStep - 1);
+
+    private void EstimateNext_Click(object? sender, RoutedEventArgs e) =>
+        GoToEstimateStep(_estimateStep == 0 && EstimateScopeIndex == 1 ? 2 : _estimateStep + 1);
+
+    /// <summary>Shows one wizard step; the recap step is only reachable once the inputs compute a valid price.</summary>
+    private void GoToEstimateStep(int step)
+    {
+        step = Math.Clamp(step, 0, 3);
+        if (step == 1 && EstimateScopeIndex == 1) step = _estimateStep > 1 ? 0 : 2;
+        if (step == 3 && !CalculateEstimate())
+        {
+            Notify(EstimateDetail.Text ?? "Vérifiez les valeurs saisies.", error: true);
+            return;
+        }
+        ShowEstimateStep(step);
+    }
+
+    private void ShowEstimateStep(int step)
+    {
+        _estimateStep = step;
+        EstimateStep0.IsVisible = step == 0;
+        EstimateStep1.IsVisible = step == 1;
+        EstimateStep2.IsVisible = step == 2;
+        EstimateStep3.IsVisible = step == 3;
+        EstimateBackButton.IsVisible = step > 0;
+        EstimateNextButton.IsVisible = step < 3;
+        EstimateSaveButton.IsVisible = step == 3;
+        if (step == 3) BuildEstimateRecap();
+        UpdateEstimateStepper();
+    }
+
+    private void UpdateEstimateStepper()
+    {
+        foreach (var chip in EstimateStepper.Children.OfType<Button>())
+        {
+            var index = int.Parse((string)chip.Tag!, System.Globalization.CultureInfo.InvariantCulture);
+            chip.Classes.Set("active", index == _estimateStep);
+            chip.Classes.Set("done", index < _estimateStep && !(index == 1 && EstimateScopeIndex == 1));
+            chip.IsEnabled = !(index == 1 && EstimateScopeIndex == 1);
+            if (chip.Content is StackPanel { Children: [Border { Child: TextBlock number }, ..] })
+                number.Text = index < _estimateStep && chip.IsEnabled ? "✓" : (index + 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
+    }
+
+    private void BuildEstimateRecap()
+    {
+        EstimateRecap.Children.Clear();
+        if (_latestEstimateInputs is not { } inputs || _latestEstimateResult is not { } result) return;
+        void Row(string label, string value, bool strong = false, bool negative = false)
+        {
+            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+            var name = new TextBlock { Text = label };
+            if (!strong) name.Classes.Add("muted");
+            var amount = new TextBlock { Text = value, FontWeight = strong ? FontWeight.SemiBold : FontWeight.Normal };
+            if (strong) amount.FontSize = 18;
+            Grid.SetColumn(amount, 1);
+            row.Children.Add(name);
+            row.Children.Add(amount);
+            EstimateRecap.Children.Add(row);
+        }
+        void Cost(string label, decimal value) { if (value != 0) Row(label, value.ToString("0.00") + " €"); }
+        void Separator() => EstimateRecap.Children.Add(new Border { Height = 1, Margin = new Avalonia.Thickness(0, 6), Background = (IBrush?)Avalonia.Application.Current?.FindResource("BorderBrush") });
+
+        EstimateRecap.Children.Add(new TextBlock { Text = EstimateName.Text, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
+        Cost("Matière", inputs.MaterialCost);
+        Cost("Machine", inputs.MachineCost);
+        Cost("Électricité", inputs.ElectricityCost);
+        Cost("Conception", inputs.DesignCost);
+        Cost("Main-d’œuvre", inputs.LaborCost);
+        Cost("Post-traitement", inputs.PostProcessingCost);
+        Cost("Consommables", inputs.ConsumablesCost);
+        Cost("Emballage / expédition", inputs.PackagingShippingCost);
+        Cost("Autres coûts", inputs.MiscCost);
+        Separator();
+        Row("Coût brut", result.RawCost.ToString("0.00") + " €");
+        if (result.ExpectedCost != result.RawCost) Row($"Aléas d’impression ({inputs.FailureRatePercent:0.##} %)", "+ " + (result.ExpectedCost - result.RawCost).ToString("0.00") + " €");
+        if (result.SalePrice != result.ExpectedCost) Row($"Marge ({inputs.MarginPercent:0.##} %)", "+ " + (result.SalePrice - result.ExpectedCost).ToString("0.00") + " €");
+        if (result.FinalPrice != result.SalePrice) Row($"Remise ({inputs.DiscountPercent:0.##} %)", "− " + (result.SalePrice - result.FinalPrice).ToString("0.00") + " €");
+        Separator();
+        Row("Prix de vente", result.FinalPrice.ToString("0.00") + " €", strong: true);
+    }
+
+    private void CalculateEstimate_Click(object? sender, RoutedEventArgs e) => CalculateEstimate();
+
+    private bool CalculateEstimate()
     {
         var modellingOnly = EstimateScopeIndex == 1;
         var filament = EstimateFilament.SelectedItem as MS3DPRINT.Manager.Core.Filaments.FilamentProfile;
         if (!modellingOnly && filament is null)
         {
             EstimateDetail.Text = "Ajoutez ou sélectionnez un filament.";
-            return;
+            return false;
         }
 
         if (!TryEstimateValue(EstimateWeight.Text, out var grams) || !TryEstimateValue(EstimateHours.Text, out var hours) ||
@@ -2170,7 +2267,7 @@ public partial class MainWindow : Window
             grams < 0 || hours < 0 || rate < 0 || pricePerKwh < 0 || electricity < 0 || design < 0 || labor < 0 || postProcessing < 0 || consumables < 0 || packaging < 0 || misc < 0)
         {
             EstimateDetail.Text = "Saisissez des montants positifs, avec une virgule ou un point.";
-            return;
+            return false;
         }
 
         try
@@ -2188,10 +2285,12 @@ public partial class MainWindow : Window
             _latestEstimateResult = result;
             EstimateFinal.Text = result.FinalPrice.ToString("0.00") + " €";
             EstimateDetail.Text = $"Coût brut : {result.RawCost:0.00} € · Avec aléas : {result.ExpectedCost:0.00} € · Avant remise : {result.SalePrice:0.00} €.";
+            return true;
         }
         catch (ArgumentOutOfRangeException)
         {
             EstimateDetail.Text = "Le taux d’échec doit être inférieur à 100 %, et la remise entre 0 et 100 %.";
+            return false;
         }
     }
 
@@ -2240,8 +2339,8 @@ public partial class MainWindow : Window
             FilamentList.Children.Add(CreateCompactTableHeader(ActionRowColumns, "FILAMENT", "MATIÈRE", "PRIX", "ACTIONS"));
             foreach (var filament in filaments)
             {
-                var edit = new Button { Content = "✎  Modifier", Tag = filament }; edit.Click += EditFilament_Click;
-                var trash = new Button { Content = "⌫  Corbeille", Tag = filament }; trash.Click += TrashFilament_Click;
+                var edit = new Button { Content = Icons.Label("IconEdit", "Modifier"), Tag = filament }; edit.Click += EditFilament_Click;
+                var trash = new Button { Content = Icons.Label("IconTrash", "Corbeille"), Tag = filament }; trash.Click += TrashFilament_Click;
                 var color = string.IsNullOrWhiteSpace(filament.Color) ? string.Empty : $" · {filament.Color}";
                 var material = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
                 material.Children.Add(CreateCompactTableCell($"{filament.Material}{color}"));

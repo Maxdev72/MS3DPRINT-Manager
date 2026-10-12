@@ -20,10 +20,10 @@ public sealed class DocumentPreviewWindow : Window
     private readonly TextBlock _message = new() { TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _pageText = new() { VerticalAlignment = VerticalAlignment.Center, IsVisible = false };
     private readonly TextBlock _zoomText = new() { Text = "100 %", VerticalAlignment = VerticalAlignment.Center, MinWidth = 48, TextAlignment = TextAlignment.Center };
-    private readonly Button _previous = new() { Content = "←  Précédent", IsEnabled = false, IsVisible = false };
-    private readonly Button _next = new() { Content = "Suivant  →", IsEnabled = false, IsVisible = false };
-    private readonly Button _zoomOut = new() { Content = "−" };
-    private readonly Button _zoomIn = new() { Content = "+" };
+    private readonly Button _previous = new() { Content = MS3DPRINT.Manager.Desktop.Icons.Label("IconArrowLeft", "Précédent"), IsEnabled = false, IsVisible = false };
+    private readonly Button _next = new() { Content = MS3DPRINT.Manager.Desktop.Icons.Label("IconArrowRight", "Suivant"), IsEnabled = false, IsVisible = false };
+    private readonly Button _zoomOut = new() { Content = MS3DPRINT.Manager.Desktop.Icons.Glyph("IconMinus") };
+    private readonly Button _zoomIn = new() { Content = MS3DPRINT.Manager.Desktop.Icons.Glyph("IconPlus") };
     private readonly Button _print = new() { Content = "Imprimer…", IsVisible = false };
     private PdfPageRenderer? _pdf;
     private int _pageIndex;
