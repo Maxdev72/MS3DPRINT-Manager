@@ -28,6 +28,8 @@
           <Button Classes="nav-item" Content="Estimations" Tag="Estimations" Click="NavigationButton_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
           <Button Classes="nav-item" Content="Imprimantes" Tag="Imprimantes" Click="NavigationButton_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
           <Button Classes="nav-item" Content="Corbeille" Tag="Corbeille" Click="NavigationButton_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
+          <TextBlock Text="OUTILS" Classes="muted" Margin="10,18,0,8" />
+          <Button Classes="nav-item" Content="Visualiseur 3D" Click="OpenThreeDViewer_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
         </StackPanel>
         <StackPanel Grid.Row="2" Spacing="10">
           <Border Background="{DynamicResource RaisedSurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="12">
@@ -46,10 +48,13 @@
           <TextBlock x:Name="PageTitle" Text="Vue d’ensemble" FontSize="30" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
           <TextBlock x:Name="PageSubtitle" Text="Bienvenue dans votre atelier. Voici ce qui mérite votre attention." Classes="muted" />
         </StackPanel>
-        <Grid Grid.Column="1" Width="286" Height="42">
-          <TextBox x:Name="SearchBox" PlaceholderText="Rechercher partout" KeyUp="SearchBox_KeyUp" Padding="13,0" />
-          <TextBlock Text="Ctrl+K" IsHitTestVisible="False" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,13,0" FontSize="11" Foreground="{DynamicResource AccentBrush}" />
-        </Grid>
+        <Border Grid.Column="1" Classes="search-box" Width="320" Height="40" VerticalAlignment="Center">
+          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+            <Path Data="M10.5,3 A7.5,7.5 0 1 0 10.5,18 A7.5,7.5 0 1 0 10.5,3 M16,16 L21,21" Stroke="{DynamicResource MutedTextBrush}" StrokeThickness="2" StrokeLineCap="Round" Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center" />
+            <TextBox x:Name="SearchBox" Grid.Column="1" Classes="search-input" PlaceholderText="Rechercher un projet, un client, un fichier…" KeyUp="SearchBox_KeyUp" VerticalAlignment="Center" />
+            <Border Grid.Column="2" Classes="key-hint" VerticalAlignment="Center"><TextBlock Text="Ctrl+K" FontSize="11" Foreground="{DynamicResource MutedTextBrush}" /></Border>
+          </Grid>
+        </Border>
       </Grid>
       <Grid x:Name="DashboardStats" Grid.Row="1" ColumnDefinitions="*,*,*" ColumnSpacing="16">
         <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
@@ -70,8 +75,8 @@
               <Button Grid.Column="1" Content="Voir les projets" Click="DashboardProjects_Click" VerticalAlignment="Center" />
             </Grid>
             <StackPanel Grid.Row="1" Spacing="10">
-              <Border Background="{DynamicResource RaisedSurfaceBrush}" CornerRadius="9" Padding="15"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock x:Name="RecentProjectOneTitle" Text="Chargement des projets…" FontWeight="SemiBold" /><TextBlock x:Name="RecentProjectOneDetail" Text="" Classes="muted" /></StackPanel><TextBlock x:Name="RecentProjectOneStatus" Grid.Column="1" Text="" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}" /></Grid></Border>
-              <Border Background="{DynamicResource RaisedSurfaceBrush}" CornerRadius="9" Padding="15"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock x:Name="RecentProjectTwoTitle" Text="" FontWeight="SemiBold" /><TextBlock x:Name="RecentProjectTwoDetail" Text="" Classes="muted" /></StackPanel><TextBlock x:Name="RecentProjectTwoStatus" Grid.Column="1" Text="" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}" /></Grid></Border>
+              <Button x:Name="RecentProjectOneButton" Classes="workspace-card" Click="RecentProject_Click"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock x:Name="RecentProjectOneTitle" Text="Chargement des projets…" FontWeight="SemiBold" /><TextBlock x:Name="RecentProjectOneDetail" Text="" Classes="muted" /></StackPanel><TextBlock x:Name="RecentProjectOneStatus" Grid.Column="1" Text="" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}" /></Grid></Button>
+              <Button x:Name="RecentProjectTwoButton" Classes="workspace-card" Click="RecentProject_Click"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock x:Name="RecentProjectTwoTitle" Text="" FontWeight="SemiBold" /><TextBlock x:Name="RecentProjectTwoDetail" Text="" Classes="muted" /></StackPanel><TextBlock x:Name="RecentProjectTwoStatus" Grid.Column="1" Text="" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}" /></Grid></Button>
             </StackPanel>
           </Grid>
         </Border>
@@ -86,7 +91,7 @@
             <Button Grid.Column="1" Content="Actualiser" Click="RefreshProjects_Click" VerticalAlignment="Center" />
           </Grid>
           <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
-            <StackPanel x:Name="ProjectList" HorizontalAlignment="Stretch" Spacing="8" />
+            <StackPanel x:Name="ProjectList" HorizontalAlignment="Stretch" Spacing="0" />
           </ScrollViewer>
         </Grid>
       </Border>
@@ -96,19 +101,27 @@
             <StackPanel Spacing="4"><TextBlock Text="Tous les clients" FontSize="18" FontWeight="SemiBold" /><TextBlock Text="Catalogue lu depuis votre espace de travail." Classes="muted" /></StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"><Button Content="Créer" Click="CreateClient_Click" /><Button Content="Actualiser" Click="RefreshClients_Click" VerticalAlignment="Center" /></StackPanel>
           </Grid>
-          <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel x:Name="ClientList" HorizontalAlignment="Stretch" Spacing="8" /></ScrollViewer>
+          <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel x:Name="ClientList" HorizontalAlignment="Stretch" Spacing="0" /></ScrollViewer>
         </Grid>
       </Border>
       <Border x:Name="CollectionsWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="20">
         <Grid RowDefinitions="Auto,*" RowSpacing="16">
-          <Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock Text="Collections" FontSize="18" FontWeight="SemiBold" /><TextBlock Text="Modèles 3D, produits et fournisseurs." Classes="muted" /></StackPanel><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"><Button Content="Créer" Click="CreateCollection_Click" /><Button Content="Actualiser" Click="RefreshCollections_Click" VerticalAlignment="Center" /></StackPanel></Grid>
-          <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel x:Name="CollectionList" HorizontalAlignment="Stretch" Spacing="8" /></ScrollViewer>
+          <Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock Text="Collections" FontSize="18" FontWeight="SemiBold" /><TextBlock Text="Modèles 3D, produits et fournisseurs, classés par type." Classes="muted" /></StackPanel><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"><Button Content="Créer" Click="CreateCollection_Click" /><Button Content="Actualiser" Click="RefreshCollections_Click" VerticalAlignment="Center" /></StackPanel></Grid>
+          <Grid Grid.Row="1" RowDefinitions="Auto,*" RowSpacing="12">
+            <StackPanel x:Name="CollectionFilters" Orientation="Horizontal" Spacing="8">
+              <Button Classes="filter-chip selected" Content="Tout" Tag="" Click="CollectionFilter_Click" />
+              <Button Classes="filter-chip" Content="Modèles 3D" Tag="02_MODELES_3D" Click="CollectionFilter_Click" />
+              <Button Classes="filter-chip" Content="Produits" Tag="03_PRODUITS_MS3DPRINT" Click="CollectionFilter_Click" />
+              <Button Classes="filter-chip" Content="Fournisseurs" Tag="06_FOURNISSEURS" Click="CollectionFilter_Click" />
+            </StackPanel>
+            <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel x:Name="CollectionList" HorizontalAlignment="Stretch" Spacing="0" /></ScrollViewer>
+          </Grid>
         </Grid>
       </Border>
       <Border x:Name="FilamentsWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="20">
         <Grid RowDefinitions="Auto,*" RowSpacing="16">
           <Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock Text="Filaments" FontSize="18" FontWeight="SemiBold" /><TextBlock Text="Stock de matières et caractéristiques." Classes="muted" /></StackPanel><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"><Button Content="Ajouter" Click="CreateFilament_Click" /><Button Content="Actualiser" Click="RefreshFilaments_Click" VerticalAlignment="Center" /></StackPanel></Grid>
-          <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel x:Name="FilamentList" HorizontalAlignment="Stretch" Spacing="8" /></ScrollViewer>
+          <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel x:Name="FilamentList" HorizontalAlignment="Stretch" Spacing="0" /></ScrollViewer>
         </Grid>
       </Border>
       <Border x:Name="EstimatesWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="24">
@@ -122,15 +135,15 @@
             <StackPanel x:Name="EstimatePrintInputs" Spacing="14">
               <TextBlock Text="Filament" /><ComboBox x:Name="EstimateFilament" />
               <TextBlock Text="Imprimante" /><ComboBox x:Name="EstimatePrinter" SelectionChanged="EstimatePrinter_SelectionChanged" />
-              <Grid ColumnDefinitions="*,*" ColumnSpacing="12"><StackPanel><TextBlock Text="Poids (g)" Classes="muted"/><TextBox x:Name="EstimateWeight" Text="100" /></StackPanel><StackPanel Grid.Column="1"><TextBlock Text="Durée machine (h)" Classes="muted"/><TextBox x:Name="EstimateHours" Text="2" /></StackPanel></Grid>
-              <Grid ColumnDefinitions="*,*" ColumnSpacing="12"><StackPanel><TextBlock Text="Taux horaire machine (€)" Classes="muted"/><TextBox x:Name="EstimateMachineRate" Text="2" /></StackPanel><StackPanel Grid.Column="1"><TextBlock Text="Prix électricité / kWh (€)" Classes="muted"/><TextBox x:Name="EstimateKwhPrice" Text="0,25" /></StackPanel></Grid>
-              <StackPanel><TextBlock Text="Électricité estimée (€)" Classes="muted"/><TextBox x:Name="EstimateElectricity" Text="0" /></StackPanel>
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="12"><StackPanel><TextBlock Text="Poids" Classes="muted"/><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox x:Name="EstimateWeight" Text="100" /><TextBlock Grid.Column="1" Text="g" Classes="muted" VerticalAlignment="Center" /></Grid></StackPanel><StackPanel Grid.Column="1"><TextBlock Text="Durée machine" Classes="muted"/><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox x:Name="EstimateHours" Text="2" /><TextBlock Grid.Column="1" Text="h" Classes="muted" VerticalAlignment="Center" /></Grid></StackPanel></Grid>
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="12"><StackPanel><TextBlock Text="Taux horaire machine" Classes="muted"/><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox x:Name="EstimateMachineRate" Text="2" /><TextBlock Grid.Column="1" Text="€/h" Classes="muted" VerticalAlignment="Center" /></Grid></StackPanel><StackPanel Grid.Column="1"><TextBlock Text="Prix électricité" Classes="muted"/><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox x:Name="EstimateKwhPrice" Text="0,25" /><TextBlock Grid.Column="1" Text="€/kWh" Classes="muted" VerticalAlignment="Center" /></Grid></StackPanel></Grid>
+              <StackPanel><TextBlock Text="Électricité estimée" Classes="muted"/><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox x:Name="EstimateElectricity" Text="0" /><TextBlock Grid.Column="1" Text="€" Classes="muted" VerticalAlignment="Center" /></Grid></StackPanel>
             </StackPanel>
             <TextBlock Text="COÛTS COMPLÉMENTAIRES" Classes="muted" Margin="0,8,0,0" />
-            <Grid ColumnDefinitions="*,*" ColumnSpacing="12"><StackPanel><TextBlock Text="Modélisation / conception (€)" Classes="muted"/><TextBox x:Name="EstimateDesign" Text="0" /></StackPanel><StackPanel Grid.Column="1"><TextBlock Text="Main-d’œuvre (€)" Classes="muted"/><TextBox x:Name="EstimateLabor" Text="0" /></StackPanel></Grid>
-            <Grid ColumnDefinitions="*,*" ColumnSpacing="12"><StackPanel><TextBlock Text="Post-traitement (€)" Classes="muted"/><TextBox x:Name="EstimatePostProcessing" Text="0" /></StackPanel><StackPanel Grid.Column="1"><TextBlock Text="Consommables (€)" Classes="muted"/><TextBox x:Name="EstimateConsumables" Text="0" /></StackPanel></Grid>
-            <Grid ColumnDefinitions="*,*" ColumnSpacing="12"><StackPanel><TextBlock Text="Emballage / expédition (€)" Classes="muted"/><TextBox x:Name="EstimatePackaging" Text="0" /></StackPanel><StackPanel Grid.Column="1"><TextBlock Text="Autres coûts (€)" Classes="muted"/><TextBox x:Name="EstimateMisc" Text="0" /></StackPanel></Grid>
-            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12"><StackPanel><TextBlock Text="Marge %" Classes="muted"/><TextBox x:Name="EstimateMargin" Text="30" /></StackPanel><StackPanel Grid.Column="1"><TextBlock Text="Échec %" Classes="muted"/><TextBox x:Name="EstimateFailure" Text="5" /></StackPanel><StackPanel Grid.Column="2"><TextBlock Text="Remise %" Classes="muted"/><TextBox x:Name="EstimateDiscount" Text="0" /></StackPanel></Grid>
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="12"><StackPanel><TextBlock Text="Modélisation / conception" Classes="muted"/><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox x:Name="EstimateDesign" Text="0" /><TextBlock Grid.Column="1" Text="€" Classes="muted" VerticalAlignment="Center" /></Grid></StackPanel><StackPanel Grid.Column="1"><TextBlock Text="Main-d’œuvre" Classes="muted"/><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox x:Name="EstimateLabor" Text="0" /><TextBlock Grid.Column="1" Text="€" Classes="muted" VerticalAlignment="Center" /></Grid></StackPanel></Grid>
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="12"><StackPanel><TextBlock Text="Post-traitement" Classes="muted"/><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox x:Name="EstimatePostProcessing" Text="0" /><TextBlock Grid.Column="1" Text="€" Classes="muted" VerticalAlignment="Center" /></Grid></StackPanel><StackPanel Grid.Column="1"><TextBlock Text="Consommables" Classes="muted"/><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox x:Name="EstimateConsumables" Text="0" /><TextBlock Grid.Column="1" Text="€" Classes="muted" VerticalAlignment="Center" /></Grid></StackPanel></Grid>
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="12"><StackPanel><TextBlock Text="Emballage / expédition" Classes="muted"/><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox x:Name="EstimatePackaging" Text="0" /><TextBlock Grid.Column="1" Text="€" Classes="muted" VerticalAlignment="Center" /></Grid></StackPanel><StackPanel Grid.Column="1"><TextBlock Text="Autres coûts" Classes="muted"/><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox x:Name="EstimateMisc" Text="0" /><TextBlock Grid.Column="1" Text="€" Classes="muted" VerticalAlignment="Center" /></Grid></StackPanel></Grid>
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12"><StackPanel><TextBlock Text="Marge" Classes="muted"/><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox x:Name="EstimateMargin" Text="30" /><TextBlock Grid.Column="1" Text="%" Classes="muted" VerticalAlignment="Center" /></Grid></StackPanel><StackPanel Grid.Column="1"><TextBlock Text="Échec" Classes="muted"/><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox x:Name="EstimateFailure" Text="5" /><TextBlock Grid.Column="1" Text="%" Classes="muted" VerticalAlignment="Center" /></Grid></StackPanel><StackPanel Grid.Column="2"><TextBlock Text="Remise" Classes="muted"/><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox x:Name="EstimateDiscount" Text="0" /><TextBlock Grid.Column="1" Text="%" Classes="muted" VerticalAlignment="Center" /></Grid></StackPanel></Grid>
             <StackPanel Orientation="Horizontal" Spacing="8"><Button Content="Calculer l’estimation" Click="CalculateEstimate_Click" /><Button Content="Enregistrer" Click="SaveEstimate_Click" /><Button Content="Réinitialiser" Click="ResetEstimate_Click" /></StackPanel>
           </StackPanel></ScrollViewer>
           <Border Grid.Column="1" Background="{DynamicResource RaisedSurfaceBrush}" CornerRadius="12" Padding="22"><StackPanel Spacing="12"><TextBlock Text="RÉSULTAT" Classes="muted"/><TextBlock x:Name="EstimateFinal" Text="—" FontSize="32" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"/><TextBlock x:Name="EstimateDetail" Text="Sélectionnez un filament et calculez." Classes="muted" TextWrapping="Wrap"/><Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,8"/><TextBlock Text="DERNIÈRES ESTIMATIONS" Classes="muted"/><StackPanel x:Name="SavedEstimateList" Spacing="6"/></StackPanel></Border>
@@ -139,13 +152,13 @@
       <Border x:Name="PrintersWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="20">
         <Grid RowDefinitions="Auto,*" RowSpacing="16">
           <Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock Text="Imprimantes" FontSize="18" FontWeight="SemiBold" /><TextBlock Text="Parc machines et coûts horaires utilisés dans vos estimations." Classes="muted" /></StackPanel><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"><Button Content="Ajouter" Click="CreatePrinter_Click" /><Button Content="Actualiser" Click="RefreshPrinters_Click" /></StackPanel></Grid>
-          <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel x:Name="PrinterList" HorizontalAlignment="Stretch" Spacing="8" /></ScrollViewer>
+          <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel x:Name="PrinterList" HorizontalAlignment="Stretch" Spacing="0" /></ScrollViewer>
         </Grid>
       </Border>
       <Border x:Name="TrashWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="20">
-        <Grid RowDefinitions="Auto,*" RowSpacing="16"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock Text="Corbeille" FontSize="18" FontWeight="SemiBold" /><TextBlock Text="Éléments supprimés de façon réversible." Classes="muted" /></StackPanel><Button Grid.Column="1" Content="Actualiser" Click="RefreshTrash_Click" VerticalAlignment="Center" /></Grid><ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel x:Name="TrashList" HorizontalAlignment="Stretch" Spacing="8" /></ScrollViewer></Grid>
+        <Grid RowDefinitions="Auto,*" RowSpacing="16"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock Text="Corbeille" FontSize="18" FontWeight="SemiBold" /><TextBlock Text="Éléments supprimés de façon réversible." Classes="muted" /></StackPanel><Button Grid.Column="1" Content="Actualiser" Click="RefreshTrash_Click" VerticalAlignment="Center" /></Grid><ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel x:Name="TrashList" HorizontalAlignment="Stretch" Spacing="0" /></ScrollViewer></Grid>
       </Border>
-      <Border x:Name="SettingsWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="20"><Grid RowDefinitions="Auto,*" RowSpacing="16"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock Text="Paramètres" FontSize="18" FontWeight="SemiBold" /><TextBlock Text="Emplacements de stockage disponibles." Classes="muted" /></StackPanel><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"><Button Content="Classer un fichier" Click="ClassifyFile_Click" /><Button Content="Visualiseur 3D" Click="OpenThreeDViewer_Click" /><Button Content="Vérifier l’arborescence" Click="VerifyWorkspace_Click" /><Button Content="Actualiser" Click="RefreshSettings_Click" VerticalAlignment="Center" /></StackPanel></Grid><StackPanel x:Name="StorageList" Grid.Row="1" Spacing="8" /></Grid></Border>
+      <Border x:Name="SettingsWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="20"><Grid RowDefinitions="Auto,*" RowSpacing="16"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock Text="Paramètres" FontSize="18" FontWeight="SemiBold" /><TextBlock Text="Emplacements de stockage disponibles." Classes="muted" /></StackPanel><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"><Button Content="Journal des modifications" Click="Changelog_Click" /><Button Content="Vérifier l’arborescence" Click="VerifyWorkspace_Click" /><Button Content="Actualiser" Click="RefreshSettings_Click" VerticalAlignment="Center" /></StackPanel></Grid><StackPanel x:Name="StorageList" Grid.Row="1" Spacing="8" /></Grid></Border>
       <Border x:Name="FolderWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="20">
         <Grid RowDefinitions="Auto,*" RowSpacing="16">
           <StackPanel Spacing="4"><TextBlock x:Name="FolderWorkspaceTitle" Text="Dossiers" FontSize="18" FontWeight="SemiBold" /><TextBlock x:Name="FolderWorkspaceLocation" Classes="muted" TextWrapping="Wrap" /></StackPanel>

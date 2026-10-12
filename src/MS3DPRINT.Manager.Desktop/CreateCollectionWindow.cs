@@ -12,6 +12,7 @@ public sealed class CreateCollectionWindow : Window
     public CreateCollectionWindow()
     {
         Title = "Créer une collection"; Width = 440; Height = 275;
+        WindowStartupLocation = WindowStartupLocation.CenterOwner;
         var create = new Button { Content = "Créer", HorizontalAlignment = HorizontalAlignment.Right };
         create.Click += (_, _) => Close(!string.IsNullOrWhiteSpace(NameValue));
         Content = new StackPanel { Margin = new Avalonia.Thickness(24), Spacing = 14, Children = { new TextBlock { Text = "Nouvel élément", FontSize = 20 }, _category, _name, create } };

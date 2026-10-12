@@ -18,7 +18,7 @@ public sealed class CreateFilamentWindow : Window
     private readonly TextBox _name = new() { PlaceholderText = "Nom du filament" };
     private readonly ComboBox _material = new() { ItemsSource = Materials, SelectedIndex = 0, IsEditable = true };
     private readonly ComboBox _color = new() { ItemsSource = Colors, IsEditable = true, PlaceholderText = "Couleur (optionnelle)" };
-    private readonly TextBox _price = new() { PlaceholderText = "Prix au kg (ex. 24,90)" };
+    private readonly TextBox _price = new() { PlaceholderText = "ex. 24,90" };
     private readonly CheckBox _abrasive = new() { Content = "Matière abrasive" };
     private readonly TextBlock _error = new() { Foreground = Avalonia.Media.Brushes.IndianRed, IsVisible = false };
     public FilamentProfile? Original { get; }
@@ -33,6 +33,7 @@ public sealed class CreateFilamentWindow : Window
     {
         Original = original;
         Title = original is null ? "Ajouter un filament" : "Modifier le filament"; Width = 440; Height = 610;
+        WindowStartupLocation = WindowStartupLocation.CenterOwner;
         _brand.Text = original?.Brand ?? string.Empty;
         _name.Text = original?.Name ?? string.Empty;
         _material.SelectedItem = original?.Material ?? "PLA";
@@ -42,15 +43,8 @@ public sealed class CreateFilamentWindow : Window
         _abrasive.IsChecked = original?.IsAbrasive ?? false;
         var save = new Button { Content = original is null ? "Ajouter" : "Enregistrer", HorizontalAlignment = HorizontalAlignment.Right };
         save.Click += Save_Click;
-        Content = new StackPanel { Margin = new Avalonia.Thickness(24), Spacing = 12, Children = { new TextBlock { Text = "Nouveau filament", FontSize = 20 }, Field("Marque", _brand), Field("Nom du filament", _name), Field("Matière", _material), Field("Couleur (optionnelle)", _color), Field("Prix (€/kg, ex. 24,90)", _price), _abrasive, _error, save } };
+        Content = new StackPanel { Margin = new Avalonia.Thickness(24), Spacing = 12, Children = { new TextBlock { Text = "Nouveau filament", FontSize = 20 }, CreatePrinterWindow.CreateUnitField("Marque", _brand), CreatePrinterWindow.CreateUnitField("Nom du filament", _name), CreatePrinterWindow.CreateUnitField("Matière", _material), CreatePrinterWindow.CreateUnitField("Couleur (optionnelle)", _color), CreatePrinterWindow.CreateUnitField("Prix au kilo", _price, "€/kg"), _abrasive, _error, save } };
     }
-    private static StackPanel Field(string label, Control input)
-    {
-        var text = new TextBlock { Text = label };
-        text.Classes.Add("muted");
-        return new StackPanel { Spacing = 4, Children = { text, input } };
-    }
-
     private void Save_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         if (string.IsNullOrWhiteSpace(Brand) || string.IsNullOrWhiteSpace(FilamentName) || !FilamentPrice.TryParse(_price.Text, out var price))

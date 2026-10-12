@@ -8,6 +8,7 @@ public sealed class ConfirmTrashWindow : Window
     public ConfirmTrashWindow(string label, string detail)
     {
         Title = "Envoyer à la corbeille"; Width = 460; Height = 270; MinWidth = 380;
+        WindowStartupLocation = WindowStartupLocation.CenterOwner;
         var cancel = new Button { Content = "Annuler" };
         cancel.Click += (_, _) => Close(false);
         var confirm = new Button { Content = "Envoyer à la corbeille" };

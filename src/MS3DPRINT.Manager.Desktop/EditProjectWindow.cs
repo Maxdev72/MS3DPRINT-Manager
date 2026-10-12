@@ -20,6 +20,7 @@ public sealed class EditProjectWindow : Window
     public EditProjectWindow(ProjectProfile profile)
     {
         Title = "Fiche projet";
+        WindowStartupLocation = WindowStartupLocation.CenterOwner;
         Width = 560;
         Height = 610;
         MinWidth = 440;

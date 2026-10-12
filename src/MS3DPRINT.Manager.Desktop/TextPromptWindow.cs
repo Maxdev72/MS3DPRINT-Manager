@@ -11,6 +11,7 @@ public sealed class TextPromptWindow : Window
     public TextPromptWindow(string title, string detail, string initialValue)
     {
         Title = title; Width = 460; Height = 260; MinWidth = 380;
+        WindowStartupLocation = WindowStartupLocation.CenterOwner;
         _value = new TextBox { Text = initialValue };
         var cancel = new Button { Content = "Annuler" };
         cancel.Click += (_, _) => Close(false);

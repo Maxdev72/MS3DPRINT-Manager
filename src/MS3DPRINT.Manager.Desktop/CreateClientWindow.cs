@@ -21,6 +21,7 @@ public sealed class CreateClientWindow : Window
     {
         _existingClient = existingClient;
         Title = existingClient is null ? "Créer un client" : "Compléter la fiche client"; Width = 420; Height = 370;
+        WindowStartupLocation = WindowStartupLocation.CenterOwner;
         if (existingClient is not null) { _name.Text = existingClient.DisplayName; _code.Text = existingClient.ClientCode; }
         var create = new Button { Content = existingClient is null ? "Créer" : "Enregistrer la fiche", HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right };
         create.Click += (_, _) => Close((IsIndividual ? !string.IsNullOrWhiteSpace(LastName) : !string.IsNullOrWhiteSpace(ClientName)) && !string.IsNullOrWhiteSpace(Code));

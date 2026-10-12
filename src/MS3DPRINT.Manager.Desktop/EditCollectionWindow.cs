@@ -25,6 +25,7 @@ public sealed class EditCollectionWindow : Window
     public EditCollectionWindow(CollectionItemSummary item)
     {
         Title = "Fiche collection"; Width = 560; Height = 720;
+        WindowStartupLocation = WindowStartupLocation.CenterOwner;
         _name = new TextBox { Text = item.Profile?.Name ?? item.Name, PlaceholderText = "Nom" };
         _description = new TextBox { Text = item.Profile?.Description ?? string.Empty, PlaceholderText = "Description", AcceptsReturn = true, TextWrapping = Avalonia.Media.TextWrapping.Wrap, MinHeight = 80 };
         _contact = new TextBox { Text = item.Profile?.Contact ?? string.Empty, PlaceholderText = "Contact" };

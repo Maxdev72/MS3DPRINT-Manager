@@ -32,6 +32,7 @@ public sealed class EditClientWindow : Window
     public EditClientWindow(ClientProfile profile)
     {
         Title = "Fiche client";
+        WindowStartupLocation = WindowStartupLocation.CenterOwner;
         Width = 520;
         Height = 680;
         MinWidth = 420;

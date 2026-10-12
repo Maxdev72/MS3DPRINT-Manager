@@ -22,44 +22,52 @@ public sealed class CreatePrinterWindow : Window
         ItemsSource = KnownBrands
     };
     private readonly TextBox _model = new() { PlaceholderText = "Modèle (ex. P1S)" };
-    private readonly TextBox _purchasePrice = new() { PlaceholderText = "Prix d’achat (€)" };
-    private readonly TextBox _lifetimeHours = new() { PlaceholderText = "Durée de vie estimée (h, ex. 8000)" };
-    private readonly TextBox _powerWatts = new() { PlaceholderText = "Puissance (W, optionnelle)" };
-    private readonly TextBox _volume = new() { PlaceholderText = "Volume (ex. 256 × 256 × 256 mm)" };
-    private readonly CheckBox _active = new() { Content = "Imprimante active", IsChecked = true };
+    private readonly TextBox _purchasePrice = new() { PlaceholderText = "Prix d’achat" };
+    private readonly TextBox _lifetimeHours = new() { PlaceholderText = "ex. 8000" };
+    private readonly TextBox _powerWatts = new() { PlaceholderText = "ex. 150" };
+    private readonly TextBox _volume = new() { PlaceholderText = "Non utilisé pour l’instant", IsEnabled = false };
     private readonly TextBlock _error = new() { Foreground = Avalonia.Media.Brushes.IndianRed, IsVisible = false };
     public PrinterProfile? Original { get; }
     public string Brand => _brand.Text?.Trim() ?? _brand.SelectedItem as string ?? string.Empty;
     public string Model => _model.Text?.Trim() ?? string.Empty;
     public string PrinterName => $"{Brand} {Model}".Trim();
-    public string BuildVolume => _volume.Text?.Trim() ?? string.Empty;
+    public string BuildVolume => Original?.BuildVolume ?? string.Empty;
     public decimal PurchasePrice { get; private set; }
     public int LifetimeHours { get; private set; }
     public int? PowerWatts { get; private set; }
     public decimal HourlyRate { get; private set; }
-    public bool PrinterIsActive => _active.IsChecked == true;
+    public bool PrinterIsActive => Original?.IsActive ?? true;
 
     public CreatePrinterWindow(PrinterProfile? original = null)
     {
         Original = original;
-        Title = original is null ? "Ajouter une imprimante" : "Modifier l’imprimante"; Width = 440; Height = 700;
+        Title = original is null ? "Ajouter une imprimante" : "Modifier l’imprimante"; Width = 440; Height = 640;
+        WindowStartupLocation = WindowStartupLocation.CenterOwner;
         _brand.Text = original?.Brand ?? string.Empty;
         _brand.SelectedItem = KnownBrands.Contains(original?.Brand ?? string.Empty, StringComparer.OrdinalIgnoreCase) ? original?.Brand : null;
         _model.Text = original?.Model ?? string.Empty;
         _purchasePrice.Text = original?.PurchasePrice.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR")) ?? "0";
         _lifetimeHours.Text = (original?.LifetimeHours is > 0 ? original.LifetimeHours : 8000).ToString();
         _powerWatts.Text = original?.PowerWatts?.ToString() ?? string.Empty;
-        _volume.Text = original?.BuildVolume ?? string.Empty; _active.IsChecked = original?.IsActive ?? true;
+        _volume.Text = original?.BuildVolume ?? string.Empty;
         var save = new Button { Content = original is null ? "Ajouter" : "Enregistrer", HorizontalAlignment = HorizontalAlignment.Right };
         save.Click += Save_Click;
-        Content = new StackPanel { Margin = new Avalonia.Thickness(24), Spacing = 12, Children = { new TextBlock { Text = "Nouvelle imprimante", FontSize = 20 }, Field("Marque", _brand), Field("Modèle", _model), Field("Prix d’achat (€)", _purchasePrice), Field("Durée de vie estimée (h)", _lifetimeHours), Field("Puissance (W, optionnelle)", _powerWatts), Field("Volume d’impression (mm, ex. 256 × 256 × 256)", _volume), _active, _error, save } };
+        Content = new StackPanel { Margin = new Avalonia.Thickness(24), Spacing = 12, Children = { new TextBlock { Text = original is null ? "Nouvelle imprimante" : "Modifier l’imprimante", FontSize = 20 }, CreateUnitField("Marque", _brand), CreateUnitField("Modèle", _model), CreateUnitField("Prix d’achat", _purchasePrice, "€"), CreateUnitField("Durée de vie estimée", _lifetimeHours, "h"), CreateUnitField("Puissance (optionnelle)", _powerWatts, "W"), CreateUnitField("Volume d’impression — bientôt disponible", _volume, "mm"), _error, save } };
     }
 
-    private static StackPanel Field(string label, Control input)
+    internal static StackPanel CreateUnitField(string label, Control input, string? unit = null)
     {
         var text = new TextBlock { Text = label };
         text.Classes.Add("muted");
-        return new StackPanel { Spacing = 4, Children = { text, input } };
+        Control row = input;
+        if (unit is not null)
+        {
+            var suffix = new TextBlock { Text = unit, VerticalAlignment = VerticalAlignment.Center, MinWidth = 36 };
+            suffix.Classes.Add("muted");
+            Grid.SetColumn(suffix, 1);
+            row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 8, Children = { input, suffix } };
+        }
+        return new StackPanel { Spacing = 4, Children = { text, row } };
     }
 
     private void Save_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)

@@ -8,6 +8,7 @@ public sealed class ConfirmMoveWindow : Window
     public ConfirmMoveWindow(string source, string destination)
     {
         Title = "Confirmer le classement"; Width = 520; Height = 300; MinWidth = 400;
+        WindowStartupLocation = WindowStartupLocation.CenterOwner;
         var cancel = new Button { Content = "Annuler" }; cancel.Click += (_, _) => Close(false);
         var confirm = new Button { Content = "Déplacer le fichier" }; confirm.Click += (_, _) => Close(true);
         Content = new StackPanel

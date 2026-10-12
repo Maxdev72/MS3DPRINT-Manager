@@ -13,6 +13,7 @@ public sealed class FolderBrowserWindow : Window
     {
         _root = Path.GetFullPath(root); _openFile = openFile;
         Title = Path.GetFileName(_root); Width = 900; Height = 680; MinWidth = 600;
+        WindowStartupLocation = WindowStartupLocation.CenterOwner;
         Content = new StackPanel { Margin = new Avalonia.Thickness(24), Spacing = 14,
             Children = { new TextBlock { Text = "Contenu du dossier", FontSize = 21, FontWeight = Avalonia.Media.FontWeight.SemiBold }, new ScrollViewer { Content = _entries } } };
         Opened += (_, _) => Load(_root);
