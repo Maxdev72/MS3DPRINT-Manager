@@ -113,7 +113,7 @@
             <StackPanel x:Name="ProjectStatusFilters" Grid.Column="1" Orientation="Horizontal" Spacing="6"><Button Classes="filter-chip selected" Content="Tous" Tag="" Click="ProjectFilter_Click" /><Button Classes="filter-chip" Content="Devis" Tag="DEVIS" Click="ProjectFilter_Click" /><Button Classes="filter-chip" Content="En cours" Tag="EN_COURS" Click="ProjectFilter_Click" /><Button Classes="filter-chip" Content="Terminés" Tag="TERMINE" Click="ProjectFilter_Click" /><Button Classes="filter-chip" Content="À compléter" Tag="TODO" Click="ProjectFilter_Click" /></StackPanel>
           </Grid>
           <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
-            <StackPanel x:Name="ProjectList" HorizontalAlignment="Stretch" Spacing="0" />
+            <StackPanel x:Name="ProjectList" HorizontalAlignment="Stretch" Spacing="0" Margin="0,0,10,0" />
           </ScrollViewer>
         </Grid>
       </Border>
@@ -127,7 +127,7 @@
             <Border Classes="search-box" Height="36" HorizontalAlignment="Left" Width="300"><Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"><Path Classes="icon" Data="{StaticResource IconSearch}" /><TextBox x:Name="ClientFilterBox" Grid.Column="1" Classes="search-input" PlaceholderText="Filtrer les clients…" TextChanged="ClientFilterText_Changed" AutomationProperties.Name="Filtrer les clients…" /></Grid></Border>
             <StackPanel x:Name="ClientStatusFilters" Grid.Column="1" Orientation="Horizontal" Spacing="6"><Button Classes="filter-chip selected" Content="Tous" Tag="" Click="ClientFilter_Click" /><Button Classes="filter-chip" Content="Professionnels" Tag="Professionnel" Click="ClientFilter_Click" /><Button Classes="filter-chip" Content="Particuliers" Tag="Particulier" Click="ClientFilter_Click" /><Button Classes="filter-chip" Content="À compléter" Tag="Fiche à compléter" Click="ClientFilter_Click" /></StackPanel>
           </Grid>
-          <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel x:Name="ClientList" HorizontalAlignment="Stretch" Spacing="0" /></ScrollViewer>
+          <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel x:Name="ClientList" HorizontalAlignment="Stretch" Spacing="0" Margin="0,0,10,0" /></ScrollViewer>
         </Grid>
       </Border>
       <Border x:Name="CollectionsWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="panel">
@@ -140,14 +140,14 @@
               <Button Classes="filter-chip" Content="Produits" Tag="03_PRODUITS_MS3DPRINT" Click="CollectionFilter_Click" />
               <Button Classes="filter-chip" Content="Fournisseurs" Tag="06_FOURNISSEURS" Click="CollectionFilter_Click" />
             </StackPanel>
-            <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel x:Name="CollectionList" HorizontalAlignment="Stretch" Spacing="0" /></ScrollViewer>
+            <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel x:Name="CollectionList" HorizontalAlignment="Stretch" Spacing="0" Margin="0,0,10,0" /></ScrollViewer>
           </Grid>
         </Grid>
       </Border>
       <Border x:Name="FilamentsWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="panel">
         <Grid RowDefinitions="Auto,*" RowSpacing="16">
           <Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock Text="Stock de matières et caractéristiques." Classes="muted" /></StackPanel><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"><Button Classes="primary-action" Click="CreateFilament_Click" AutomationProperties.Name="Ajouter"><StackPanel Orientation="Horizontal" Spacing="6"><Path Classes="icon icon-sm" Data="{StaticResource IconPlus}" /><TextBlock Text="Ajouter" /></StackPanel></Button><Button Click="RefreshFilaments_Click" AutomationProperties.Name="Actualiser"><StackPanel Orientation="Horizontal" Spacing="6"><Path Classes="icon icon-sm" Data="{StaticResource IconRefresh}" /><TextBlock Text="Actualiser" /></StackPanel></Button></StackPanel></Grid>
-          <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel x:Name="FilamentList" HorizontalAlignment="Stretch" Spacing="0" /></ScrollViewer>
+          <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel x:Name="FilamentList" HorizontalAlignment="Stretch" Spacing="0" Margin="0,0,10,0" /></ScrollViewer>
         </Grid>
       </Border>
       <Border x:Name="EstimatesWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="card" Padding="24">
@@ -205,17 +205,17 @@
       <Border x:Name="PrintersWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="panel">
         <Grid RowDefinitions="Auto,*" RowSpacing="16">
           <Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock Text="Parc machines et coûts horaires utilisés dans vos estimations." Classes="muted" /></StackPanel><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"><Button Classes="primary-action" Click="CreatePrinter_Click" AutomationProperties.Name="Ajouter"><StackPanel Orientation="Horizontal" Spacing="6"><Path Classes="icon icon-sm" Data="{StaticResource IconPlus}" /><TextBlock Text="Ajouter" /></StackPanel></Button><Button Click="RefreshPrinters_Click" AutomationProperties.Name="Actualiser"><StackPanel Orientation="Horizontal" Spacing="6"><Path Classes="icon icon-sm" Data="{StaticResource IconRefresh}" /><TextBlock Text="Actualiser" /></StackPanel></Button></StackPanel></Grid>
-          <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel x:Name="PrinterList" HorizontalAlignment="Stretch" Spacing="0" /></ScrollViewer>
+          <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel x:Name="PrinterList" HorizontalAlignment="Stretch" Spacing="0" Margin="0,0,10,0" /></ScrollViewer>
         </Grid>
       </Border>
       <Border x:Name="TrashWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="panel">
-        <Grid RowDefinitions="Auto,*" RowSpacing="16"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock Text="Éléments supprimés de façon réversible." Classes="muted" /></StackPanel><Button Grid.Column="1"  Click="RefreshTrash_Click" AutomationProperties.Name="Actualiser"><StackPanel Orientation="Horizontal" Spacing="6"><Path Classes="icon icon-sm" Data="{StaticResource IconRefresh}" /><TextBlock Text="Actualiser" /></StackPanel></Button></Grid><ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel x:Name="TrashList" HorizontalAlignment="Stretch" Spacing="0" /></ScrollViewer></Grid>
+        <Grid RowDefinitions="Auto,*" RowSpacing="16"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock Text="Éléments supprimés de façon réversible." Classes="muted" /></StackPanel><Button Grid.Column="1"  Click="RefreshTrash_Click" AutomationProperties.Name="Actualiser"><StackPanel Orientation="Horizontal" Spacing="6"><Path Classes="icon icon-sm" Data="{StaticResource IconRefresh}" /><TextBlock Text="Actualiser" /></StackPanel></Button></Grid><ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel x:Name="TrashList" HorizontalAlignment="Stretch" Spacing="0" Margin="0,0,10,0" /></ScrollViewer></Grid>
       </Border>
       <Border x:Name="SettingsWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="panel"><Grid RowDefinitions="Auto,*" RowSpacing="16"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock Text="Espace de travail, stockage et informations." Classes="muted" /></StackPanel><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"><Button Click="RefreshSettings_Click" AutomationProperties.Name="Actualiser"><StackPanel Orientation="Horizontal" Spacing="6"><Path Classes="icon icon-sm" Data="{StaticResource IconRefresh}" /><TextBlock Text="Actualiser" /></StackPanel></Button></StackPanel></Grid><ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled"><StackPanel x:Name="StorageList" Spacing="14" /></ScrollViewer></Grid></Border>
       <Border x:Name="FolderWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="panel">
         <Grid RowDefinitions="Auto,*" RowSpacing="16">
           <StackPanel Spacing="4"><TextBlock x:Name="FolderWorkspaceTitle" Text="Dossiers" Classes="section-title" /><TextBlock x:Name="FolderWorkspaceLocation" Classes="muted" TextWrapping="Wrap" /></StackPanel>
-          <ScrollViewer Grid.Row="1"><StackPanel x:Name="FolderWorkspaceList" Spacing="8" /></ScrollViewer>
+          <ScrollViewer Grid.Row="1"><StackPanel x:Name="FolderWorkspaceList" Spacing="0" Margin="0,0,10,0" /></ScrollViewer>
         </Grid>
       </Border>
       <Border x:Name="SearchResultsPanel" Grid.RowSpan="3" IsVisible="False" HorizontalAlignment="Right" VerticalAlignment="Top" Width="440" MaxHeight="460" Margin="0,46,0,0" ZIndex="10" Background="{DynamicResource RaisedSurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="8">

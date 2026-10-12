@@ -8,12 +8,19 @@ namespace MS3DPRINT.Manager.Desktop;
 /// <summary>Drawn icons from the theme (one stroke weight everywhere) instead of text glyphs.</summary>
 public static class Icons
 {
-    public static Avalonia.Controls.Shapes.Path Glyph(string key, double size = 16, bool dots = false)
+    /// <summary>
+    /// Icon drawn on its 24 x 24 grid and scaled as a whole, so every icon keeps the same optical size
+    /// (a stretched path would blow up icons whose drawing does not fill the grid, and flatten a row of dots).
+    /// </summary>
+    public static Control Glyph(string key, double size = 16, bool dots = false)
     {
-        var icon = new Avalonia.Controls.Shapes.Path { Classes = { "icon" }, Width = size, Height = size };
-        if (dots) icon.StrokeThickness = 3;
-        if (Application.Current?.TryFindResource(key, out var geometry) == true && geometry is Geometry data) icon.Data = data;
-        return icon;
+        var path = new Avalonia.Controls.Shapes.Path
+        {
+            Classes = { "icon" }, Width = 24, Height = 24, Stretch = Stretch.None,
+            StrokeThickness = dots ? 3 : 2
+        };
+        if (Application.Current?.TryFindResource(key, out var geometry) == true && geometry is Geometry data) path.Data = data;
+        return new Viewbox { Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center, Child = path };
     }
 
     /// <summary>Icon followed by a label, for buttons and menu entries.</summary>

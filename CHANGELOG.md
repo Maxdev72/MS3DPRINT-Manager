@@ -2,6 +2,11 @@
 
 ## 12 octobre 2026
 
+### Passe Impeccable
+- Vraies icônes dessinées (menus d’actions, boutons, tri des colonnes, notifications) à la place des symboles texte.
+- Menu actif sans liseré coloré ; pages posées directement sur le fond, sans cartes imbriquées ni titres répétés.
+- Accueil : trois indicateurs réunis dans un seul bandeau ; plus de défilement qui masque les boutons des listes.
+
 ### Passe de finition
 - Fiche client, explorateur de dossiers et corbeille repris dans le même style de tableau (icônes, badges, dates).
 - Une erreur inattendue ne ferme plus le logiciel : elle s’affiche en bas à droite et est consignée dans
