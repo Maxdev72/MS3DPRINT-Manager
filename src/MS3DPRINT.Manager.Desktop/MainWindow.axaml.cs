@@ -31,6 +31,7 @@ public partial class MainWindow : Window
 
     private async void Window_Opened(object? sender, EventArgs e)
     {
+        UpdateCentralWorkspaceWidth(Bounds.Width);
         var workspaceRoot = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
 
         try
@@ -48,6 +49,16 @@ public partial class MainWindow : Window
         {
             WorkspaceStatusText.Text = "Impossible de lire l’espace de travail.";
         }
+    }
+
+    private void Window_SizeChanged(object? sender, SizeChangedEventArgs e)
+        => UpdateCentralWorkspaceWidth(e.NewSize.Width);
+
+    private void UpdateCentralWorkspaceWidth(double windowWidth)
+    {
+        const double sidebarWidth = 232;
+        const double centralMargins = 68;
+        CentralWorkspace.Width = Math.Min(1200, Math.Max(0, windowWidth - sidebarWidth - centralMargins));
     }
 
     private async void NavigationButton_Click(object? sender, RoutedEventArgs e)

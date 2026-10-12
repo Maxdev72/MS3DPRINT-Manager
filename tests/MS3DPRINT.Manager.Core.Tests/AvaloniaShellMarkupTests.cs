@@ -70,8 +70,11 @@ public sealed class AvaloniaShellMarkupTests
     public void Main_window_keeps_only_the_central_workspace_within_a_1200_pixel_reading_width()
     {
         var markup = File.ReadAllText(MainWindowPath());
+        var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
 
-        Assert.Contains("<Grid Grid.Column=\"1\" Margin=\"34,28\" MaxWidth=\"1200\" HorizontalAlignment=\"Center\"", markup, StringComparison.Ordinal);
+        Assert.Contains("<Grid x:Name=\"CentralWorkspace\" Grid.Column=\"1\" Margin=\"34,28\" Width=\"1200\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Window_SizeChanged", markup, StringComparison.Ordinal);
+        Assert.Contains("UpdateCentralWorkspaceWidth", source, StringComparison.Ordinal);
         Assert.DoesNotContain("<Grid ColumnDefinitions=\"232,*\" MaxWidth=\"1200\"", markup, StringComparison.Ordinal);
     }
 

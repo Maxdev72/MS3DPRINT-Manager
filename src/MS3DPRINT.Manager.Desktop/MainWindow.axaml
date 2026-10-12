@@ -8,6 +8,7 @@
         Background="{DynamicResource CanvasBrush}"
         KeyDown="Window_KeyDown"
         Opened="Window_Opened"
+        SizeChanged="Window_SizeChanged"
         Title="MS3DPRINT Manager">
   <Grid ColumnDefinitions="232,*">
     <Border Background="#0B111B" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0" Padding="18,22">
@@ -38,7 +39,7 @@
         </StackPanel>
       </Grid>
     </Border>
-    <Grid Grid.Column="1" Margin="34,28" MaxWidth="1200" HorizontalAlignment="Center" RowDefinitions="Auto,Auto,*" RowSpacing="28">
+    <Grid x:Name="CentralWorkspace" Grid.Column="1" Margin="34,28" Width="1200" MaxWidth="1200" HorizontalAlignment="Center" RowDefinitions="Auto,Auto,*" RowSpacing="28">
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20">
         <StackPanel Spacing="6">
           <TextBlock x:Name="PageTitle" Text="Vue d’ensemble" FontSize="30" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
