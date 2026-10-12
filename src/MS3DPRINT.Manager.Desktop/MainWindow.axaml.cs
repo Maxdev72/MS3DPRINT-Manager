@@ -537,6 +537,14 @@ public partial class MainWindow : Window
     private async void OpenFolder_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: string path } || !Directory.Exists(path)) return;
+        var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        var project = (await Task.Run(() => new WorkspaceProjectReader().Load(root))).FirstOrDefault(item => path.StartsWith(item.ProjectPath, StringComparison.OrdinalIgnoreCase));
+        if (project is not null)
+        {
+            PageTitle.Text = project.ProjectName;
+            await LoadProjectDirectoryAsync(project, path);
+            return;
+        }
         await new FolderBrowserWindow(path, OpenFileAsync).ShowDialog(this);
     }
 
