@@ -1532,17 +1532,18 @@ public partial class MainWindow : Window
             foreach (var filament in filaments)
             {
                 var row = new Grid { ColumnDefinitions = new ColumnDefinitions("2*,*,Auto"), ColumnSpacing = 16, MinHeight = 44 };
-                var button = new Button { Content = CreateCompactTableCell($"{filament.Brand} · {filament.Name}", prominent: true), Tag = filament, HorizontalContentAlignment = HorizontalAlignment.Left, HorizontalAlignment = HorizontalAlignment.Stretch, Classes = { "table-row" } };
-                button.Click += EditFilament_Click;
+                var name = CreateCompactTableCell($"{filament.Brand} · {filament.Name}", prominent: true);
                 var color = string.IsNullOrWhiteSpace(filament.Color) ? string.Empty : $" · {filament.Color}";
                 var material = CreateCompactTableCell($"{filament.Material}{color} · {filament.PricePerKg:0.00} €/kg{(filament.IsAbrasive ? " · Abrasif" : string.Empty)}", accent: filament.IsAbrasive);
                 Grid.SetColumn(material, 1);
+                var edit = new Button { Content = "✎  Modifier", Tag = filament };
+                edit.Click += EditFilament_Click;
                 var trash = new Button { Content = "⌫  Corbeille", Tag = filament };
                 trash.Click += TrashFilament_Click;
-                var actions = CreateOverflowActions(trash);
+                var actions = CreateOverflowActions(edit, trash);
                 Grid.SetColumn(actions, 2);
-                row.Children.Add(button); row.Children.Add(material); row.Children.Add(actions);
-                FilamentList.Children.Add(new Border { BorderBrush = new SolidColorBrush(Color.Parse("#263A56")), BorderThickness = new Avalonia.Thickness(0, 0, 0, 1), Padding = new Avalonia.Thickness(0, 0, 0, 2), Child = row });
+                row.Children.Add(name); row.Children.Add(material); row.Children.Add(actions);
+                FilamentList.Children.Add(new Border { BorderBrush = new SolidColorBrush(Color.Parse("#263A56")), BorderThickness = new Avalonia.Thickness(0, 0, 0, 1), Padding = new Avalonia.Thickness(14, 6), Child = row });
             }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
