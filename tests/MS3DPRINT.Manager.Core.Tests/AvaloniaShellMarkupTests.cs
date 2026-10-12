@@ -213,7 +213,7 @@ public sealed class AvaloniaShellMarkupTests
 
         Assert.Contains("CreateCompactTableHeader", source, StringComparison.Ordinal);
         Assert.Contains("\"PROJET\", \"CLIENT\", \"STATUT\"", source, StringComparison.Ordinal);
-        Assert.Contains("\"CLIENT\", \"FICHE\", \"PROJETS\"", source, StringComparison.Ordinal);
+        Assert.Contains("\"CLIENT\", \"CODE\", \"FICHE\", \"PROJETS\"", source, StringComparison.Ordinal);
         Assert.Contains("\"table-row\"", source, StringComparison.Ordinal);
         Assert.Contains("Button.table-row", styles, StringComparison.Ordinal);
     }

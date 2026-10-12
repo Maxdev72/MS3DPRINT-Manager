@@ -48,7 +48,8 @@ public sealed class GlobalSearchService
             cancellationToken.ThrowIfCancellationRequested();
             if (!Matches(client.DisplayName, term) && !Matches(client.ClientCode, term) && !Matches(client.FolderName, term) &&
                 !Matches(client.Profile?.PrimaryContact.FirstName, term) && !Matches(client.Profile?.PrimaryContact.LastName, term) &&
-                !Matches(client.Profile?.PrimaryContact.Phone, term) && !Matches(client.Profile?.PrimaryContact.Email, term)) continue;
+                !Matches(client.Profile?.PrimaryContact.Phone, term) && !Matches(client.Profile?.PrimaryContact.Mobile, term) &&
+                !Matches(client.Profile?.PrimaryContact.Email, term)) continue;
             if (!Add(new GlobalSearchResult(GlobalSearchResultKind.Client, client.DisplayName, $"Client · {client.ClientCode}", client.ClientPath, Client: client)))
                 return new GlobalSearchResponse(results, true);
         }

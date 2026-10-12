@@ -23,6 +23,17 @@ public sealed class ClientCatalogTests : IDisposable
     }
 
     [Fact]
+    public void Load_ReadsTheCodeOfALegacyClientFromItsProjectReferences()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "01_CLIENTS", "GUY_LALLEMAND", "GL-2026-001_EPEE"));
+
+        var client = _catalog.Load(_root).Single();
+
+        Assert.True(client.IsProfileMissing);
+        Assert.Equal("GL", client.ClientCode);
+    }
+
+    [Fact]
     public void Load_ExcludesClientSystemFoldersAndCountsOnlyProjectReferences()
     {
         Directory.CreateDirectory(Path.Combine(_root, "01_CLIENTS", "MPO", "00_CLIENT"));

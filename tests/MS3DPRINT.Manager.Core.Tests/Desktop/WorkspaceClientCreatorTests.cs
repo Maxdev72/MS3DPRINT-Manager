@@ -89,6 +89,26 @@ public sealed class WorkspaceClientCreatorTests
     }
 
     [Fact]
+    public void Create_keeps_the_email_and_mobile_number_in_the_primary_contact()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"ms3dprint-client-contact-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(root, "01_CLIENTS"));
+        try
+        {
+            var creator = new WorkspaceClientCreator();
+
+            var company = creator.CreateProfessional(root, "Atelier Test", null, null, null, " contact@atelier.fr ", "06 12 34 56 78");
+            var person = creator.CreateIndividual(root, "Camille", "Durand", null, null, null, "07 98 76 54 32");
+
+            Assert.Equal("contact@atelier.fr", company.PrimaryContact.Email);
+            Assert.Equal("06 12 34 56 78", company.PrimaryContact.Mobile);
+            Assert.Null(person.PrimaryContact.Email);
+            Assert.Equal("07 98 76 54 32", person.PrimaryContact.Mobile);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
     public void Create_individual_creates_a_personal_client_profile()
     {
         var root = Path.Combine(Path.GetTempPath(), $"ms3dprint-person-{Guid.NewGuid():N}");

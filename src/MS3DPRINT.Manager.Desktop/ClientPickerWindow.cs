@@ -20,7 +20,7 @@ public sealed class ClientPickerWindow : DialogWindow
         };
         _clients.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<ClientSummary>((client, _) => new TextBlock
         {
-            Text = client is null ? string.Empty : $"{client.DisplayName} · {client.ClientCode}"
+            Text = client is null ? string.Empty : $"{client.Title()} · {client.ClientCode}"
         });
         var move = new Button { Content = "Déplacer" };
         move.Click += (_, _) =>

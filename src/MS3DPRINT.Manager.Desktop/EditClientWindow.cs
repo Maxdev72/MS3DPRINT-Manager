@@ -17,6 +17,7 @@ public sealed class EditClientWindow : DialogWindow
     private readonly TextBox _contactRole;
     private readonly TextBox _contactPhone;
     private readonly TextBox _contactEmail;
+    private readonly TextBox _contactMobile;
     public string? Address => Normalize(_address.Text);
     public string? Notes => Normalize(_notes.Text);
     public string? CompanyName => Normalize(_companyName.Text);
@@ -28,12 +29,13 @@ public sealed class EditClientWindow : DialogWindow
     public string? ContactRole => Normalize(_contactRole.Text);
     public string? ContactPhone => Normalize(_contactPhone.Text);
     public string? ContactEmail => Normalize(_contactEmail.Text);
+    public string? ContactMobile => Normalize(_contactMobile.Text);
 
     public EditClientWindow(ClientProfile profile)
     {
         Title = "Fiche client";
         Width = 540;
-        Height = 760;
+        Height = 800;
         MinWidth = 440;
         _companyName = new TextBox { Text = profile.CompanyName ?? string.Empty, PlaceholderText = "Raison sociale", IsVisible = profile.Kind == ClientKind.Professional };
         _siret = new TextBox { Text = profile.Siret ?? string.Empty, PlaceholderText = "SIRET", IsVisible = profile.Kind == ClientKind.Professional };
@@ -45,6 +47,7 @@ public sealed class EditClientWindow : DialogWindow
         _contactLastName = new TextBox { Text = profile.PrimaryContact.LastName ?? string.Empty, PlaceholderText = "Nom du contact" };
         _contactRole = new TextBox { Text = profile.PrimaryContact.Role ?? string.Empty, PlaceholderText = "Fonction" };
         _contactPhone = new TextBox { Text = profile.PrimaryContact.Phone ?? string.Empty, PlaceholderText = "Téléphone" };
+        _contactMobile = new TextBox { Text = profile.PrimaryContact.Mobile ?? string.Empty, PlaceholderText = "06 12 34 56 78" };
         _contactEmail = new TextBox { Text = profile.PrimaryContact.Email ?? string.Empty, PlaceholderText = "E-mail" };
         var save = new Button { Content = "Enregistrer" };
         save.Click += (_, _) => Close(true);
@@ -54,7 +57,7 @@ public sealed class EditClientWindow : DialogWindow
              FormKit.Field("Prénom", _identityFirstName), FormKit.Field("Nom", _identityLastName),
              FormKit.SectionLabel("Contact principal"),
              FormKit.Field("Prénom du contact", _contactFirstName), FormKit.Field("Nom du contact", _contactLastName), FormKit.Field("Fonction", _contactRole),
-             FormKit.Field("Téléphone", _contactPhone), FormKit.Field("E-mail", _contactEmail),
+             FormKit.Field("Portable", _contactMobile), FormKit.Field("Téléphone fixe", _contactPhone), FormKit.Field("E-mail", _contactEmail),
              FormKit.SectionLabel("Adresse"), _address,
              FormKit.SectionLabel("Notes internes"), _notes], save);
     }

@@ -19,9 +19,13 @@ public sealed class CreateClientWindow : DialogWindow
     private readonly TextBox _firstName = new() { PlaceholderText = "Prénom" };
     private readonly TextBox _lastName = new() { PlaceholderText = "Nom" };
     private readonly TextBox _siret = new() { PlaceholderText = "14 chiffres" };
+    private readonly TextBox _email = new() { PlaceholderText = "contact@exemple.fr" };
+    private readonly TextBox _mobile = new() { PlaceholderText = "06 12 34 56 78" };
     private readonly TextBox _address = new() { PlaceholderText = "Tapez pour rechercher l’adresse" };
     private readonly ListBox _companyResults = new() { IsVisible = false, MaxHeight = 150 };
     private readonly ListBox _addressResults = new() { IsVisible = false, MaxHeight = 150 };
+    private readonly TextBlock _codePreview = new() { FontWeight = Avalonia.Media.FontWeight.SemiBold };
+    private readonly IReadOnlyList<string> _usedCodes;
     private readonly TextBlock _status = new() { FontSize = 12, IsVisible = false, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _error = FormKit.ErrorText();
     private readonly CheckBox _individual = new() { Content = "Client particulier" };
@@ -36,16 +40,19 @@ public sealed class CreateClientWindow : DialogWindow
     /// <summary>Code of the client being completed; empty for a new client (the code is then generated automatically).</summary>
     public string Code => _existingCode;
     public string? Siret => string.IsNullOrWhiteSpace(_siret.Text) || IsIndividual ? null : _siret.Text.Trim();
+    public string? Email => string.IsNullOrWhiteSpace(_email.Text) ? null : _email.Text.Trim();
+    public string? Mobile => string.IsNullOrWhiteSpace(_mobile.Text) ? null : _mobile.Text.Trim();
     public string? Address => string.IsNullOrWhiteSpace(_address.Text) ? null : _address.Text.Trim();
     public bool IsIndividual => _individual.IsChecked == true;
 
-    public CreateClientWindow(ClientSummary? existingClient = null, IClientLookup? lookup = null)
+    public CreateClientWindow(ClientSummary? existingClient = null, IClientLookup? lookup = null, IReadOnlyList<string>? usedCodes = null)
     {
         _lookup = lookup ?? new PublicClientLookup(LookupHttp);
+        _usedCodes = usedCodes ?? [];
         _existingCode = existingClient?.ClientCode ?? string.Empty;
         Title = existingClient is null ? "Créer un client" : "Compléter la fiche client";
-        Width = 500; Height = 720; MinWidth = 420; MinHeight = 480;
-        if (existingClient is not null) _name.Text = existingClient.DisplayName;
+        Width = 500; Height = 800; MinWidth = 420; MinHeight = 480;
+        if (existingClient is not null) _name.Text = existingClient.Title();
 
         var create = new Button { Content = existingClient is null ? "Créer le client" : "Enregistrer la fiche" };
         create.Click += (_, _) => TryClose();
@@ -57,11 +64,15 @@ public sealed class CreateClientWindow : DialogWindow
             _firstName.IsVisible = IsIndividual;
             _lastName.IsVisible = IsIndividual;
             HideSuggestions();
+            UpdateCodePreview();
         };
         _firstName.IsVisible = _lastName.IsVisible = false;
+        _firstName.TextChanged += (_, _) => UpdateCodePreview();
+        _lastName.TextChanged += (_, _) => UpdateCodePreview();
 
         _name.TextChanged += async (_, _) =>
         {
+            UpdateCodePreview();
             if (!_applyingSuggestion && !IsIndividual) await SearchCompaniesAsync(ClientName);
         };
         _address.TextChanged += async (_, _) =>
@@ -93,10 +104,13 @@ public sealed class CreateClientWindow : DialogWindow
         };
 
         Layout(existingClient is null ? "Nouveau client" : "Compléter la fiche client",
-            existingClient is null ? "Le code client est généré automatiquement à la création." : "Le dossier et les fichiers existants sont conservés.",
-            [_individual, FormKit.Field("Nom de l’entreprise", _name), _companyResults,
+            existingClient is null ? "Un code client est attribué automatiquement à la création." : "Le dossier et les fichiers existants sont conservés.",
+            [_codePreview, _individual, FormKit.Field("Nom de l’entreprise", _name), _companyResults,
              FormKit.Field("Prénom", _firstName), FormKit.Field("Nom", _lastName),
-             FormKit.Field("SIRET (optionnel)", _siret), FormKit.Field("Adresse", _address), _addressResults, _status, _error], create);
+             FormKit.Field("SIRET (optionnel)", _siret),
+             FormKit.Field("E-mail", _email), FormKit.Field("Portable", _mobile),
+             FormKit.Field("Adresse", _address), _addressResults, _status, _error], create);
+        UpdateCodePreview();
         Closed += (_, _) => { _companySearch?.Cancel(); _addressSearch?.Cancel(); };
     }
 
@@ -187,5 +201,17 @@ public sealed class CreateClientWindow : DialogWindow
     {
         _status.Text = "Suggestions indisponibles (connexion ?). La saisie manuelle reste possible.";
         _status.IsVisible = true;
+    }
+
+    private void UpdateCodePreview()
+    {
+        if (_existingCode.Length > 0)
+        {
+            _codePreview.Text = "Code client : " + _existingCode;
+            return;
+        }
+        var identity = IsIndividual ? $"{FirstName} {LastName}" : ClientName;
+        var code = ClientCodeSuggester.SuggestUnique(identity, _usedCodes);
+        _codePreview.Text = code.Length == 0 ? "Code client : attribué dès que le nom est saisi" : "Code client attribué : " + code;
     }
 }

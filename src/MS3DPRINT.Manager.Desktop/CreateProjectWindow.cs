@@ -17,7 +17,7 @@ public sealed class CreateProjectWindow : DialogWindow
         _clients = new ComboBox { ItemsSource = clients, PlaceholderText = "Choisir un client", HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch };
         _clients.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<ClientSummary>((client, _) => new TextBlock
         {
-            Text = client is null ? string.Empty : $"{client.DisplayName} · {client.ClientCode}"
+            Text = client is null ? string.Empty : $"{client.Title()} · {client.ClientCode}"
         });
         string? hint = null;
         if (preselected is not null)

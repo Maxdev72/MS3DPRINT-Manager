@@ -44,13 +44,24 @@ public sealed class ClientCatalog
     {
         var folderName = Path.GetFileName(clientPath);
         profiles.TryGetValue(clientPath, out var profile);
-        var clientCode = profile?.ClientCode ?? ReadLegacyCode(folderName);
-        var displayName = profile is null ? folderName : GetDisplayName(profile);
-        var projectCount = Directory.EnumerateDirectories(clientPath, "*", SearchOption.TopDirectoryOnly)
+        var projectFolders = Directory.EnumerateDirectories(clientPath, "*", SearchOption.TopDirectoryOnly)
             .Select(Path.GetFileName)
             .OfType<string>()
-            .Count(name => ProjectReferenceFormat.TryParseFolderName(name, out _));
+            .ToArray();
+        var clientCode = profile?.ClientCode ?? ReadLegacyCode(folderName);
+        // A legacy client without a profile or a registered code still has its code in the project references (GL-2026-001).
+        if (string.IsNullOrWhiteSpace(clientCode)) clientCode = CodeFromProjectReferences(projectFolders);
+        var displayName = profile is null ? folderName : GetDisplayName(profile);
+        var projectCount = projectFolders.Count(name => ProjectReferenceFormat.TryParseFolderName(name, out _));
         return new ClientSummary(clientPath, folderName, displayName, clientCode, profile?.Kind, profile, projectCount);
+    }
+
+    private static string CodeFromProjectReferences(IEnumerable<string> folderNames)
+    {
+        foreach (var name in folderNames.OrderBy(name => name, StringComparer.OrdinalIgnoreCase))
+            if (ProjectReferenceFormat.TryParseFolderName(name, out var reference))
+                return reference[..reference.IndexOf('-')];
+        return string.Empty;
     }
 
     private string ReadLegacyCode(string folderName)

@@ -35,6 +35,9 @@
 - Aperçu PDF : bouton « Imprimer… » qui ouvre la boîte d’impression de Windows (imprimante, propriétés, exemplaires, pages) ; la page est centrée dans la fenêtre.
 - Page Projets : bouton « Créer » ; colonnes des tableaux Projets et Clients alignées sur toutes les lignes.
 - Fiche client : bouton « Nouveau projet » (le client est déjà choisi).
+- Clients : le code client est attribué automatiquement, affiché en direct dans la fenêtre de création, puis dans une
+  colonne « Code » de la liste ; ajout de l’e-mail et du portable (fiche, création, recherche).
+- Noms lisibles : « GUY_LALLEMAND » s’affiche « Guy Lallemand », « MPO_FRANCE » « MPO France » (les dossiers ne changent pas).
 - Filaments : plus de clic sur la ligne, la modification est dans le menu « ⋯ ».
 
 ### Améliorations
