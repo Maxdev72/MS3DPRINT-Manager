@@ -2,6 +2,14 @@
 
 ## 12 octobre 2026
 
+### Changer le code d’un client
+- Nouveau bouton « Changer le code » dans la fiche client et dans le menu de sa ligne : il propose un code (initiales du nom, ex. FA pour Fell Agency) et montre, à mesure que vous tapez, les dossiers de projet qui seront renommés (F-2026-001_SAMURAI_70CM devient FA-2026-001_SAMURAI_70CM).
+- Au changement, les dossiers, les fiches projet, les références réservées et les estimations liées suivent ; en cas d’erreur tout est remis en l’état. Rien n’est modifié avant la confirmation.
+
+### Visualiseur 3D : rotation et découpage
+- La rotation à la souris est inversée sur l’horizontale : faire glisser vers la droite tourne le modèle vers la droite.
+- Les imprimantes à deux buses (H2D) ne peuvent pas être découpées en ligne de commande (erreur « multi-extruder ») : le logiciel découpe une H2D comme une H2S, à une seule buse, et l’indique ; un message clair remplace l’erreur du découpeur.
+
 ### Visualiseur 3D : nouvelle interface
 - La vue 3D reste au centre ; une barre d’outils flottante en haut à gauche regroupe recentrer, filaire, mesurer, couper et comparer, chacun avec son icône et son raccourci.
 - Le panneau de droite passe de neuf sections empilées à quatre onglets : Infos (modèle, unités, résultats, matière, durée d’impression), Affichage, Outils (réglages de l’outil actif) et Analyse.

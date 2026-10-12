@@ -556,10 +556,14 @@ public sealed class ModelViewerView : UserControl
         }
         _slicer = found.Install;
         _slicerProfiles = found.Profiles;
-        _machines = found.Machines;
+        _machines = found.Machines.Where(machine => machine.CanBeSlicedAutomatically).ToList();
         _slicerNote.Text = _slicer.Name + " calcule la durée et le filament sans afficher sa fenêtre.";
         _slicerMachine.ItemsSource = _machines.Select(machine => machine.Name).ToList();
-        var first = _machines.FirstOrDefault(machine => preferred.Any(name => string.Equals(name, machine.PrinterModel, StringComparison.OrdinalIgnoreCase))) ?? _machines.FirstOrDefault();
+        var firstPrinter = preferred.FirstOrDefault(name => SlicerProfiles.MachineFor(found.Machines, name) is not null);
+        var first = firstPrinter is null ? _machines.FirstOrDefault() : SlicerProfiles.MachineFor(found.Machines, firstPrinter);
+        // a double-nozzle printer cannot be sliced from the command line: say which single-nozzle machine stands in for it
+        if (firstPrinter is not null && first is not null && !string.Equals(first.PrinterModel, firstPrinter, StringComparison.OrdinalIgnoreCase))
+            _slicerNote.Text += $" {firstPrinter} est découpée comme {first.PrinterModel} (une seule buse) : la durée est une très bonne approximation.";
         _slicerMachine.SelectedItem = first?.Name;
         FillQualities();
         ScheduleSlice();
@@ -608,7 +612,10 @@ public sealed class ModelViewerView : UserControl
         catch (OperationCanceledException) { return; }
         catch (Exception exception) when (exception is InvalidOperationException or IOException or System.ComponentModel.Win32Exception or System.Text.Json.JsonException or FileNotFoundException)
         {
-            if (!cancellation.IsCancellationRequested) _sliceStatus.Text = exception.Message;
+            if (!cancellation.IsCancellationRequested)
+                _sliceStatus.Text = exception.Message.Contains("multi-extruder", StringComparison.OrdinalIgnoreCase)
+                    ? "Cette imprimante a plusieurs buses : le découpage automatique n’en prend pas en charge. Choisissez le profil d’une imprimante à une buse."
+                    : exception.Message;
         }
         finally
         {

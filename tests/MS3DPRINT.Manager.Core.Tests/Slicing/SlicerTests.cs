@@ -19,6 +19,12 @@ public sealed class SlicerTests : IDisposable
         Write("machine", "Bambu Lab A1 mini", """
             { "type": "machine", "name": "Bambu Lab A1 mini", "instantiation": "false", "printer_model": "Bambu Lab A1 mini" }
             """);
+        Write("machine", "Bambu Lab H2D 0.4 nozzle", """
+            { "type": "machine", "name": "Bambu Lab H2D 0.4 nozzle", "instantiation": "true", "printer_model": "Bambu Lab H2D", "nozzle_diameter": ["0.4", "0.4"] }
+            """);
+        Write("machine", "Bambu Lab H2S 0.4 nozzle", """
+            { "type": "machine", "name": "Bambu Lab H2S 0.4 nozzle", "instantiation": "true", "printer_model": "Bambu Lab H2S", "nozzle_diameter": ["0.4"] }
+            """);
         Write("machine", "fragment", """{ "name": "Bambu Lab A1 0.4 nozzle template", "instantiation": "true" }""");
         Write("process", "0.20mm Standard @BBL A1", """
             { "type": "process", "name": "0.20mm Standard @BBL A1", "instantiation": "true", "compatible_printers": ["Bambu Lab A1 0.4 nozzle"] }
@@ -45,7 +51,7 @@ public sealed class SlicerTests : IDisposable
     {
         var machines = Profiles().Machines();
 
-        Assert.Equal(["Bambu Lab A1 0.4 nozzle", "Bambu Lab A1 0.6 nozzle"], machines.Select(machine => machine.Name));
+        Assert.Equal(["Bambu Lab A1 0.4 nozzle", "Bambu Lab H2D 0.4 nozzle", "Bambu Lab H2S 0.4 nozzle", "Bambu Lab A1 0.6 nozzle"], machines.Select(machine => machine.Name));
         Assert.Equal("0.20mm Standard @BBL A1", machines[0].DefaultProcess);
         Assert.Equal("Bambu PLA Basic @BBL A1", machines[0].DefaultFilament);
     }
@@ -159,5 +165,25 @@ public sealed class SlicerTests : IDisposable
         Assert.Equal(1000, result.FilamentLengthMm);
         Assert.Equal(15, result.InfillPercent);
         Assert.Equal(10, result.Layers);
+    }
+
+    [Fact]
+    public void Machines_know_how_many_nozzles_they_have()
+    {
+        var machines = Profiles().Machines();
+
+        Assert.Equal(2, machines.Single(machine => machine.PrinterModel == "Bambu Lab H2D").ExtruderCount);
+        Assert.False(machines.Single(machine => machine.PrinterModel == "Bambu Lab H2D").CanBeSlicedAutomatically);
+        Assert.True(machines.First(machine => machine.PrinterModel == "Bambu Lab A1").CanBeSlicedAutomatically);
+    }
+
+    [Fact]
+    public void MachineFor_slices_a_double_nozzle_printer_as_its_single_nozzle_sibling()
+    {
+        var machines = Profiles().Machines();
+
+        Assert.Equal("Bambu Lab A1 0.4 nozzle", SlicerProfiles.MachineFor(machines, "bambu lab a1")?.Name);
+        Assert.Equal("Bambu Lab H2S 0.4 nozzle", SlicerProfiles.MachineFor(machines, "Bambu Lab H2D")?.Name);
+        Assert.Null(SlicerProfiles.MachineFor(machines, "Prusa MK4"));
     }
 }

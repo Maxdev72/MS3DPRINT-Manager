@@ -152,7 +152,7 @@ public sealed class MeshViewport : Control, IMeshViewport
         if (Math.Abs(position.X - _pressPoint.X) + Math.Abs(position.Y - _pressPoint.Y) > 4) _moved = true;
         if (_rotating)
         {
-            Camera.Yaw -= dx * 0.01;
+            Camera.Yaw += dx * 0.01;
             Camera.Pitch = Math.Clamp(Camera.Pitch + dy * 0.01, -Math.PI / 2 + 0.02, Math.PI / 2 - 0.02);
         }
         else

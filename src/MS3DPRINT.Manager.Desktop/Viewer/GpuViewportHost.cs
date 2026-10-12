@@ -69,7 +69,7 @@ public sealed class GpuViewportHost : Panel, IMeshViewport
         var camera = Camera;
         if (_rotating)
         {
-            camera.Yaw -= dx * 0.01;
+            camera.Yaw += dx * 0.01;
             camera.Pitch = Math.Clamp(camera.Pitch + dy * 0.01, -Math.PI / 2 + 0.02, Math.PI / 2 - 0.02);
         }
         else

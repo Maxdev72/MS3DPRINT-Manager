@@ -9,7 +9,11 @@ namespace MS3DPRINT.Manager.Core.Slicing;
 public sealed record SlicerInstall(string Name, string ExecutablePath, string ProfilesDirectory);
 
 /// <summary>A machine profile of the slicer (printer and nozzle) with its default quality and filament profiles.</summary>
-public sealed record SlicerMachine(string Name, string PrinterModel, string FilePath, string? DefaultProcess, string? DefaultFilament);
+public sealed record SlicerMachine(string Name, string PrinterModel, string FilePath, string? DefaultProcess, string? DefaultFilament, int ExtruderCount = 1)
+{
+    /// <summary>The command line cannot map a filament to the nozzles of a multi-nozzle printer, so such machines cannot be sliced this way.</summary>
+    public bool CanBeSlicedAutomatically => ExtruderCount <= 1;
+}
 
 public sealed record SliceRequest(string ModelPath, SlicerMachine Machine, string ProcessName, string? FilamentName, int? InfillPercent = null, int? WallLoops = null, double MillimetresPerUnit = 1);
 
@@ -57,7 +61,7 @@ public sealed class SlicerProfiles(SlicerInstall install)
             var name = Text(json, "name");
             var model = Text(json, "printer_model");
             if (name is null || model is null || !NozzleSize.IsMatch(name)) continue;
-            machines.Add(new SlicerMachine(name, model, file, Text(json, "default_print_profile"), FirstOf(json, "default_filament_profile")));
+            machines.Add(new SlicerMachine(name, model, file, Text(json, "default_print_profile"), FirstOf(json, "default_filament_profile"), Count(json, "nozzle_diameter")));
         }
         return machines
             .OrderBy(machine => NozzleSize.Match(machine.Name).Groups[1].Value == "0.4" ? 0 : 1)
@@ -106,6 +110,22 @@ public sealed class SlicerProfiles(SlicerInstall install)
 
     private static string? Text(JsonElement element, string property)
         => element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+
+    private static int Count(JsonElement element, string property)
+        => element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.Array ? Math.Max(1, value.GetArrayLength()) : 1;
+
+    /// <summary>
+    /// The machine to slice with for a printer of the workshop: its own profile, or for a double-nozzle printer the single-nozzle
+    /// sibling that moves the same way (a H2D is sliced as a H2S); null when there is none.
+    /// </summary>
+    public static SlicerMachine? MachineFor(IEnumerable<SlicerMachine> machines, string printerModel)
+    {
+        var usable = machines.Where(machine => machine.CanBeSlicedAutomatically).ToList();
+        var exact = usable.FirstOrDefault(machine => string.Equals(machine.PrinterModel, printerModel, StringComparison.OrdinalIgnoreCase));
+        if (exact is not null) return exact;
+        var sibling = printerModel.StartsWith("Bambu Lab H2D", StringComparison.OrdinalIgnoreCase) ? "Bambu Lab H2S" : null;
+        return sibling is null ? null : usable.FirstOrDefault(machine => string.Equals(machine.PrinterModel, sibling, StringComparison.OrdinalIgnoreCase) && machine.Name.EndsWith("0.4 nozzle", StringComparison.Ordinal));
+    }
 
     private static string? FirstOf(JsonElement element, string property)
         => element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.Array && value.GetArrayLength() > 0 ? value[0].GetString() : null;
