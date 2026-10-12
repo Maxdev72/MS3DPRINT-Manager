@@ -72,6 +72,17 @@ public sealed class AvaloniaShellMarkupTests
     }
 
     [Fact]
+    public void Project_files_offer_an_open_with_action()
+    {
+        var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
+        var host = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Windows.App", "Program.cs"));
+
+        Assert.Contains("Ouvrir avec…", source, StringComparison.Ordinal);
+        Assert.Contains("OpenWithFile_Click", source, StringComparison.Ordinal);
+        Assert.Contains("\"openas\"", host, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Estimate_workspace_keeps_units_visible_beside_numeric_values()
     {
         var markup = File.ReadAllText(MainWindowPath());

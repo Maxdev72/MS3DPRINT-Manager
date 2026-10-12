@@ -507,13 +507,15 @@ public partial class MainWindow : Window
                         Classes = { "table-row" }
                     };
                     file.Click += FileEntry_Click;
+                    var openWith = new Button { Content = "↗  Ouvrir avec…", Tag = entry.FullPath };
+                    openWith.Click += OpenWithFile_Click;
                     var rename = new Button { Content = "↻  Renommer", Tag = new ProjectDirectoryContext(project, directory, entry.FullPath) };
                     rename.Click += RenameProjectFile_Click;
                     var move = new Button { Content = "⇄  Déplacer", Tag = new ProjectDirectoryContext(project, directory, entry.FullPath) };
                     move.Click += MoveProjectEntry_Click;
                     var trash = new Button { Content = "⌫  Corbeille", Tag = new ProjectDirectoryContext(project, directory, entry.FullPath) };
                     trash.Click += TrashProjectFile_Click;
-                    var overflow = CreateOverflowActions(rename, move, trash);
+                    var overflow = CreateOverflowActions(openWith, rename, move, trash);
                     Grid.SetColumn(overflow, 1);
                     row.Children.Add(file); row.Children.Add(overflow);
                     ProjectList.Children.Add(row);
@@ -565,6 +567,18 @@ public partial class MainWindow : Window
     {
         if (sender is not Button { Tag: string path } || !File.Exists(path)) return;
         await OpenFileAsync(path);
+    }
+
+    private void OpenWithFile_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string path } || !File.Exists(path)) return;
+        try
+        {
+            if (DesktopPreviewLauncher.OpenWith is { } openWith) openWith(path);
+            else _ = OpenFileAsync(path);
+        }
+        catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException or IOException)
+        { PageSubtitle.Text = "Impossible d’ouvrir ce fichier avec une autre application : " + exception.Message; }
     }
 
     private async void RenameProjectFile_Click(object? sender, RoutedEventArgs e)

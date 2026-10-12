@@ -7,6 +7,9 @@ public static class DesktopPreviewLauncher
 {
     public static Action<string>? OpenDocument { get; set; }
 
+    /// <summary>Shows the platform "Open with" chooser for a file (Windows: the shell's "openas" dialog).</summary>
+    public static Action<string>? OpenWith { get; set; }
+
     public static bool TryOpenDocument(string path)
     {
         if (PreviewFileSupport.GetKind(path) == PreviewFileKind.None || OpenDocument is null) return false;
