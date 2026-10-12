@@ -30,7 +30,23 @@ public partial class MainWindow : Window
     private string? _folderWorkspaceReturnTitle;
     private string? _folderWorkspaceReturnSubtitle;
 
-    public MainWindow() => InitializeComponent();
+    private readonly WindowPlacementStore _placement = new(Environment.GetEnvironmentVariable("MS3DPRINT_WINDOW_FILE"));
+
+    public MainWindow()
+    {
+        InitializeComponent();
+        if (_placement.Load() is { } saved)
+        {
+            Width = Math.Max(MinWidth, saved.Width);
+            Height = Math.Max(MinHeight, saved.Height);
+            if (saved.Maximized) WindowState = WindowState.Maximized;
+        }
+        Closing += (_, _) =>
+            _placement.Save(new WindowPlacement(
+                WindowState == WindowState.Normal ? Bounds.Width : Width,
+                WindowState == WindowState.Normal ? Bounds.Height : Height,
+                WindowState == WindowState.Maximized));
+    }
 
     private bool _preloaded;
     private string _collectionCategoryFilter = string.Empty;
@@ -56,7 +72,7 @@ public partial class MainWindow : Window
                 _projectOriginClient = null;
                 ShowWorkspace("Projets");
                 PageTitle.Text = found.Title();
-                PageSubtitle.Text = found.Reference;
+                PageSubtitle.Text = $"{found.Reference} · {found.ClientTitle()}";
                 await LoadProjectDirectoryAsync(found, found.ProjectPath);
             }
         }
@@ -88,13 +104,16 @@ public partial class MainWindow : Window
             ProjectCountText.Text = dashboard.ProjectCount.ToString();
             QuoteCountText.Text = dashboard.QuoteCount.ToString();
             InProgressCountText.Text = dashboard.InProgressCount.ToString();
-            ClientCountText.Text = dashboard.ClientCount switch { 0 => "Aucun client", 1 => "1 client", var count => $"{count} clients" };
-            WorkspaceStatusText.Text = dashboard.CompletedCount switch { 0 => "Aucun projet terminé pour l’instant.", 1 => "1 projet terminé.", var count => $"{count} projets terminés." };
+            NavProjectsCount.Text = dashboard.ProjectCount.ToString();
+            NavProjectsBadge.IsVisible = dashboard.ProjectCount > 0;
+            NavClientsCount.Text = dashboard.ClientCount.ToString();
+            NavClientsBadge.IsVisible = dashboard.ClientCount > 0;
             BuildRecentProjects(dashboard.RecentProjects);
+            BuildAttention(dashboard);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
-            WorkspaceStatusText.Text = "Impossible de lire l’espace de travail.";
+            Notify("Impossible de lire l’espace de travail.", error: true);
         }
     }
 
@@ -103,7 +122,11 @@ public partial class MainWindow : Window
 
     private void UpdateCentralWorkspaceWidth(double windowWidth)
     {
-        const double sidebarWidth = 232;
+        // Below 1100 px the sidebar shrinks to an icon rail so the content keeps its room.
+        var compact = windowWidth < 1100;
+        if (compact) Classes.Add("compact"); else Classes.Remove("compact");
+        var sidebarWidth = compact ? 68d : 232d;
+        RootGrid.ColumnDefinitions[0].Width = new GridLength(sidebarWidth);
         const double centralMargins = 68;
         CentralWorkspace.Width = Math.Min(1200, Math.Max(0, windowWidth - sidebarWidth - centralMargins));
     }
@@ -131,7 +154,64 @@ public partial class MainWindow : Window
         TrashWorkspacePanel.IsVisible = destination == "Corbeille";
         SettingsWorkspacePanel.IsVisible = destination == "Paramètres";
         FolderWorkspacePanel.IsVisible = false;
+        ClearBreadcrumb();
+        FadeIn(destination switch
+        {
+            "Projets" => ProjectsWorkspacePanel, "Clients" => ClientsWorkspacePanel, "Collections" => CollectionsWorkspacePanel,
+            "Filaments" => FilamentsWorkspacePanel, "Estimations" => EstimatesWorkspacePanel, "Imprimantes" => PrintersWorkspacePanel,
+            "Corbeille" => TrashWorkspacePanel, "Paramètres" => SettingsWorkspacePanel, _ => null
+        });
         _selectedNavigationButton = NavigationButtons().FirstOrDefault(button => button.Tag as string == destination);
+    }
+
+    private static void FadeIn(Control? panel)
+    {
+        if (panel is null) return;
+        panel.Opacity = 0;
+        Dispatcher.UIThread.Post(() => panel.Opacity = 1, DispatcherPriority.Background);
+    }
+
+    private void ClearBreadcrumb()
+    {
+        Breadcrumb.Children.Clear();
+        Breadcrumb.IsVisible = false;
+    }
+
+    /// <summary>Clickable path above the page title; the last segment is the current place.</summary>
+    private void SetBreadcrumb(params (string Label, Func<Task>? Go)[] segments)
+    {
+        Breadcrumb.Children.Clear();
+        for (var index = 0; index < segments.Length; index++)
+        {
+            if (index > 0)
+                Breadcrumb.Children.Add(new TextBlock { Text = "›", Classes = { "faint" }, VerticalAlignment = VerticalAlignment.Center });
+            var (label, go) = segments[index];
+            if (go is null || index == segments.Length - 1)
+            {
+                Breadcrumb.Children.Add(new TextBlock { Text = label, FontSize = 13, FontWeight = FontWeight.SemiBold, Margin = new Avalonia.Thickness(6, 0), VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = 260 });
+                continue;
+            }
+            var crumb = new Button { Content = label, Classes = { "crumb" } };
+            crumb.Click += async (_, _) => await go();
+            Breadcrumb.Children.Add(crumb);
+        }
+        Breadcrumb.IsVisible = segments.Length > 1;
+    }
+
+    private async Task GoToProjectsAsync()
+    {
+        ShowWorkspace("Projets");
+        PageTitle.Text = "Projets";
+        PageSubtitle.Text = PageSubtitles["Projets"];
+        await LoadProjectsAsync();
+    }
+
+    private async Task GoToClientsAsync()
+    {
+        ShowWorkspace("Clients");
+        PageTitle.Text = "Clients";
+        PageSubtitle.Text = PageSubtitles["Clients"];
+        await LoadClientsAsync();
     }
 
     private async void NavigationButton_Click(object? sender, RoutedEventArgs e)
@@ -208,8 +288,51 @@ public partial class MainWindow : Window
         }
     }
 
+    private int _searchIndex = -1;
+
+    private void SearchBox_KeyDown(object? sender, KeyEventArgs e)
+    {
+        var items = SearchResults.Children.OfType<Button>().ToArray();
+        if (e.Key is not (Key.Down or Key.Up or Key.Enter) || items.Length == 0 || !SearchResultsPanel.IsVisible) return;
+        if (e.Key == Key.Enter)
+        {
+            items[Math.Clamp(_searchIndex, 0, items.Length - 1)].RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        }
+        else
+        {
+            _searchIndex = e.Key == Key.Down ? Math.Min(items.Length - 1, _searchIndex + 1) : Math.Max(0, _searchIndex - 1);
+            for (var index = 0; index < items.Length; index++)
+            {
+                if (index == _searchIndex) items[index].Classes.Add("selected"); else items[index].Classes.Remove("selected");
+            }
+        }
+        e.Handled = true;
+    }
+
+    private static Control CreateSearchRow(MS3DPRINT.Manager.Core.Search.GlobalSearchResult result)
+    {
+        var (iconKey, kind) = result.Kind switch
+        {
+            MS3DPRINT.Manager.Core.Search.GlobalSearchResultKind.Project => ("IconProjects", "Projet"),
+            MS3DPRINT.Manager.Core.Search.GlobalSearchResultKind.Client => ("IconClients", "Client"),
+            _ => ("IconFile", "Fichier")
+        };
+        var icon = new Avalonia.Controls.Shapes.Path { Classes = { "icon", "icon-accent" } };
+        if (Avalonia.Application.Current?.TryFindResource(iconKey, out var geometry) == true && geometry is Geometry data) icon.Data = data;
+        var texts = new StackPanel { Spacing = 1, VerticalAlignment = VerticalAlignment.Center };
+        texts.Children.Add(new TextBlock { Text = result.Title, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
+        texts.Children.Add(new TextBlock { Text = result.Detail, Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis });
+        var badge = new Border { Classes = { "badge" }, Child = new TextBlock { Text = kind } };
+        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 12 };
+        Grid.SetColumn(texts, 1); Grid.SetColumn(badge, 2);
+        row.Children.Add(icon); row.Children.Add(texts); row.Children.Add(badge);
+        return row;
+    }
+
     private async void SearchBox_KeyUp(object? sender, KeyEventArgs e)
     {
+        if (e.Key is Key.Up or Key.Down or Key.Enter or Key.Escape or Key.Tab) return;
+        _searchIndex = -1;
         var query = SearchBox.Text?.Trim() ?? string.Empty;
         _searchCancellation?.Cancel();
         _searchCancellation?.Dispose();
@@ -235,12 +358,7 @@ public partial class MainWindow : Window
             SearchResults.Children.Clear();
             foreach (var result in results.Take(8))
             {
-                var item = new Button
-                {
-                    Content = $"{result.Title}\n{result.Detail}",
-                    HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left,
-                    Tag = result
-                };
+                var item = new Button { Content = CreateSearchRow(result), Classes = { "search-item" }, Tag = result };
                 item.Click += SearchResult_Click;
                 SearchResults.Children.Add(item);
             }
@@ -266,7 +384,7 @@ public partial class MainWindow : Window
             _projectOriginClient = null;
             ShowWorkspace("Projets");
             PageTitle.Text = project.Title();
-            PageSubtitle.Text = project.Reference;
+            PageSubtitle.Text = $"{project.Reference} · {project.ClientTitle()}";
             await LoadProjectDirectoryAsync(project, project.ProjectPath);
         }
         else if (result.Client is not null)
@@ -305,6 +423,61 @@ public partial class MainWindow : Window
             row.Click += RecentProject_Click;
             RecentProjectsList.Children.Add(row);
         }
+    }
+
+    private void BuildAttention(WorkspaceDashboard dashboard)
+    {
+        AttentionList.Children.Clear();
+        var today = DateOnly.FromDateTime(DateTime.Today);
+
+        foreach (var project in dashboard.Deadlines)
+        {
+            var due = project.Profile!.DueDate!.Value;
+            var days = due.DayNumber - today.DayNumber;
+            var (text, variant) = days switch
+            {
+                < 0 => ($"En retard de {-days} j", "danger"),
+                0 => ("Aujourd’hui", "warning"),
+                1 => ("Demain", "warning"),
+                <= 7 => ($"Dans {days} j", "warning"),
+                _ => ($"{due:dd/MM}", "neutral")
+            };
+            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 10 };
+            var labels = new StackPanel { Spacing = 1 };
+            labels.Children.Add(new TextBlock { Text = project.Title(), FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
+            labels.Children.Add(new TextBlock { Text = "Échéance · " + project.Reference, Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis });
+            var badge = new Border { Classes = { "badge", variant }, Child = new TextBlock { Text = text } };
+            Grid.SetColumn(badge, 1);
+            row.Children.Add(labels);
+            row.Children.Add(badge);
+            var open = new Button { Classes = { "workspace-card" }, MinHeight = 52, Padding = new Avalonia.Thickness(12, 8), Tag = project, Content = row };
+            open.Click += RecentProject_Click;
+            AttentionList.Children.Add(open);
+        }
+
+        void AddShortcut(string text, string destination, string filterTag)
+        {
+            var button = new Button { Classes = { "ghost" }, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left, Content = text };
+            button.Click += async (_, _) => await OpenFilteredAsync(destination, filterTag);
+            AttentionList.Children.Add(button);
+        }
+
+        if (dashboard.IncompleteProjects > 0)
+            AddShortcut(dashboard.IncompleteProjects == 1 ? "1 projet à compléter" : $"{dashboard.IncompleteProjects} projets à compléter", "Projets", "TODO");
+        if (dashboard.IncompleteClients > 0)
+            AddShortcut(dashboard.IncompleteClients == 1 ? "1 fiche client à compléter" : $"{dashboard.IncompleteClients} fiches client à compléter", "Clients", "Fiche à compléter");
+
+        if (AttentionList.Children.Count == 0)
+            AttentionList.Children.Add(new TextBlock { Text = "Rien d’urgent : toutes les fiches sont à jour et aucune échéance n’est enregistrée.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap });
+    }
+
+    private async Task OpenFilteredAsync(string destination, string filterTag)
+    {
+        if (NavigationButtons().FirstOrDefault(button => button.Tag as string == destination) is not { } target) return;
+        if (destination == "Projets") { _projectStatusFilter = filterTag; SelectChip(ProjectStatusFilters, filterTag); }
+        else { _clientKindFilter = filterTag; SelectChip(ClientStatusFilters, filterTag); }
+        NavigationButton_Click(target, new RoutedEventArgs());
+        await Task.CompletedTask;
     }
 
     /// <summary>Coloured pill for a project status label (DEVIS, EN_COURS, TERMINE or "À compléter").</summary>
@@ -394,6 +567,31 @@ public partial class MainWindow : Window
             NavigationButton_Click(target, e);
     }
 
+    /// <summary>Header whose labels are buttons: click to sort, click again to reverse. The last heading (actions) is not sortable.</summary>
+    private static Border CreateSortableHeader(string columns, string[] headings, int active, bool ascending, Action<int> onSort)
+    {
+        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions(columns), ColumnSpacing = 16 };
+        for (var index = 0; index < headings.Length; index++)
+        {
+            Control cell;
+            if (index == headings.Length - 1)
+                cell = new TextBlock { Text = headings[index], FontSize = 11, FontWeight = FontWeight.SemiBold, Classes = { "faint" } };
+            else
+            {
+                var column = index;
+                var label = headings[index] + (index == active ? (ascending ? "  ▲" : "  ▼") : string.Empty);
+                var button = new Button { Content = label, Classes = { "sort-head" } };
+                if (index == active) button.Classes.Add("active");
+                ToolTip.SetTip(button, "Trier par " + headings[index].ToLowerInvariant());
+                button.Click += (_, _) => onSort(column);
+                cell = button;
+            }
+            Grid.SetColumn(cell, index);
+            grid.Children.Add(cell);
+        }
+        return new Border { Background = Avalonia.Media.Brushes.Transparent, Padding = new Avalonia.Thickness(14, 4), Child = grid };
+    }
+
     private static Border CreateCompactTableHeader(string columns, params string[] headings)
     {
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions(columns), ColumnSpacing = 16 };
@@ -461,6 +659,8 @@ public partial class MainWindow : Window
             Grid.SetColumn(cells[index], index);
             row.Children.Add(cells[index]);
         }
+        if (actions?.Tag is Flyout contextMenu)
+            row.ContextRequested += (_, e) => { contextMenu.ShowAt(row, showAtPointer: true); e.Handled = true; };
         if (actions is not null)
         {
             actions.HorizontalAlignment = HorizontalAlignment.Center;
@@ -496,8 +696,8 @@ public partial class MainWindow : Window
             Placement = placement,
             Content = new Border
             {
-                Background = new SolidColorBrush(Color.Parse("#141F30")),
-                BorderBrush = new SolidColorBrush(Color.Parse("#2D4D75")),
+                Background = (IBrush?)Avalonia.Application.Current?.FindResource("RaisedSurfaceBrush"),
+                BorderBrush = (IBrush?)Avalonia.Application.Current?.FindResource("BorderBrush"),
                 BorderThickness = new Avalonia.Thickness(1),
                 CornerRadius = new Avalonia.CornerRadius(10),
                 Padding = new Avalonia.Thickness(6),
@@ -508,6 +708,7 @@ public partial class MainWindow : Window
         var overflow = new Button { Content = "⋯", Classes = { "icon-action" } };
         ToolTip.SetTip(overflow, "Actions");
         overflow.Click += (_, _) => flyout.ShowAt(overflow);
+        overflow.Tag = flyout; // lets the row open the same menu on right click
         return overflow;
     }
 
@@ -519,7 +720,7 @@ public partial class MainWindow : Window
         _projectOriginClient = null;
         ShowWorkspace("Projets");
         PageTitle.Text = project.Title();
-        PageSubtitle.Text = project.Reference;
+        PageSubtitle.Text = $"{project.Reference} · {project.ClientTitle()}";
         await LoadProjectDirectoryAsync(project, project.ProjectPath);
     }
 
@@ -576,6 +777,10 @@ public partial class MainWindow : Window
     }
 
     private IReadOnlyList<ProjectSummary> _allProjects = [];
+    private int _projectSortColumn = -1;
+    private bool _projectSortAscending = true;
+    private int _clientSortColumn = -1;
+    private bool _clientSortAscending = true;
     private string _projectStatusFilter = string.Empty;
 
     private async Task LoadProjectsAsync()
@@ -586,6 +791,7 @@ public partial class MainWindow : Window
         _projectListMode = true;
         ProjectsPanelTitle.Text = "Tous les projets";
         ProjectsPanelActions.IsVisible = true;
+        ProjectsPanelHeader.IsVisible = true;
         ProjectFilterBar.IsVisible = true;
 
         try
@@ -632,7 +838,13 @@ public partial class MainWindow : Window
             return;
         }
 
-        ProjectList.Children.Add(CreateCompactTableHeader(ActionRowColumns, "PROJET", "CLIENT", "STATUT", "ACTIONS"));
+        projects = SortProjects(projects);
+        ProjectList.Children.Add(CreateSortableHeader(ActionRowColumns, ["PROJET", "CLIENT", "STATUT", "ACTIONS"], _projectSortColumn, _projectSortAscending, column =>
+        {
+            _projectSortAscending = _projectSortColumn != column || !_projectSortAscending;
+            _projectSortColumn = column;
+            RenderProjects();
+        }));
         foreach (var project in projects)
         {
             var open = new Button { Tag = project, HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch };
@@ -647,6 +859,31 @@ public partial class MainWindow : Window
                 CreateCompactTableCell(project.ClientTitle()),
                 CreateStatusBadge(project.StatusLabel)));
         }
+    }
+
+    private ProjectSummary[] SortProjects(ProjectSummary[] projects)
+    {
+        if (_projectSortColumn < 0) return projects;
+        IOrderedEnumerable<ProjectSummary> ordered = _projectSortColumn switch
+        {
+            1 => projects.OrderBy(project => project.ClientTitle(), StringComparer.CurrentCultureIgnoreCase),
+            2 => projects.OrderBy(project => project.StatusLabel switch { "DEVIS" => 0, "EN_COURS" => 1, "TERMINE" => 2, _ => 3 }),
+            _ => projects.OrderBy(project => project.Title(), StringComparer.CurrentCultureIgnoreCase)
+        };
+        return (_projectSortAscending ? ordered : ordered.Reverse()).ToArray();
+    }
+
+    private ClientSummary[] SortClients(ClientSummary[] clients)
+    {
+        if (_clientSortColumn < 0) return clients;
+        IOrderedEnumerable<ClientSummary> ordered = _clientSortColumn switch
+        {
+            1 => clients.OrderBy(client => client.ClientCode, StringComparer.OrdinalIgnoreCase),
+            2 => clients.OrderBy(client => client.ProfileLabel, StringComparer.CurrentCultureIgnoreCase),
+            3 => clients.OrderBy(client => client.ProjectCount),
+            _ => clients.OrderBy(client => client.Title(), StringComparer.CurrentCultureIgnoreCase)
+        };
+        return (_clientSortAscending ? ordered : ordered.Reverse()).ToArray();
     }
 
     private void ProjectFilterText_Changed(object? sender, TextChangedEventArgs e)
@@ -677,7 +914,7 @@ public partial class MainWindow : Window
         _projectOriginClient = ClientsWorkspacePanel.IsVisible ? _currentClientDetail : null;
         ShowWorkspace("Projets");
         PageTitle.Text = project.Title();
-        PageSubtitle.Text = project.Reference;
+        PageSubtitle.Text = $"{project.Reference} · {project.ClientTitle()}";
         await LoadProjectDirectoryAsync(project, project.ProjectPath);
     }
 
@@ -689,10 +926,11 @@ public partial class MainWindow : Window
         ProjectsPanelTitle.Text = directory == project.ProjectPath ? "Fiche projet" : Path.GetFileName(directory);
         ProjectsPanelSubtitle.Text = $"{project.Reference} · {project.ClientTitle()}";
         ProjectsPanelActions.IsVisible = false;
+        ProjectsPanelHeader.IsVisible = false;
         ProjectFilterBar.IsVisible = false;
         var toolbar = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), Margin = new Avalonia.Thickness(0, 0, 0, 8) };
         var origin = _projectOriginClient;
-        var back = new Button { Content = directory != project.ProjectPath ? "← Dossier parent" : origin is null ? "← Retour aux projets" : "← Retour au client", HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left };
+        var back = new Button { Content = directory != project.ProjectPath ? "← Dossier parent" : origin is null ? "← Retour aux projets" : "← Retour au client", Classes = { "ghost" }, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left };
         back.Click += async (_, _) =>
         {
             if (directory == project.ProjectPath && origin is not null)
@@ -724,6 +962,27 @@ public partial class MainWindow : Window
         ProjectList.Children.Add(toolbar);
         if (directory == project.ProjectPath)
             AddProjectOverview(project);
+
+        var trail = new List<(string Label, Func<Task>? Go)>();
+        if (origin is null) trail.Add(("Projets", GoToProjectsAsync));
+        else
+        {
+            trail.Add(("Clients", GoToClientsAsync));
+            trail.Add((origin.Title(), async () => { ShowWorkspace("Clients"); PageTitle.Text = "Clients"; await LoadClientDetailAsync(origin); }));
+        }
+        trail.Add((project.Title(), () => LoadProjectDirectoryAsync(project, project.ProjectPath)));
+        var relative = Path.GetRelativePath(project.ProjectPath, directory);
+        if (relative != ".")
+        {
+            var current = project.ProjectPath;
+            foreach (var part in relative.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries))
+            {
+                current = Path.Combine(current, part);
+                var target = current;
+                trail.Add((part, () => LoadProjectDirectoryAsync(project, target)));
+            }
+        }
+        SetBreadcrumb(trail.ToArray());
         try
         {
             var entries = await Task.Run(() => new ProjectWorkspaceBrowser().List(project.ProjectPath, directory));
@@ -939,27 +1198,29 @@ public partial class MainWindow : Window
 
     private void AddProjectOverview(ProjectSummary project)
     {
-        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
-        var titles = new StackPanel { Spacing = 3 };
-        titles.Children.Add(new TextBlock { Text = project.Title(), Classes = { "section-title" }, TextWrapping = TextWrapping.Wrap });
-        titles.Children.Add(new TextBlock { Text = $"{project.Reference} · {project.ClientTitle()}", Classes = { "caption" } });
+        var edit = new Button { Content = "✎  Modifier la fiche", Tag = project, VerticalAlignment = VerticalAlignment.Center };
+        edit.Click += EditProject_Click;
         var badge = CreateStatusBadge(project.Profile is null ? "À compléter" : project.StatusLabel);
-        Grid.SetColumn(badge, 1);
-        badge.VerticalAlignment = VerticalAlignment.Top;
-        header.Children.Add(titles);
-        header.Children.Add(badge);
+
+        var summary = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, VerticalAlignment = VerticalAlignment.Center };
+        summary.Children.Add(badge);
+        summary.Children.Add(new TextBlock
+        {
+            Text = project.Profile?.DueDate is { } due ? $"Échéance le {due:dd/MM/yyyy}" : "Aucune échéance",
+            Classes = { "muted" }, VerticalAlignment = VerticalAlignment.Center
+        });
+
+        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
+        Grid.SetColumn(edit, 1);
+        header.Children.Add(summary);
+        header.Children.Add(edit);
 
         var content = new StackPanel { Spacing = 10 };
         content.Children.Add(header);
-        if (project.Profile?.DueDate is { } due)
-            content.Children.Add(new TextBlock { Text = $"Échéance le {due:dd/MM/yyyy}", Classes = { "muted" } });
         if (!string.IsNullOrWhiteSpace(project.Profile?.Description))
             content.Children.Add(new TextBlock { Text = project.Profile.Description, TextWrapping = TextWrapping.Wrap });
         else if (project.Profile is null)
             content.Children.Add(new TextBlock { Text = "La fiche de ce projet est à compléter.", Classes = { "muted" } });
-        var edit = new Button { Content = "✎  Modifier la fiche", Tag = project, HorizontalAlignment = HorizontalAlignment.Left };
-        edit.Click += EditProject_Click;
-        content.Children.Add(edit);
         ProjectList.Children.Add(new Border { Classes = { "card-raised" }, Margin = new Avalonia.Thickness(0, 0, 0, 10), Child = content });
     }
 
@@ -1183,6 +1444,7 @@ public partial class MainWindow : Window
         _currentClientDetail = null;
         ClientsPanelTitle.Text = "Tous les clients";
         ClientsPanelActions.IsVisible = true;
+        ClientsPanelHeader.IsVisible = true;
         ClientFilterBar.IsVisible = true;
         try
         {
@@ -1220,7 +1482,13 @@ public partial class MainWindow : Window
             return;
         }
 
-        ClientList.Children.Add(CreateCompactTableHeader(ClientRowColumns, "CLIENT", "CODE", "FICHE", "PROJETS", "ACTIONS"));
+        clients = SortClients(clients);
+        ClientList.Children.Add(CreateSortableHeader(ClientRowColumns, ["CLIENT", "CODE", "FICHE", "PROJETS", "ACTIONS"], _clientSortColumn, _clientSortAscending, column =>
+        {
+            _clientSortAscending = _clientSortColumn != column || !_clientSortAscending;
+            _clientSortColumn = column;
+            RenderClients();
+        }));
         foreach (var client in clients)
         {
             var open = new Button { Tag = client, HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch };
@@ -1267,8 +1535,9 @@ public partial class MainWindow : Window
         ClientsPanelTitle.Text = "Fiche client";
         ClientsPanelSubtitle.Text = client.Title();
         ClientsPanelActions.IsVisible = false;
+        ClientsPanelHeader.IsVisible = false;
         ClientFilterBar.IsVisible = false;
-        var back = new Button { Content = "← Retour aux clients", HorizontalAlignment = HorizontalAlignment.Left };
+        var back = new Button { Content = "← Retour aux clients", Classes = { "ghost" }, HorizontalAlignment = HorizontalAlignment.Left };
         back.Click += async (_, _) =>
         {
             PageTitle.Text = "Clients";
@@ -1276,6 +1545,7 @@ public partial class MainWindow : Window
             await LoadClientsAsync();
         };
         ClientList.Children.Add(back);
+        SetBreadcrumb(("Clients", GoToClientsAsync), (client.Title(), null));
 
         var card = new StackPanel { Spacing = 8 };
         card.Children.Add(new TextBlock { Text = client.Title(), FontSize = 18, FontWeight = FontWeight.SemiBold });

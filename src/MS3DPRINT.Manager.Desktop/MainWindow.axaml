@@ -11,43 +11,47 @@
         Opened="Window_Opened"
         SizeChanged="Window_SizeChanged"
         Title="MS3DPRINT Manager">
-  <Grid ColumnDefinitions="232,*">
+  <Grid x:Name="RootGrid">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="232" />
+      <ColumnDefinition Width="*" />
+    </Grid.ColumnDefinitions>
     <Border Background="{DynamicResource SidebarBrush}" BorderBrush="{DynamicResource SubtleBorderBrush}" BorderThickness="0,0,1,0" Padding="14,20,14,16">
       <Grid RowDefinitions="Auto,*,Auto">
         <StackPanel Orientation="Horizontal" Spacing="12" Margin="6,0,0,0">
           <Image Source="avares://MS3DPRINT.Manager.Desktop/Assets/app-icon.png" Width="36" Height="36" />
-          <StackPanel VerticalAlignment="Center" Spacing="1">
+          <StackPanel Classes="nav-label" VerticalAlignment="Center" Spacing="1">
             <TextBlock Text="MS3DPRINT" FontSize="17" FontWeight="SemiBold" />
             <TextBlock Text="MANAGER" FontSize="10" FontWeight="SemiBold" LetterSpacing="2.5" Foreground="{DynamicResource AccentBrush}" />
           </StackPanel>
         </StackPanel>
         <ScrollViewer Grid.Row="1" Margin="0,26,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
           <StackPanel x:Name="NavigationItems" Spacing="2">
-            <TextBlock Text="ESPACE DE TRAVAIL" Classes="overline" Margin="12,0,0,8" />
-            <Button Classes="nav-item selected" Tag="Accueil" Click="NavigationButton_Click" AutomationProperties.Name="Accueil"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconHome}" /><TextBlock Text="Accueil" /></StackPanel></Button>
-            <Button Classes="nav-item" Tag="Projets" Click="NavigationButton_Click" AutomationProperties.Name="Projets"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconProjects}" /><TextBlock Text="Projets" /></StackPanel></Button>
-            <Button Classes="nav-item" Tag="Clients" Click="NavigationButton_Click" AutomationProperties.Name="Clients"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconClients}" /><TextBlock Text="Clients" /></StackPanel></Button>
-            <Button Classes="nav-item" Tag="Collections" Click="NavigationButton_Click" AutomationProperties.Name="Collections"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconCollections}" /><TextBlock Text="Collections" /></StackPanel></Button>
-            <Button Classes="nav-item" Tag="Filaments" Click="NavigationButton_Click" AutomationProperties.Name="Filaments"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconFilaments}" /><TextBlock Text="Filaments" /></StackPanel></Button>
-            <Button Classes="nav-item" Tag="Estimations" Click="NavigationButton_Click" AutomationProperties.Name="Estimations"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconEstimates}" /><TextBlock Text="Estimations" /></StackPanel></Button>
-            <Button Classes="nav-item" Tag="Imprimantes" Click="NavigationButton_Click" AutomationProperties.Name="Imprimantes"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconPrinters}" /><TextBlock Text="Imprimantes" /></StackPanel></Button>
-            <Button Classes="nav-item" Tag="Corbeille" Click="NavigationButton_Click" AutomationProperties.Name="Corbeille"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconTrash}" /><TextBlock Text="Corbeille" /></StackPanel></Button>
-            <TextBlock Text="OUTILS" Classes="overline" Margin="12,20,0,8" />
-            <Button Classes="nav-item" Click="OpenThreeDViewer_Click" AutomationProperties.Name="Visualiseur 3D"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconCube}" /><TextBlock Text="Visualiseur 3D" /></StackPanel></Button>
+            <TextBlock Text="ESPACE DE TRAVAIL" Classes="overline nav-label" Margin="12,0,0,8" />
+            <Button Classes="nav-item selected" Tag="Accueil" Click="NavigationButton_Click" AutomationProperties.Name="Accueil"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconHome}" /><TextBlock Classes="nav-label" Text="Accueil" /></StackPanel></Button>
+            <Button Classes="nav-item" Tag="Projets" Click="NavigationButton_Click" AutomationProperties.Name="Projets"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"><Path Classes="icon" Data="{StaticResource IconProjects}" /><TextBlock Grid.Column="1" Classes="nav-label" Text="Projets" /><Border x:Name="NavProjectsBadge" Grid.Column="2" Classes="badge nav-label" IsVisible="False"><TextBlock x:Name="NavProjectsCount" Text="0" /></Border></Grid></Button>
+            <Button Classes="nav-item" Tag="Clients" Click="NavigationButton_Click" AutomationProperties.Name="Clients"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"><Path Classes="icon" Data="{StaticResource IconClients}" /><TextBlock Grid.Column="1" Classes="nav-label" Text="Clients" /><Border x:Name="NavClientsBadge" Grid.Column="2" Classes="badge nav-label" IsVisible="False"><TextBlock x:Name="NavClientsCount" Text="0" /></Border></Grid></Button>
+            <Button Classes="nav-item" Tag="Collections" Click="NavigationButton_Click" AutomationProperties.Name="Collections"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconCollections}" /><TextBlock Classes="nav-label" Text="Collections" /></StackPanel></Button>
+            <Button Classes="nav-item" Tag="Filaments" Click="NavigationButton_Click" AutomationProperties.Name="Filaments"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconFilaments}" /><TextBlock Classes="nav-label" Text="Filaments" /></StackPanel></Button>
+            <Button Classes="nav-item" Tag="Estimations" Click="NavigationButton_Click" AutomationProperties.Name="Estimations"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconEstimates}" /><TextBlock Classes="nav-label" Text="Estimations" /></StackPanel></Button>
+            <Button Classes="nav-item" Tag="Imprimantes" Click="NavigationButton_Click" AutomationProperties.Name="Imprimantes"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconPrinters}" /><TextBlock Classes="nav-label" Text="Imprimantes" /></StackPanel></Button>
+            <Button Classes="nav-item" Tag="Corbeille" Click="NavigationButton_Click" AutomationProperties.Name="Corbeille"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconTrash}" /><TextBlock Classes="nav-label" Text="Corbeille" /></StackPanel></Button>
+            <TextBlock Text="OUTILS" Classes="overline nav-label" Margin="12,20,0,8" />
+            <Button Classes="nav-item" Click="OpenThreeDViewer_Click" AutomationProperties.Name="Visualiseur 3D"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconCube}" /><TextBlock Classes="nav-label" Text="Visualiseur 3D" /></StackPanel></Button>
           </StackPanel>
         </ScrollViewer>
         <StackPanel Grid.Row="2" Spacing="10">
           <Border Classes="card-raised" Padding="12">
             <StackPanel Orientation="Horizontal" Spacing="10">
               <Ellipse Width="8" Height="8" Fill="{DynamicResource SuccessBrush}" VerticalAlignment="Center" />
-              <StackPanel Spacing="1">
+              <StackPanel Classes="nav-label" Spacing="1">
                 <TextBlock Text="ATELIER NORD" FontSize="13" FontWeight="SemiBold" />
                 <TextBlock Text="Espace local connecté" Classes="caption" />
               </StackPanel>
             </StackPanel>
           </Border>
           <StackPanel x:Name="FooterNavigation">
-            <Button Classes="nav-item" Tag="Paramètres" Click="NavigationButton_Click" AutomationProperties.Name="Paramètres"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconSettings}" /><TextBlock Text="Paramètres" /></StackPanel></Button>
+            <Button Classes="nav-item" Tag="Paramètres" Click="NavigationButton_Click" AutomationProperties.Name="Paramètres"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconSettings}" /><TextBlock Classes="nav-label" Text="Paramètres" /></StackPanel></Button>
           </StackPanel>
         </StackPanel>
       </Grid>
@@ -55,13 +59,14 @@
     <Grid x:Name="CentralWorkspace" Grid.Column="1" Margin="34,28" Width="1200" MaxWidth="1200" HorizontalAlignment="Center" RowDefinitions="Auto,Auto,*" RowSpacing="24">
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20">
         <StackPanel Spacing="4" VerticalAlignment="Center">
+          <StackPanel x:Name="Breadcrumb" Orientation="Horizontal" Spacing="2" IsVisible="False" />
           <TextBlock x:Name="PageTitle" Text="Vue d’ensemble" Classes="page-title" />
           <TextBlock x:Name="PageSubtitle" Text="Bienvenue dans votre atelier. Voici ce qui mérite votre attention." Classes="muted" />
         </StackPanel>
         <Border Grid.Column="1" Classes="search-box" Width="340" Height="40" VerticalAlignment="Center">
           <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
             <Path Classes="icon" Data="{StaticResource IconSearch}" />
-            <TextBox x:Name="SearchBox" Grid.Column="1" Classes="search-input" PlaceholderText="Rechercher un projet, un client, un fichier…" KeyUp="SearchBox_KeyUp" VerticalAlignment="Center" AutomationProperties.Name="Recherche globale" />
+            <TextBox x:Name="SearchBox" Grid.Column="1" Classes="search-input" PlaceholderText="Rechercher un projet, un client, un fichier…" KeyUp="SearchBox_KeyUp" KeyDown="SearchBox_KeyDown" VerticalAlignment="Center" AutomationProperties.Name="Recherche globale" />
             <Border Grid.Column="2" Classes="key-hint" VerticalAlignment="Center"><TextBlock Text="Ctrl+K" FontSize="11" Foreground="{DynamicResource MutedTextBrush}" /></Border>
           </Grid>
         </Border>
@@ -103,14 +108,14 @@
             <Button Click="DashboardCreateClient_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"><StackPanel Orientation="Horizontal" Spacing="10"><Path Classes="icon icon-sm" Data="{StaticResource IconClients}" /><TextBlock Text="Nouveau client" /></StackPanel></Button>
             <Button Click="DashboardEstimate_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"><StackPanel Orientation="Horizontal" Spacing="10"><Path Classes="icon icon-sm" Data="{StaticResource IconEstimates}" /><TextBlock Text="Nouvelle estimation" /></StackPanel></Button>
             <Border Height="1" Background="{DynamicResource SubtleBorderBrush}" Margin="0,4" />
-            <StackPanel Spacing="3"><TextBlock Text="Clients" Classes="caption" /><TextBlock x:Name="ClientCountText" Text="—" FontWeight="SemiBold" /></StackPanel>
-            <StackPanel Spacing="3"><TextBlock Text="Espace de travail" Classes="caption" /><TextBlock x:Name="WorkspaceStatusText" Text="Lecture des données…" TextWrapping="Wrap" /></StackPanel>
+            <TextBlock Text="À surveiller" Classes="section-title" />
+            <StackPanel x:Name="AttentionList" Spacing="8" />
           </StackPanel>
         </Border>
       </Grid>
       <Border x:Name="ProjectsWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="card">
         <Grid RowDefinitions="Auto,Auto,*" RowSpacing="16">
-          <Grid ColumnDefinitions="*,Auto">
+          <Grid x:Name="ProjectsPanelHeader" ColumnDefinitions="*,Auto">
             <StackPanel Spacing="4"><TextBlock x:Name="ProjectsPanelTitle" Text="Tous les projets" Classes="section-title" /><TextBlock x:Name="ProjectsPanelSubtitle" Text="Catalogue lu depuis votre espace de travail." Classes="muted" /></StackPanel>
             <StackPanel x:Name="ProjectsPanelActions" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"><Button Classes="primary-action" Click="CreateProject_Click" AutomationProperties.Name="Créer"><StackPanel Orientation="Horizontal" Spacing="6"><Path Classes="icon icon-sm" Data="{StaticResource IconPlus}" /><TextBlock Text="Créer" /></StackPanel></Button><Button Click="RefreshProjects_Click" AutomationProperties.Name="Actualiser"><StackPanel Orientation="Horizontal" Spacing="6"><Path Classes="icon icon-sm" Data="{StaticResource IconRefresh}" /><TextBlock Text="Actualiser" /></StackPanel></Button></StackPanel>
           </Grid>
@@ -125,7 +130,7 @@
       </Border>
       <Border x:Name="ClientsWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="card">
         <Grid RowDefinitions="Auto,Auto,*" RowSpacing="16">
-          <Grid ColumnDefinitions="*,Auto">
+          <Grid x:Name="ClientsPanelHeader" ColumnDefinitions="*,Auto">
             <StackPanel Spacing="4"><TextBlock x:Name="ClientsPanelTitle" Text="Tous les clients" Classes="section-title" /><TextBlock x:Name="ClientsPanelSubtitle" Text="Catalogue lu depuis votre espace de travail." Classes="muted" /></StackPanel>
             <StackPanel x:Name="ClientsPanelActions" Grid.Column="1" Orientation="Horizontal" Spacing="8"><Button Classes="primary-action" Click="CreateClient_Click" AutomationProperties.Name="Créer"><StackPanel Orientation="Horizontal" Spacing="6"><Path Classes="icon icon-sm" Data="{StaticResource IconPlus}" /><TextBlock Text="Créer" /></StackPanel></Button><Button Click="RefreshClients_Click" AutomationProperties.Name="Actualiser"><StackPanel Orientation="Horizontal" Spacing="6"><Path Classes="icon icon-sm" Data="{StaticResource IconRefresh}" /><TextBlock Text="Actualiser" /></StackPanel></Button></StackPanel>
           </Grid>
@@ -197,12 +202,12 @@
           <ScrollViewer Grid.Row="1"><StackPanel x:Name="FolderWorkspaceList" Spacing="8" /></ScrollViewer>
         </Grid>
       </Border>
-    </Grid>
-    <Border x:Name="SearchResultsPanel" Grid.Column="1" IsVisible="False" HorizontalAlignment="Right" VerticalAlignment="Top" Width="390" MaxHeight="420" Margin="0,82,34,0" Background="{DynamicResource RaisedSurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="8">
-      <ScrollViewer MaxHeight="400">
+      <Border x:Name="SearchResultsPanel" Grid.RowSpan="3" IsVisible="False" HorizontalAlignment="Right" VerticalAlignment="Top" Width="440" MaxHeight="460" Margin="0,46,0,0" ZIndex="10" Background="{DynamicResource RaisedSurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="8">
+      <ScrollViewer MaxHeight="440">
         <StackPanel x:Name="SearchResults" Spacing="4" />
       </ScrollViewer>
     </Border>
+    </Grid>
       <ProgressBar x:Name="BusyBar" Grid.Column="1" Classes="busy" IsIndeterminate="True" IsVisible="False" VerticalAlignment="Top" />
     <StackPanel x:Name="ToastHost" Grid.Column="1" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,28,24" Spacing="8" />
   </Grid>

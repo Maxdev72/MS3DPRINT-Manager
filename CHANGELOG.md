@@ -2,6 +2,15 @@
 
 ## 12 octobre 2026
 
+### Deuxième passe sur l’interface
+- Fil d’Ariane cliquable (Projets › Projet › sous-dossier, ou Clients › Client › Projet) pour remonter en un clic.
+- Colonnes triables en cliquant sur l’en-tête (Projets et Clients), clic droit sur une ligne pour ouvrir ses actions.
+- Accueil : bloc « À surveiller » (échéances proches ou dépassées, fiches projet et client à compléter) avec accès direct aux listes filtrées.
+- Menu : compteurs sur Projets et Clients ; en dessous de 1100 px il se réduit à une barre d’icônes.
+- Recherche : résultats avec icône et type, navigation au clavier (↑ ↓ puis Entrée).
+- Le logiciel retient la taille de sa fenêtre ; transitions douces sur les boutons et les pages.
+- Fiche projet épurée : plus de titre en double, statut et échéance sur une ligne.
+
 ### Refonte de l’interface
 - Nouveau système de design : couleurs plus contrastées, typographie, boutons (principal, secondaire, discret, danger),
   champs, badges de statut colorés et cartes cohérents dans tout le logiciel.

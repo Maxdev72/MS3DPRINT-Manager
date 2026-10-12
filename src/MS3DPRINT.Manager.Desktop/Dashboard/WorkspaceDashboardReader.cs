@@ -10,7 +10,10 @@ public sealed record WorkspaceDashboard(
     int QuoteCount,
     int InProgressCount,
     int CompletedCount,
-    IReadOnlyList<ProjectSummary> RecentProjects);
+    IReadOnlyList<ProjectSummary> RecentProjects,
+    IReadOnlyList<ProjectSummary> Deadlines,
+    int IncompleteProjects,
+    int IncompleteClients);
 
 /// <summary>Reads the existing workspace without changing its files or metadata.</summary>
 public sealed class WorkspaceDashboardReader
@@ -27,12 +30,21 @@ public sealed class WorkspaceDashboardReader
             .Take(5)
             .ToArray();
 
+        var deadlines = projects
+            .Where(project => project.Profile is { DueDate: not null } profile && profile.Status != ProjectStatus.Completed)
+            .OrderBy(project => project.Profile!.DueDate)
+            .Take(4)
+            .ToArray();
+
         return new WorkspaceDashboard(
             clients.Count,
             projects.Count,
             projects.Count(project => project.Status == ProjectStatus.Quote),
             projects.Count(project => project.Status == ProjectStatus.InProgress),
             projects.Count(project => project.Status == ProjectStatus.Completed),
-            recent);
+            recent,
+            deadlines,
+            projects.Count(project => project.Profile is null),
+            clients.Count(client => client.Profile is null));
     }
 }

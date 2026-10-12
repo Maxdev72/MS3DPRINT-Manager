@@ -121,6 +121,57 @@
   <Style Selector="Button.nav-item.selected Path.icon"><Setter Property="Stroke" Value="{DynamicResource AccentBrush}" /></Style>
   <Style Selector="Button.nav-item TextBlock"><Setter Property="Foreground" Value="{Binding $parent[Button].Foreground}" /></Style>
 
+  <!-- Compact sidebar: icons only below 1100 px -->
+  <Style Selector="Window.compact .nav-label" x:SetterTargetType="Control"><Setter Property="IsVisible" Value="False" /></Style>
+  <Style Selector="Window.compact Button.nav-item"><Setter Property="HorizontalContentAlignment" Value="Center" /><Setter Property="Padding" Value="0,10" /></Style>
+
+  <!-- Breadcrumb, sortable headers, search results -->
+  <Style Selector="Button.crumb">
+    <Setter Property="Padding" Value="6,2" />
+    <Setter Property="MinHeight" Value="24" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+  </Style>
+  <Style Selector="Button.crumb:pointerover"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="BorderBrush" Value="Transparent" /><Setter Property="Foreground" Value="{DynamicResource AccentBrush}" /></Style>
+  <Style Selector="Button.sort-head">
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="Foreground" Value="{DynamicResource FaintTextBrush}" />
+  </Style>
+  <Style Selector="Button.sort-head:pointerover"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderBrush" Value="Transparent" /><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Style>
+  <Style Selector="Button.sort-head.active"><Setter Property="Foreground" Value="{DynamicResource AccentBrush}" /></Style>
+  <Style Selector="Button.search-item">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Padding" Value="10,8" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="FontWeight" Value="Normal" />
+  </Style>
+  <Style Selector="Button.search-item:pointerover, Button.search-item.selected"><Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" /><Setter Property="BorderBrush" Value="Transparent" /></Style>
+
+  <!-- Gentle transitions -->
+  <Style Selector="Button">
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="0:0:0.12" />
+        <BrushTransition Property="BorderBrush" Duration="0:0:0.12" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Border.card">
+    <Setter Property="Transitions"><Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.2" /></Transitions></Setter>
+  </Style>
+
   <!-- ============ Cards and rows ============ -->
   <Style Selector="Button.workspace-card">
     <Setter Property="HorizontalAlignment" Value="Stretch" />
