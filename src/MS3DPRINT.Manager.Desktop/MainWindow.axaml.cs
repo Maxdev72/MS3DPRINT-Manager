@@ -1139,6 +1139,14 @@ public partial class MainWindow : Window
         EstimateMachineRate.Text = PrinterCostCalculator.HourlyRate(printer).ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
     }
 
+    private void EstimateScope_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        var modellingOnly = EstimateScope.SelectedIndex == 1;
+        EstimatePrintInputs.IsVisible = !modellingOnly;
+        if (modellingOnly)
+            EstimateDetail.Text = "Renseignez le coût de modélisation puis calculez.";
+    }
+
     private async void RefreshPrinters_Click(object? sender, RoutedEventArgs e) => await LoadPrintersAsync();
 
     private async void CreatePrinter_Click(object? sender, RoutedEventArgs e)
@@ -1274,6 +1282,8 @@ public partial class MainWindow : Window
         var inputs = estimate.Inputs;
         _loadedEstimate = estimate;
         EstimateName.Text = estimate.Name;
+        EstimateScope.SelectedIndex = string.Equals(estimate.FilamentName, "Modélisation seule", StringComparison.Ordinal) ? 1 : 0;
+        EstimatePrintInputs.IsVisible = EstimateScope.SelectedIndex != 1;
         EstimateProject.SelectedItem = (EstimateProject.ItemsSource as IEnumerable<ProjectSummary>)?.FirstOrDefault(project => project.Reference == estimate.ProjectReference && project.ClientFolderName == estimate.ClientName);
         EstimateFilament.SelectedItem = (EstimateFilament.ItemsSource as IEnumerable<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>)?.FirstOrDefault(filament => $"{filament.Brand} {filament.Name}" == estimate.FilamentName);
         EstimatePrinter.SelectedItem = (EstimatePrinter.ItemsSource as IEnumerable<PrinterProfile>)?.FirstOrDefault(printer => printer.Name == estimate.PrinterName || printer.DisplayName == estimate.PrinterName);
@@ -1300,6 +1310,8 @@ public partial class MainWindow : Window
     private void ResetEstimate_Click(object? sender, RoutedEventArgs e)
     {
         EstimateName.Text = "Nouvelle estimation";
+        EstimateScope.SelectedIndex = 0;
+        EstimatePrintInputs.IsVisible = true;
         EstimateWeight.Text = "100";
         EstimateHours.Text = "2";
         EstimateMachineRate.Text = "2";
@@ -1316,7 +1328,7 @@ public partial class MainWindow : Window
 
     private async void SaveEstimate_Click(object? sender, RoutedEventArgs e)
     {
-        if (_latestEstimateInputs is null || _latestEstimateResult is null || EstimateFilament.SelectedItem is not MS3DPRINT.Manager.Core.Filaments.FilamentProfile filament)
+        if (_latestEstimateInputs is null || _latestEstimateResult is null)
         { EstimateDetail.Text = "Calculez l’estimation avant de l’enregistrer."; return; }
         try
         {
@@ -1326,7 +1338,8 @@ public partial class MainWindow : Window
             TryEstimateValue(EstimateHours.Text, out var savedHours);
             TryEstimateValue(EstimateMachineRate.Text, out var savedRate);
             var project = EstimateProject.SelectedItem as ProjectSummary;
-            var profile = new EstimateProfile(_loadedEstimate?.Id ?? Guid.NewGuid(), string.IsNullOrWhiteSpace(EstimateName.Text) ? "Nouvelle estimation" : EstimateName.Text.Trim(), $"{filament.Brand} {filament.Name}", printer?.DisplayName ?? "Coût machine manuel", _latestEstimateInputs, _latestEstimateResult, _loadedEstimate?.CreatedAt ?? DateTimeOffset.UtcNow, savedWeight, savedHours, savedRate, project?.Reference, project?.ClientFolderName);
+            var filament = EstimateFilament.SelectedItem as MS3DPRINT.Manager.Core.Filaments.FilamentProfile;
+            var profile = new EstimateProfile(_loadedEstimate?.Id ?? Guid.NewGuid(), string.IsNullOrWhiteSpace(EstimateName.Text) ? "Nouvelle estimation" : EstimateName.Text.Trim(), filament is null ? "Modélisation seule" : $"{filament.Brand} {filament.Name}", printer?.DisplayName ?? "Sans impression", _latestEstimateInputs, _latestEstimateResult, _loadedEstimate?.CreatedAt ?? DateTimeOffset.UtcNow, savedWeight, savedHours, savedRate, project?.Reference, project?.ClientFolderName);
             var store = new EstimateStore(root);
             if (_loadedEstimate is null) store.Create(profile);
             else store.Update(profile);
@@ -1340,7 +1353,9 @@ public partial class MainWindow : Window
 
     private void CalculateEstimate_Click(object? sender, RoutedEventArgs e)
     {
-        if (EstimateFilament.SelectedItem is not MS3DPRINT.Manager.Core.Filaments.FilamentProfile filament)
+        var modellingOnly = EstimateScope.SelectedIndex == 1;
+        var filament = EstimateFilament.SelectedItem as MS3DPRINT.Manager.Core.Filaments.FilamentProfile;
+        if (!modellingOnly && filament is null)
         {
             EstimateDetail.Text = "Ajoutez ou sélectionnez un filament.";
             return;
@@ -1361,12 +1376,11 @@ public partial class MainWindow : Window
         try
         {
             var printer = EstimatePrinter.SelectedItem as PrinterProfile;
-            var machineCost = printer is null ? hours * rate : PrinterCostCalculator.MachineCost(printer, hours);
-            var electricityCost = printer?.PowerWatts is > 0 ? PrinterCostCalculator.ElectricityCost(printer, hours, pricePerKwh) : electricity;
-            EstimateMachineRate.Text = (printer is null ? rate : PrinterCostCalculator.HourlyRate(printer)).ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+            var machineCost = modellingOnly ? 0m : hours * rate;
+            var electricityCost = modellingOnly ? 0m : printer?.PowerWatts is > 0 ? PrinterCostCalculator.ElectricityCost(printer, hours, pricePerKwh) : electricity;
             EstimateElectricity.Text = electricityCost.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
             var inputs = new EstimateInputs(
-                MaterialCost: filament.PricePerKg * grams / 1000m, MachineCost: machineCost, ElectricityCost: electricityCost,
+                MaterialCost: modellingOnly ? 0m : filament!.PricePerKg * grams / 1000m, MachineCost: machineCost, ElectricityCost: electricityCost,
                 DesignCost: design, LaborCost: labor, PostProcessingCost: postProcessing, ConsumablesCost: consumables,
                 PackagingShippingCost: packaging, MiscCost: misc, MarginPercent: margin, FailureRatePercent: failure, DiscountPercent: discount);
             var result = EstimateCalculator.Calculate(inputs);

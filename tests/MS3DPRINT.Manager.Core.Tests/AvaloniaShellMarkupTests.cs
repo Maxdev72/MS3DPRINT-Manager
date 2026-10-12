@@ -59,6 +59,19 @@ public sealed class AvaloniaShellMarkupTests
     }
 
     [Fact]
+    public void Estimate_workspace_exposes_pricing_inputs_and_a_modelling_only_mode()
+    {
+        var markup = File.ReadAllText(MainWindowPath());
+        var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
+
+        Assert.Contains("EstimateKwhPrice", markup, StringComparison.Ordinal);
+        Assert.Contains("EstimateScope", markup, StringComparison.Ordinal);
+        Assert.Contains("Modélisation seule", markup, StringComparison.Ordinal);
+        Assert.Contains("EstimatePrintInputs", markup, StringComparison.Ordinal);
+        Assert.Contains("EstimateScope_SelectionChanged", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Main_window_exposes_a_dashboard_and_command_search()
     {
         var markup = File.ReadAllText(MainWindowPath());
