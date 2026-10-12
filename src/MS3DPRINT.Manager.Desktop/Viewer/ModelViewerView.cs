@@ -66,6 +66,8 @@ public sealed class ModelViewerView : UserControl
     private readonly StackPanel _measureGroup = new() { Spacing = 10, IsVisible = false };
     private readonly StackPanel _cutGroup = new() { Spacing = 10, IsVisible = false };
     private readonly TextBlock _toolsHint = new() { Text = "Mesurer, couper ou comparer : choisissez un outil dans la barre au-dessus de la vue.", Classes = { "muted" }, TextWrapping = TextWrapping.Wrap };
+    private static readonly string[] TabNames = ["Infos", "Affichage", "Outils", "Analyse"];
+    private Border? _stageFrame;
     private StackPanel[] _tabs = [];
     private Button[] _tabButtons = [];
     private string? _modelPath;
@@ -128,6 +130,7 @@ public sealed class ModelViewerView : UserControl
             BorderBrush = (IBrush?)Application.Current?.FindResource("SubtleBorderBrush"),
             Child = _stage
         };
+        _stageFrame = stage;
         _stage.Children.Add(_emptyState);
         _stage.Children.Add(hint);
         UseViewport(CreateGpuViewport() ?? new MeshViewport());
@@ -282,7 +285,7 @@ public sealed class ModelViewerView : UserControl
         };
         _tabs = [infoTab, displayTab, toolsTab, analysisTab];
         var tabRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
-        _tabButtons = new[] { "Infos", "Affichage", "Outils", "Analyse" }.Select((name, index) =>
+        _tabButtons = TabNames.Select((name, index) =>
         {
             var chip = new Button { Content = name, Classes = { "filter-chip" } };
             chip.Click += (_, _) => ShowTab(index);
@@ -313,6 +316,13 @@ public sealed class ModelViewerView : UserControl
         Content = root;
     }
 
+    /// <summary>Frames the 3D view in the accent colour while it has the keyboard focus, so the shortcuts are discoverable.</summary>
+    private void SetStageFocus(bool focused)
+    {
+        if (_stageFrame is null) return;
+        _stageFrame.BorderBrush = (IBrush?)Application.Current?.FindResource(focused ? "FocusBorderBrush" : "SubtleBorderBrush");
+    }
+
     /// <summary>Shows one tab of the side panel (0 info, 1 display, 2 tools, 3 analysis).</summary>
     private void ShowTab(int index)
     {
@@ -320,6 +330,7 @@ public sealed class ModelViewerView : UserControl
         {
             _tabs[i].IsVisible = i == index;
             _tabButtons[i].Classes.Set("selected", i == index);
+            AutomationProperties.SetName(_tabButtons[i], TabNames[i] + (i == index ? ", onglet sélectionné" : ", onglet"));
         }
     }
 
@@ -412,6 +423,8 @@ public sealed class ModelViewerView : UserControl
         next.Clicked += point => _ = MeasureClickAsync(point);
         next.Visual.Cursor = _measureToggle.IsChecked == true ? new Cursor(StandardCursorType.Cross) : null;
         next.Visual.KeyDown += Viewport_KeyDown;
+        next.Visual.GotFocus += (_, _) => SetStageFocus(true);
+        next.Visual.LostFocus += (_, _) => SetStageFocus(false);
         next.Visual.PointerPressed += (_, _) => next.Visual.Focus();
         if (_mesh is not null)
         {

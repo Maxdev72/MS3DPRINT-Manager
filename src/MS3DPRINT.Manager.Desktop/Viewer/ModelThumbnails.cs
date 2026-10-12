@@ -17,6 +17,8 @@ public static class ModelThumbnails
     private const long MaxFileBytes = 40L * 1024 * 1024;
     private const uint Background = 0xFF0E1522;
     private static readonly SemaphoreSlim Gate = new(2);
+    private static readonly TimeSpan MaxAge = TimeSpan.FromDays(90);
+    private static int _pruned;
 
     public static string CacheDirectory { get; set; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MS3DPRINT Manager", "thumbnails");
@@ -28,6 +30,22 @@ public static class ModelThumbnails
         return Path.Combine(CacheDirectory, Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key)))[..24] + ".png");
     }
 
+    /// <summary>Deletes pictures not used for three months; runs once per launch, in the background.</summary>
+    public static void PruneOnce()
+    {
+        if (Interlocked.Exchange(ref _pruned, 1) == 1) return;
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                if (!Directory.Exists(CacheDirectory)) return;
+                foreach (var file in Directory.EnumerateFiles(CacheDirectory, "*.png"))
+                    if (DateTime.UtcNow - File.GetLastAccessTimeUtc(file) > MaxAge && DateTime.UtcNow - File.GetLastWriteTimeUtc(file) > MaxAge) File.Delete(file);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { /* a cache that cannot be tidied is harmless */ }
+        });
+    }
+
     public static bool IsEligible(string path)
         => ThreeDFileSupport.IsPreviewable(path) && new FileInfo(path) is { Exists: true, Length: > 0 and <= MaxFileBytes };
 
@@ -37,6 +55,7 @@ public static class ModelThumbnails
         try
         {
             if (!IsEligible(path)) return null;
+            PruneOnce();
             var info = new FileInfo(path);
             var cached = CachePath(path, info.Length, info.LastWriteTimeUtc);
             if (File.Exists(cached)) return new Bitmap(cached);

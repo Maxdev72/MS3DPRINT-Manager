@@ -2,6 +2,10 @@
 
 ## 12 octobre 2026
 
+### Audit : accessibilité et entretien
+- Les onglets du visualiseur indiquent à un lecteur d’écran lequel est sélectionné ; la vue 3D est entourée de la couleur d’accent quand elle a le clavier, ce qui montre que les raccourcis (R, W, M, C, P) sont actifs.
+- Les vignettes inutilisées depuis trois mois sont supprimées du disque au lancement.
+
 ### Image de la vue 3D et vignettes
 - Nouveau bouton « Enregistrer une image » (touche `P`) dans la barre d’outils du visualiseur : la vue, telle qu’elle est à l’écran (coupe, comparaison, couleur), est enregistrée en PNG dans le dossier `06_PHOTOS_RENDUS` du projet du modèle ; hors d’un projet, le logiciel demande où l’enregistrer.
 - Les fichiers STL et OBJ des projets et des dossiers s’affichent avec une vignette du modèle au lieu d’une icône ; les vignettes sont calculées en arrière-plan, gardées sur le disque jusqu’à ce que le fichier change, et ignorées au-delà de 40 Mo.
