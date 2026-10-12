@@ -11,6 +11,7 @@ using MS3DPRINT.Manager.Core.Projects;
 using MS3DPRINT.Manager.Core.Printers;
 using MS3DPRINT.Manager.Core.Estimates;
 using MS3DPRINT.Manager.Desktop.Dashboard;
+using MS3DPRINT.Manager.Desktop.Viewer;
 
 namespace MS3DPRINT.Manager.Desktop;
 
@@ -582,8 +583,11 @@ public partial class MainWindow : Window
                 return;
             }
 
-            if (ThreeDFileSupport.IsPreviewable(path) && DesktopPreviewLauncher.TryOpenThreeD(path))
+            if (ThreeDFileSupport.IsPreviewable(path))
+            {
+                new ModelViewerWindow(path).Show(this);
                 return;
+            }
 
             if (DesktopPreviewLauncher.TryOpenDocument(path))
                 return;
@@ -1016,10 +1020,7 @@ public partial class MainWindow : Window
     private async void RefreshCollections_Click(object? sender, RoutedEventArgs e) => await LoadCollectionsAsync();
 
     private void OpenThreeDViewer_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DesktopPreviewLauncher.OpenThreeD is null) { PageSubtitle.Text = "Le visualiseur 3D n’est pas disponible sur cette plateforme."; return; }
-        DesktopPreviewLauncher.OpenThreeD(null);
-    }
+        => new ModelViewerWindow().Show(this);
 
     private async void Changelog_Click(object? sender, RoutedEventArgs e)
         => await new ChangelogWindow().ShowDialog(this);

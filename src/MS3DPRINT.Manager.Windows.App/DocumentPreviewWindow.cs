@@ -4,7 +4,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
-using MS3DPRINT.Manager.App.Preview;
+using MS3DPRINT.Manager.Windows;
 using MS3DPRINT.Manager.Core.Files;
 
 namespace MS3DPRINT.Manager.Windows.App;

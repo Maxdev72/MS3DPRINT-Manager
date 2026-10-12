@@ -1,6 +1,6 @@
 using System.Text;
 using System.Buffers.Binary;
-using MS3DPRINT.Manager.App.Preview;
+using MS3DPRINT.Manager.Windows;
 
 namespace MS3DPRINT.Manager.Core.Tests.Preview;
 

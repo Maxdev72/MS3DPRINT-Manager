@@ -1,15 +1,15 @@
-using System.Windows.Media.Media3D;
 using System.Globalization;
-using MS3DPRINT.Manager.App.Preview;
+using System.Numerics;
+using MS3DPRINT.Manager.Desktop.Viewer;
 
 namespace MS3DPRINT.Manager.Core.Tests.Preview;
 
 public sealed class ModelDimensionsTests
 {
     [Fact]
-    public void FromBounds_ReturnsAxisLengthsWithoutAssumingMillimeters()
+    public void FromSize_ReturnsAxisLengthsWithoutAssumingMillimeters()
     {
-        var dimensions = ModelDimensions.FromBounds(new Rect3D(10, 20, 30, 40, 50, 60));
+        var dimensions = ModelDimensions.FromSize(new Vector3(40, 50, 60));
 
         Assert.Equal(40, dimensions.X);
         Assert.Equal(50, dimensions.Y);
@@ -17,8 +17,8 @@ public sealed class ModelDimensionsTests
     }
 
     [Fact]
-    public void FromBounds_RejectsEmptyGeometry()
-        => Assert.Throws<InvalidDataException>(() => ModelDimensions.FromBounds(Rect3D.Empty));
+    public void FromSize_RejectsNonFiniteGeometry()
+        => Assert.Throws<InvalidDataException>(() => ModelDimensions.FromSize(new Vector3(float.NegativeInfinity, 1, 1)));
 
     [Fact]
     public void ToDisplayText_PreservesSmallNonzeroDimensions()

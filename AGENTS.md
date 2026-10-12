@@ -9,7 +9,7 @@ Préférence explicite de l’utilisateur, enregistrée le 7 octobre 2026 :
   dans le dossier de livraison, au lieu d’ajouter une nouvelle variante.
 - Le dossier de livraison ne doit contenir qu’un seul exécutable de l’application.
   Ne pas livrer de noms comportant `Material`, `v2`, `v3`, une date ou un numéro.
-- La publication .NET produit en interne `MS3DPRINT.Manager.App.exe` dans
+- La publication .NET produit en interne `MS3DPRINT.Manager.Windows.App.exe` dans
   `outputs/MS3DPRINT-Manager/`. Copier cette publication sous le nom de livraison
   `MS3DPRINT Manager.exe` dans le dossier parent de ce dépôt (`sources/`).
 - Vérifier que les empreintes SHA256 du binaire publié et du binaire livré sont

@@ -56,6 +56,21 @@ public sealed class AvaloniaProjectBoundaryTests
         Assert.Contains("MS3DPRINT.Manager.Windows", project, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Sources_contain_no_wpf_reference()
+    {
+        var root = Path.Combine(RepositoryRoot(), "src");
+        var offenders = Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories)
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") && !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"))
+            .Where(path => path.EndsWith(".cs", StringComparison.Ordinal) || path.EndsWith(".csproj", StringComparison.Ordinal) || path.EndsWith(".xaml", StringComparison.Ordinal))
+            .Where(path => path.EndsWith(".xaml", StringComparison.Ordinal) ||
+                           File.ReadAllText(path) is var text && (text.Contains("UseWPF", StringComparison.Ordinal) || text.Contains("System.Windows.", StringComparison.Ordinal) ||
+                                                                  text.Contains("MaterialDesign", StringComparison.Ordinal) || text.Contains("HelixToolkit", StringComparison.Ordinal)))
+            .ToArray();
+
+        Assert.True(offenders.Length == 0, "WPF references found: " + string.Join(", ", offenders));
+    }
+
     private static string RepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

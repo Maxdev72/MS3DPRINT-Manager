@@ -1,12 +1,12 @@
 # MS3DPRINT Manager
 
 MS3DPRINT Manager est une application Windows portable destinée à organiser
-les dossiers de MS3DPRINT. Elle est développée avec .NET 8 et WPF. La version
+les dossiers de MS3DPRINT. Elle est développée avec .NET 10 et Avalonia. La version
 publiée est autonome et tient dans un exécutable unique.
 
 ## Prérequis
 
-Le SDK .NET 8 est nécessaire pour compiler et exécuter l'application depuis
+Le SDK .NET 10 est nécessaire pour compiler et exécuter l'application depuis
 les sources. L'exécutable publié pour Windows x64 n'a pas besoin d'un runtime
 .NET installé.
 
@@ -14,13 +14,13 @@ les sources. L'exécutable publié pour Windows x64 n'a pas besoin d'un runtime
 
 ```powershell
 dotnet test MS3DPRINT.Manager.sln
-dotnet run --project src/MS3DPRINT.Manager.App/MS3DPRINT.Manager.App.csproj
-dotnet publish src/MS3DPRINT.Manager.App/MS3DPRINT.Manager.App.csproj -p:PublishProfile=PortableWinX64 -o outputs/MS3DPRINT-Manager
+dotnet run --project src/MS3DPRINT.Manager.Windows.App/MS3DPRINT.Manager.Windows.App.csproj
+dotnet publish src/MS3DPRINT.Manager.Windows.App/MS3DPRINT.Manager.Windows.App.csproj -p:PublishProfile=PortableWinX64 -o outputs/MS3DPRINT-Manager
 ```
 
 ## Livraison
 
-Après publication, le binaire interne `outputs\MS3DPRINT-Manager\MS3DPRINT.Manager.App.exe`
+Après publication, le binaire interne `outputs\MS3DPRINT-Manager\MS3DPRINT.Manager.Windows.App.exe`
 est autonome et fonctionne sur Windows x64 sans installation du runtime .NET.
 Le nom destiné à l’utilisateur est toujours **MS3DPRINT Manager.exe**.
 Copiez le binaire publié sous ce nom dans le dossier de livraison et remplacez

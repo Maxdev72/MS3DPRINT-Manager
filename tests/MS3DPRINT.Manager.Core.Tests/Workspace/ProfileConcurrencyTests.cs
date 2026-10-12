@@ -1,4 +1,3 @@
-using MS3DPRINT.Manager.App.ViewModels;
 using MS3DPRINT.Manager.Core.Clients;
 using MS3DPRINT.Manager.Core.Projects;
 using MS3DPRINT.Manager.Core.Collections;
@@ -30,25 +29,6 @@ public sealed class ProfileConcurrencyTests : IDisposable
         Assert.Equal(current, read());
     }
 
-    [Fact]
-    public void ClientDraft_ConflictingSavePreservesDraftAndOtherEditorsChanges()
-    {
-        var (storeObject, originalObject, _, _, _) = Fixture("client");
-        var store = (ClientProfileStore)storeObject;
-        var original = (ClientProfile)originalObject;
-        var first = new ClientDetailViewModel(original, store) { Address = "Nouvelle adresse" };
-        var stale = new ClientDetailViewModel(original, store) { Notes = "Brouillon conservé" };
-        first.Save();
-        Assert.ThrowsAny<InvalidOperationException>(() => stale.Save());
-        Assert.Equal("Nouvelle adresse", store.Load(original.Id).Address);
-        Assert.Null(store.Load(original.Id).Notes);
-        Assert.Equal("Brouillon conservé", stale.Notes);
-        Assert.True(stale.HasUnsavedChanges);
-        first.Notes = "Seconde sauvegarde";
-        first.Save();
-        Assert.Equal("Seconde sauvegarde", store.Load(original.Id).Notes);
-    }
-
     [Theory]
     [InlineData("client")]
     [InlineData("project")]
@@ -73,24 +53,6 @@ public sealed class ProfileConcurrencyTests : IDisposable
         var results = await Task.WhenAll(first, second);
         Assert.Single(results.Where(error => error is null));
         Assert.IsAssignableFrom<InvalidOperationException>(Assert.IsType<TargetInvocationException>(Assert.Single(results.Where(error => error is not null))).InnerException);
-    }
-
-    [Fact]
-    public void ProjectDraft_ConflictingSavePreservesDraftAndOtherEditorsChanges()
-    {
-        var (storeObject, originalObject, _, _, _) = Fixture("project");
-        var store = (ProjectProfileStore)storeObject;
-        var original = (ProjectProfile)originalObject;
-        var first = new ProjectDetailViewModel(original, store) { Status = ProjectStatus.Completed };
-        var stale = new ProjectDetailViewModel(original, store) { Description = "Brouillon conservé" };
-        first.Save();
-        Assert.ThrowsAny<InvalidOperationException>(() => stale.Save());
-        Assert.Equal(ProjectStatus.Completed, store.LoadAll().Single().Status);
-        Assert.Equal("Brouillon conservé", stale.Description);
-        Assert.True(stale.HasUnsavedChanges);
-        first.Notes = "Seconde sauvegarde";
-        first.Save();
-        Assert.Equal("Seconde sauvegarde", store.LoadAll().Single().Notes);
     }
 
     private (object Store, object Original, object Latest, object Stale, Func<object> Read) Fixture(string kind)

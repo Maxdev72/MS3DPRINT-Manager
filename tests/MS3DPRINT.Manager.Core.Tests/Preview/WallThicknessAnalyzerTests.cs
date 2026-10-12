@@ -1,5 +1,5 @@
 using System.Numerics;
-using MS3DPRINT.Manager.App.Preview;
+using MS3DPRINT.Manager.Desktop.Viewer;
 
 namespace MS3DPRINT.Manager.Core.Tests.Preview;
 

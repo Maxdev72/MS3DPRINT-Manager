@@ -2,7 +2,7 @@
 # Each size is rendered directly with antialiasing; no external tools are required.
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
-$iconPath = Join-Path $PSScriptRoot '../src/MS3DPRINT.Manager.App/Assets/app-icon.ico'
+$iconPath = Join-Path $PSScriptRoot '../src/MS3DPRINT.Manager.Windows.App/Assets/app-icon.ico'
 $sizes = @(16, 24, 32, 48, 64, 128, 256)
 $frames = @()
 foreach ($size in $sizes) {

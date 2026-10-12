@@ -9,6 +9,9 @@
 - Collections : filtre par type (Modèles 3D, Produits, Fournisseurs) et colonne « Type » dans le tableau.
 - Visualiseur 3D accessible depuis le menu latéral.
 - Journal des modifications accessible depuis Paramètres.
+- Les PDF s’ouvrent dans une fenêtre aux couleurs du logiciel (pages, zoom, ajustement à la largeur).
+- Nouveau visualiseur 3D intégré (STL et OBJ) : rotation, zoom, déplacement, mode solide ou filaire,
+  couleur au choix et analyse indicative des parois fines.
 
 ### Améliorations
 - Projets, Clients, Collections, Filaments et Imprimantes s’affichent en tableau compact.
@@ -21,6 +24,7 @@
 - La création d’un projet depuis le tableau de bord ne plante plus.
 
 ### Retiré
+- L’ancien moteur d’interface WPF a été entièrement supprimé : plus aucune fenêtre de l’ancien logiciel ne s’ouvre.
 - « Classer un fichier » dans Paramètres (le classement se fait depuis les projets).
 
 ## 7 – 11 octobre 2026
