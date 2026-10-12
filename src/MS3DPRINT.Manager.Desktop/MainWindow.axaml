@@ -5,6 +5,7 @@
         Height="760"
         MinWidth="960"
         MinHeight="640"
+        WindowStartupLocation="CenterScreen"
         Background="{DynamicResource CanvasBrush}"
         KeyDown="Window_KeyDown"
         Opened="Window_Opened"

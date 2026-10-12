@@ -67,6 +67,14 @@ public sealed class AvaloniaShellMarkupTests
     }
 
     [Fact]
+    public void Main_window_opens_centered_on_the_screen()
+    {
+        var markup = File.ReadAllText(MainWindowPath());
+
+        Assert.Contains("WindowStartupLocation=\"CenterScreen\"", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Main_window_keeps_only_the_central_workspace_within_a_1200_pixel_reading_width()
     {
         var markup = File.ReadAllText(MainWindowPath());
