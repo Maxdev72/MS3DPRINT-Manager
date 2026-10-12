@@ -22,7 +22,7 @@ public sealed class AvaloniaShellMarkupTests
     [Fact]
     public void Estimate_workspace_wires_saved_estimate_loading()
     {
-        var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
+        var source = MainWindowSource();
 
         Assert.Contains("LoadSavedEstimate_Click", source, StringComparison.Ordinal);
     }
@@ -30,7 +30,7 @@ public sealed class AvaloniaShellMarkupTests
     [Fact]
     public void Estimate_workspace_updates_the_loaded_estimate_without_creating_a_duplicate()
     {
-        var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
+        var source = MainWindowSource();
 
         Assert.Contains("_loadedEstimate", source, StringComparison.Ordinal);
         Assert.Contains("store.Update", source, StringComparison.Ordinal);
@@ -42,7 +42,7 @@ public sealed class AvaloniaShellMarkupTests
     [Fact]
     public void Estimate_workspace_templates_tolerate_empty_items()
     {
-        var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
+        var source = MainWindowSource();
 
         Assert.Contains("f?.Brand", source, StringComparison.Ordinal);
         Assert.Contains("printer is null", source, StringComparison.Ordinal);
@@ -62,7 +62,7 @@ public sealed class AvaloniaShellMarkupTests
     public void Estimate_workspace_exposes_pricing_inputs_and_a_modelling_only_mode()
     {
         var markup = File.ReadAllText(MainWindowPath());
-        var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
+        var source = MainWindowSource();
 
         Assert.Contains("EstimateKwhPrice", markup, StringComparison.Ordinal);
         Assert.Contains("EstimateScope", markup, StringComparison.Ordinal);
@@ -74,18 +74,21 @@ public sealed class AvaloniaShellMarkupTests
     [Fact]
     public void Dialog_values_are_read_on_the_ui_thread_before_background_work()
     {
-        var lines = File.ReadAllLines(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
         var offenders = new List<string>();
-        for (var index = 0; index < lines.Length; index++)
+        foreach (var file in MainWindowSourceFiles())
         {
-            if (!lines[index].Contains("Task.Run(", StringComparison.Ordinal)) continue;
-            // Inspect only the lines of this Task.Run statement, up to the one that closes it.
-            for (var offset = 0; offset < 4 && index + offset < lines.Length; offset++)
+            var lines = File.ReadAllLines(file);
+            for (var index = 0; index < lines.Length; index++)
             {
-                var line = lines[index + offset];
-                if (System.Text.RegularExpressions.Regex.IsMatch(line, @"\b(dialog|completion|naming)\.[A-Z]"))
-                    offenders.Add($"ligne {index + offset + 1}: {line.Trim()}");
-                if (line.TrimEnd().EndsWith(");", StringComparison.Ordinal)) break;
+                if (!lines[index].Contains("Task.Run(", StringComparison.Ordinal)) continue;
+                // Inspect only the lines of this Task.Run statement, up to the one that closes it.
+                for (var offset = 0; offset < 4 && index + offset < lines.Length; offset++)
+                {
+                    var line = lines[index + offset];
+                    if (System.Text.RegularExpressions.Regex.IsMatch(line, @"\b(dialog|completion|naming)\.[A-Z]"))
+                        offenders.Add($"{Path.GetFileName(file)} ligne {index + offset + 1}: {line.Trim()}");
+                    if (line.TrimEnd().EndsWith(");", StringComparison.Ordinal)) break;
+                }
             }
         }
 
@@ -95,7 +98,7 @@ public sealed class AvaloniaShellMarkupTests
     [Fact]
     public void Client_sheet_can_create_a_project_for_that_client()
     {
-        var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
+        var source = MainWindowSource();
         var dialog = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "CreateProjectWindow.cs"));
 
         Assert.Contains("Nouveau projet", source, StringComparison.Ordinal);
@@ -106,7 +109,7 @@ public sealed class AvaloniaShellMarkupTests
     [Fact]
     public void Project_files_offer_an_open_with_action()
     {
-        var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
+        var source = MainWindowSource();
         var host = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Windows.App", "Program.cs"));
 
         Assert.Contains("Ouvrir avec…", source, StringComparison.Ordinal);
@@ -149,7 +152,7 @@ public sealed class AvaloniaShellMarkupTests
     public void Main_window_keeps_only_the_central_workspace_within_a_1200_pixel_reading_width()
     {
         var markup = File.ReadAllText(MainWindowPath());
-        var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
+        var source = MainWindowSource();
 
         Assert.Contains("<Grid x:Name=\"CentralWorkspace\" Grid.Column=\"1\" Margin=\"34,28\" Width=\"1200\"", markup, StringComparison.Ordinal);
         Assert.Contains("Window_SizeChanged", markup, StringComparison.Ordinal);
@@ -172,7 +175,7 @@ public sealed class AvaloniaShellMarkupTests
     public void Main_window_browses_non_project_folders_inside_the_main_workspace()
     {
         var markup = File.ReadAllText(MainWindowPath());
-        var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
+        var source = MainWindowSource();
 
         Assert.Contains("FolderWorkspacePanel", markup, StringComparison.Ordinal);
         Assert.Contains("LoadFolderWorkspaceAsync", source, StringComparison.Ordinal);
@@ -183,7 +186,7 @@ public sealed class AvaloniaShellMarkupTests
     public void Project_cards_fill_the_available_workspace_and_open_on_click()
     {
         var markup = File.ReadAllText(MainWindowPath());
-        var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
+        var source = MainWindowSource();
 
         Assert.Contains("<ScrollViewer Grid.Row=\"1\" HorizontalScrollBarVisibility=\"Disabled\" HorizontalContentAlignment=\"Stretch\">", markup, StringComparison.Ordinal);
         Assert.Contains("<StackPanel x:Name=\"ProjectList\" HorizontalAlignment=\"Stretch\"", markup, StringComparison.Ordinal);
@@ -195,7 +198,7 @@ public sealed class AvaloniaShellMarkupTests
     [Fact]
     public void Project_folder_commands_are_grouped_in_a_single_toolbar()
     {
-        var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
+        var source = MainWindowSource();
         var styles = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "Styles", "Controls.axaml"));
 
         Assert.Contains("var toolbar = new Grid", source, StringComparison.Ordinal);
@@ -207,7 +210,7 @@ public sealed class AvaloniaShellMarkupTests
     [Fact]
     public void Workspace_lists_use_compact_table_headers_and_rows()
     {
-        var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
+        var source = MainWindowSource();
         var styles = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "Styles", "Controls.axaml"));
 
         Assert.Contains("CreateCompactTableHeader", source, StringComparison.Ordinal);
@@ -220,7 +223,7 @@ public sealed class AvaloniaShellMarkupTests
     [Fact]
     public void Workspace_action_sets_use_a_compact_overflow_menu()
     {
-        var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
+        var source = MainWindowSource();
         var styles = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "Styles", "Controls.axaml"));
 
         Assert.Contains("CreateOverflowActions", source, StringComparison.Ordinal);
@@ -232,7 +235,7 @@ public sealed class AvaloniaShellMarkupTests
     [Fact]
     public void Overflow_action_menu_does_not_render_a_second_presenter_surface()
     {
-        var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
+        var source = MainWindowSource();
         var styles = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "Styles", "Controls.axaml"));
 
         Assert.Contains("FlyoutPresenterClasses.Add(\"action-menu-flyout\")", source, StringComparison.Ordinal);
@@ -241,6 +244,12 @@ public sealed class AvaloniaShellMarkupTests
 
     private static string MainWindowPath()
         => Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml");
+
+    /// <summary>The code-behind of the main window is split in several partial files: all of them, in a stable order.</summary>
+    private static string[] MainWindowSourceFiles()
+        => Directory.GetFiles(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop"), "MainWindow*.cs").OrderBy(file => file, StringComparer.Ordinal).ToArray();
+
+    private static string MainWindowSource() => string.Join(Environment.NewLine, MainWindowSourceFiles().Select(File.ReadAllText));
 
     private static string RepositoryRoot()
     {

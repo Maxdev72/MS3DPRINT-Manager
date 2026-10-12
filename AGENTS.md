@@ -21,3 +21,14 @@ Préférence explicite de l’utilisateur, enregistrée le 7 octobre 2026 :
 - Ne pas lancer une instance supplémentaire à chaque livraison sans demande.
   Si un fichier est verrouillé, demander la fermeture normale du logiciel ;
   ne pas forcer l’arrêt au risque de perdre des modifications.
+
+## Organisation du code de la fenêtre principale
+
+Le code de `MainWindow` est réparti en fichiers partiels par page dans
+`src/MS3DPRINT.Manager.Desktop/` : `MainWindow.axaml.cs` (construction, chargement,
+notifications), puis `MainWindow.Navigation.cs`, `.Search.cs`, `.Dashboard.cs`,
+`.Controls.cs` (éléments communs des listes), `.Projects.cs`, `.ProjectFiles.cs`,
+`.Folders.cs`, `.Clients.cs`, `.Collections.cs`, `.Filaments.cs`, `.Printers.cs`,
+`.Estimates.cs`, `.Viewer.cs`, `.Trash.cs` et `.Settings.cs`. Ajouter une fonction dans
+le fichier de la page concernée ; seul `MainWindow.axaml.cs` déclare `: Window`.
+Les tests de structure (`AvaloniaShellMarkupTests`) lisent tous les fichiers `MainWindow*.cs`.
