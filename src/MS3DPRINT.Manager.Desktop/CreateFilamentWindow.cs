@@ -4,7 +4,7 @@ using MS3DPRINT.Manager.Core.Filaments;
 
 namespace MS3DPRINT.Manager.Desktop;
 
-public sealed class CreateFilamentWindow : Window
+public sealed class CreateFilamentWindow : DialogWindow
 {
     private static readonly string[] Materials = [
         "PLA", "PLA+", "PLA Silk", "PLA Matte", "PETG", "PETG-CF", "ABS", "ASA", "TPU 95A", "TPU 98A", "TPE",
@@ -20,7 +20,7 @@ public sealed class CreateFilamentWindow : Window
     private readonly ComboBox _color = new() { ItemsSource = Colors, IsEditable = true, PlaceholderText = "Couleur (optionnelle)" };
     private readonly TextBox _price = new() { PlaceholderText = "ex. 24,90" };
     private readonly CheckBox _abrasive = new() { Content = "Matière abrasive" };
-    private readonly TextBlock _error = new() { Foreground = Avalonia.Media.Brushes.IndianRed, IsVisible = false };
+    private readonly TextBlock _error = FormKit.ErrorText();
     public FilamentProfile? Original { get; }
     public string Brand => _brand.Text?.Trim() ?? string.Empty;
     public string FilamentName => _name.Text?.Trim() ?? string.Empty;
@@ -32,8 +32,7 @@ public sealed class CreateFilamentWindow : Window
     public CreateFilamentWindow(FilamentProfile? original = null)
     {
         Original = original;
-        Title = original is null ? "Ajouter un filament" : "Modifier le filament"; Width = 440; Height = 610;
-        WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        Title = original is null ? "Ajouter un filament" : "Modifier le filament"; Width = 480; Height = 640; MinWidth = 420;
         _brand.Text = original?.Brand ?? string.Empty;
         _name.Text = original?.Name ?? string.Empty;
         _material.SelectedItem = original?.Material ?? "PLA";
@@ -41,9 +40,11 @@ public sealed class CreateFilamentWindow : Window
         _color.SelectedItem = Colors.Contains(original?.Color ?? string.Empty, StringComparer.OrdinalIgnoreCase) ? original?.Color : null;
         _price.Text = original?.PricePerKg.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR")) ?? string.Empty;
         _abrasive.IsChecked = original?.IsAbrasive ?? false;
-        var save = new Button { Content = original is null ? "Ajouter" : "Enregistrer", HorizontalAlignment = HorizontalAlignment.Right };
+        var save = new Button { Content = original is null ? "Ajouter le filament" : "Enregistrer" };
         save.Click += Save_Click;
-        Content = new StackPanel { Margin = new Avalonia.Thickness(24), Spacing = 12, Children = { new TextBlock { Text = "Nouveau filament", FontSize = 20 }, CreatePrinterWindow.CreateUnitField("Marque", _brand), CreatePrinterWindow.CreateUnitField("Nom du filament", _name), CreatePrinterWindow.CreateUnitField("Matière", _material), CreatePrinterWindow.CreateUnitField("Couleur (optionnelle)", _color), CreatePrinterWindow.CreateUnitField("Prix au kilo", _price, "€/kg"), _abrasive, _error, save } };
+        Layout(original is null ? "Nouveau filament" : "Modifier le filament", "Le prix au kilo sert au coût matière de vos estimations.",
+            [FormKit.Field("Marque", _brand), FormKit.Field("Nom du filament", _name), FormKit.Field("Matière", _material),
+             FormKit.Field("Couleur (optionnelle)", _color), FormKit.Field("Prix au kilo", _price, "€/kg"), _abrasive, _error], save);
     }
     private void Save_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {

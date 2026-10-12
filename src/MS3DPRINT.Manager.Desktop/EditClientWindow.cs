@@ -4,7 +4,7 @@ using MS3DPRINT.Manager.Core.Clients;
 
 namespace MS3DPRINT.Manager.Desktop;
 
-public sealed class EditClientWindow : Window
+public sealed class EditClientWindow : DialogWindow
 {
     private readonly TextBox _address;
     private readonly TextBox _notes;
@@ -32,10 +32,9 @@ public sealed class EditClientWindow : Window
     public EditClientWindow(ClientProfile profile)
     {
         Title = "Fiche client";
-        WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        Width = 520;
-        Height = 680;
-        MinWidth = 420;
+        Width = 540;
+        Height = 760;
+        MinWidth = 440;
         _companyName = new TextBox { Text = profile.CompanyName ?? string.Empty, PlaceholderText = "Raison sociale", IsVisible = profile.Kind == ClientKind.Professional };
         _siret = new TextBox { Text = profile.Siret ?? string.Empty, PlaceholderText = "SIRET", IsVisible = profile.Kind == ClientKind.Professional };
         _identityFirstName = new TextBox { Text = profile.FirstName ?? string.Empty, PlaceholderText = "Prénom", IsVisible = profile.Kind == ClientKind.Individual };
@@ -47,21 +46,17 @@ public sealed class EditClientWindow : Window
         _contactRole = new TextBox { Text = profile.PrimaryContact.Role ?? string.Empty, PlaceholderText = "Fonction" };
         _contactPhone = new TextBox { Text = profile.PrimaryContact.Phone ?? string.Empty, PlaceholderText = "Téléphone" };
         _contactEmail = new TextBox { Text = profile.PrimaryContact.Email ?? string.Empty, PlaceholderText = "E-mail" };
-        var save = new Button { Content = "Enregistrer", HorizontalAlignment = HorizontalAlignment.Right };
+        var save = new Button { Content = "Enregistrer" };
         save.Click += (_, _) => Close(true);
-        Content = new StackPanel
-        {
-            Margin = new Avalonia.Thickness(24), Spacing = 12,
-            Children =
-            {
-                new TextBlock { Text = profile.Kind == ClientKind.Professional ? profile.CompanyName ?? profile.FolderName : string.Join(" ", new[] { profile.FirstName, profile.LastName }), FontSize = 20, FontWeight = Avalonia.Media.FontWeight.SemiBold },
-                new TextBlock { Text = profile.ClientCode, Classes = { "muted" } },
-                new TextBlock { Text = "Identité" }, _companyName, _siret, _identityFirstName, _identityLastName,
-                new TextBlock { Text = "Contact" }, _contactFirstName, _contactLastName, _contactRole, _contactPhone, _contactEmail,
-                new TextBlock { Text = "Adresse" }, _address,
-                new TextBlock { Text = "Notes" }, _notes, save
-            }
-        };
+        Layout(profile.Kind == ClientKind.Professional ? profile.CompanyName ?? profile.FolderName : string.Join(" ", new[] { profile.FirstName, profile.LastName }), "Code client : " + profile.ClientCode,
+            [FormKit.SectionLabel("Identité"),
+             FormKit.Field("Raison sociale", _companyName), FormKit.Field("SIRET", _siret),
+             FormKit.Field("Prénom", _identityFirstName), FormKit.Field("Nom", _identityLastName),
+             FormKit.SectionLabel("Contact principal"),
+             FormKit.Field("Prénom du contact", _contactFirstName), FormKit.Field("Nom du contact", _contactLastName), FormKit.Field("Fonction", _contactRole),
+             FormKit.Field("Téléphone", _contactPhone), FormKit.Field("E-mail", _contactEmail),
+             FormKit.SectionLabel("Adresse"), _address,
+             FormKit.SectionLabel("Notes internes"), _notes], save);
     }
 
     private static string? Normalize(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

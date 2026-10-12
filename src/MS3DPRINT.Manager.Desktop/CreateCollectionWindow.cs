@@ -1,20 +1,26 @@
 using Avalonia.Controls;
-using Avalonia.Layout;
 
 namespace MS3DPRINT.Manager.Desktop;
 
-public sealed class CreateCollectionWindow : Window
+public sealed class CreateCollectionWindow : DialogWindow
 {
-    private readonly ComboBox _category = new() { ItemsSource = new[] { "Modèle 3D", "Produit", "Fournisseur" }, SelectedIndex = 0 };
-    private readonly TextBox _name = new() { PlaceholderText = "Nom" };
+    private readonly ComboBox _category = new() { ItemsSource = new[] { "Modèle 3D", "Produit", "Fournisseur" }, SelectedIndex = 0, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch };
+    private readonly TextBox _name = new() { PlaceholderText = "ex. Pots décoratifs" };
+    private readonly TextBlock _error = FormKit.ErrorText();
     public string NameValue => _name.Text?.Trim() ?? string.Empty;
     public string Category => _category.SelectedIndex switch { 1 => "03_PRODUITS_MS3DPRINT", 2 => "06_FOURNISSEURS", _ => "02_MODELES_3D" };
+
     public CreateCollectionWindow()
     {
-        Title = "Créer une collection"; Width = 440; Height = 275;
-        WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        var create = new Button { Content = "Créer", HorizontalAlignment = HorizontalAlignment.Right };
-        create.Click += (_, _) => Close(!string.IsNullOrWhiteSpace(NameValue));
-        Content = new StackPanel { Margin = new Avalonia.Thickness(24), Spacing = 14, Children = { new TextBlock { Text = "Nouvel élément", FontSize = 20 }, _category, _name, create } };
+        Title = "Créer une collection"; Width = 460; Height = 380; MinWidth = 400;
+        var create = new Button { Content = "Créer" };
+        create.Click += (_, _) =>
+        {
+            if (string.IsNullOrWhiteSpace(NameValue)) { _error.Text = "Donnez un nom à la collection."; _error.IsVisible = true; return; }
+            Close(true);
+        };
+        Layout("Nouvelle collection", "Un dossier est créé dans la catégorie choisie.",
+            [FormKit.Field("Type", _category), FormKit.Field("Nom", _name), _error], create);
+        Opened += (_, _) => _name.Focus();
     }
 }

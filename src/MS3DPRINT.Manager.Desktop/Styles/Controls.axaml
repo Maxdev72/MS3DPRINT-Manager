@@ -1,81 +1,180 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-  <Style Selector="TextBlock.section-title">
-    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+
+  <!-- ============ Typography ============ -->
+  <Style Selector="TextBlock.muted"><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /></Style>
+  <Style Selector="TextBlock.faint"><Setter Property="Foreground" Value="{DynamicResource FaintTextBrush}" /></Style>
+  <Style Selector="TextBlock.page-title"><Setter Property="FontSize" Value="26" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
+  <Style Selector="TextBlock.section-title"><Setter Property="FontSize" Value="17" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
+  <Style Selector="TextBlock.card-title"><Setter Property="FontSize" Value="15" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
+  <Style Selector="TextBlock.caption"><Setter Property="FontSize" Value="12" /><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /></Style>
+  <Style Selector="TextBlock.overline">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LetterSpacing" Value="1" />
+    <Setter Property="Foreground" Value="{DynamicResource FaintTextBrush}" />
+  </Style>
+  <Style Selector="TextBlock.metric"><Setter Property="FontSize" Value="30" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
+
+  <!-- ============ Surfaces ============ -->
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="Padding" Value="20" />
+  </Style>
+  <Style Selector="Border.card-raised">
+    <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Padding" Value="16" />
+  </Style>
+  <Style Selector="Border.icon-chip">
+    <Setter Property="Width" Value="40" />
+    <Setter Property="Height" Value="40" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+  </Style>
+  <Style Selector="Border.icon-chip.success"><Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" /></Style>
+  <Style Selector="Border.icon-chip.warning"><Setter Property="Background" Value="{DynamicResource WarningSoftBrush}" /></Style>
+
+  <!-- ============ Icons ============ -->
+  <Style Selector="Path.icon">
+    <Setter Property="Stroke" Value="{DynamicResource MutedTextBrush}" />
+    <Setter Property="StrokeThickness" Value="1.8" />
+    <Setter Property="StrokeLineCap" Value="Round" />
+    <Setter Property="StrokeJoin" Value="Round" />
+    <Setter Property="Width" Value="18" />
+    <Setter Property="Height" Value="18" />
+    <Setter Property="Stretch" Value="Uniform" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Path.icon-sm"><Setter Property="Width" Value="15" /><Setter Property="Height" Value="15" /></Style>
+  <Style Selector="Path.icon-accent"><Setter Property="Stroke" Value="{DynamicResource AccentBrush}" /></Style>
+  <Style Selector="Path.icon-success"><Setter Property="Stroke" Value="{DynamicResource SuccessBrush}" /></Style>
+  <Style Selector="Path.icon-warning"><Setter Property="Stroke" Value="{DynamicResource WarningBrush}" /></Style>
+  <Style Selector="Path.icon-danger"><Setter Property="Stroke" Value="{DynamicResource DangerBrush}" /></Style>
+
+  <!-- ============ Buttons ============ -->
+  <Style Selector="Button /template/ ContentPresenter#PART_ContentPresenter">
+    <!-- File and folder names contain underscores; they must not be read as keyboard mnemonics. -->
+    <Setter Property="RecognizesAccessKey" Value="False" />
+  </Style>
+  <Style Selector="Button.primary-action">
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}" />
+  </Style>
+  <Style Selector="Button.primary-action:pointerover"><Setter Property="Background" Value="{DynamicResource FocusBorderBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource FocusBorderBrush}" /></Style>
+  <Style Selector="Button.primary-action:pressed"><Setter Property="Background" Value="#4F7FE6" /></Style>
+  <Style Selector="Button.primary-action Path.icon"><Setter Property="Stroke" Value="{DynamicResource AccentForegroundBrush}" /></Style>
+  <Style Selector="Button.primary-action TextBlock"><Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}" /></Style>
+  <Style Selector="Button.ghost"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderBrush" Value="Transparent" /><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /></Style>
+  <Style Selector="Button.ghost:pointerover"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" /><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Style>
+  <Style Selector="Button.danger"><Setter Property="Foreground" Value="{DynamicResource DangerBrush}" /><Setter Property="BorderBrush" Value="#5A2A30" /></Style>
+  <Style Selector="Button.danger:pointerover"><Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" /></Style>
+  <Style Selector="Button.icon-action">
+    <Setter Property="MinWidth" Value="34" />
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="Padding" Value="7,2" />
     <Setter Property="FontSize" Value="18" />
     <Setter Property="FontWeight" Value="SemiBold" />
-  </Style>
-  <Style Selector="TextBlock.muted">
-    <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
-  </Style>
-  <Style Selector="Button.nav-item">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
-    <Setter Property="Padding" Value="12,10" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
   </Style>
-  <Style Selector="Button.nav-item:pointerover">
-    <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
-    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
-  </Style>
-  <Style Selector="Button.nav-item.selected">
-    <Setter Property="Background" Value="#1B3154" />
-    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
-  </Style>
-  <!-- File and folder names contain underscores; they must not be read as keyboard mnemonics. -->
-  <Style Selector="Button /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="RecognizesAccessKey" Value="False" />
-  </Style>
-  <Style Selector="Button.workspace-card">
+  <Style Selector="Button.icon-action:pointerover"><Setter Property="Background" Value="{DynamicResource HoverBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" /><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Style>
+  <Style Selector="Button.menu-action">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Padding" Value="10,8" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Left" />
-    <Setter Property="MinHeight" Value="72" />
-    <Setter Property="Padding" Value="20,15" />
+    <Setter Property="FontWeight" Value="Normal" />
+  </Style>
+  <Style Selector="Button.menu-action:pointerover"><Setter Property="Background" Value="{DynamicResource HoverBrush}" /><Setter Property="BorderBrush" Value="Transparent" /></Style>
+  <Style Selector="FlyoutPresenter.action-menu-flyout">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+
+  <!-- ============ Navigation ============ -->
+  <Style Selector="Button.nav-item">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="3,0,0,0" />
+    <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+    <Setter Property="Padding" Value="12,9" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="CornerRadius" Value="8" />
+  </Style>
+  <Style Selector="Button.nav-item:pointerover"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="BorderBrush" Value="Transparent" /><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Style>
+  <Style Selector="Button.nav-item:pointerover Path.icon"><Setter Property="Stroke" Value="{DynamicResource TextBrush}" /></Style>
+  <Style Selector="Button.nav-item.selected"><Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" /><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
+  <Style Selector="Button.nav-item.selected Path.icon"><Setter Property="Stroke" Value="{DynamicResource AccentBrush}" /></Style>
+  <Style Selector="Button.nav-item TextBlock"><Setter Property="Foreground" Value="{Binding $parent[Button].Foreground}" /></Style>
+
+  <!-- ============ Cards and rows ============ -->
+  <Style Selector="Button.workspace-card">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="MinHeight" Value="64" />
+    <Setter Property="Padding" Value="18,13" />
+    <Setter Property="CornerRadius" Value="12" />
     <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" />
+    <Setter Property="FontWeight" Value="Normal" />
   </Style>
-  <Style Selector="Button.workspace-card:pointerover">
-    <Setter Property="Background" Value="#1B3154" />
-    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-  </Style>
-  <Style Selector="Button.workspace-card:focus"><Setter Property="BorderThickness" Value="2" /><Setter Property="BorderBrush" Value="{DynamicResource FocusBorderBrush}" /></Style>
+  <Style Selector="Button.workspace-card:pointerover"><Setter Property="Background" Value="{DynamicResource HoverBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Style>
   <Style Selector="Button.table-row">
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="MinHeight" Value="46" />
     <Setter Property="Padding" Value="14,6" />
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" />
     <Setter Property="BorderThickness" Value="0,0,0,1" />
     <Setter Property="CornerRadius" Value="0" />
     <Setter Property="FontWeight" Value="Normal" />
   </Style>
-  <Style Selector="Button.table-row:pointerover"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" /></Style>
-  <Style Selector="Button.table-row:focus"><Setter Property="BorderThickness" Value="0,0,0,1" /><Setter Property="BorderBrush" Value="{DynamicResource FocusBorderBrush}" /></Style>
-  <Style Selector="Button.scope-choice">
-    <Setter Property="Padding" Value="10,12" />
-    <Setter Property="CornerRadius" Value="10" />
-    <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
-    <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
-  </Style>
-  <Style Selector="Button.scope-choice Path"><Setter Property="Stroke" Value="{DynamicResource MutedTextBrush}" /></Style>
-  <Style Selector="Button.scope-choice.selected">
-    <Setter Property="Background" Value="#1B3154" />
-    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
-  </Style>
-  <Style Selector="Button.scope-choice.selected Path"><Setter Property="Stroke" Value="{DynamicResource AccentBrush}" /></Style>
+  <Style Selector="Button.table-row:pointerover"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" /></Style>
+  <Style Selector="Button.table-row:focus-visible"><Setter Property="BorderThickness" Value="0,0,0,2" /><Setter Property="BorderBrush" Value="{DynamicResource FocusBorderBrush}" /></Style>
+
+  <!-- ============ Filters, badges ============ -->
   <Style Selector="Button.filter-chip">
-    <Setter Property="Padding" Value="14,6" />
-    <Setter Property="CornerRadius" Value="16" />
+    <Setter Property="Padding" Value="14,5" />
+    <Setter Property="MinHeight" Value="30" />
+    <Setter Property="CornerRadius" Value="15" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+    <Setter Property="FontWeight" Value="Medium" />
   </Style>
-  <Style Selector="Button.filter-chip.selected">
-    <Setter Property="Background" Value="#1B3154" />
-    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+  <Style Selector="Button.filter-chip.selected"><Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" /><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Style>
+  <Style Selector="Border.badge">
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="9,2" />
+    <Setter Property="Background" Value="{DynamicResource NeutralSoftBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
+  <Style Selector="Border.badge > TextBlock"><Setter Property="FontSize" Value="11" /><Setter Property="FontWeight" Value="SemiBold" /><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /></Style>
+  <Style Selector="Border.badge.info"><Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" /></Style>
+  <Style Selector="Border.badge.info > TextBlock"><Setter Property="Foreground" Value="{DynamicResource AccentBrush}" /></Style>
+  <Style Selector="Border.badge.success"><Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" /></Style>
+  <Style Selector="Border.badge.success > TextBlock"><Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" /></Style>
+  <Style Selector="Border.badge.warning"><Setter Property="Background" Value="{DynamicResource WarningSoftBrush}" /></Style>
+  <Style Selector="Border.badge.warning > TextBlock"><Setter Property="Foreground" Value="{DynamicResource WarningBrush}" /></Style>
+  <Style Selector="Border.badge.danger"><Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" /></Style>
+  <Style Selector="Border.badge.danger > TextBlock"><Setter Property="Foreground" Value="{DynamicResource DangerBrush}" /></Style>
+
+  <!-- ============ Search, estimate scope, toast ============ -->
   <Style Selector="Border.search-box">
     <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
@@ -83,10 +182,7 @@
     <Setter Property="CornerRadius" Value="10" />
     <Setter Property="Padding" Value="12,0,8,0" />
   </Style>
-  <Style Selector="Border.search-box:focus-within">
-    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
-  </Style>
+  <Style Selector="Border.search-box:focus-within"><Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" /><Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /></Style>
   <Style Selector="Border.key-hint">
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
@@ -103,35 +199,30 @@
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
   </Style>
-  <Style Selector="Button.primary-action">
-    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-    <Setter Property="Foreground" Value="#09111F" />
-  </Style>
-  <Style Selector="Button.primary-action:pointerover"><Setter Property="Background" Value="{DynamicResource FocusBorderBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource FocusBorderBrush}" /></Style>
-  <Style Selector="Button.icon-action">
-    <Setter Property="MinWidth" Value="34" />
-    <Setter Property="MinHeight" Value="32" />
-    <Setter Property="Padding" Value="7,2" />
-    <Setter Property="FontSize" Value="20" />
-    <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="HorizontalContentAlignment" Value="Center" />
-  </Style>
-  <Style Selector="Button.menu-action">
-    <Setter Property="Background" Value="Transparent" />
-    <Setter Property="BorderBrush" Value="Transparent" />
-    <Setter Property="Padding" Value="10,8" />
-    <Setter Property="HorizontalAlignment" Value="Stretch" />
-    <Setter Property="HorizontalContentAlignment" Value="Left" />
-  </Style>
-  <Style Selector="Button.menu-action:pointerover">
+  <Style Selector="Button.scope-choice">
+    <Setter Property="Padding" Value="10,12" />
+    <Setter Property="CornerRadius" Value="10" />
     <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
   </Style>
-  <Style Selector="FlyoutPresenter.action-menu-flyout">
+  <Style Selector="Button.scope-choice Path"><Setter Property="Stroke" Value="{DynamicResource MutedTextBrush}" /></Style>
+  <Style Selector="Button.scope-choice.selected"><Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" /><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Style>
+  <Style Selector="Button.scope-choice.selected Path"><Setter Property="Stroke" Value="{DynamicResource AccentBrush}" /></Style>
+  <Style Selector="Border.toast">
+    <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Padding" Value="14,12" />
+    <Setter Property="MaxWidth" Value="420" />
+    <Setter Property="BoxShadow" Value="0 8 24 0 #66000000" />
+  </Style>
+  <Style Selector="Border.toast.success"><Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}" /></Style>
+  <Style Selector="Border.toast.error"><Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" /></Style>
+  <Style Selector="ProgressBar.busy">
+    <Setter Property="Height" Value="3" />
+    <Setter Property="MinHeight" Value="3" />
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="BorderBrush" Value="Transparent" />
-    <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="Padding" Value="0" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
   </Style>
 </Styles>

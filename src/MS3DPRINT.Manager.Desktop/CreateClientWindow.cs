@@ -9,21 +9,21 @@ using MS3DPRINT.Manager.Desktop.Clients;
 
 namespace MS3DPRINT.Manager.Desktop;
 
-public sealed class CreateClientWindow : Window
+public sealed class CreateClientWindow : DialogWindow
 {
     private static readonly HttpClient LookupHttp = new() { Timeout = TimeSpan.FromSeconds(8) };
     private const int SuggestionDelayMs = 350;
 
     private readonly IClientLookup _lookup;
-    private readonly TextBox _name = new() { PlaceholderText = "Nom de l’entreprise (suggestions automatiques)" };
+    private readonly TextBox _name = new() { PlaceholderText = "Tapez pour rechercher l’entreprise" };
     private readonly TextBox _firstName = new() { PlaceholderText = "Prénom" };
     private readonly TextBox _lastName = new() { PlaceholderText = "Nom" };
-    private readonly TextBox _siret = new() { PlaceholderText = "SIRET (optionnel)" };
-    private readonly TextBox _address = new() { PlaceholderText = "Adresse (suggestions automatiques)" };
+    private readonly TextBox _siret = new() { PlaceholderText = "14 chiffres" };
+    private readonly TextBox _address = new() { PlaceholderText = "Tapez pour rechercher l’adresse" };
     private readonly ListBox _companyResults = new() { IsVisible = false, MaxHeight = 150 };
     private readonly ListBox _addressResults = new() { IsVisible = false, MaxHeight = 150 };
     private readonly TextBlock _status = new() { FontSize = 12, IsVisible = false, TextWrapping = TextWrapping.Wrap };
-    private readonly TextBlock _error = new() { Foreground = Brushes.IndianRed, IsVisible = false, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _error = FormKit.ErrorText();
     private readonly CheckBox _individual = new() { Content = "Client particulier" };
     private CancellationTokenSource? _companySearch;
     private CancellationTokenSource? _addressSearch;
@@ -44,11 +44,10 @@ public sealed class CreateClientWindow : Window
         _lookup = lookup ?? new PublicClientLookup(LookupHttp);
         _existingCode = existingClient?.ClientCode ?? string.Empty;
         Title = existingClient is null ? "Créer un client" : "Compléter la fiche client";
-        WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        Width = 480; Height = 680; MinHeight = 480;
+        Width = 500; Height = 720; MinWidth = 420; MinHeight = 480;
         if (existingClient is not null) _name.Text = existingClient.DisplayName;
 
-        var create = new Button { Content = existingClient is null ? "Créer" : "Enregistrer la fiche", HorizontalAlignment = HorizontalAlignment.Right };
+        var create = new Button { Content = existingClient is null ? "Créer le client" : "Enregistrer la fiche" };
         create.Click += (_, _) => TryClose();
 
         _individual.IsCheckedChanged += (_, _) =>
@@ -93,17 +92,11 @@ public sealed class CreateClientWindow : Window
             _addressResults.SelectedItem = null;
         };
 
-        var title = new TextBlock { Text = existingClient is null ? "Nouveau client" : "Compléter la fiche client", FontSize = 20 };
-        var hint = new TextBlock { Text = existingClient is null ? string.Empty : "Le dossier et les fichiers existants sont conservés.", Classes = { "muted" } };
-        var codeNote = new TextBlock { Text = existingClient is null ? "Le code client est généré automatiquement à la création." : string.Empty, FontSize = 12, Classes = { "muted" }, TextWrapping = TextWrapping.Wrap };
-        Content = new ScrollViewer
-        {
-            Content = new StackPanel
-            {
-                Margin = new Thickness(24), Spacing = 12,
-                Children = { title, hint, _individual, _name, _companyResults, _firstName, _lastName, _siret, _address, _addressResults, codeNote, _status, _error, create }
-            }
-        };
+        Layout(existingClient is null ? "Nouveau client" : "Compléter la fiche client",
+            existingClient is null ? "Le code client est généré automatiquement à la création." : "Le dossier et les fichiers existants sont conservés.",
+            [_individual, FormKit.Field("Nom de l’entreprise", _name), _companyResults,
+             FormKit.Field("Prénom", _firstName), FormKit.Field("Nom", _lastName),
+             FormKit.Field("SIRET (optionnel)", _siret), FormKit.Field("Adresse", _address), _addressResults, _status, _error], create);
         Closed += (_, _) => { _companySearch?.Cancel(); _addressSearch?.Cancel(); };
     }
 

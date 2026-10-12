@@ -1,23 +1,24 @@
 using Avalonia.Controls;
-using Avalonia.Layout;
 
 namespace MS3DPRINT.Manager.Desktop;
 
-public sealed class TextPromptWindow : Window
+public sealed class TextPromptWindow : DialogWindow
 {
     private readonly TextBox _value;
+    private readonly TextBlock _error = FormKit.ErrorText();
     public string Value => _value.Text?.Trim() ?? string.Empty;
 
     public TextPromptWindow(string title, string detail, string initialValue)
     {
-        Title = title; Width = 460; Height = 260; MinWidth = 380;
-        WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        Title = title; Width = 480; Height = 300; MinWidth = 400;
         _value = new TextBox { Text = initialValue };
-        var cancel = new Button { Content = "Annuler" };
-        cancel.Click += (_, _) => Close(false);
         var save = new Button { Content = "Enregistrer" };
-        save.Click += (_, _) => { if (!string.IsNullOrWhiteSpace(Value)) Close(true); };
-        Content = new StackPanel { Margin = new Avalonia.Thickness(24), Spacing = 14, Children = { new TextBlock { Text = detail, TextWrapping = Avalonia.Media.TextWrapping.Wrap, Classes = { "muted" } }, _value, new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 10, Children = { cancel, save } } } };
-        Opened += (_, _) => _value.Focus();
+        save.Click += (_, _) =>
+        {
+            if (string.IsNullOrWhiteSpace(Value)) { _error.Text = "Le nom ne peut pas être vide."; _error.IsVisible = true; return; }
+            Close(true);
+        };
+        Layout(title, detail, [FormKit.Field("Nom", _value), _error], save);
+        Opened += (_, _) => { _value.Focus(); _value.SelectAll(); };
     }
 }

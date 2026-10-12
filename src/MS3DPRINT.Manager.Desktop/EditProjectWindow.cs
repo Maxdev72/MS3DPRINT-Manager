@@ -4,7 +4,7 @@ using MS3DPRINT.Manager.Core.Projects;
 
 namespace MS3DPRINT.Manager.Desktop;
 
-public sealed class EditProjectWindow : Window
+public sealed class EditProjectWindow : DialogWindow
 {
     private readonly ComboBox _status;
     private readonly TextBox _dueDate;
@@ -20,32 +20,18 @@ public sealed class EditProjectWindow : Window
     public EditProjectWindow(ProjectProfile profile)
     {
         Title = "Fiche projet";
-        WindowStartupLocation = WindowStartupLocation.CenterOwner;
         Width = 560;
-        Height = 610;
+        Height = 660;
         MinWidth = 440;
         _status = new ComboBox { ItemsSource = Enum.GetValues<ProjectStatus>(), SelectedItem = profile.Status };
-        _dueDate = new TextBox { Text = profile.DueDate?.ToString("yyyy-MM-dd") ?? string.Empty, PlaceholderText = "Échéance (AAAA-MM-JJ)" };
+        _dueDate = new TextBox { Text = profile.DueDate?.ToString("yyyy-MM-dd") ?? string.Empty, PlaceholderText = "ex. 2026-11-30" };
         _description = new TextBox { Text = profile.Description ?? string.Empty, PlaceholderText = "Description", AcceptsReturn = true, TextWrapping = Avalonia.Media.TextWrapping.Wrap, MinHeight = 90 };
         _notes = new TextBox { Text = profile.Notes ?? string.Empty, PlaceholderText = "Notes internes", AcceptsReturn = true, TextWrapping = Avalonia.Media.TextWrapping.Wrap, MinHeight = 90 };
-        var save = new Button { Content = "Enregistrer", HorizontalAlignment = HorizontalAlignment.Right };
+        var save = new Button { Content = "Enregistrer" };
         save.Click += Save_Click;
-        Content = new ScrollViewer
-        {
-            Content = new StackPanel
-            {
-                Margin = new Avalonia.Thickness(24), Spacing = 12,
-                Children =
-                {
-                    new TextBlock { Text = profile.Reference, FontSize = 20, FontWeight = Avalonia.Media.FontWeight.SemiBold },
-                    new TextBlock { Text = profile.ProjectName, Classes = { "muted" } },
-                    new TextBlock { Text = "Statut" }, _status,
-                    new TextBlock { Text = "Échéance (AAAA-MM-JJ)" }, _dueDate,
-                    new TextBlock { Text = "Description" }, _description,
-                    new TextBlock { Text = "Notes" }, _notes, _error, save
-                }
-            }
-        };
+        Layout(profile.Reference, profile.ProjectName,
+            [FormKit.Field("Statut", _status), FormKit.Field("Échéance", _dueDate, hint: "Format AAAA-MM-JJ, ou vide pour aucune échéance."),
+             FormKit.Field("Description", _description), FormKit.Field("Notes internes", _notes), _error], save);
     }
 
     private void Save_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)

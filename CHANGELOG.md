@@ -2,6 +2,18 @@
 
 ## 12 octobre 2026
 
+### Refonte de l’interface
+- Nouveau système de design : couleurs plus contrastées, typographie, boutons (principal, secondaire, discret, danger),
+  champs, badges de statut colorés et cartes cohérents dans tout le logiciel.
+- Menu latéral avec icônes, repère de la page active et raccourcis clavier : Ctrl+1 à Ctrl+9 pour changer de page,
+  Ctrl+N pour créer un projet, Ctrl+K pour rechercher.
+- Tableau de bord : indicateurs avec icônes, cinq projets récents (statut en badge), actions rapides
+  (nouveau projet, client, estimation), mis à jour à chaque retour sur l’accueil.
+- Filtres de recherche et de statut dans Projets et Clients, avec le nombre de résultats.
+- Fenêtres de saisie unifiées : titre, aide, champs étiquetés, boutons en pied de fenêtre ; Entrée valide, Échap annule.
+- Notifications discrètes en bas à droite à la place des messages sous le titre, et barre de chargement pendant les lectures.
+- États vides explicatifs avec un bouton d’action, fiche projet en tableau (icônes, type, taille), page Paramètres en cartes.
+
 ### Nouveautés
 - Écran de chargement au démarrage, avec le logo, le nom du logiciel et une barre de progression.
 - Les projets récents du tableau de bord sont cliquables et ouvrent directement le projet.
