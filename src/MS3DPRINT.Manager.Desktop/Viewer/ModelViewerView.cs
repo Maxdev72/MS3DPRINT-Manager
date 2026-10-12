@@ -71,8 +71,10 @@ public sealed class ModelViewerView : UserControl
     private readonly TextBox _hex = new() { Text = Palette[0].Hex };
     private readonly StackPanel _swatches = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
     private readonly TextBox _threshold = new() { Text = "1" };
-    private readonly TextBox _scale = new() { Text = "1" };
-    private readonly CheckBox _confirmUnits = new() { Content = "Je confirme cette échelle" };
+    private readonly TextBox _scale = new() { Text = "1", PlaceholderText = "mm par unité du modèle" };
+    private readonly ComboBox _units = new() { HorizontalAlignment = HorizontalAlignment.Stretch };
+    private readonly TextBlock _unitsNote = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
+    private bool _applyingUnit;
     private readonly Button _analyze = new() { Content = "Analyser les parois", IsEnabled = false };
     private readonly Button _cancelAnalysis = new() { Content = "Annuler", IsEnabled = false };
     private readonly Button _reset = new() { Content = "Recentrer", IsEnabled = false };
@@ -136,7 +138,11 @@ public sealed class ModelViewerView : UserControl
         }
         _measureToggle.IsCheckedChanged += (_, _) => UpdateMeasureMode();
         _clearMeasures.Click += (_, _) => ClearMeasures();
-        _scale.TextChanged += (_, _) => RefreshMeasures();
+        _scale.IsVisible = false;
+        _units.ItemsSource = ModelUnits.All.Select(unit => unit.Label).Append("Personnalisé…").ToList();
+        _units.SelectedIndex = 0;
+        _units.SelectionChanged += (_, _) => UnitChosen();
+        _scale.TextChanged += (_, _) => { RefreshMeasures(); RefreshDimensions(); };
         _slicerPanel.Children.Add(_slicerNote);
         _slicerPanel.Children.Add(Muted("Imprimante"));
         _slicerPanel.Children.Add(_slicerMachine);
@@ -160,7 +166,7 @@ public sealed class ModelViewerView : UserControl
         _material.SelectionChanged += (_, _) => { RefreshVolume(); ScheduleSlice(); };
         _infill.TextChanged += (_, _) => { RefreshVolume(); ScheduleSlice(); };
         _walls.TextChanged += (_, _) => { RefreshVolume(); ScheduleSlice(); };
-        _scale.TextChanged += (_, _) => RefreshVolume();
+        _scale.TextChanged += (_, _) => { RefreshVolume(); ScheduleSlice(); if (!_applyingUnit) SaveCustomScale(); };
         RefreshVolume();
         _hex.LostFocus += (_, _) => ApplyColor();
         _hex.KeyDown += (_, e) => { if (e.Key == Key.Enter) { ApplyColor(); e.Handled = true; } };
@@ -168,14 +174,11 @@ public sealed class ModelViewerView : UserControl
 
         _analyze.Click += async (_, _) => await AnalyzeAsync();
         _cancelAnalysis.Click += (_, _) => _activeAnalysis?.Cancel();
-        var limits = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,*,Auto"), ColumnSpacing = 8, RowDefinitions = new RowDefinitions("Auto,Auto"), RowSpacing = 4 };
+        var limits = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 8, RowDefinitions = new RowDefinitions("Auto,Auto"), RowSpacing = 4 };
         void Cell(Control control, int row, int column) { Grid.SetRow(control, row); Grid.SetColumn(control, column); limits.Children.Add(control); }
         Cell(Muted("Seuil de paroi"), 0, 0);
-        Cell(Muted("Échelle"), 0, 2);
         Cell(_threshold, 1, 0);
         Cell(Unit("mm"), 1, 1);
-        Cell(_scale, 1, 2);
-        Cell(Unit("mm / unité"), 1, 3);
         var analysisButtons = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 8 };
         analysisButtons.Children.Add(_analyze);
         Grid.SetColumn(_cancelAnalysis, 1);
@@ -192,17 +195,18 @@ public sealed class ModelViewerView : UserControl
             {
                 back,
                 _title, _location, _dimensions, _message, fileButtons,
+                Muted("Unités du modèle"), _units, _scale, _unitsNote,
                 FormKit.SectionLabel("Affichage"), _mode, _swatches, hexRow, Muted("Rendu"), _renderer, _rendererNote,
                 FormKit.SectionLabel("Mesures"), _measureToggle,
-                new TextBlock { Text = "Cliquez deux points du modèle : ils s’accrochent aux sommets proches. Les longueurs utilisent l’échelle indiquée plus bas. M active, Échap annule le point en cours.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap },
+                new TextBlock { Text = "Cliquez deux points du modèle : ils s’accrochent aux sommets proches. Les longueurs sont en mm selon les unités du modèle. M active, Échap annule le point en cours.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap },
                 _measureList, _clearMeasures,
                 FormKit.SectionLabel("Volume et poids"), _volumeResult, Muted("Matière"), _material,
                 new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,*,Auto"), ColumnSpacing = 8, Children = { _infill, Place(Unit("% remplissage"), 1), Place(_walls, 2), Place(Unit("mm parois"), 3) } },
                 _createEstimate, _volumeNote,
                 FormKit.SectionLabel("Durée d’impression"), _slicerPanel,
                 FormKit.SectionLabel("Analyse des parois"),
-                new TextBlock { Text = "STL et OBJ n’indiquent pas leurs unités : choisissez le seuil selon votre buse, votre matériau et votre trancheur.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap },
-                limits, _confirmUnits, analysisButtons, _analysisSummary, _analysis
+                new TextBlock { Text = "Choisissez le seuil selon votre buse, votre matériau et votre trancheur ; la mesure suit les unités du modèle choisies plus haut.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap },
+                limits, analysisButtons, _analysisSummary, _analysis
             }
         };
         var panel = new ScrollViewer
@@ -353,9 +357,8 @@ public sealed class ModelViewerView : UserControl
         _activeAnalysis?.Cancel();
         _activeLoad?.Cancel();
         _analyze.IsEnabled = false;
-        _confirmUnits.IsChecked = false;
         _analysisSummary.IsVisible = false;
-        _analysis.Text = "Confirmez l’échelle du nouveau modèle avant l’analyse.";
+        _analysis.Text = "Analyse indicative sur échantillons, sans certification d’imprimabilité. Aucun fichier n’est modifié.";
         using var load = new CancellationTokenSource();
         _activeLoad = load;
         _message.Text = "Chargement du modèle…";
@@ -380,7 +383,7 @@ public sealed class ModelViewerView : UserControl
             _modelPath = path;
             ToolTip.SetTip(_location, path);
             _location.IsVisible = _dimensions.IsVisible = true;
-            _dimensions.Text = ModelDimensions.FromMesh(mesh).ToDisplayText();
+            ApplyRememberedUnit(path, mesh);
             _message.Text = $"{mesh.TriangleCount:N0} triangles · chargé en {stopwatch.Elapsed.TotalSeconds:N1} s.";
             ModelLoaded?.Invoke(Path.GetFileName(path));
             _viewport.Visual.Focus();
@@ -465,7 +468,7 @@ public sealed class ModelViewerView : UserControl
         var material = _material.SelectedItem as MaterialChoice;
         int? infill = double.TryParse(_infill.Text?.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var infillValue) && infillValue is >= 0 and <= 100 ? (int)Math.Round(infillValue) : null;
         int? loops = double.TryParse(_walls.Text?.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var wallMm) && wallMm > 0 ? Math.Max(1, (int)Math.Round(wallMm / 0.4)) : null;
-        var request = new SliceRequest(_modelPath, machine, quality, _slicerProfiles.FilamentFor(machine, material?.MaterialName), infill, loops);
+        var request = new SliceRequest(_modelPath, machine, quality, _slicerProfiles.FilamentFor(machine, material?.MaterialName), infill, loops, MeasureScale);
         var path = _modelPath;
         _sliceButton.IsEnabled = false;
         _slice = null;
@@ -557,7 +560,7 @@ public sealed class ModelViewerView : UserControl
             false => "Maillage ouvert : le volume n’est qu’approximatif, corrigez le maillage avant de vous y fier. ",
             null => "Fermeture du maillage non vérifiée (modèle très volumineux). ",
             _ => string.Empty
-        }) + (_slice is null ? "Estimation indicative : le découpeur donnera le poids et la durée exacts. " : "Durée et poids calculés par le découpeur. ") + "L’échelle du modèle est celle de la section Analyse des parois.";
+        }) + (_slice is null ? "Estimation indicative : le découpeur donnera le poids et la durée exacts. " : "Durée et poids calculés par le découpeur. ") + "Les valeurs suivent les unités du modèle choisies en haut du panneau.";
     }
 
     private void UpdateMeasureMode()
@@ -574,6 +577,68 @@ public sealed class ModelViewerView : UserControl
         _segments.Clear();
         _pendingPoint = null;
         RefreshMeasures();
+    }
+
+    /// <summary>Applies the unit remembered for this file, else millimetres, and says so.</summary>
+    private void ApplyRememberedUnit(string path, MeshModel mesh)
+    {
+        var stored = ModelUnitStore.Default.Get(path);
+        _applyingUnit = true;
+        try
+        {
+            if (stored is not null && stored.StartsWith(ModelUnits.CustomKey + ":", StringComparison.Ordinal)
+                && double.TryParse(stored[(ModelUnits.CustomKey.Length + 1)..], NumberStyles.Float, CultureInfo.InvariantCulture, out var custom) && custom > 0)
+            {
+                _units.SelectedIndex = ModelUnits.All.Count;
+                _scale.Text = custom.ToString("G9", CultureInfo.InvariantCulture);
+            }
+            else
+            {
+                var unit = ModelUnits.ByKey(stored) ?? ModelUnits.Default;
+                _units.SelectedIndex = ModelUnits.All.ToList().IndexOf(unit);
+                _scale.Text = unit.MmPerUnit.ToString("G9", CultureInfo.InvariantCulture);
+            }
+            _scale.IsVisible = _units.SelectedIndex == ModelUnits.All.Count;
+        }
+        finally { _applyingUnit = false; }
+        var warning = ModelUnits.Warning(mesh.Size, MeasureScale);
+        _unitsNote.Text = (stored is null ? "Unité supposée : mm (le fichier ne l’indique pas), modifiable ici. " : "Unité mémorisée pour ce fichier. ") + warning;
+        RefreshDimensions();
+    }
+
+    /// <summary>The user picked a unit: apply it, remember it for this file and recompute what depends on it.</summary>
+    private void UnitChosen()
+    {
+        if (_applyingUnit) return;
+        var index = _units.SelectedIndex;
+        var custom = index == ModelUnits.All.Count;
+        _scale.IsVisible = custom;
+        if (!custom && index >= 0)
+        {
+            _applyingUnit = true;
+            try { _scale.Text = ModelUnits.All[index].MmPerUnit.ToString("G9", CultureInfo.InvariantCulture); }
+            finally { _applyingUnit = false; }
+        }
+        if (_modelPath is not null) ModelUnitStore.Default.Set(_modelPath, custom ? ModelUnits.CustomKey + ":" + MeasureScale.ToString("G9", CultureInfo.InvariantCulture) : ModelUnits.All[Math.Max(0, index)].Key);
+        if (_mesh is { } mesh) _unitsNote.Text = ModelUnits.Warning(mesh.Size, MeasureScale) ?? "Unité mémorisée pour ce fichier.";
+        RefreshMeasures();
+        RefreshVolume();
+        RefreshDimensions();
+        ScheduleSlice();
+    }
+
+    private void SaveCustomScale()
+    {
+        if (_units.SelectedIndex == ModelUnits.All.Count && _modelPath is not null && TryNumber(_scale.Text, out var value))
+            ModelUnitStore.Default.Set(_modelPath, ModelUnits.CustomKey + ":" + value.ToString("G9", CultureInfo.InvariantCulture));
+    }
+
+    private void RefreshDimensions()
+    {
+        if (_mesh is not { } mesh) return;
+        var index = _units.SelectedIndex;
+        var label = index >= 0 && index < ModelUnits.All.Count ? ModelUnits.All[index].Short : "unités";
+        _dimensions.Text = "Dimensions : " + ModelUnits.FormatSize(mesh.Size, MeasureScale, label);
     }
 
     private double MeasureScale => TryNumber(_scale.Text, out var value) ? value : 1;
@@ -672,9 +737,9 @@ public sealed class ModelViewerView : UserControl
     {
         var mesh = _mesh;
         if (mesh is null || _activeAnalysis is not null) return;
-        if (_confirmUnits.IsChecked != true || !TryNumber(_scale.Text, out var scale) || !TryNumber(_threshold.Text, out var threshold))
+        if (!TryNumber(_scale.Text, out var scale) || !TryNumber(_threshold.Text, out var threshold))
         {
-            _analysis.Text = "Saisissez une échelle et un seuil positifs, puis confirmez l’échelle (ex. 1 pour mm, 25,4 pour pouces).";
+            _analysis.Text = "Saisissez un seuil positif et, pour une unité personnalisée, une échelle positive en mm par unité.";
             return;
         }
         var version = _loadVersion;

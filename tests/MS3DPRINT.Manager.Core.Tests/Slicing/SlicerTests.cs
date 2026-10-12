@@ -98,6 +98,20 @@ public sealed class SlicerTests : IDisposable
     }
 
     [Fact]
+    public void BuildArguments_ScalesAModelDrawnInInches()
+    {
+        var install = new SlicerInstall("Bambu Studio", "bambu-studio.exe", _root);
+        var profiles = new SlicerProfiles(install);
+        var machine = profiles.Machines()[0];
+
+        var inches = SliceRunner.BuildArguments(install, profiles, new SliceRequest("m.stl", machine, "0.20mm Standard @BBL A1", null, MillimetresPerUnit: 25.4), "out");
+        var millimetres = SliceRunner.BuildArguments(install, profiles, new SliceRequest("m.stl", machine, "0.20mm Standard @BBL A1", null), "out");
+
+        Assert.Equal("25.4", inches[inches.ToList().IndexOf("--scale") + 1]);
+        Assert.DoesNotContain("--scale", millimetres);
+    }
+
+    [Fact]
     public void ParseResult_ReadsLengthDiameterAndLayersFromTheHeader()
     {
         const string header = "; model printing time: 1h 7m 9s; total estimated time: 1h 7m 10s\n; total layer number: 70\n; total filament length [mm] : 3005.10\n; filament_diameter: 1.75\n";

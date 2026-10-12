@@ -2,6 +2,11 @@
 
 ## 12 octobre 2026
 
+### Unités du modèle mémorisées
+- Un seul choix d’unité (mm, cm, m, pouces ou personnalisée) remplace l’échelle à saisir et la case de confirmation ; il est mémorisé pour chaque fichier.
+- Les dimensions s’affichent dans l’unité choisie et en mm, une alerte signale un modèle de taille improbable, et mesures, volume, poids, analyse des parois et découpage suivent l’unité.
+- Le découpeur reçoit l’échelle : un modèle dessiné en pouces est découpé à la bonne taille.
+
 ### Découpage automatique (Bambu Studio / OrcaSlicer)
 - Le logiciel détecte Bambu Studio ou OrcaSlicer et découpe le modèle ouvert dans le visualiseur sans afficher sa fenêtre : durée d’impression, longueur de filament et poids réels sont affichés au chargement.
 - L’imprimante (profil machine) est choisie parmi vos imprimantes du logiciel, la qualité parmi les profils compatibles, et le filament selon la matière ; le remplissage et les parois du panneau sont transmis au découpeur.
