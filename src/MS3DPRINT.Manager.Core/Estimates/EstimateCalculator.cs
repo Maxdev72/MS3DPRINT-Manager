@@ -28,13 +28,15 @@ public sealed record EstimateProfile(Guid Id, string Name, string FilamentName, 
 
 public sealed class EstimateStore
 {
+    private readonly string _root;
     private readonly string _directory;
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     public EstimateStore(string workspaceRoot)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(workspaceRoot);
-        _directory = Path.Combine(Path.GetFullPath(workspaceRoot), ".ms3dprint-manager", "estimates");
+        _root = Path.GetFullPath(workspaceRoot);
+        _directory = Path.Combine(_root, ".ms3dprint-manager", "estimates");
     }
 
     public void Create(EstimateProfile profile)
@@ -46,6 +48,14 @@ public sealed class EstimateStore
         WorkspacePathSafety.EnsureNoLinks(path);
         using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
         JsonSerializer.Serialize(stream, profile, JsonOptions);
+    }
+
+    public TrashEntry Trash(Guid id)
+    {
+        var path = Path.Combine(_directory, id + ".json");
+        if (!File.Exists(path)) throw new InvalidOperationException("L’estimation est introuvable.");
+        var estimate = LoadAll().FirstOrDefault(item => item.Id == id) ?? throw new InvalidOperationException("L’estimation est introuvable.");
+        return new ManagedFileService(_root).Trash(path, label: "Estimation : " + estimate.Name);
     }
 
     public void Update(EstimateProfile profile)

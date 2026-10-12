@@ -7,13 +7,15 @@ public sealed record PrinterProfile(Guid Id, string Brand, string Model, string 
 
 public sealed class PrinterStore
 {
+    private readonly string _root;
     private readonly string _directory;
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     public PrinterStore(string workspaceRoot)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(workspaceRoot);
-        _directory = Path.Combine(Path.GetFullPath(workspaceRoot), ".ms3dprint-manager", "printers");
+        _root = Path.GetFullPath(workspaceRoot);
+        _directory = Path.Combine(_root, ".ms3dprint-manager", "printers");
     }
 
     public IReadOnlyList<PrinterProfile> LoadAll()
@@ -33,6 +35,14 @@ public sealed class PrinterStore
         if (File.Exists(path)) throw new InvalidOperationException("Une imprimante porte déjà cet identifiant.");
         using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
         JsonSerializer.Serialize(stream, profile, JsonOptions);
+    }
+
+    public TrashEntry Trash(Guid id)
+    {
+        var path = Path.Combine(_directory, id + ".json");
+        if (!File.Exists(path)) throw new InvalidOperationException("La fiche imprimante est introuvable.");
+        var profile = Read(path);
+        return new ManagedFileService(_root).Trash(path, label: "Imprimante : " + profile.Name);
     }
 
     public PrinterProfile Update(PrinterProfile profile, DateTimeOffset expectedUpdatedAt)
