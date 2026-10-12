@@ -14,4 +14,18 @@ public sealed class EstimateStoreTests
 
         Assert.Equal(estimate, Assert.Single(new EstimateStore(root).LoadAll()));
     }
+
+    [Fact]
+    public void Update_replaces_the_saved_estimate()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "ms3d-estimate-" + Guid.NewGuid().ToString("N"));
+        var now = DateTimeOffset.UtcNow;
+        var estimate = new EstimateProfile(Guid.NewGuid(), "Support", "Sunlu Basic", "P1S", new EstimateInputs(MaterialCost: 4m), new EstimateResult(4m, 4m, 4m, 4m), now);
+        var store = new EstimateStore(root);
+        store.Create(estimate);
+
+        store.Update(estimate with { Name = "Support révisé" });
+
+        Assert.Equal("Support révisé", Assert.Single(store.LoadAll()).Name);
+    }
 }

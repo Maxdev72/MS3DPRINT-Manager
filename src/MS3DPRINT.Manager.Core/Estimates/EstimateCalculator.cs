@@ -24,7 +24,7 @@ public static class EstimateCalculator
 }
 
 
-public sealed record EstimateProfile(Guid Id, string Name, string FilamentName, string PrinterName, EstimateInputs Inputs, EstimateResult Result, DateTimeOffset CreatedAt, decimal WeightGrams = 0, decimal MachineHours = 0, decimal MachineHourlyRate = 0);
+public sealed record EstimateProfile(Guid Id, string Name, string FilamentName, string PrinterName, EstimateInputs Inputs, EstimateResult Result, DateTimeOffset CreatedAt, decimal WeightGrams = 0, decimal MachineHours = 0, decimal MachineHourlyRate = 0, string? ProjectReference = null, string? ClientName = null);
 
 public sealed class EstimateStore
 {
@@ -46,6 +46,22 @@ public sealed class EstimateStore
         WorkspacePathSafety.EnsureNoLinks(path);
         using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
         JsonSerializer.Serialize(stream, profile, JsonOptions);
+    }
+
+    public void Update(EstimateProfile profile)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        if (profile.Id == Guid.Empty || string.IsNullOrWhiteSpace(profile.Name)) throw new ArgumentException("Le nom de l’estimation est requis.");
+        var path = Path.Combine(_directory, profile.Id + ".json");
+        WorkspacePathSafety.EnsureNoLinks(path);
+        if (!File.Exists(path)) throw new InvalidOperationException("L’estimation est introuvable.");
+        var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None)) JsonSerializer.Serialize(stream, profile, JsonOptions);
+            File.Move(temporary, path, true);
+        }
+        finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }
 
     public IReadOnlyList<EstimateProfile> LoadAll()

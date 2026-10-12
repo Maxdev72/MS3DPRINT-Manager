@@ -926,6 +926,10 @@ public partial class MainWindow : Window
             var inventory = new WorkspaceInventoryReader();
             var filaments = inventory.LoadFilaments(root);
             var printers = inventory.LoadPrinters(root);
+            var projects = new WorkspaceProjectReader().Load(root);
+            EstimateProject.ItemsSource = projects;
+            EstimateProject.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<ProjectSummary>((project, _) => new TextBlock { Text = project is null ? "Projet indisponible" : $"{project.Reference} · {project.ClientFolderName}" });
+            EstimateProject.SelectedIndex = -1;
             EstimateFilament.ItemsSource = filaments;
             EstimateFilament.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>((f, _) => new TextBlock { Text = f is null ? "Filament indisponible" : $"{f?.Brand} · {f?.Name} ({f?.PricePerKg:0.00} €/kg)" });
             EstimateFilament.SelectedIndex = filaments.Count > 0 ? 0 : -1;
@@ -1072,7 +1076,8 @@ public partial class MainWindow : Window
             TryEstimateValue(EstimateWeight.Text, out var savedWeight);
             TryEstimateValue(EstimateHours.Text, out var savedHours);
             TryEstimateValue(EstimateMachineRate.Text, out var savedRate);
-            new EstimateStore(root).Create(new EstimateProfile(Guid.NewGuid(), string.IsNullOrWhiteSpace(EstimateName.Text) ? "Nouvelle estimation" : EstimateName.Text.Trim(), $"{filament.Brand} {filament.Name}", printer?.Name ?? "Coût machine manuel", _latestEstimateInputs, _latestEstimateResult, DateTimeOffset.UtcNow, savedWeight, savedHours, savedRate));
+            var project = EstimateProject.SelectedItem as ProjectSummary;
+            new EstimateStore(root).Create(new EstimateProfile(Guid.NewGuid(), string.IsNullOrWhiteSpace(EstimateName.Text) ? "Nouvelle estimation" : EstimateName.Text.Trim(), $"{filament.Brand} {filament.Name}", printer?.Name ?? "Coût machine manuel", _latestEstimateInputs, _latestEstimateResult, DateTimeOffset.UtcNow, savedWeight, savedHours, savedRate, project?.Reference, project?.ClientFolderName));
             EstimateDetail.Text = "Estimation enregistrée.";
             await LoadSavedEstimatesAsync(root);
         }

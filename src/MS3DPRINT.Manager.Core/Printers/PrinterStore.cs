@@ -35,6 +35,23 @@ public sealed class PrinterStore
         JsonSerializer.Serialize(stream, profile, JsonOptions);
     }
 
+    public PrinterProfile Update(PrinterProfile profile, DateTimeOffset expectedUpdatedAt)
+    {
+        Validate(profile);
+        var path = Path.Combine(_directory, profile.Id + ".json");
+        var current = Read(path);
+        if (current.UpdatedAt != expectedUpdatedAt) throw new InvalidOperationException("La fiche imprimante a été modifiée par ailleurs.");
+        profile = profile with { CreatedAt = current.CreatedAt, UpdatedAt = DateTimeOffset.UtcNow };
+        var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None)) JsonSerializer.Serialize(stream, profile, JsonOptions);
+            File.Move(temporary, path, true);
+            return profile;
+        }
+        finally { if (File.Exists(temporary)) File.Delete(temporary); }
+    }
+
     private static PrinterProfile Read(string path)
     {
         WorkspacePathSafety.EnsureNoLinks(path);
