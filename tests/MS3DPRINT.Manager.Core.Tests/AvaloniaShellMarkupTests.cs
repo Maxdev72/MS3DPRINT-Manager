@@ -67,6 +67,15 @@ public sealed class AvaloniaShellMarkupTests
     }
 
     [Fact]
+    public void Main_window_keeps_the_workspace_within_a_1200_pixel_reading_width()
+    {
+        var markup = File.ReadAllText(MainWindowPath());
+
+        Assert.Contains("MaxWidth=\"1200\"", markup, StringComparison.Ordinal);
+        Assert.Contains("HorizontalAlignment=\"Center\"", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Main_window_wires_navigation_and_the_search_shortcut()
     {
         var markup = File.ReadAllText(MainWindowPath());

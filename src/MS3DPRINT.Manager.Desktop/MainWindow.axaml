@@ -9,7 +9,7 @@
         KeyDown="Window_KeyDown"
         Opened="Window_Opened"
         Title="MS3DPRINT Manager">
-  <Grid ColumnDefinitions="232,*">
+  <Grid ColumnDefinitions="232,*" MaxWidth="1200" HorizontalAlignment="Center">
     <Border Background="#0B111B" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0" Padding="18,22">
       <Grid RowDefinitions="Auto,*,Auto">
         <StackPanel Spacing="6">
