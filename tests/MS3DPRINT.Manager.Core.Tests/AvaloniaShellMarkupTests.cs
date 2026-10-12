@@ -72,6 +72,20 @@ public sealed class AvaloniaShellMarkupTests
     }
 
     [Fact]
+    public void Estimate_workspace_keeps_units_visible_beside_numeric_values()
+    {
+        var markup = File.ReadAllText(MainWindowPath());
+        var printerDialog = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "CreatePrinterWindow.cs"));
+        var filamentDialog = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "CreateFilamentWindow.cs"));
+
+        Assert.Contains("Text=\"g\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Text=\"€/h\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Text=\"%\"", markup, StringComparison.Ordinal);
+        Assert.Contains("CreateUnitField", printerDialog, StringComparison.Ordinal);
+        Assert.Contains("€/kg", filamentDialog, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Main_window_exposes_a_dashboard_and_command_search()
     {
         var markup = File.ReadAllText(MainWindowPath());
