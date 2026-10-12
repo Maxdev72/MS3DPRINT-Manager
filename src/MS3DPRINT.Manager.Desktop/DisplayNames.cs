@@ -1,4 +1,5 @@
 using MS3DPRINT.Manager.Core.Clients;
+using MS3DPRINT.Manager.Core.Naming;
 using MS3DPRINT.Manager.Core.Projects;
 
 namespace MS3DPRINT.Manager.Desktop;
@@ -25,7 +26,29 @@ public static class DisplayNames
         var words = text.Split(['_', ' '], StringSplitOptions.RemoveEmptyEntries);
         for (var index = 0; index < words.Length; index++)
             words[index] = FormatWord(words[index], first: index == 0);
-        return string.Join(' ', words);
+        return JoinElisions(words);
+    }
+
+    /// <summary>"Pions D Échecs" (from PIONS_D_ECHECS) becomes "Pions d’Échecs": a lone d or l before a vowel is an elision.</summary>
+    private static string JoinElisions(string[] words)
+    {
+        var parts = new List<string>();
+        for (var index = 0; index < words.Length; index++)
+        {
+            if (index + 1 < words.Length && words[index] is "d" or "l" && StartsWithVowel(words[index + 1]) && words[index].Length == 1 && index > 0)
+            {
+                parts.Add(words[index] + "’" + words[index + 1]);
+                index++;
+            }
+            else parts.Add(words[index]);
+        }
+        return string.Join(' ', parts);
+    }
+
+    private static bool StartsWithVowel(string word)
+    {
+        var first = char.ToLowerInvariant(word[0]);
+        return "aeiouyhàâäéèêëîïôöùûüœ".Contains(first);
     }
 
     private static string FormatWord(string word, bool first)
@@ -33,7 +56,10 @@ public static class DisplayNames
         if (word.Any(char.IsLower) || word.Any(char.IsDigit)) return word; // "EPW175S", "3D", "Crâne"
         if (!first && SmallWords.Contains(word)) return word.ToLowerInvariant();
         if (word.Length <= 3 && IsLikelyAcronym(word)) return word; // MPO, MV; but not GUY or LEA, which are first names
-        return char.ToUpperInvariant(word[0]) + word[1..].ToLowerInvariant();
+        // folder names lost their accents: put back those of the words we know (EPEE → Épée)
+        var lower = word.ToLowerInvariant();
+        lower = FrenchAccents.TryRestore(lower) ?? lower;
+        return char.ToUpperInvariant(lower[0]) + lower[1..];
     }
 
     /// <summary>Short words without a vowel in their first two letters read as acronyms (MV, MPO); the others as names (GUY, LEA).</summary>

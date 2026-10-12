@@ -18,6 +18,18 @@ public sealed class WorkspaceProjectCreator
         return profile;
     }
 
+    /// <summary>
+    /// Creates the project folders and, when the client has a fiche, the project fiche too, keeping the name as it was typed
+    /// (the folder name loses accents, spaces and case; the fiche keeps them). A client without a fiche only gets the folders.
+    /// </summary>
+    public ProjectReference CreateTracked(string workspaceRoot, ClientSummary client, int year, string projectName)
+    {
+        ArgumentNullException.ThrowIfNull(client);
+        if (client.Profile is null) return Create(client.ClientPath, client.ClientCode, year, projectName);
+        var profiles = new ProjectProfileStore(new MS3DPRINT.Manager.Core.Workspace.WorkspaceMetadataPaths(workspaceRoot));
+        return new ProjectCreationService(new FolderTreeService()).CreateWithProfile(client, year, projectName, profiles, null, null).Reference;
+    }
+
     public ProjectReference Create(string clientPath, string clientCode, int year, string projectName)
         => new ProjectCreationService(new FolderTreeService()).Create(clientPath, clientCode, year, projectName);
 }

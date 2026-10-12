@@ -51,7 +51,7 @@ public partial class MainWindow
             {
                 var projectName = dialog.ProjectName;
                 BeginBusy();
-                try { await Task.Run(() => new WorkspaceProjectCreator().Create(client.ClientPath, client.ClientCode, DateTime.Today.Year, projectName)); }
+                try { await Task.Run(() => new WorkspaceProjectCreator().CreateTracked(root, client, DateTime.Today.Year, projectName)); }
                 finally { EndBusy(); }
                 PageTitle.Text = "Projets";
                 Notify("Projet créé.");
@@ -73,7 +73,8 @@ public partial class MainWindow
         try
         {
             var projectName = dialog.ProjectName;
-            await Task.Run(() => new WorkspaceProjectCreator().Create(selected.ClientPath, selected.ClientCode, DateTime.Today.Year, projectName));
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            await Task.Run(() => new WorkspaceProjectCreator().CreateTracked(root, selected, DateTime.Today.Year, projectName));
             Notify("Projet créé.");
             await LoadClientDetailAsync(client with { ProjectCount = client.ProjectCount + 1 });
         }
@@ -267,7 +268,7 @@ public partial class MainWindow
             var client = (await Task.Run(() => new WorkspaceClientReader().Load(root)))
                 .FirstOrDefault(candidate => string.Equals(candidate.ClientPath, project.ClientPath, StringComparison.OrdinalIgnoreCase));
             if (client?.Profile is null) { Notify("Complétez d’abord la fiche de ce client historique.", error: true); return; }
-            var completion = new TextPromptWindow("Compléter la fiche projet", "Le dossier et les fichiers existants seront conservés.", project.ProjectName);
+            var completion = new TextPromptWindow("Compléter la fiche projet", "Le dossier et les fichiers existants seront conservés. Le nom proposé retrouve les accents que le nom de dossier a perdus : corrigez-le si besoin.", DisplayNames.Format(project.ProjectName));
             if (!await completion.ShowDialog<bool>(this)) return;
             try
             {
@@ -287,8 +288,8 @@ public partial class MainWindow
         try
         {
             var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
-            var (status, dueDate, description, notes) = (dialog.Status, dialog.DueDate, dialog.Description, dialog.Notes);
-            var updated = await Task.Run(() => new WorkspaceProfileEditor().UpdateProject(root, profile, status, dueDate, description, notes));
+            var (status, dueDate, description, notes, name) = (dialog.Status, dialog.DueDate, dialog.Description, dialog.Notes, dialog.ProjectName);
+            var updated = await Task.Run(() => new WorkspaceProfileEditor().UpdateProject(root, profile, status, dueDate, description, notes, name));
             Notify("Fiche projet enregistrée.");
             if (_projectListMode) await LoadProjectsAsync();
             else await LoadProjectDirectoryAsync(project with { Profile = updated }, project.ProjectPath);

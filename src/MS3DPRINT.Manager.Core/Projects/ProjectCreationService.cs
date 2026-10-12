@@ -73,7 +73,7 @@ public sealed class ProjectCreationService
         var now = DateTimeOffset.UtcNow;
         var profile = new ProjectProfile(Guid.NewGuid(), client.Profile.Id, client.ClientCode,
             $"{reference.ClientCode}-{reference.Year:D4}-{reference.Sequence:D3}", reference.FolderName,
-            reference.NormalizedProjectName, ProjectStatus.Quote, now, dueDate, description, null, now,
+            projectName.Trim(), ProjectStatus.Quote, now, dueDate, description, null, now,
             Path.GetRelativePath(WorkspaceRoot(client.ClientPath), Path.Combine(client.ClientPath, reference.FolderName)).Replace('\\', '/'));
         try { profiles.Create(profile); }
         catch (Exception failure)

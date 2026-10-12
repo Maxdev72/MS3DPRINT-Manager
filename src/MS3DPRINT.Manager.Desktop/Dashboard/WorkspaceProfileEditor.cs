@@ -13,7 +13,8 @@ public sealed class WorkspaceProfileEditor
         ProjectStatus status,
         DateOnly? dueDate,
         string? description,
-        string? notes)
+        string? notes,
+        string? projectName = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(workspaceRoot);
         ArgumentNullException.ThrowIfNull(profile);
@@ -23,7 +24,9 @@ public sealed class WorkspaceProfileEditor
             Status = status,
             DueDate = dueDate,
             Description = Normalize(description),
-            Notes = Normalize(notes)
+            Notes = Normalize(notes),
+            // the displayed name only: the folder keeps its name (no rename on disk)
+            ProjectName = string.IsNullOrWhiteSpace(projectName) ? profile.ProjectName : projectName.Trim()
         }, profile.UpdatedAt);
     }
 

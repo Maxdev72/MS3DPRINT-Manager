@@ -2,6 +2,11 @@
 
 ## 12 octobre 2026
 
+### Accents des noms de projets et de clients
+- Les noms de dossier perdent leurs accents (« EPEE_FOURREAU_REPLIQUE ») : l’affichage les retrouve pour les mots usuels (« Épée Fourreau Réplique », « Pions d’Échecs », « MV Créations », « Gâchette de Tronçonneuse »). Les dossiers sur le disque ne sont pas renommés.
+- Un projet créé depuis le logiciel garde désormais le nom tel que saisi (accents, espaces, majuscules) dans sa fiche, au lieu de la version normalisée du dossier ; la fiche est créée dès la création pour un client qui a une fiche.
+- « Modifier la fiche » propose le nom du projet lisible et permet de le corriger ; « Compléter la fiche » d’un projet historique propose le nom avec ses accents.
+
 ### Position de la fenêtre mémorisée
 - La fenêtre se rouvre à l’endroit où vous l’avez laissée, sur le bon écran, avec sa taille ; fermée en plein écran, elle se rouvre en plein écran et revient à sa position d’avant en la réduisant.
 - Si cet endroit n’est plus visible (écran débranché, résolution changée), elle est recentrée sur l’écran principal.

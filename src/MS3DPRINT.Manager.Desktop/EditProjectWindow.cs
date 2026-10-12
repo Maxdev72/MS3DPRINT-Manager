@@ -6,6 +6,8 @@ namespace MS3DPRINT.Manager.Desktop;
 
 public sealed class EditProjectWindow : DialogWindow
 {
+    private readonly TextBox _name;
+    private readonly string _suggestedName;
     private readonly ComboBox _status;
     private readonly TextBox _dueDate;
     private readonly TextBox _description;
@@ -14,6 +16,8 @@ public sealed class EditProjectWindow : DialogWindow
 
     public ProjectStatus Status => _status.SelectedItem is ProjectStatus value ? value : ProjectStatus.Quote;
     public DateOnly? DueDate { get; private set; }
+    /// <summary>The corrected name, or null when it was left as proposed (nothing to store).</summary>
+    public string? ProjectName => string.IsNullOrWhiteSpace(_name.Text) || _name.Text.Trim() == _suggestedName ? null : _name.Text.Trim();
     public string? Description => Normalize(_description.Text);
     public string? Notes => Normalize(_notes.Text);
 
@@ -21,16 +25,19 @@ public sealed class EditProjectWindow : DialogWindow
     {
         Title = "Fiche projet";
         Width = 560;
-        Height = 660;
+        Height = 740;
         MinWidth = 440;
+        // names made from folder names come back in capitals with underscores and no accents: propose them readable
+        _suggestedName = DisplayNames.Format(profile.ProjectName);
+        _name = new TextBox { Text = _suggestedName };
         _status = new ComboBox { ItemsSource = Enum.GetValues<ProjectStatus>(), SelectedItem = profile.Status };
         _dueDate = new TextBox { Text = profile.DueDate?.ToString("yyyy-MM-dd") ?? string.Empty, PlaceholderText = "ex. 2026-11-30" };
         _description = new TextBox { Text = profile.Description ?? string.Empty, PlaceholderText = "Description", AcceptsReturn = true, TextWrapping = Avalonia.Media.TextWrapping.Wrap, MinHeight = 90 };
         _notes = new TextBox { Text = profile.Notes ?? string.Empty, PlaceholderText = "Notes internes", AcceptsReturn = true, TextWrapping = Avalonia.Media.TextWrapping.Wrap, MinHeight = 90 };
         var save = new Button { Content = "Enregistrer" };
         save.Click += Save_Click;
-        Layout(profile.Reference, profile.ProjectName,
-            [FormKit.Field("Statut", _status), FormKit.Field("Échéance", _dueDate, hint: "Format AAAA-MM-JJ, ou vide pour aucune échéance."),
+        Layout(profile.Reference, _suggestedName,
+            [FormKit.Field("Nom du projet", _name, hint: "Nom affiché, avec ses accents. Le dossier sur le disque garde son nom."), FormKit.Field("Statut", _status), FormKit.Field("Échéance", _dueDate, hint: "Format AAAA-MM-JJ, ou vide pour aucune échéance."),
              FormKit.Field("Description", _description), FormKit.Field("Notes internes", _notes), _error], save);
     }
 

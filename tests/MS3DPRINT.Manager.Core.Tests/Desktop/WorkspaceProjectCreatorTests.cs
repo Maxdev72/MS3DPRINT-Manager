@@ -43,4 +43,44 @@ public sealed class WorkspaceProjectCreatorTests
         }
         finally { Directory.Delete(root, true); }
     }
+
+    [Fact]
+    public void CreateTracked_keeps_the_typed_name_in_the_fiche_while_the_folder_is_normalised()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "MS3DPRINT-tracked-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var clientPath = Path.Combine(root, "01_CLIENTS", "ACME");
+            Directory.CreateDirectory(clientPath);
+            var paths = new WorkspaceMetadataPaths(root); paths.EnsureMetadataDirectories();
+            var client = new ClientProfile(Guid.NewGuid(), ClientKind.Professional, "ACME", "ACME", "ACME", null, null, null, null,
+                new PrimaryContact(null, null, null, null, null), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, RelativePath: "01_CLIENTS/ACME");
+            new ClientProfileStore(paths).Create(client);
+            var summary = new ClientSummary(clientPath, "ACME", "ACME", "ACME", ClientKind.Professional, client, 0);
+
+            var reference = new WorkspaceProjectCreator().CreateTracked(root, summary, 2026, "Épée d’échecs");
+
+            Assert.EndsWith("_EPEE_D_ECHECS", reference.FolderName);
+            Assert.Equal("Épée d’échecs", new ProjectProfileStore(paths).LoadAll().Single().ProjectName);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public void CreateTracked_only_makes_the_folders_for_a_client_without_a_fiche()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "MS3DPRINT-tracked-legacy-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var clientPath = Path.Combine(root, "01_CLIENTS", "LEGACY");
+            Directory.CreateDirectory(clientPath);
+            var summary = new ClientSummary(clientPath, "LEGACY", "LEGACY", "LG", ClientKind.Professional, null, 0);
+
+            var reference = new WorkspaceProjectCreator().CreateTracked(root, summary, 2026, "Pièce test");
+
+            Assert.True(Directory.Exists(Path.Combine(clientPath, reference.FolderName)));
+            Assert.False(Directory.Exists(Path.Combine(root, ".ms3dprint-manager", "projects")) && Directory.EnumerateFiles(Path.Combine(root, ".ms3dprint-manager", "projects")).Any());
+        }
+        finally { Directory.Delete(root, true); }
+    }
 }
