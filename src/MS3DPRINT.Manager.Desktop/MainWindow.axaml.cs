@@ -383,6 +383,23 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void CreateProjectForClient_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: ClientSummary client }) return;
+        var dialog = new CreateProjectWindow([client], client);
+        if (!await dialog.ShowDialog<bool>(this) || dialog.Client is not { } selected) return;
+        try
+        {
+            await Task.Run(() => new WorkspaceProjectCreator().Create(selected.ClientPath, selected.ClientCode, DateTime.Today.Year, dialog.ProjectName));
+            PageSubtitle.Text = "Projet créé.";
+            await LoadClientDetailAsync(client with { ProjectCount = client.ProjectCount + 1 });
+        }
+        catch (Exception exception) when (exception is ArgumentException or IOException or InvalidOperationException)
+        {
+            PageSubtitle.Text = exception.Message;
+        }
+    }
+
     private async Task LoadProjectsAsync()
     {
         var workspaceRoot = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
@@ -960,8 +977,9 @@ public partial class MainWindow : Window
         if (!string.IsNullOrWhiteSpace(client.Profile?.Notes)) card.Children.Add(new TextBlock { Text = client.Profile.Notes, TextWrapping = TextWrapping.Wrap });
         var edit = new Button { Content = "✎  Modifier la fiche", Tag = client };
         edit.Click += EditClient_Click;
-        edit.HorizontalAlignment = HorizontalAlignment.Left;
-        card.Children.Add(edit);
+        var newProject = new Button { Content = "+  Nouveau projet", Tag = client, Classes = { "primary-action" } };
+        newProject.Click += CreateProjectForClient_Click;
+        card.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { newProject, edit } });
         ClientList.Children.Add(new Border { Background = new SolidColorBrush(Color.Parse("#141F30")), CornerRadius = new Avalonia.CornerRadius(10), Padding = new Avalonia.Thickness(16), Child = card });
         try
         {

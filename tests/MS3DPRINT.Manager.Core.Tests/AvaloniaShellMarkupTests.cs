@@ -72,6 +72,17 @@ public sealed class AvaloniaShellMarkupTests
     }
 
     [Fact]
+    public void Client_sheet_can_create_a_project_for_that_client()
+    {
+        var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
+        var dialog = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "CreateProjectWindow.cs"));
+
+        Assert.Contains("Nouveau projet", source, StringComparison.Ordinal);
+        Assert.Contains("CreateProjectForClient_Click", source, StringComparison.Ordinal);
+        Assert.Contains("preselected", dialog, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Project_files_offer_an_open_with_action()
     {
         var source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "MainWindow.axaml.cs"));
