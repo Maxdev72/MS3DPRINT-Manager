@@ -1142,7 +1142,10 @@ public partial class MainWindow : Window
 
     private void EstimateScope_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        var modellingOnly = EstimateScope.SelectedIndex == 1;
+        // Déclenché pendant le chargement du XAML, avant que les contrôles nommés soient résolus.
+        if (sender is not ComboBox scope || EstimatePrintInputs is null || EstimateDetail is null)
+            return;
+        var modellingOnly = scope.SelectedIndex == 1;
         EstimatePrintInputs.IsVisible = !modellingOnly;
         if (modellingOnly)
             EstimateDetail.Text = "Renseignez le coût de modélisation puis calculez.";
