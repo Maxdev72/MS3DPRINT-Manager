@@ -1893,7 +1893,7 @@ public partial class MainWindow : Window
             EstimatePrinter.ItemsSource = printers.Where(printer => printer.IsActive).ToArray();
             EstimatePrinter.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<PrinterProfile>((printer, _) => new TextBlock { Text = printer is null ? string.Empty : $"{printer.DisplayName} · {PrinterCostCalculator.HourlyRate(printer):0.00} €/h" });
             EstimatePrinter.SelectedIndex = printers.Any(printer => printer.IsActive) ? 0 : -1;
-            EstimateDetail.Text = filaments.Count == 0 ? "Ajoutez un filament dans la page Filaments pour démarrer." : "Renseignez vos paramètres puis calculez.";
+            EstimateDetail.Text = filaments.Count == 0 ? "Aucun filament : ajoutez-en un à l’étape Impression." : "Renseignez vos paramètres puis calculez.";
             await LoadSavedEstimatesAsync(root);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException)
@@ -1901,6 +1901,23 @@ public partial class MainWindow : Window
             EstimateFilament.ItemsSource = null;
             EstimateDetail.Text = "Les filaments ne peuvent pas être lus : " + exception.Message;
         }
+    }
+
+    private async void EstimateAddFilament_Click(object? sender, RoutedEventArgs e)
+    {
+        var dialog = new CreateFilamentWindow();
+        if (!await dialog.ShowDialog<bool>(this)) return;
+        try
+        {
+            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            new WorkspaceFilamentEditor().Create(root, dialog.Brand, dialog.FilamentName, dialog.Material, dialog.Price, dialog.IsAbrasive, dialog.Color);
+            var filaments = new WorkspaceInventoryReader().LoadFilaments(root);
+            EstimateFilament.ItemsSource = filaments;
+            EstimateFilament.SelectedItem = filaments.FirstOrDefault(f => f.Brand == dialog.Brand && f.Name == dialog.FilamentName) ?? filaments.FirstOrDefault();
+            Notify("Filament ajouté et sélectionné.");
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { Notify(exception.Message, error: true); }
     }
 
     private async void RefreshEstimates_Click(object? sender, RoutedEventArgs e) => await LoadEstimateFilamentsAsync();
@@ -2173,6 +2190,11 @@ public partial class MainWindow : Window
     {
         step = Math.Clamp(step, 0, 3);
         if (step == 1 && EstimateScopeIndex == 1) step = _estimateStep > 1 ? 0 : 2;
+        if (step > 1 && _estimateStep == 1 && EstimateScopeIndex != 1 && EstimateFilament.SelectedItem is null)
+        {
+            Notify("Choisissez un filament, ou ajoutez-en un avec « Nouveau filament ».", error: true);
+            return;
+        }
         if (step == 3 && !CalculateEstimate())
         {
             Notify(EstimateDetail.Text ?? "Vérifiez les valeurs saisies.", error: true);
@@ -2254,7 +2276,7 @@ public partial class MainWindow : Window
         var filament = EstimateFilament.SelectedItem as MS3DPRINT.Manager.Core.Filaments.FilamentProfile;
         if (!modellingOnly && filament is null)
         {
-            EstimateDetail.Text = "Ajoutez ou sélectionnez un filament.";
+            EstimateDetail.Text = "Choisissez un filament, ou ajoutez-en un avec « Nouveau filament ».";
             return false;
         }
 
