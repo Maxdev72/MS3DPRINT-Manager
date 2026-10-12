@@ -278,6 +278,9 @@ public partial class MainWindow : Window
     }
 
     private static Button CreateOverflowActions(params Button[] actions)
+        => CreateOverflowActions(PlacementMode.BottomEdgeAlignedRight, actions);
+
+    private static Button CreateOverflowActions(PlacementMode placement, params Button[] actions)
     {
         var menu = new StackPanel { Spacing = 2, MinWidth = 184 };
         foreach (var action in actions)
@@ -290,7 +293,7 @@ public partial class MainWindow : Window
 
         var flyout = new Flyout
         {
-            Placement = PlacementMode.BottomEdgeAlignedRight,
+            Placement = placement,
             Content = new Border
             {
                 Background = new SolidColorBrush(Color.Parse("#141F30")),
@@ -643,7 +646,7 @@ public partial class MainWindow : Window
         move.Click += MoveProject_Click;
         var trash = new Button { Content = "⌫  Corbeille", Tag = project };
         trash.Click += TrashProject_Click;
-        content.Children.Add(CreateOverflowActions(open, edit, rename, move, trash));
+        content.Children.Add(CreateOverflowActions(PlacementMode.BottomEdgeAlignedLeft, open, edit, rename, move, trash));
         ProjectList.Children.Add(new Border
         {
             Background = new SolidColorBrush(Color.Parse("#141F30")), CornerRadius = new Avalonia.CornerRadius(10), Padding = new Avalonia.Thickness(16), Child = content
@@ -929,7 +932,7 @@ public partial class MainWindow : Window
         move.Click += MoveClient_Click;
         var trash = new Button { Content = "⌫  Corbeille", Tag = client };
         trash.Click += TrashClient_Click;
-        card.Children.Add(CreateOverflowActions(open, edit, rename, move, trash));
+        card.Children.Add(CreateOverflowActions(PlacementMode.BottomEdgeAlignedLeft, open, edit, rename, move, trash));
         ClientList.Children.Add(new Border { Background = new SolidColorBrush(Color.Parse("#141F30")), CornerRadius = new Avalonia.CornerRadius(10), Padding = new Avalonia.Thickness(16), Child = card });
         try
         {
