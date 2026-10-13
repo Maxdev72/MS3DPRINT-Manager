@@ -43,6 +43,10 @@ public interface IMeshViewport
     bool ShowSecond { get; set; }
     /// <summary>Translation applied to the second model, for example to put its centre on the first one's.</summary>
     Vector3 SecondOffset { get; set; }
+    /// <summary>Reference grid on the base of the model (drawn by the GPU view only).</summary>
+    bool ShowGrid { get; set; }
+    /// <summary>Size of a grid cell in model units; 0 lets the view choose.</summary>
+    float GridSpacing { get; set; }
     /// <summary>The view as it is drawn now (null when nothing could be captured).</summary>
     Task<CapturedImage?> CaptureAsync();
     void SetMesh(MeshModel? mesh);
@@ -66,7 +70,9 @@ public sealed class GpuMeshViewport : OpenGlControlBase
     private const float BackgroundR = 0x10 / 255f, BackgroundG = 0x19 / 255f, BackgroundB = 0x23 / 255f;
 
     private GlApi? _gl;
-    private int _solidProgram, _pointProgram;
+    private int _solidProgram, _pointProgram, _gridProgram, _gridVao, _gridPositionBuffer, _gridColorBuffer, _gridCount;
+    private bool _gridDirty = true;
+    private float _gridSpacing;
     private int _meshVao, _wireVao, _pointVao;
     private int _positionBuffer, _indexBuffer, _wireBuffer, _pointBuffer;
     private int _msaaFramebuffer, _msaaColor, _msaaDepth, _msaaWidth, _msaaHeight, _samples;
@@ -90,6 +96,12 @@ public sealed class GpuMeshViewport : OpenGlControlBase
     public bool ShowFirst { get; set; } = true;
     public bool ShowSecond { get; set; } = true;
     public Vector3 SecondOffset { get; set; }
+    public bool ShowGrid { get; set; }
+    public float GridSpacing
+    {
+        get => _gridSpacing;
+        set { _gridSpacing = value; _gridDirty = true; }
+    }
 
     private TaskCompletionSource<CapturedImage?>? _capture;
 
@@ -146,6 +158,7 @@ public sealed class GpuMeshViewport : OpenGlControlBase
         _mesh = mesh;
         _meshDirty = true;
         _wireDirty = true;
+        _gridDirty = true;
         Markers = null;
         Camera.Reset();
         RequestRender(false);
@@ -172,6 +185,11 @@ public sealed class GpuMeshViewport : OpenGlControlBase
             var header = isEs ? "#version 300 es\nprecision highp float;\n" : "#version 330 core\n";
             _solidProgram = _gl.BuildProgram(header + SolidVertex, header + SolidFragment);
             _pointProgram = _gl.BuildProgram(header + PointVertex, header + PointFragment);
+            _gridProgram = _gl.BuildProgram(header + GridVertex, header + GridFragment);
+            _gridPositionBuffer = _gl.GenBuffer();
+            _gridColorBuffer = _gl.GenBuffer();
+            _gridVao = _gl.GenVertexArray();
+            _gridDirty = true;
             _positionBuffer = _gl.GenBuffer();
             _indexBuffer = _gl.GenBuffer();
             _wireBuffer = _gl.GenBuffer();
@@ -200,6 +218,8 @@ public sealed class GpuMeshViewport : OpenGlControlBase
         if (_gl is null) return;
         _gl.DeleteProgram(_solidProgram);
         _gl.DeleteProgram(_pointProgram);
+        _gl.DeleteProgram(_gridProgram);
+        _gl.DeleteBuffer(_gridPositionBuffer); _gl.DeleteBuffer(_gridColorBuffer); _gl.DeleteVertexArray(_gridVao);
         _gl.DeleteBuffer(_positionBuffer); _gl.DeleteBuffer(_indexBuffer); _gl.DeleteBuffer(_wireBuffer); _gl.DeleteBuffer(_pointBuffer);
         _gl.DeleteVertexArray(_meshVao); _gl.DeleteVertexArray(_wireVao); _gl.DeleteVertexArray(_pointVao);
         _gl.DeleteBuffer(_secondPosition); _gl.DeleteBuffer(_secondIndex); _gl.DeleteBuffer(_secondWire);
@@ -253,6 +273,14 @@ public sealed class GpuMeshViewport : OpenGlControlBase
         var mesh = _mesh!;
         var (view, projection) = BuildMatrices(mesh, width, height);
         var color = ModelColor;
+        if (ShowGrid && _gridCount > 0)
+        {
+            _gl!.UseProgram(_gridProgram);
+            _gl.UniformMatrix(_gl.GetUniformLocation(_gridProgram, "uView"), view);
+            _gl.UniformMatrix(_gl.GetUniformLocation(_gridProgram, "uProj"), projection);
+            _gl.BindVertexArray(_gridVao);
+            _gl.DrawArrays(GlApi.Lines, 0, _gridCount);
+        }
         _gl!.UseProgram(_solidProgram);
         _gl.UniformMatrix(_gl.GetUniformLocation(_solidProgram, "uView"), view);
         _gl.UniformMatrix(_gl.GetUniformLocation(_solidProgram, "uProj"), projection);
@@ -345,6 +373,22 @@ public sealed class GpuMeshViewport : OpenGlControlBase
         {
             _wireDirty = false;
             _wireCount = UploadWire(gl, wireMesh, _wireVao, _positionBuffer, _wireBuffer);
+        }
+        if (_gridDirty && ShowGrid && _mesh is { } gridMesh)
+        {
+            _gridDirty = false;
+            var (positions, colors) = GroundGrid.Build(gridMesh, _gridSpacing, new Vector3(BackgroundR, BackgroundG, BackgroundB));
+            gl.BindVertexArray(_gridVao);
+            gl.BindBuffer(GlApi.ArrayBuffer, _gridPositionBuffer);
+            gl.BufferData(GlApi.ArrayBuffer, positions, positions.Length * 4);
+            gl.EnableVertexAttribArray(0);
+            gl.VertexAttribPointerFloat(0, 3, 12);
+            gl.BindBuffer(GlApi.ArrayBuffer, _gridColorBuffer);
+            gl.BufferData(GlApi.ArrayBuffer, colors, colors.Length * 4);
+            gl.EnableVertexAttribArray(1);
+            gl.VertexAttribPointerFloat(1, 3, 12);
+            gl.BindVertexArray(0);
+            _gridCount = positions.Length / 3;
         }
         if (_secondDirty)
         {
@@ -484,6 +528,24 @@ void main() {
         shade = 0.28 + 0.72 * abs(dot(n, normalize(vec3(-0.35, -1.0, 0.55))));
     }
     outColor = vec4(uColor * shade, 1.0);
+}";
+
+    private const string GridVertex = @"
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec3 aColor;
+uniform mat4 uView;
+uniform mat4 uProj;
+out vec3 vColor;
+void main() {
+    vColor = aColor;
+    gl_Position = uProj * (uView * vec4(aPos, 1.0));
+}";
+
+    private const string GridFragment = @"
+in vec3 vColor;
+out vec4 outColor;
+void main() {
+    outColor = vec4(vColor, 1.0);
 }";
 
     private const string PointVertex = @"

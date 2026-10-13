@@ -102,6 +102,8 @@ public sealed class ModelViewerView : UserControl
     private readonly Button _cancelAnalysis = new() { Content = "Annuler", IsEnabled = false };
     private readonly Button _reset = new() { IsEnabled = false };
     private readonly ToggleButton _wireToggle = new();
+    private readonly CheckBox _grid = new() { Content = "Grille au sol (G)" };
+    private readonly TextBlock _gridNote = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
     private readonly Button _captureTool = new() { IsEnabled = false };
     private readonly StackPanel _emptyState = new() { Spacing = 10, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
     private CancellationTokenSource? _activeLoad;
@@ -118,7 +120,7 @@ public sealed class ModelViewerView : UserControl
         AddHandler(DragDrop.DropEvent, View_Drop);
 
         // viewport with its empty state and a navigation hint
-        var hint = new TextBlock { Text = "Clic gauche : tourner · Clic droit : déplacer · Molette : zoom · R : recentrer · W : filaire · P : image", Classes = { "caption" }, Margin = new Thickness(14, 0, 14, 10), VerticalAlignment = VerticalAlignment.Bottom, IsHitTestVisible = false };
+        var hint = new TextBlock { Text = "Clic gauche : tourner · Clic droit : déplacer · Molette : zoom · R recentrer · W filaire · G grille · P image", Classes = { "caption" }, Margin = new Thickness(14, 0, 14, 10), VerticalAlignment = VerticalAlignment.Bottom, IsHitTestVisible = false };
         _emptyState.Children.Add(new TextBlock { Text = "Déposez un fichier STL ou OBJ ici", FontSize = 16, FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Center });
         _emptyState.Children.Add(new TextBlock { Text = "ou choisissez-en un sur votre ordinateur", Classes = { "muted" }, HorizontalAlignment = HorizontalAlignment.Center });
         var emptyBrowse = new Button { Content = Icons.Label("IconOpen", "Ouvrir un fichier"), Classes = { "primary-action" }, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 6, 0, 0) };
@@ -173,6 +175,7 @@ public sealed class ModelViewerView : UserControl
         Grid.SetColumn(browse, 1);
         topBar.Children.Add(browse);
 
+        _grid.IsCheckedChanged += (_, _) => ApplyGrid();
         _mode.SelectionChanged += (_, _) => { _viewport.Wireframe = _mode.SelectedIndex == 1; _wireToggle.IsChecked = _mode.SelectedIndex == 1; UpdateModeMessage(); _viewport.RequestRender(false); };
         foreach (var (name, hex) in Palette)
         {
@@ -272,7 +275,7 @@ public sealed class ModelViewerView : UserControl
                 FormKit.SectionLabel("Durée d’impression"), _slicerPanel
             }
         };
-        var displayTab = new StackPanel { Spacing = 10, Children = { Muted("Mode d’affichage"), _mode, Muted("Couleur du modèle"), _swatches, hexRow, Muted("Rendu"), _renderer, _rendererNote } };
+        var displayTab = new StackPanel { Spacing = 10, Children = { Muted("Mode d’affichage"), _mode, Muted("Couleur du modèle"), _swatches, hexRow, Muted("Repère"), _grid, _gridNote, Muted("Rendu"), _renderer, _rendererNote } };
         var toolsTab = new StackPanel { Spacing = 14, Children = { _toolsHint, _measureGroup, _cutGroup, compareGroup } };
         var analysisTab = new StackPanel
         {
@@ -412,6 +415,7 @@ public sealed class ModelViewerView : UserControl
         _stage.Children.Insert(0, next.Visual);
         next.Wireframe = _mode.SelectedIndex == 1;
         next.WindingInverted = _measures?.Inverted == true;
+        ApplyGrid(next);
         ApplyComparison(next);
         if (PreviewColorParser.TryParse(_hex.Text, out var color)) next.ModelColor = color;
         AutomationProperties.SetName(next.Visual, "Vue 3D du modèle : souris pour tourner, déplacer et zoomer, touche R pour recentrer, W pour le mode filaire");
@@ -466,6 +470,7 @@ public sealed class ModelViewerView : UserControl
         else if (e.Key == Key.P && _captureTool.IsEnabled) { _ = CaptureViewAsync(); e.Handled = true; }
         else if (e.Key == Key.C && _cutToggle.IsEnabled) { _cutToggle.IsChecked = _cutToggle.IsChecked != true; e.Handled = true; }
         else if (e.Key == Key.Escape && _pendingPoint is not null) { _pendingPoint = null; RefreshMeasures(); e.Handled = true; }
+        else if (e.Key == Key.G && _grid.IsEnabled) { _grid.IsChecked = _grid.IsChecked != true; e.Handled = true; }
         else if (e.Key == Key.W) { _mode.SelectedIndex = _mode.SelectedIndex == 1 ? 0 : 1; e.Handled = true; }
     }
 
@@ -980,10 +985,32 @@ public sealed class ModelViewerView : UserControl
 
     private void RefreshDimensions()
     {
+        ApplyGrid();
         if (_mesh is not { } mesh) return;
         var index = _units.SelectedIndex;
         var label = index >= 0 && index < ModelUnits.All.Count ? ModelUnits.All[index].Short : "unités";
         _dimensions.Text = "Dimensions : " + ModelUnits.FormatSize(mesh.Size, MeasureScale, label);
+    }
+
+    /// <summary>Shows or hides the floor grid and sizes its cells in round millimetres for the displayed model and unit.</summary>
+    private void ApplyGrid(IMeshViewport? viewport = null)
+    {
+        viewport ??= _viewport;
+        var supported = viewport is GpuViewportHost;
+        _grid.IsEnabled = supported;
+        viewport.ShowGrid = supported && _grid.IsChecked == true;
+        if (_mesh is { } mesh)
+        {
+            var scale = MeasureScale > 0 ? MeasureScale : 1;
+            var largest = Math.Max(mesh.Size.X, Math.Max(mesh.Size.Y, mesh.Size.Z)) * scale;
+            var step = GroundGrid.NiceSpacingMillimetres(largest);
+            viewport.GridSpacing = (float)(step / scale);
+            _gridNote.Text = supported
+                ? "Carreaux de " + step.ToString("0.##", CultureInfo.GetCultureInfo("fr-FR")) + " mm, posés sous le modèle."
+                : "Disponible avec le rendu par carte graphique.";
+        }
+        else _gridNote.Text = supported ? "La grille se pose sous le modèle." : "Disponible avec le rendu par carte graphique.";
+        viewport.RequestRender(false);
     }
 
     private double MeasureScale => TryNumber(_scale.Text, out var value) ? value : 1;

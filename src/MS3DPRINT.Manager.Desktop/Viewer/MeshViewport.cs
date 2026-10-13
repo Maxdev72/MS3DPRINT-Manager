@@ -38,6 +38,9 @@ public sealed class MeshViewport : Control, IMeshViewport
     private bool _moved;
     public ViewCamera Camera { get; } = new();
     public bool Wireframe { get; set; }
+    /// <summary>Not drawn by the CPU view; kept so both views share one interface.</summary>
+    public bool ShowGrid { get; set; }
+    public float GridSpacing { get; set; }
     public MeshModel? SecondMesh { get; set; }
     public Color SecondColor { get; set; }
     public bool ShowFirst { get; set; } = true;

@@ -2,6 +2,11 @@
 
 ## 13 octobre 2026
 
+### Visualiseur 3D : grille au sol
+- Nouvelle option « Grille au sol » (onglet Affichage, touche `G`) : une grille posée sous le modèle donne un repère de sol et d'échelle ; elle s'estompe dans le lointain et passe derrière le modèle.
+- Les carreaux ont une taille ronde (1, 2, 5, 10, 20… mm) choisie pour en avoir une dizaine sur la plus grande dimension, et suivent l'unité du modèle ; leur taille est indiquée sous la case.
+- Disponible avec le rendu par carte graphique ; elle apparaît aussi sur l'image enregistrée de la vue.
+
 ### Visualiseur 3D : cadre de focus
 - Le cadre bleu autour de la vue 3D n’apparaît plus après un clic ni à l’ouverture d’un modèle : il ne s’affiche que lorsque la vue reçoit le focus au clavier (Tab).
 
