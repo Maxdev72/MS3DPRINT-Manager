@@ -13,10 +13,10 @@ public sealed class WorkspaceInventoryReader
         => new CollectionCatalog().Load(workspaceRoot, category);
 
     public IReadOnlyList<FilamentProfile> LoadFilaments(string workspaceRoot)
-        => new FilamentStore(workspaceRoot).LoadAll();
+        => new FilamentStore(workspaceRoot).LoadReadable();
 
     public IReadOnlyList<PrinterProfile> LoadPrinters(string workspaceRoot)
-        => new PrinterStore(workspaceRoot).LoadAll();
+        => new PrinterStore(workspaceRoot).LoadReadable();
 
     public IReadOnlyList<CollectionItemSummary> LoadAllCollections(string workspaceRoot)
         => CollectionCategories.SelectMany(category => LoadCollections(workspaceRoot, category))

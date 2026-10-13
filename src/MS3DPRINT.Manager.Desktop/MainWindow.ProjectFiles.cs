@@ -198,6 +198,11 @@ public partial class MainWindow
     private void OpenWithFile_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: string path } || !File.Exists(path)) return;
+        if (ExecutableFileGuard.IsExecutable(path))
+        {
+            Notify("Ce fichier est un programme ou un script : le logiciel ne le lance pas. Ouvrez son dossier dans l’Explorateur si vous êtes sûr de sa provenance.", error: true);
+            return;
+        }
         try
         {
             if (DesktopPreviewLauncher.OpenWith is { } openWith) openWith(path);
@@ -283,6 +288,12 @@ public partial class MainWindow
 
             if (DesktopPreviewLauncher.TryOpenDocument(path))
                 return;
+
+            if (ExecutableFileGuard.IsExecutable(path))
+            {
+                Notify("Ce fichier est un programme ou un script : le logiciel ne le lance pas. Ouvrez son dossier dans l’Explorateur si vous êtes sûr de sa provenance.", error: true);
+                return;
+            }
 
             var launcher = TopLevel.GetTopLevel(this)?.Launcher;
             if (launcher is not null)

@@ -1,5 +1,12 @@
 # Journal des modifications
 
+## 13 octobre 2026
+
+### Audit : sécurité et fiches illisibles
+- Un programme ou un script (`.exe`, `.bat`, `.ps1`, `.lnk`, `.vbs`…) trouvé dans un dossier de projet n'est plus lancé par un double clic ni par « Ouvrir avec… » : le logiciel l'explique et invite à ouvrir son dossier dans l'Explorateur.
+- Une fiche d'estimation, de filament ou d'imprimante illisible n'empêche plus d'afficher les autres ni de changer le code d'un client.
+- L'enregistrement des estimations est protégé contre deux modifications simultanées, comme les autres fiches.
+
 ## 12 octobre 2026
 
 ### Audit : accessibilité et entretien

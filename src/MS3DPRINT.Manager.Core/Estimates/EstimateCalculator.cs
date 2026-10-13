@@ -46,6 +46,7 @@ public sealed class EstimateStore
         Directory.CreateDirectory(_directory);
         var path = Path.Combine(_directory, profile.Id + ".json");
         WorkspacePathSafety.EnsureNoLinks(path);
+        using var mutation = ProfileMutationLock.Acquire(path);
         using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
         JsonSerializer.Serialize(stream, profile, JsonOptions);
     }
@@ -64,6 +65,7 @@ public sealed class EstimateStore
         if (profile.Id == Guid.Empty || string.IsNullOrWhiteSpace(profile.Name)) throw new ArgumentException("Le nom de l’estimation est requis.");
         var path = Path.Combine(_directory, profile.Id + ".json");
         WorkspacePathSafety.EnsureNoLinks(path);
+        using var mutation = ProfileMutationLock.Acquire(path);
         if (!File.Exists(path)) throw new InvalidOperationException("L’estimation est introuvable.");
         var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
@@ -74,15 +76,32 @@ public sealed class EstimateStore
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }
 
+    /// <summary>Every estimate; fails on the first unreadable file so that callers which rewrite estimates never skip one silently.</summary>
     public IReadOnlyList<EstimateProfile> LoadAll()
     {
         WorkspacePathSafety.EnsureNoLinks(_directory);
         if (!Directory.Exists(_directory)) return [];
-        return Directory.EnumerateFiles(_directory, "*.json").Select(path =>
+        return Directory.EnumerateFiles(_directory, "*.json").Select(Read).OrderByDescending(estimate => estimate.CreatedAt).ToArray();
+    }
+
+    /// <summary>The readable estimates; a corrupt file is left out instead of hiding all the others.</summary>
+    public IReadOnlyList<EstimateProfile> LoadReadable()
+    {
+        WorkspacePathSafety.EnsureNoLinks(_directory);
+        if (!Directory.Exists(_directory)) return [];
+        var readable = new List<EstimateProfile>();
+        foreach (var path in Directory.EnumerateFiles(_directory, "*.json"))
         {
-            WorkspacePathSafety.EnsureNoLinks(path);
-            using var stream = File.OpenRead(path);
-            return JsonSerializer.Deserialize<EstimateProfile>(stream) ?? throw new JsonException("Une estimation est vide.");
-        }).OrderByDescending(estimate => estimate.CreatedAt).ToArray();
+            try { readable.Add(Read(path)); }
+            catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException or ArgumentException) { }
+        }
+        return readable.OrderByDescending(estimate => estimate.CreatedAt).ToArray();
+    }
+
+    private static EstimateProfile Read(string path)
+    {
+        WorkspacePathSafety.EnsureNoLinks(path);
+        using var stream = File.OpenRead(path);
+        return JsonSerializer.Deserialize<EstimateProfile>(stream) ?? throw new JsonException("Une estimation est vide.");
     }
 }

@@ -120,7 +120,7 @@ public partial class MainWindow
         SavedEstimateList.Children.Clear();
         try
         {
-            var estimates = await Task.Run(() => new EstimateStore(root).LoadAll());
+            var estimates = await Task.Run(() => new EstimateStore(root).LoadReadable());
             if (estimates.Count == 0)
             {
                 SavedEstimateList.Children.Add(new TextBlock { Text = "Aucune estimation enregistrée.", Classes = { "muted" } });

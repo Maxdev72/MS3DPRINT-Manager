@@ -50,7 +50,7 @@ public sealed partial class ClientCodeChanger(string workspaceRoot)
         var projects = new ProjectCatalog(new ProjectProfileStore(paths)).Load(_root)
             .Where(project => string.Equals(project.ClientPath, client.ClientPath, StringComparison.OrdinalIgnoreCase)).ToList();
         var taken = new ProjectReferenceReservations(_root).ExistingNames();
-        var estimates = new EstimateStore(_root).LoadAll();
+        var estimates = new EstimateStore(_root).LoadReadable();
         var renames = new List<ClientCodeRename>();
         var skipped = new List<string>();
         var prefix = oldCode.ToUpperInvariant() + "-";
@@ -82,7 +82,7 @@ public sealed partial class ClientCodeChanger(string workspaceRoot)
         var projectStore = new ProjectProfileStore(paths);
         var reservations = new ProjectReferenceReservations(_root);
         var estimateStore = new EstimateStore(_root);
-        var estimates = estimateStore.LoadAll();
+        var estimates = estimateStore.LoadReadable();
         var undo = new Stack<Action>();
         try
         {

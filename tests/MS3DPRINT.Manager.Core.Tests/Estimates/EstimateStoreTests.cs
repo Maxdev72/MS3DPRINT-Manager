@@ -28,4 +28,17 @@ public sealed class EstimateStoreTests
 
         Assert.Equal("Support révisé", Assert.Single(store.LoadAll()).Name);
     }
+
+    [Fact]
+    public void LoadReadable_skips_a_corrupt_file_while_LoadAll_reports_it()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "ms3d-estimate-" + Guid.NewGuid().ToString("N"));
+        var estimate = new EstimateProfile(Guid.NewGuid(), "Support", "Sunlu Basic", "P1S", new EstimateInputs(MaterialCost: 4m), new EstimateResult(4m, 4m, 4m, 4m), DateTimeOffset.UtcNow);
+        var store = new EstimateStore(root);
+        store.Create(estimate);
+        File.WriteAllText(Path.Combine(root, ".ms3dprint-manager", "estimates", Guid.NewGuid() + ".json"), "{ pas du json");
+
+        Assert.Equal(estimate, Assert.Single(store.LoadReadable()));
+        Assert.ThrowsAny<Exception>(() => store.LoadAll());
+    }
 }

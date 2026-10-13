@@ -25,6 +25,21 @@ public sealed class FilamentStore
             .ThenBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase).ToArray();
     }
 
+    /// <summary>The readable filaments; a corrupt file is left out instead of hiding all the others.</summary>
+    public IReadOnlyList<FilamentProfile> LoadReadable()
+    {
+        CheckLinks(_directory);
+        if (!Directory.Exists(_directory)) return [];
+        var readable = new List<FilamentProfile>();
+        foreach (var path in Directory.EnumerateFiles(_directory, "*.json"))
+        {
+            try { readable.Add(Read(path)); }
+            catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException or ArgumentException) { }
+        }
+        return readable.OrderBy(p => p.Brand, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase).ToArray();
+    }
+
     public void Create(FilamentProfile profile)
     {
         Validate(profile);

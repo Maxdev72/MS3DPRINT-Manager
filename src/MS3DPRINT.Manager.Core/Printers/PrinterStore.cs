@@ -57,6 +57,20 @@ public sealed class PrinterStore
             .OrderByDescending(printer => printer.IsActive).ThenBy(printer => printer.Name, StringComparer.CurrentCultureIgnoreCase).ToArray();
     }
 
+    /// <summary>The readable printers; a corrupt file is left out instead of hiding all the others.</summary>
+    public IReadOnlyList<PrinterProfile> LoadReadable()
+    {
+        WorkspacePathSafety.EnsureNoLinks(_directory);
+        if (!Directory.Exists(_directory)) return [];
+        var readable = new List<PrinterProfile>();
+        foreach (var path in Directory.EnumerateFiles(_directory, "*.json"))
+        {
+            try { readable.Add(Read(path)); }
+            catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException or ArgumentException) { }
+        }
+        return readable.OrderByDescending(printer => printer.IsActive).ThenBy(printer => printer.Name, StringComparer.CurrentCultureIgnoreCase).ToArray();
+    }
+
     public void Create(PrinterProfile profile)
     {
         Validate(profile);
