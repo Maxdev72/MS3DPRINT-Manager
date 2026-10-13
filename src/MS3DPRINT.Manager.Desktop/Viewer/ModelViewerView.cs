@@ -316,7 +316,7 @@ public sealed class ModelViewerView : UserControl
         Content = root;
     }
 
-    /// <summary>Frames the 3D view in the accent colour while it has the keyboard focus, so the shortcuts are discoverable.</summary>
+    /// <summary>Frames the 3D view in the accent colour while it has the focus from the keyboard, so the shortcuts are discoverable.</summary>
     private void SetStageFocus(bool focused)
     {
         if (_stageFrame is null) return;
@@ -423,9 +423,10 @@ public sealed class ModelViewerView : UserControl
         next.Clicked += point => _ = MeasureClickAsync(point);
         next.Visual.Cursor = _measureToggle.IsChecked == true ? new Cursor(StandardCursorType.Cross) : null;
         next.Visual.KeyDown += Viewport_KeyDown;
-        next.Visual.GotFocus += (_, _) => SetStageFocus(true);
+        // The frame marks keyboard focus only (Tab, arrows): a click or the automatic focus after loading must not draw it.
+        next.Visual.GotFocus += (_, e) => SetStageFocus(e.NavigationMethod is NavigationMethod.Tab or NavigationMethod.Directional);
         next.Visual.LostFocus += (_, _) => SetStageFocus(false);
-        next.Visual.PointerPressed += (_, _) => next.Visual.Focus();
+        next.Visual.PointerPressed += (_, _) => { SetStageFocus(false); next.Visual.Focus(); };
         if (_mesh is not null)
         {
             next.SetMesh(_mesh);

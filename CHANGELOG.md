@@ -2,6 +2,9 @@
 
 ## 13 octobre 2026
 
+### Visualiseur 3D : cadre de focus
+- Le cadre bleu autour de la vue 3D n’apparaît plus après un clic ni à l’ouverture d’un modèle : il ne s’affiche que lorsque la vue reçoit le focus au clavier (Tab).
+
 ### Espace de travail configurable
 - Nouveau bouton « Changer d’espace de travail… » dans Paramètres : le dossier choisi est mémorisé (`data/workspace.json`) et remplace l’emplacement fixe d’origine, qui reste la valeur par défaut. Un dossier disparu ou un fichier illisible ramène à l’emplacement par défaut.
 
