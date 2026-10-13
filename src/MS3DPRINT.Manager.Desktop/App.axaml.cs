@@ -5,7 +5,8 @@ namespace MS3DPRINT.Manager.Desktop;
 
 public partial class App : Application
 {
-    private const int SplashDurationMs = 5000;
+    /// <summary>The splash screen stays long enough to be read, then closes as soon as the workspace is read.</summary>
+    private const int SplashMinimumMs = 900;
 
     public override void OnFrameworkInitializationCompleted()
     {
@@ -36,9 +37,9 @@ public partial class App : Application
         await Task.Yield();
         var main = new MainWindow();
         var preload = main.PreloadAsync();
-        while (clock.ElapsedMilliseconds < SplashDurationMs)
+        while (clock.ElapsedMilliseconds < SplashMinimumMs || !preload.IsCompleted)
         {
-            var percent = clock.ElapsedMilliseconds * 100.0 / SplashDurationMs;
+            var percent = clock.ElapsedMilliseconds * 100.0 / SplashMinimumMs;
             splash.Report(Math.Min(percent, 99), percent < 40 ? "Chargement de l’interface…" : percent < 80 ? "Lecture de l’espace de travail…" : "Finalisation…");
             await Task.Delay(40);
         }

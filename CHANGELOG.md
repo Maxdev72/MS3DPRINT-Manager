@@ -2,6 +2,9 @@
 
 ## 13 octobre 2026
 
+### Démarrage plus rapide
+- L'écran de démarrage ne dure plus 5 secondes fixes : il se ferme dès que l'espace de travail est lu, au bout d'une seconde environ au minimum.
+
 ### Visualiseur 3D : grille au sol
 - Nouvelle option « Grille au sol » (onglet Affichage, touche `G`) : une grille posée sous le modèle donne un repère de sol et d'échelle ; elle s'estompe dans le lointain et passe derrière le modèle.
 - Les carreaux ont une taille ronde (1, 2, 5, 10, 20… mm) choisie pour en avoir une dizaine sur la plus grande dimension, et suivent l'unité du modèle ; leur taille est indiquée sous la case.
