@@ -8,6 +8,9 @@ namespace MS3DPRINT.Manager.Desktop.Viewer;
 /// <summary>Reads STL (binary or ASCII) and OBJ files into a <see cref="MeshModel"/> without any native dependency.</summary>
 public static class MeshLoader
 {
+    /// <summary>Above this size the whole file would have to be held in memory (more for ASCII STL): it is refused with a clear message.</summary>
+    public const long MaxFileBytes = 400L * 1024 * 1024;
+
     private const string EmptyMessage = "Le modèle 3D ne contient aucune géométrie affichable.";
 
     public static MeshModel Load(string path, CancellationToken cancellationToken = default)
@@ -15,6 +18,8 @@ public static class MeshLoader
         cancellationToken.ThrowIfCancellationRequested();
         if (!ThreeDFileSupport.IsPreviewable(path))
             throw new NotSupportedException("Seuls les fichiers STL et OBJ sont pris en charge.");
+        if (new FileInfo(path) is { Exists: true } info && info.Length > MaxFileBytes)
+            throw new InvalidDataException($"Ce fichier fait {info.Length / (1024 * 1024)} Mo : au-delà de {MaxFileBytes / (1024 * 1024)} Mo, il est trop volumineux pour être affiché.");
 
         var mesh = Path.GetExtension(path).Equals(".obj", StringComparison.OrdinalIgnoreCase)
             ? LoadObj(path, cancellationToken)

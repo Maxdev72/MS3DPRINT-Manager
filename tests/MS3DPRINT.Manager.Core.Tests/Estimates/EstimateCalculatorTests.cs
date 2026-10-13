@@ -25,4 +25,8 @@ public sealed class EstimateCalculatorTests
         Assert.Equal(45m, result.SalePrice);
         Assert.Equal(45m, result.FinalPrice);
     }
+
+    [Fact]
+    public void Calculate_rejects_a_negative_cost()
+        => Assert.Throws<ArgumentOutOfRangeException>(() => EstimateCalculator.Calculate(new EstimateInputs(MaterialCost: 10m, MiscCost: -1m)));
 }

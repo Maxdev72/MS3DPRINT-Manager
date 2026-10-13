@@ -87,4 +87,16 @@ public sealed class ClientCodeRegistryTests : IDisposable
             Directory.Delete(_dataDirectory, recursive: true);
         }
     }
+
+    [Fact]
+    public void Add_keeps_only_the_most_recent_archived_backups()
+    {
+        var registry = new ClientCodeRegistry(_dataDirectory);
+        for (var i = 0; i < 14; i++) registry.Add("CLIENT" + i, "C" + i);
+
+        Assert.True(Directory.GetFiles(_dataDirectory, "client-codes.previous.*.json").Length <= 5);
+        Assert.True(File.Exists(Path.Combine(_dataDirectory, "client-codes.previous.json")));
+        Assert.Equal("C13", new ClientCodeRegistry(_dataDirectory).GetCode("CLIENT13"));
+        Assert.Equal("C0", new ClientCodeRegistry(_dataDirectory).GetCode("CLIENT0"));
+    }
 }

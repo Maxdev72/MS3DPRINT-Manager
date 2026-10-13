@@ -33,4 +33,19 @@ public sealed class ErrorLogTests : IDisposable
 
         Assert.Null(failure);
     }
+
+    [Fact]
+    public void Write_sets_an_oversized_log_aside_and_starts_a_new_one()
+    {
+        var path = Path.Combine(_directory, "erreurs.log");
+        Directory.CreateDirectory(_directory);
+        File.WriteAllText(path, new string('x', (int)ErrorLog.MaxBytes + 10));
+
+        ErrorLog.Write(new InvalidOperationException("récent"), path);
+
+        Assert.True(File.Exists(Path.Combine(_directory, "erreurs.old.log")));
+        var fresh = File.ReadAllText(path);
+        Assert.Contains("récent", fresh);
+        Assert.True(fresh.Length < 2000);
+    }
 }

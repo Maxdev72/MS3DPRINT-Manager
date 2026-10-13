@@ -2,6 +2,13 @@
 
 ## 13 octobre 2026
 
+### Audit : robustesse
+- Le registre des codes clients ne garde que les cinq dernières sauvegardes archivées et n'attend plus indéfiniment s'il est verrouillé : au bout de 30 secondes, un message demande de réessayer.
+- Le visualiseur 3D refuse avec un message clair un fichier de plus de 400 Mo, qui épuiserait la mémoire.
+- Le journal `erreurs.log` est mis de côté (`erreurs.old.log`) au-delà de 1 Mo.
+- Le découpeur automatique est arrêté s'il ne répond pas au bout de 10 minutes.
+- Une estimation refuse un coût négatif ; le champ « Marge » devient « Marge sur coût », ce qu'il calcule réellement (prix = coût avec aléas × (1 + marge)), et le message d'erreur couvre le taux d'échec, la remise et la marge.
+
 ### Démarrage plus rapide
 - L'écran de démarrage ne dure plus 5 secondes fixes : il se ferme dès que l'espace de travail est lu, au bout d'une seconde environ au minimum.
 

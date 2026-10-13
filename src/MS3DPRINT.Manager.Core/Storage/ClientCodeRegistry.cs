@@ -7,6 +7,9 @@ namespace MS3DPRINT.Manager.Core.Storage;
 
 public sealed class ClientCodeRegistry
 {
+    private static readonly TimeSpan LockTimeout = TimeSpan.FromSeconds(30);
+    private const int ArchivedBackupsKept = 5;
+
     private readonly string _dataDirectory;
     private readonly string _activePath;
     private readonly string _previousPath;
@@ -41,7 +44,8 @@ public sealed class ClientCodeRegistry
         using var mutex = new Mutex(false, _mutexName);
         try
         {
-            mutex.WaitOne();
+            if (!mutex.WaitOne(LockTimeout))
+                throw new IOException("Le registre des codes clients est utilisé par une autre fenêtre ou un autre programme. Réessayez dans un instant.");
         }
         catch (AbandonedMutexException)
         {
@@ -76,6 +80,8 @@ public sealed class ClientCodeRegistry
                 {
                     File.Move(temporaryPath, _activePath);
                 }
+
+                PruneArchivedBackups();
             }
             finally
             {
@@ -112,6 +118,21 @@ public sealed class ClientCodeRegistry
 
         var archivePath = Path.Combine(_dataDirectory, "client-codes.previous." + Guid.NewGuid().ToString("N") + ".json");
         File.Move(_previousPath, archivePath);
+    }
+
+    /// <summary>Every change archives the previous registry; only the most recent archives are kept.</summary>
+    private void PruneArchivedBackups()
+    {
+        try
+        {
+            foreach (var old in Directory.EnumerateFiles(_dataDirectory, "client-codes.previous.*.json")
+                         .OrderByDescending(File.GetLastWriteTimeUtc).Skip(ArchivedBackupsKept))
+                File.Delete(old);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // an archive that cannot be removed now will be at the next change
+        }
     }
 
     private static string NormalizeRequired(string value, string parameterName)

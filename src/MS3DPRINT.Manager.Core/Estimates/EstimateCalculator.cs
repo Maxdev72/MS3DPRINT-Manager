@@ -14,6 +14,9 @@ public static class EstimateCalculator
     public static EstimateResult Calculate(EstimateInputs input)
     {
         ArgumentNullException.ThrowIfNull(input);
+        if (new[] { input.MaterialCost, input.MachineCost, input.ElectricityCost, input.DesignCost, input.LaborCost, input.PostProcessingCost,
+                input.ConsumablesCost, input.PackagingShippingCost, input.MiscCost }.Any(cost => cost < 0))
+            throw new ArgumentOutOfRangeException(nameof(input), "Un coût ne peut pas être négatif.");
         if (input.FailureRatePercent is < 0 or >= 100) throw new ArgumentOutOfRangeException(nameof(input.FailureRatePercent));
         if (input.MarginPercent < 0 || input.DiscountPercent is < 0 or > 100) throw new ArgumentOutOfRangeException();
         var raw = input.MaterialCost + input.MachineCost + input.ElectricityCost + input.DesignCost + input.LaborCost + input.PostProcessingCost + input.ConsumablesCost + input.PackagingShippingCost + input.MiscCost;

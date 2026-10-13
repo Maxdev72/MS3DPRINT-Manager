@@ -396,7 +396,7 @@ public partial class MainWindow
         }
         catch (ArgumentOutOfRangeException)
         {
-            EstimateDetail.Text = "Le taux d’échec doit être inférieur à 100 %, et la remise entre 0 et 100 %.";
+            EstimateDetail.Text = "Le taux d’échec doit être entre 0 et 100 % (100 exclu), la remise entre 0 et 100 % et la marge positive.";
             return false;
         }
     }

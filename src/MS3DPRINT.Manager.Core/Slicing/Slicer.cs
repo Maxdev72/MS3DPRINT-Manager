@@ -104,7 +104,7 @@ public sealed class SlicerProfiles(SlicerInstall install)
 
     private static JsonElement? Read(string file)
     {
-        try { return JsonDocument.Parse(File.ReadAllText(file)).RootElement.Clone(); }
+        try { using var document = JsonDocument.Parse(File.ReadAllText(file)); return document.RootElement.Clone(); }
         catch (Exception exception) when (exception is IOException or JsonException or UnauthorizedAccessException) { return null; }
     }
 
@@ -134,6 +134,9 @@ public sealed class SlicerProfiles(SlicerInstall install)
 /// <summary>Runs the slicer without its window and reads print time and filament use from what it writes.</summary>
 public sealed class SliceRunner(SlicerInstall install)
 {
+    /// <summary>A slicer that has not finished after this long is stopped.</summary>
+    public TimeSpan Timeout { get; init; } = TimeSpan.FromMinutes(10);
+
     public static IReadOnlyList<string> BuildArguments(SlicerInstall install, SlicerProfiles profiles, SliceRequest request, string outputDirectory)
     {
         var arguments = new List<string>
@@ -160,11 +163,14 @@ public sealed class SliceRunner(SlicerInstall install)
             var start = new ProcessStartInfo(install.ExecutablePath) { UseShellExecute = false, CreateNoWindow = true };
             foreach (var argument in BuildArguments(install, profiles, request, output)) start.ArgumentList.Add(argument);
             using var process = Process.Start(start) ?? throw new InvalidOperationException("Le découpeur n’a pas démarré.");
-            try { await process.WaitForExitAsync(cancellationToken); }
+            using var limit = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            limit.CancelAfter(Timeout);
+            try { await process.WaitForExitAsync(limit.Token); }
             catch (OperationCanceledException)
             {
                 try { process.Kill(entireProcessTree: true); } catch (InvalidOperationException) { }
-                throw;
+                if (cancellationToken.IsCancellationRequested) throw;
+                throw new InvalidOperationException("Le découpeur n’a pas répondu à temps ; il a été arrêté.");
             }
             return Read(output);
         }
