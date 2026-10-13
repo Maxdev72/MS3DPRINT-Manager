@@ -24,9 +24,25 @@ public partial class MainWindow
 
     private async void RefreshSettings_Click(object? sender, RoutedEventArgs e) => await LoadSettingsAsync();
 
+    private async void ChangeWorkspace_Click(object? sender, RoutedEventArgs e)
+    {
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = "Choisir l’espace de travail", AllowMultiple = false });
+        var chosen = folders.FirstOrDefault()?.TryGetLocalPath();
+        if (string.IsNullOrWhiteSpace(chosen)) return;
+        try
+        {
+            _workspaceLocation.Save(chosen);
+            Notify("Espace de travail changé. Utilisez « Vérifier l’arborescence » pour y créer les dossiers manquants.");
+            await PreloadAsync(force: true);
+            await LoadSettingsAsync();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        { Notify(exception.Message, error: true); }
+    }
+
     private async void VerifyWorkspace_Click(object? sender, RoutedEventArgs e)
     {
-        var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        var root = WorkspaceRoot;
         try
         {
             var result = await Task.Run(() => new MS3DPRINT.Manager.Core.Storage.FolderTreeService().EnsureMainStructure(root));
@@ -41,7 +57,7 @@ public partial class MainWindow
 
     private async Task LoadSettingsAsync()
     {
-        var workspaceRoot = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        var workspaceRoot = WorkspaceRoot;
         StorageList.Children.Clear();
         StorageList.Spacing = 14;
         var providers = await Task.Run(() => new WorkspaceStorageReader().Load(workspaceRoot));
@@ -61,8 +77,13 @@ public partial class MainWindow
         open.Click += OpenFolder_Click;
         var verify = new Button { Content = "Vérifier l’arborescence" };
         verify.Click += VerifyWorkspace_Click;
+        var change = new Button { Content = "Changer d’espace de travail…" };
+        change.Click += ChangeWorkspace_Click;
+        var fixedByEnvironment = MS3DPRINT.Manager.Core.Storage.WorkspaceLocation.IsFixedByEnvironment;
+        change.IsEnabled = !fixedByEnvironment;
+        if (fixedByEnvironment) ToolTip.SetTip(change, "L’espace de travail est imposé par la variable d’environnement MS3DPRINT_WORKSPACE.");
         StorageList.Children.Add(Card("Espace de travail", workspaceRoot,
-            new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { open, verify } }));
+            new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { open, verify, change } }));
 
         var providerRows = new StackPanel { Spacing = 0 };
         foreach (var provider in providers)

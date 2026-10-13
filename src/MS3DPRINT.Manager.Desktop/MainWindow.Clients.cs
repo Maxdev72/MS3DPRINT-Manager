@@ -24,7 +24,7 @@ public partial class MainWindow
 
     private async void CreateClient_Click(object? sender, RoutedEventArgs e)
     {
-        var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        var root = WorkspaceRoot;
         var usedCodes = await Task.Run(() => new WorkspaceClientCreator().UsedCodes(root));
         var dialog = new CreateClientWindow(usedCodes: usedCodes);
         if (!await dialog.ShowDialog<bool>(this)) return;
@@ -58,7 +58,7 @@ public partial class MainWindow
 
     private async Task LoadClientsAsync()
     {
-        var workspaceRoot = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        var workspaceRoot = WorkspaceRoot;
         ClientList.Children.Clear();
         ClientList.Spacing = 0;
         _clientListMode = true;
@@ -192,7 +192,7 @@ public partial class MainWindow
         ClientList.Children.Add(new Border { Classes = { "card-raised" }, Padding = new Avalonia.Thickness(18), Child = card });
         try
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             var projects = await Task.Run(() => new WorkspaceProjectReader().Load(root)
                 .Where(project => string.Equals(project.ClientPath, client.ClientPath, StringComparison.OrdinalIgnoreCase)).ToArray());
             if (projects.Length == 0)
@@ -226,7 +226,7 @@ public partial class MainWindow
             if (!await completion.ShowDialog<bool>(this)) return;
             try
             {
-                var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+                var root = WorkspaceRoot;
                 var (individual, lastName, clientName, code) = (completion.IsIndividual, completion.LastName, completion.ClientName, completion.Code);
                 var (firstName, siret, address) = (completion.FirstName, completion.Siret, completion.Address);
                 var (completionEmail, completionMobile) = (completion.Email, completion.Mobile);
@@ -246,7 +246,7 @@ public partial class MainWindow
         if (!await dialog.ShowDialog<bool>(this)) return;
         try
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             var (address, notes, contactFirst, contactLast, contactRole) = (dialog.Address, dialog.Notes, dialog.ContactFirstName, dialog.ContactLastName, dialog.ContactRole);
             var (contactPhone, contactEmail, companyName, siret, firstName, lastName) = (dialog.ContactPhone, dialog.ContactEmail, dialog.CompanyName, dialog.Siret, dialog.IdentityFirstName, dialog.IdentityLastName);
             var contactMobile = dialog.ContactMobile;
@@ -268,7 +268,7 @@ public partial class MainWindow
     {
         if (sender is not Button { Tag: ClientSummary client }) return;
         if (client.Profile is not { } profile) { Notify("Complétez d’abord la fiche de ce client historique.", error: true); return; }
-        var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        var root = WorkspaceRoot;
         IReadOnlyList<ClientSummary> all;
         try { all = await Task.Run(() => new WorkspaceClientReader().Load(root)); }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
@@ -300,7 +300,7 @@ public partial class MainWindow
         if (!await new ConfirmTrashWindow(client.Title(), "Ses projets et tous ses fichiers seront concernés.").ShowDialog<bool>(this)) return;
         try
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).TrashClient(client));
             PageTitle.Text = "Clients";
             Notify("Client envoyé dans la corbeille.");
@@ -317,7 +317,7 @@ public partial class MainWindow
         if (!await dialog.ShowDialog<bool>(this)) return;
         try
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             var newName = dialog.Value;
             await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).RenameClient(client, newName));
             PageTitle.Text = "Clients";
@@ -336,7 +336,7 @@ public partial class MainWindow
         if (string.IsNullOrWhiteSpace(destination)) return;
         try
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).MoveClient(client, destination));
             PageTitle.Text = "Clients";
             Notify("Client déplacé.");

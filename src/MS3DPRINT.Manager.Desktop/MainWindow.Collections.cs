@@ -27,7 +27,7 @@ public partial class MainWindow
         if (!await dialog.ShowDialog<bool>(this)) return;
         try
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             var (newCategory, newName) = (dialog.Category, dialog.NameValue);
             var item = await Task.Run(() => new WorkspaceCollectionCreator().Create(root, newCategory, newName));
             await Task.Run(() => new WorkspaceCollectionEditor().Save(root, item, newCategory, item.Name, null, null));
@@ -40,7 +40,7 @@ public partial class MainWindow
 
     private async Task LoadCollectionsAsync()
     {
-        var workspaceRoot = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        var workspaceRoot = WorkspaceRoot;
         CollectionList.Children.Clear();
         try
         {
@@ -80,7 +80,7 @@ public partial class MainWindow
         if (!await dialog.ShowDialog<bool>(this)) return;
         try
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             var category = Path.GetRelativePath(root, item.Path).Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)[0];
             var (name, description, notes, contact) = (dialog.NameValue, dialog.Description, dialog.Notes, dialog.Contact);
             var (address, phone, email, website) = (dialog.Address, dialog.Phone, dialog.Email, dialog.Website);
@@ -122,7 +122,7 @@ public partial class MainWindow
         if (!await dialog.ShowDialog<bool>(this)) return;
         try
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             var newName = dialog.Value;
             await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).RenameCollection(item, CollectionCategory(root, item), newName));
             Notify("Collection renommée.");
@@ -140,7 +140,7 @@ public partial class MainWindow
         if (string.IsNullOrWhiteSpace(destination)) return;
         try
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).MoveCollection(item, CollectionCategory(root, item), destination));
             Notify("Collection déplacée.");
             await LoadCollectionsAsync();
@@ -155,7 +155,7 @@ public partial class MainWindow
         if (!await new ConfirmTrashWindow(item.Name, "La collection et son contenu pourront être restaurés depuis la corbeille.").ShowDialog<bool>(this)) return;
         try
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).TrashCollection(item));
             Notify("Collection envoyée dans la corbeille.");
             await LoadCollectionsAsync();

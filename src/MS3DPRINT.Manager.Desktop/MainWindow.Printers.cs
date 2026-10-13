@@ -27,7 +27,7 @@ public partial class MainWindow
         if (!await dialog.ShowDialog<bool>(this)) return;
         try
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             var now = DateTimeOffset.UtcNow;
             new PrinterStore(root).Create(new PrinterProfile(Guid.NewGuid(), dialog.Brand, dialog.Model, dialog.PrinterName, dialog.HourlyRate, dialog.BuildVolume, dialog.PrinterIsActive, now, now,
                 dialog.PurchasePrice, dialog.LifetimeHours, dialog.PowerWatts));
@@ -45,7 +45,7 @@ public partial class MainWindow
         if (!await dialog.ShowDialog<bool>(this)) return;
         try
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             new PrinterStore(root).Update(original with { Brand = dialog.Brand, Model = dialog.Model, Name = dialog.PrinterName, HourlyRate = dialog.HourlyRate, BuildVolume = dialog.BuildVolume,
                 IsActive = dialog.PrinterIsActive, PurchasePrice = dialog.PurchasePrice, LifetimeHours = dialog.LifetimeHours, PowerWatts = dialog.PowerWatts }, original.UpdatedAt);
             await LoadPrintersAsync();
@@ -61,7 +61,7 @@ public partial class MainWindow
         if (!await new ConfirmTrashWindow(printer.Name, "Cette imprimante pourra être restaurée depuis la corbeille.").ShowDialog<bool>(this)) return;
         try
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             await Task.Run(() => new PrinterStore(root).Trash(printer.Id));
             await LoadPrintersAsync();
             Notify("Imprimante envoyée dans la corbeille.");
@@ -72,7 +72,7 @@ public partial class MainWindow
 
     private async Task LoadPrintersAsync()
     {
-        var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        var root = WorkspaceRoot;
         PrinterList.Children.Clear();
         try
         {

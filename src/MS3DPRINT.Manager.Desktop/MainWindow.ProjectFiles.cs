@@ -132,7 +132,7 @@ public partial class MainWindow
         if (!await dialog.ShowDialog<bool>(this)) return;
         try
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             var folderName = dialog.Value;
             await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.ManagedFileService(root).CreateFolder(context.Item2, folderName));
             Notify("Dossier créé.");
@@ -177,7 +177,7 @@ public partial class MainWindow
         if (!await naming.ShowDialog<bool>(this)) return;
         try
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             var finalName = naming.FileName;
             var targetDirectory = naming.DestinationDirectory ?? context.Item2;
             await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.ManagedFileService(root).Import(source, targetDirectory, finalName));
@@ -220,7 +220,7 @@ public partial class MainWindow
         if (!await dialog.ShowDialog<bool>(this)) return;
         try
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             var newName = dialog.Value;
             await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).RenamePath(context.Path, newName));
             Notify(isDirectory ? "Dossier renommé." : "Fichier renommé.");
@@ -238,7 +238,7 @@ public partial class MainWindow
         if (!await new ConfirmTrashWindow(name, isDirectory ? "Le dossier et son contenu pourront être restaurés depuis la corbeille." : "Le fichier pourra être restauré depuis la corbeille.").ShowDialog<bool>(this)) return;
         try
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.ManagedFileService(root).Trash(context.Path, label: name));
             Notify(isDirectory ? "Dossier envoyé dans la corbeille." : "Fichier envoyé dans la corbeille.");
             await ReloadDirectoryAsync(context);
@@ -256,7 +256,7 @@ public partial class MainWindow
         try
         {
             var isDirectory = Directory.Exists(context.Path);
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).MovePath(context.Path, destination));
             Notify(isDirectory ? "Dossier déplacé." : "Fichier déplacé.");
             await ReloadDirectoryAsync(context);

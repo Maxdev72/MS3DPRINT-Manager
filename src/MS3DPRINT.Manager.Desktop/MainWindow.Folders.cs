@@ -37,7 +37,7 @@ public partial class MainWindow
         if (!await dialog.ShowDialog<bool>(this)) return;
         try
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             var folderName = dialog.Value;
             await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.ManagedFileService(root).CreateFolder(directory, folderName));
             Notify("Dossier créé.");
@@ -56,7 +56,7 @@ public partial class MainWindow
         if (string.IsNullOrWhiteSpace(source)) return;
         try
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.ManagedFileService(root).Import(source, directory));
             Notify("Fichier importé.");
             await LoadFolderWorkspaceAsync();
@@ -84,7 +84,7 @@ public partial class MainWindow
         if (sender is not Button { Tag: string path } || !Directory.Exists(path)) return;
         try
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             var project = (await Task.Run(() => new WorkspaceProjectReader().Load(root))).FirstOrDefault(item => path.StartsWith(item.ProjectPath, StringComparison.OrdinalIgnoreCase));
             if (project is not null)
             {

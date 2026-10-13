@@ -77,7 +77,7 @@ public partial class MainWindow
         }
 
         var cancellationToken = _searchCancellation.Token;
-        var workspaceRoot = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        var workspaceRoot = WorkspaceRoot;
         try
         {
             var results = await Task.Run(

@@ -47,11 +47,11 @@ public partial class MainWindow
         {
             _modelViewer = new ModelViewerView(CloseModelViewer, () =>
             {
-                var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+                var root = WorkspaceRoot;
                 return new WorkspaceInventoryReader().LoadFilaments(root);
             }, () =>
             {
-                var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+                var root = WorkspaceRoot;
                 return new WorkspaceInventoryReader().LoadPrinters(root).Where(printer => printer.IsActive).Select(printer => printer.DisplayName).ToList();
             });
             _modelViewer.ModelLoaded += name => PageSubtitle.Text = name;
@@ -104,7 +104,7 @@ public partial class MainWindow
     {
         try
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             if (MS3DPRINT.Manager.Core.Projects.ProjectLocator.PhotosFolder(modelPath) is { } photos && Path.GetFullPath(photos).StartsWith(Path.GetFullPath(root), StringComparison.OrdinalIgnoreCase))
             {
                 var saved = await Task.Run(() =>

@@ -42,7 +42,7 @@ public partial class MainWindow
 
     private async void CreateProject_Click(object? sender, RoutedEventArgs e)
     {
-        var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        var root = WorkspaceRoot;
         var clients = await Task.Run(() => new WorkspaceClientReader().Load(root));
         var dialog = new CreateProjectWindow(clients);
         if (await dialog.ShowDialog<bool>(this) && dialog.Client is { } client)
@@ -73,7 +73,7 @@ public partial class MainWindow
         try
         {
             var projectName = dialog.ProjectName;
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             await Task.Run(() => new WorkspaceProjectCreator().CreateTracked(root, selected, DateTime.Today.Year, projectName));
             Notify("Projet créé.");
             await LoadClientDetailAsync(client with { ProjectCount = client.ProjectCount + 1 });
@@ -98,7 +98,7 @@ public partial class MainWindow
 
     private async Task LoadProjectsAsync()
     {
-        var workspaceRoot = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        var workspaceRoot = WorkspaceRoot;
         ProjectList.Children.Clear();
         ProjectList.Spacing = 0;
         _projectListMode = true;
@@ -264,7 +264,7 @@ public partial class MainWindow
         if (sender is not Button { Tag: ProjectSummary project }) return;
         if (project.Profile is null)
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             var client = (await Task.Run(() => new WorkspaceClientReader().Load(root)))
                 .FirstOrDefault(candidate => string.Equals(candidate.ClientPath, project.ClientPath, StringComparison.OrdinalIgnoreCase));
             if (client?.Profile is null) { Notify("Complétez d’abord la fiche de ce client historique.", error: true); return; }
@@ -287,7 +287,7 @@ public partial class MainWindow
         if (!await dialog.ShowDialog<bool>(this)) return;
         try
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             var (status, dueDate, description, notes, name) = (dialog.Status, dialog.DueDate, dialog.Description, dialog.Notes, dialog.ProjectName);
             var updated = await Task.Run(() => new WorkspaceProfileEditor().UpdateProject(root, profile, status, dueDate, description, notes, name));
             Notify("Fiche projet enregistrée.");
@@ -306,7 +306,7 @@ public partial class MainWindow
         if (!await new ConfirmTrashWindow(project.Reference, "Tous les fichiers et sous-dossiers du projet sont concernés.").ShowDialog<bool>(this)) return;
         try
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).TrashProject(project));
             PageTitle.Text = "Projets";
             Notify("Projet envoyé dans la corbeille.");
@@ -323,7 +323,7 @@ public partial class MainWindow
         if (!await dialog.ShowDialog<bool>(this)) return;
         try
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             var newName = dialog.Value;
             await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).RenameProject(project, newName));
             PageTitle.Text = "Projets";
@@ -337,7 +337,7 @@ public partial class MainWindow
     private async void MoveProject_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: ProjectSummary project }) return;
-        var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        var root = WorkspaceRoot;
         var clients = await Task.Run(() => new WorkspaceClientReader().Load(root)
             .Where(client => !string.Equals(client.ClientPath, project.ClientPath, StringComparison.OrdinalIgnoreCase)).ToArray());
         var dialog = new ClientPickerWindow(clients);

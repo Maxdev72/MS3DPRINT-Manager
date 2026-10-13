@@ -21,7 +21,10 @@ public partial class MainWindow : Window
 {
     private sealed record ProjectDirectoryContext(ProjectSummary? Project, string Directory, string Path);
 
-    private const string DefaultWorkspaceRoot = @"C:\MS3DPRINT\Nextcloud\MS3DPRINT";
+    private readonly MS3DPRINT.Manager.Core.Storage.WorkspaceLocation _workspaceLocation = new();
+
+    /// <summary>The workspace in use: the environment override, else the folder chosen in the settings, else the default.</summary>
+    private string WorkspaceRoot => _workspaceLocation.Resolve();
 
     private CancellationTokenSource? _searchCancellation;
 
@@ -104,7 +107,7 @@ public partial class MainWindow : Window
         // MS3DPRINT_START_PROJECT=<reference> opens that project (screenshots, demos).
         if (Environment.GetEnvironmentVariable("MS3DPRINT_START_PROJECT") is { Length: > 0 } reference)
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             var projects = await Task.Run(() => new WorkspaceProjectReader().Load(root));
             if (projects.FirstOrDefault(project => project.Reference == reference) is { } found)
             {
@@ -118,7 +121,7 @@ public partial class MainWindow : Window
         // MS3DPRINT_START_CLIENT=<code> opens that client sheet (screenshots, demos).
         if (Environment.GetEnvironmentVariable("MS3DPRINT_START_CLIENT") is { Length: > 0 } clientCode)
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             var clients = await Task.Run(() => new WorkspaceClientReader().Load(root));
             if (clients.FirstOrDefault(client => client.ClientCode == clientCode) is { } found)
             {
@@ -148,7 +151,7 @@ public partial class MainWindow : Window
     {
         if (_preloaded && !force) return;
         _preloaded = true;
-        var workspaceRoot = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        var workspaceRoot = WorkspaceRoot;
 
         try
         {

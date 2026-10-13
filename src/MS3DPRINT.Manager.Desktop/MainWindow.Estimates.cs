@@ -23,7 +23,7 @@ public partial class MainWindow
     {
         try
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             var (filaments, printers, projects) = await Task.Run(() =>
             {
                 var inventory = new WorkspaceInventoryReader();
@@ -54,7 +54,7 @@ public partial class MainWindow
         if (!await dialog.ShowDialog<bool>(this)) return;
         try
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             new WorkspaceFilamentEditor().Create(root, dialog.Brand, dialog.FilamentName, dialog.Material, dialog.Price, dialog.IsAbrasive, dialog.Color);
             var filaments = new WorkspaceInventoryReader().LoadFilaments(root);
             EstimateFilament.ItemsSource = filaments;
@@ -155,7 +155,7 @@ public partial class MainWindow
         if (!await new ConfirmTrashWindow(estimate.Name, "Cette estimation pourra être restaurée depuis la corbeille.").ShowDialog<bool>(this)) return;
         try
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             await Task.Run(() => new EstimateStore(root).Trash(estimate.Id));
             if (_loadedEstimate?.Id == estimate.Id) ResetEstimate_Click(sender, e);
             await LoadSavedEstimatesAsync(root);
@@ -225,7 +225,7 @@ public partial class MainWindow
         { EstimateDetail.Text = "Calculez l’estimation avant de l’enregistrer."; return; }
         try
         {
-            var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+            var root = WorkspaceRoot;
             var printer = EstimatePrinter.SelectedItem as PrinterProfile;
             TryEstimateValue(EstimateWeight.Text, out var savedWeight);
             TryEstimateValue(EstimateHours.Text, out var savedHours);

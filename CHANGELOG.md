@@ -2,6 +2,9 @@
 
 ## 13 octobre 2026
 
+### Espace de travail configurable
+- Nouveau bouton « Changer d’espace de travail… » dans Paramètres : le dossier choisi est mémorisé (`data/workspace.json`) et remplace l’emplacement fixe d’origine, qui reste la valeur par défaut. Un dossier disparu ou un fichier illisible ramène à l’emplacement par défaut.
+
 ### Audit : sécurité et fiches illisibles
 - Un programme ou un script (`.exe`, `.bat`, `.ps1`, `.lnk`, `.vbs`…) trouvé dans un dossier de projet n'est plus lancé par un double clic ni par « Ouvrir avec… » : le logiciel l'explique et invite à ouvrir son dossier dans l'Explorateur.
 - Une fiche d'estimation, de filament ou d'imprimante illisible n'empêche plus d'afficher les autres ni de changer le code d'un client.

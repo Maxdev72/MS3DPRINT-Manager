@@ -23,7 +23,7 @@ public partial class MainWindow
 
     private async Task LoadTrashAsync()
     {
-        var workspaceRoot = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        var workspaceRoot = WorkspaceRoot;
         TrashList.Children.Clear();
         try
         {
@@ -46,7 +46,7 @@ public partial class MainWindow
     private async void RestoreTrash_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: Guid id }) return;
-        var root = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE") ?? DefaultWorkspaceRoot;
+        var root = WorkspaceRoot;
         try { await Task.Run(() => new WorkspaceTrashReader().Restore(root, id)); await LoadTrashAsync(); }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
         { Notify(exception.Message, error: true); }
