@@ -41,7 +41,7 @@ public sealed class ModelBrowserView : UserControl
     }
 
     // Memory budget: each loaded page costs one to three hundred MB, so only a few stay loaded and the others sleep.
-    private const int MaxLivePages = 5;
+    private const int MaxLivePages = 8;
     private static readonly TimeSpan TabSleepAfter = TimeSpan.FromMinutes(10);
     // the tabs behind the shown one load in the background, one at a time, so that a click shows a page that is already there
     private static readonly TimeSpan PreloadTimeout = TimeSpan.FromSeconds(25);
