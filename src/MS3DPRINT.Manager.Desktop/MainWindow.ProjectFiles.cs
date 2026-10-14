@@ -296,12 +296,19 @@ public partial class MainWindow
             }
 
             var launcher = TopLevel.GetTopLevel(this)?.Launcher;
-            if (launcher is not null)
-                await launcher.LaunchUriAsync(new Uri(path));
+            var opened = false;
+            try { opened = launcher is not null && await launcher.LaunchUriAsync(new Uri(path)); }
+            catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException) { }
+            if (opened) return;
+
+            // Windows has no application for this type of file: a slicer for a 3D model, else the "Open with" window
+            if (SlicerLauncher.TryOpen(path) is { } slicer) { Notify($"Ouvert dans {slicer}."); return; }
+            if (DesktopPreviewLauncher.OpenWith is { } openWith) openWith(path);
+            else Notify("Aucune application n’est associée à ce type de fichier.", error: true);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or UriFormatException)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or UriFormatException or InvalidOperationException)
         {
-            Notify("Impossible d’ouvrir ce fichier.", error: true);
+            Notify("Impossible d’ouvrir ce fichier : " + exception.Message, error: true);
         }
     }
 

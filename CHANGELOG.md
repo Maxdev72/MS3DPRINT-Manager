@@ -2,6 +2,10 @@
 
 ## 14 octobre 2026
 
+### Ouvrir un fichier sans application associée
+- « Ouvrir avec… » affiche maintenant la vraie fenêtre « Ouvrir avec » de Windows, même quand le type de fichier n'a pas d'application (l'ancienne commande échouait avec « Aucune application n'est associée au fichier spécifié »). Cela arrivait pour les `.3mf` quand le choix par défaut de Windows pointait vers une application du Microsoft Store supprimée.
+- Un double clic ou « Ouvrir dans le slicer » sur un modèle 3D sans application associée l'envoie directement à Bambu Studio ou OrcaSlicer s'ils sont installés, sinon affiche la fenêtre « Ouvrir avec ». Les erreurs affichent maintenant la cause au lieu d'un message générique.
+
 ### Corrections de la recherche de modèles 3D
 - Plus de notification « Une erreur inattendue s'est produite (0x8007139F) » : le logiciel lit l'adresse de la page affichée toutes les 1,2 seconde, et le moteur web répond « état incorrect » pendant qu'une page démarre ou se ferme. Cette réponse est maintenant ignorée (elle ne servait qu'à rafraîchir la barre d'adresse), et la lecture n'est tentée que sur une page chargée. Les boutons précédent, suivant et actualiser et l'ouverture d'adresse sont protégés de la même façon.
 - Un clic dans le champ de recherche de la page de démarrage arrête l'animation et affiche le texte fixe « Rechercher un modèle 3D ou saisir une adresse » ; elle reprend si vous quittez le champ sans rien saisir.

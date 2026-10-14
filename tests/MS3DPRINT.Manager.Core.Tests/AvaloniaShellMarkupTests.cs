@@ -111,10 +111,13 @@ public sealed class AvaloniaShellMarkupTests
     {
         var source = MainWindowSource();
         var host = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Windows.App", "Program.cs"));
+        var dialog = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Windows.App", "OpenWithDialog.cs"));
 
         Assert.Contains("Ouvrir avec…", source, StringComparison.Ordinal);
         Assert.Contains("OpenWithFile_Click", source, StringComparison.Ordinal);
-        Assert.Contains("\"openas\"", host, StringComparison.Ordinal);
+        // the real Windows "Open with" window, which also works for a file type that has no application (the "openas" verb does not)
+        Assert.Contains("OpenWithDialog.Show", host, StringComparison.Ordinal);
+        Assert.Contains("SHOpenWithDialog", dialog, StringComparison.Ordinal);
     }
 
     [Fact]

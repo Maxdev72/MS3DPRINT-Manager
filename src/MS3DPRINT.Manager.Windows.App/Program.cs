@@ -16,7 +16,10 @@ internal static class Program
             if (owner is not null) preview.Show(owner); else preview.Show();
         };
         DesktopPreviewLauncher.OpenWith = path =>
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true, Verb = "openas" });
+        {
+            var owner = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow?.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+            OpenWithDialog.Show(path, owner);
+        };
         DesktopApplication.ReduceMotion = !ClientAreaAnimationsEnabled();
         DesktopApplication.BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }

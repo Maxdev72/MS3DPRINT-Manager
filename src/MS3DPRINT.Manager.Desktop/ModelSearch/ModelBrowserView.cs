@@ -268,12 +268,13 @@ public sealed class ModelBrowserView : UserControl
         try
         {
             if (TopLevel.GetTopLevel(this)?.Launcher is { } launcher && await launcher.LaunchUriAsync(new Uri(path))) return;
-            _downloadNote.Text = "Windows n’a pas trouvé d’application pour ce type de fichier : utilisez « Autre application… ».";
         }
         catch (Exception exception) when (exception is IOException or InvalidOperationException or UriFormatException or System.ComponentModel.Win32Exception)
         {
-            _downloadNote.Text = "Impossible d’ouvrir ce fichier : " + exception.Message;
+            // no application for this type: the slicer installed here, else the "Open with" window
         }
+        if (SlicerLauncher.TryOpen(path) is { } slicer) { _downloadNote.Text = "Ouvert dans " + slicer + "."; return; }
+        OpenDownloadWith();
     }
 
     private void OpenDownloadWith()
