@@ -7,6 +7,7 @@
 - Jusqu'à 5 pages restent chargées ; au-delà, la moins récemment vue se met en veille. Un onglet non regardé pendant 10 minutes se met en veille.
 - **Yeggi n'est jamais préchargé** : sa page, très chargée en publicités, ouvre une trentaine de processus et pèse environ 2 Go à elle seule (Printables, MakerWorld et Thangs : 450 à 620 Mo chacun, moteur compris). Il ne se charge qu'à l'ouverture de son onglet. Thangs passe en tête des moteurs, et les sites cochés par défaut deviennent Thangs, Printables et MakerWorld.
 ### Page de démarrage des modèles 3D
+- Les exemples animés sont tous en français et parlent d'impression 3D : « spatule mastic », « support de bobine de filament », « boîte de rangement vis », « organiseur de câbles », « pièce de rechange électroménager », « poignée de tiroir », « figurine articulée », « vase spirale », « porte-clés personnalisé », « support de casque audio ».
 - Avant la première recherche, la page est centrée au milieu de la fenêtre, avec un grand champ de recherche intégré (la barre du haut n'apparaît qu'une fois des onglets ouverts). Une flèche à droite du champ lance la recherche, comme Entrée.
 - Des exemples (« spatule mastic », « support casque audio »…) se tapent lettre par lettre dans le champ, puis s'effacent. L'animation s'arrête dès que vous saisissez quelque chose, ou quand la page n'est plus affichée, et reste fixe si Windows demande moins d'animations.
 

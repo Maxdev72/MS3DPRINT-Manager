@@ -68,8 +68,12 @@ public sealed class ModelBrowserView : UserControl
     // the start page has its own big search box; an example is typed into it, like someone searching
     private readonly TextBox _startInput = new() { VerticalAlignment = VerticalAlignment.Center, FontSize = 16 };
     private readonly DispatcherTimer _typing = new() { Interval = TimeSpan.FromMilliseconds(65) };
+    // all in French, and things one really prints: tools, storage, spare parts, decoration
     private static readonly string[] ExampleQueries =
-        ["spatule mastic", "support casque audio", "boîte de rangement vis", "engrenage 20 dents", "clip câble bureau", "pied de meuble réglable"];
+    [
+        "spatule mastic", "support de bobine de filament", "boîte de rangement vis", "organiseur de câbles", "pièce de rechange électroménager",
+        "poignée de tiroir", "figurine articulée", "vase spirale", "porte-clés personnalisé", "support de casque audio"
+    ];
     private int _exampleIndex, _typedLength, _pauseTicks, _blink;
     private bool _erasing;
     private readonly ProgressBar _progress = new() { IsIndeterminate = true, Height = 2, MinHeight = 2, IsVisible = false };
