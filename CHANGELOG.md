@@ -10,6 +10,11 @@
 - Le panneau « Téléchargements » du moteur web n'est plus désactivé : cet essai faisait apparaître un carré rouge sur la page.
 - Le chargement à la suite va jusqu'à **8 pages** au lieu de 5 (huit sites cochés se chargent tous, un à un) ; au-delà, ou pour Yeggi, l'onglet se charge au clic. Plus de pages chargées, c'est plus de mémoire : environ 450 à 620 Mo par page.
 
+### Page de démarrage des modèles 3D plus aérée
+- Le choix des sites n'est plus enfermé dans une carte : il se pose directement sur la page, sous la recherche, qui reste le seul élément en relief.
+- Le titre du choix affiche le nombre de sites cochés (« 3 sur 15 »), et les sites cochés portent une coche, plus seulement une couleur.
+- Le bouton de recherche devient un vrai bouton d'action, la phrase d'aide est raccourcie, les espacements suivent le contenu (serrés dans un groupe, larges entre les groupes) et les raccourcis clavier s'affichent comme des touches.
+
 ### Tampon de téléchargement sous contrôle
 - Le tampon garde **2 jours** (au lieu de 7) et **1 Go au plus** : quand il dépasse, les fichiers et dossiers de ZIP les plus anciens sont supprimés en premier. Les téléchargements en cours et les fichiers affichés dans la fenêtre de téléchargement ne sont jamais supprimés.
 - Le nettoyage se fait à chaque téléchargement terminé, au chargement de la page et à la fermeture du logiciel.

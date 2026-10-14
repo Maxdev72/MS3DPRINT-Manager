@@ -58,6 +58,7 @@ public sealed class ModelBrowserView : UserControl
     private readonly List<(string Name, Button Chip)> _chips = [];
     private readonly List<Button> _selectAlls = [];
     private readonly List<TextBlock> _siteHints = [];
+    private readonly List<TextBlock> _siteCounts = [];
 
     private readonly TextBox _omnibox = new() { PlaceholderText = "Rechercher un modèle 3D ou saisir une adresse", VerticalAlignment = VerticalAlignment.Center };
     private readonly Button _sitesButton = new() { MinHeight = 36 };
@@ -265,11 +266,14 @@ public sealed class ModelBrowserView : UserControl
         var selectAll = new Button { Classes = { "ghost" } };
         selectAll.Click += (_, _) => SetAllSites(!AllSitesSelected);
         _selectAlls.Add(selectAll);
-        var header = new Grid
+        var count = new TextBlock { Classes = { "caption" }, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 1, 0, 0) };
+        _siteCounts.Add(count);
+        var title = new StackPanel
         {
-            ColumnDefinitions = new ColumnDefinitions("*,Auto"),
-            Children = { new TextBlock { Text = "Sites interrogés par une recherche", Classes = { "card-title" }, VerticalAlignment = VerticalAlignment.Center }, selectAll }
+            Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center,
+            Children = { new TextBlock { Text = "Sites interrogés", Classes = { "card-title" }, VerticalAlignment = VerticalAlignment.Center }, count }
         };
+        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { title, selectAll } };
         Grid.SetColumn(selectAll, 1);
 
         var groups = new StackPanel { Spacing = 6 };
@@ -298,22 +302,22 @@ public sealed class ModelBrowserView : UserControl
         return new StackPanel
         {
             Spacing = 10,
-            Children = { header, groups, hint, new TextBlock { Text = LicenceReminder, Classes = { "caption" }, TextWrapping = TextWrapping.Wrap } }
+            Children = { header, groups, hint, new TextBlock { Text = LicenceReminder, Classes = { "caption" }, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 0) } }
         };
     }
 
     private Control BuildStartPage()
     {
-        var title = new TextBlock { Text = "Cherchez un modèle sur plusieurs sites à la fois", Classes = { "page-title" }, HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap };
+        var title = new TextBlock { Text = "Cherchez un modèle sur plusieurs sites à la fois", Classes = { "page-title" }, HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 22) };
 
         _startInput.Classes.Add("search-input");
         AutomationProperties.SetName(_startInput, "Rechercher un modèle 3D ou saisir une adresse");
-        var go = new Button { Content = Icons.Glyph("IconArrowRight", 18), Classes = { "tool" } };
+        var go = new Button { Content = Icons.Glyph("IconArrowRight", 18), Classes = { "primary-action" }, MinWidth = 42, MinHeight = 40, Padding = new Thickness(0), VerticalAlignment = VerticalAlignment.Center };
         Describe(go, "Lancer la recherche (Entrée)");
         go.Click += (_, _) => Submit(_startInput.Text);
         var inputBox = new Border
         {
-            Classes = { "search-box" }, Height = 52, MaxWidth = 640, HorizontalAlignment = HorizontalAlignment.Stretch,
+            Classes = { "search-box" }, Height = 58, MaxWidth = 680, HorizontalAlignment = HorizontalAlignment.Stretch,
             Child = new Grid
             {
                 ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 10,
@@ -327,17 +331,25 @@ public sealed class ModelBrowserView : UserControl
 
         var steps = new TextBlock
         {
-            Text = "Entrée : un onglet s’ouvre pour chaque site coché, le premier de la liste s’affiche. Une adresse s’ouvre directement.",
-            Classes = { "caption" }, HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap
+            Text = "Un onglet s’ouvre pour chaque site coché. Vous pouvez aussi saisir une adresse.",
+            Classes = { "caption" }, HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 12, 0, 0)
         };
-        var card = new Border { Classes = { "card-raised" }, Child = BuildChooser(), Margin = new Thickness(0, 14, 0, 0) };
-        var shortcuts = new TextBlock { Text = "Ctrl+L barre · Ctrl+T nouvel onglet · Ctrl+W fermer l’onglet · F5 actualiser", Classes = { "caption" }, HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center };
+        // the site choice sits on the page itself, not in a box of its own: the search box is the only raised thing here
+        var chooser = BuildChooser();
+        chooser.Margin = new Thickness(4, 34, 4, 0);
+        var shortcuts = new WrapPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 30, 0, 0) };
+        foreach (var (keys, meaning) in new[] { ("Ctrl+L", "barre"), ("Ctrl+T", "nouvel onglet"), ("Ctrl+W", "fermer l’onglet"), ("F5", "actualiser") })
+        {
+            var key = new Border { Classes = { "key-hint" }, VerticalAlignment = VerticalAlignment.Center, Child = new TextBlock { Text = keys, Classes = { "caption" } } };
+            var label = new TextBlock { Text = meaning, Classes = { "faint" }, FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 18, 0) };
+            shortcuts.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Children = { key, label } });
+        }
 
         // centred in the page, a little above the middle (the eye reads the middle of a page slightly higher than its true centre)
         var column = new StackPanel
         {
-            Spacing = 14, MaxWidth = 760, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(0, 0, 0, 48), Children = { title, inputBox, steps, card, shortcuts }
+            Spacing = 0, MaxWidth = 760, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 0, 48), Children = { title, inputBox, steps, chooser, shortcuts }
         };
         var holder = new Grid { Margin = new Thickness(0, 16), Children = { column } };
         var scroll = new ScrollViewer { HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, Content = holder };
@@ -408,9 +420,12 @@ public sealed class ModelBrowserView : UserControl
         {
             var on = _selected.Contains(name);
             if (on) chip.Classes.Add("selected"); else chip.Classes.Remove("selected");
+            // a tick, not the colour alone, says that the site is ticked
+            chip.Content = on ? Icons.Label("IconCheck", name, 14) : name;
             AutomationProperties.SetName(chip, name + (on ? ", sélectionné" : ", non sélectionné"));
         }
         foreach (var selectAll in _selectAlls) selectAll.Content = AllSitesSelected ? "Tout désélectionner" : "Tout sélectionner";
+        foreach (var count in _siteCounts) count.Text = "· " + _selected.Count + " sur " + ModelSearchSite.Defaults.Count;
         foreach (var hint in _siteHints) hint.IsVisible = false;
         UpdateSitesButton();
     }
