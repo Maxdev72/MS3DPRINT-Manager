@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Globalization;
 using System.Text.Json;
 using Avalonia;
 using Avalonia.Automation;
@@ -7,13 +9,15 @@ using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+using MS3DPRINT.Manager.Core.Files;
 using MS3DPRINT.Manager.Core.ModelSearch;
 
 namespace MS3DPRINT.Manager.Desktop.ModelSearch;
 
 /// <summary>
-/// 3D-model search page: one search box opens a browser tab per ticked site. The chrome stays thin (toolbar, tabs, address bar)
-/// so the web page gets the room; the site choice folds away once a search is made.
+/// 3D-model search page, laid out like a browser: tabs, then one bar (back, forward, reload, a single box for a search or an
+/// address, the site choice) and the page itself. A keyword searches every ticked site, an address opens it. What the browser
+/// downloads goes to a buffer folder of the application, and a finished 3D file is offered to the slicer.
 /// </summary>
 public sealed class ModelBrowserView : UserControl
 {
@@ -30,27 +34,29 @@ public sealed class ModelBrowserView : UserControl
         public DateTime LastShown { get; set; } = DateTime.UtcNow;
     }
 
-    private const double ToolbarHeight = 40;
-
     // Memory budget: each loaded page costs one to three hundred MB, so only a few stay loaded and the others sleep.
     private const int MaxLivePages = 3;
     private static readonly TimeSpan TabSleepAfter = TimeSpan.FromMinutes(3);
     private static readonly TimeSpan PageSleepAfter = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan BufferKeeps = TimeSpan.FromDays(7);
+
+    private const string LicenceReminder = "Vérifiez la licence de chaque modèle avant de l’imprimer pour un client : beaucoup sont réservés à l’usage personnel (CC BY-NC, « non commercial »).";
 
     private readonly List<BrowserTab> _tabs = [];
-    private readonly Dictionary<ModelSearchSite, Button> _chips = [];
     private readonly HashSet<string> _selected = new(StringComparer.Ordinal);
+    // the site choice is drawn twice (start page and "Sites" panel) from the same selection
+    private readonly List<(string Name, Button Chip)> _chips = [];
+    private readonly List<Button> _selectAlls = [];
+    private readonly List<TextBlock> _siteHints = [];
 
-    private readonly TextBox _query = new() { PlaceholderText = "Rechercher un modèle 3D (ex. spatule mastic)", VerticalAlignment = VerticalAlignment.Center };
-    private readonly TextBox _address = new() { PlaceholderText = "Adresse ou recherche", VerticalContentAlignment = VerticalAlignment.Center, MinHeight = 36 };
-    private readonly Button _sitesButton = new() { MinHeight = ToolbarHeight };
-    private readonly Button _selectAll = new() { Classes = { "ghost" } };
-    private readonly TextBlock _siteHint = new() { Classes = { "caption" }, IsVisible = false, Foreground = (IBrush?)Application.Current?.FindResource("WarningBrush") };
-    private readonly Border _sitePanel = new() { Classes = { "card-raised" }, IsVisible = true };
+    private readonly TextBox _omnibox = new() { PlaceholderText = "Rechercher un modèle 3D ou saisir une adresse", VerticalAlignment = VerticalAlignment.Center };
+    private readonly Button _sitesButton = new() { MinHeight = 36 };
+    private readonly Border _sitePanel = new() { Classes = { "card-raised" }, IsVisible = false };
+    private readonly Border _toolbar = new() { Classes = { "browser-toolbar" } };
     private readonly StackPanel _tabStrip = new() { Orientation = Orientation.Horizontal, Spacing = 2 };
     private readonly Grid _tabRow = new() { IsVisible = false };
     private readonly Grid _viewHost = new();
-    private readonly Control _emptyState;
+    private readonly Control _startPage;
     private readonly ProgressBar _progress = new() { IsIndeterminate = true, Height = 2, MinHeight = 2, IsVisible = false };
     private readonly Button _back = new() { Classes = { "tool" }, IsEnabled = false };
     private readonly Button _forward = new() { Classes = { "tool" }, IsEnabled = false };
@@ -58,6 +64,14 @@ public sealed class ModelBrowserView : UserControl
     private readonly Button _newTab = new() { Classes = { "tool" } };
     private readonly Button _external = new() { Classes = { "tool" }, IsEnabled = false };
     private readonly DispatcherTimer _follow = new() { Interval = TimeSpan.FromMilliseconds(1200) };
+
+    // downloads: the buffer folder, and the bar that offers a finished 3D file to the slicer
+    private readonly DownloadBuffer _buffer = new(DownloadBuffer.DefaultFolder);
+    private readonly Border _downloadBar = new() { Classes = { "card-raised" }, IsVisible = false };
+    private readonly TextBlock _downloadName = new() { FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis };
+    private readonly TextBlock _downloadNote = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
+    private BufferedFile? _download;
+
     private BrowserTab? _active;
     private bool _polling;
     private DateTime? _hiddenSince;
@@ -68,78 +82,81 @@ public sealed class ModelBrowserView : UserControl
     public ModelBrowserView()
     {
         foreach (var site in ModelSearchSite.Defaults)
-            if (site.Name is "Nozzlehub" or "Printables" or "MakerWorld") _selected.Add(site.Name);
+            if (site.Name is "Yeggi" or "Printables" or "MakerWorld") _selected.Add(site.Name);
 
-        var search = new Button { Content = "Rechercher", Classes = { "primary-action" }, MinHeight = ToolbarHeight };
-        search.Click += (_, _) => SearchSelectedSites();
-        _query.KeyDown += (_, e) => { if (e.Key == Key.Enter) { SearchSelectedSites(); e.Handled = true; } };
-        AutomationProperties.SetName(_query, "Rechercher un modèle 3D");
+        PrepareDownloads();
 
-        var searchBox = new Border
-        {
-            Classes = { "search-box" }, Height = ToolbarHeight,
-            Child = new Grid
-            {
-                ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 8,
-                Children = { Icons.Glyph("IconSearch", 18), _query }
-            }
-        };
-        Grid.SetColumn(_query, 1);
-        _query.Classes.Add("search-input");
-
-        _sitesButton.Click += (_, _) => SetSitesOpen(!_sitePanel.IsVisible);
-        ToolTip.SetTip(_sitesButton, "Choisir les sites interrogés");
-
-        var toolbar = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 8, Children = { searchBox, _sitesButton, search } };
-        Grid.SetColumn(_sitesButton, 1);
-        Grid.SetColumn(search, 2);
-
-        BuildSitePanel();
-
-        _newTab.Content = Icons.Glyph("IconPlus", 18);
+        // ---- the bar: back, forward, reload, one box for a keyword or an address, the sites, open outside ----
         _back.Content = Icons.Glyph("IconArrowLeft", 18);
         _forward.Content = Icons.Glyph("IconArrowRight", 18);
         _reload.Content = Icons.Glyph("IconRefresh", 18);
+        _newTab.Content = Icons.Glyph("IconPlus", 18);
         _external.Content = Icons.Glyph("IconOpen", 18);
-        Describe(_newTab, "Nouvel onglet (Ctrl+T)");
         Describe(_back, "Page précédente");
         Describe(_forward, "Page suivante");
         Describe(_reload, "Actualiser (F5)");
+        Describe(_newTab, "Nouvel onglet (Ctrl+T)");
         Describe(_external, "Ouvrir cette page dans le navigateur de Windows (utile pour une connexion ou une vérification « humain »)");
         _back.Click += (_, _) => _active?.View?.GoBack();
         _forward.Click += (_, _) => _active?.View?.GoForward();
         _reload.Click += (_, _) => _active?.View?.Refresh();
         _newTab.Click += (_, _) => OpenBlankTab();
         _external.Click += async (_, _) => await OpenExternalAsync();
-        _address.KeyDown += (_, e) => { if (e.Key == Key.Enter) { NavigateActive(_address.Text ?? string.Empty); e.Handled = true; } };
-        AutomationProperties.SetName(_address, "Adresse de la page");
 
+        _omnibox.Classes.Add("search-input");
+        _omnibox.KeyDown += (_, e) => { if (e.Key == Key.Enter) { SubmitOmnibox(); e.Handled = true; } };
+        _omnibox.GotFocus += (_, _) => Dispatcher.UIThread.Post(() => _omnibox.SelectAll());
+        AutomationProperties.SetName(_omnibox, "Rechercher un modèle 3D ou saisir une adresse");
+        var omniBorder = new Border
+        {
+            Classes = { "search-box" }, Height = 36,
+            Child = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 8, Children = { Icons.Glyph("IconSearch", 18), _omnibox } }
+        };
+        Grid.SetColumn(_omnibox, 1);
+
+        _sitesButton.Click += (_, _) => SetSitesOpen(!_sitePanel.IsVisible);
+        ToolTip.SetTip(_sitesButton, "Choisir les sites interrogés par une recherche");
+        AutomationProperties.SetName(_sitesButton, "Choisir les sites");
+
+        var bar = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("Auto,Auto,Auto,*,Auto,Auto"), ColumnSpacing = 4,
+            Children = { _back, _forward, _reload, omniBorder, _sitesButton, _external }
+        };
+        Grid.SetColumn(_forward, 1); Grid.SetColumn(_reload, 2); Grid.SetColumn(omniBorder, 3); Grid.SetColumn(_sitesButton, 4); Grid.SetColumn(_external, 5);
+        omniBorder.Margin = new Thickness(4, 0);
+        _toolbar.Child = bar;
+
+        // ---- tabs ----
         _tabStrip.Children.Add(_newTab);
         _tabRow.Children.Add(new ScrollViewer
         {
             HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled, Content = _tabStrip
         });
 
-        var navigation = new Grid
-        {
-            ColumnDefinitions = new ColumnDefinitions("Auto,Auto,Auto,*,Auto"), ColumnSpacing = 4,
-            Children = { _back, _forward, _reload, _address, _external }
-        };
-        Grid.SetColumn(_forward, 1); Grid.SetColumn(_reload, 2); Grid.SetColumn(_address, 3); Grid.SetColumn(_external, 4);
+        // ---- site panel (once a search is made) and start page (before) ----
+        _sitePanel.Child = BuildChooser();
+        _startPage = BuildStartPage();
+        _viewHost.Children.Add(_startPage);
 
-        _emptyState = BuildEmptyState();
-        _viewHost.Children.Add(_emptyState);
-
-        var chrome = new StackPanel { Spacing = 8, Children = { toolbar, _sitePanel, _tabRow, navigation, _progress } };
+        var chrome = new StackPanel { Spacing = 0, Children = { _tabRow, _toolbar, _progress, BuildDownloadBar(), _sitePanel } };
         var root = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), RowSpacing = 6, Children = { chrome, _viewHost } };
         Grid.SetRow(_viewHost, 1);
         Content = root;
 
         UpdateSelectionUi();
+        UpdateToolbarShape();
         _follow.Tick += async (_, _) => { ManageMemory(); await FollowActivePageAsync(); };
-        AttachedToVisualTree += (_, _) => { _follow.Start(); _query.Focus(); };
+        AttachedToVisualTree += (_, _) => { _follow.Start(); _omnibox.Focus(); };
         DetachedFromVisualTree += (_, _) => _follow.Stop();
         KeyDown += View_KeyDown;
+#if DEBUG
+        // development hook (Debug builds only): opens an address when the page appears, to test downloads without clicking
+        if (Environment.GetEnvironmentVariable("MS3DPRINT_TEST_URL") is { Length: > 0 } testUrl && Uri.TryCreate(testUrl, UriKind.Absolute, out var testUri))
+            AttachedToVisualTree += (_, _) => Dispatcher.UIThread.Post(() => { if (_tabs.Count == 0) Select(AddTab(testUri, "Test")); });
+        if (Environment.GetEnvironmentVariable("MS3DPRINT_TEST_QUERY") is { Length: > 0 } testQuery)
+            AttachedToVisualTree += (_, _) => Dispatcher.UIThread.Post(() => { if (_tabs.Count == 0) SearchSelectedSites(testQuery); });
+#endif
     }
 
     private static void Describe(Button button, string text)
@@ -148,27 +165,131 @@ public sealed class ModelBrowserView : UserControl
         AutomationProperties.SetName(button, text);
     }
 
-    /// <summary>The site choice: tick-like chips by category, kept in one panel that folds away after a search.</summary>
-    private void BuildSitePanel()
+    // ---- downloads -----------------------------------------------------------------------------------------------
+
+    /// <summary>Points the browser profile at the buffer folder (before the browser starts) and watches it.</summary>
+    private void PrepareDownloads()
     {
-        _selectAll.Click += (_, _) => SetAllSites(!AllSitesSelected);
+        try
+        {
+            _buffer.PrepareProfile(WebDataFolder);
+            _buffer.FileReady += file => Dispatcher.UIThread.Post(() => ShowDownload(file));
+            _buffer.StartWatching();
+            _ = Task.Run(() => _buffer.PurgeOlderThan(BufferKeeps));
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            // without the buffer the browser downloads to the Downloads folder as usual; the page works the same
+        }
+    }
+
+    private Control BuildDownloadBar()
+    {
+        var open = new Button { Content = "Ouvrir dans le slicer", Classes = { "primary-action" } };
+        var openWith = new Button { Content = "Autre application…" };
+        var folder = new Button { Content = "Afficher le dossier" };
+        var close = new Button { Content = Icons.Glyph("IconClose", 14), Classes = { "tool" } };
+        Describe(close, "Masquer cette bande");
+        open.Click += async (_, _) => await OpenDownloadAsync();
+        openWith.Click += (_, _) => OpenDownloadWith();
+        folder.Click += (_, _) => ShowDownloadFolder();
+        close.Click += (_, _) => _downloadBar.IsVisible = false;
+
+        var text = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center, Children = { _downloadName, _downloadNote } };
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center, Children = { open, openWith, folder, close } };
+        var layout = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 12, Children = { Icons.Glyph("IconCube", 22), text, buttons } };
+        Grid.SetColumn(text, 1);
+        Grid.SetColumn(buttons, 2);
+        _downloadBar.Padding = new Thickness(12, 8);
+        _downloadBar.Margin = new Thickness(0, 6, 0, 0);
+        _downloadBar.Child = layout;
+        return _downloadBar;
+    }
+
+    private void ShowDownload(BufferedFile file)
+    {
+        _download = file;
+        _downloadName.Text = "Fichier 3D reçu : " + file.Name;
+        _downloadNote.Text = SizeText(file.Length) + " · rangé dans le tampon du logiciel (pas dans vos Téléchargements). Vérifiez la licence avant d’imprimer pour un client.";
+        _downloadBar.IsVisible = true;
+    }
+
+    private static string SizeText(long bytes)
+    {
+        var french = CultureInfo.GetCultureInfo("fr-FR");
+        return bytes >= 1024 * 1024 ? (bytes / 1048576d).ToString("0.#", french) + " Mo" : Math.Max(1, bytes / 1024d).ToString("0", french) + " Ko";
+    }
+
+    /// <summary>Opens the file with the application Windows has for its type: the slicer, once it is set as the default for 3D files.</summary>
+    private async Task OpenDownloadAsync()
+    {
+        if (!UsableDownload(out var path)) return;
+        try
+        {
+            if (TopLevel.GetTopLevel(this)?.Launcher is { } launcher && await launcher.LaunchUriAsync(new Uri(path))) return;
+            _downloadNote.Text = "Windows n’a pas trouvé d’application pour ce type de fichier : utilisez « Autre application… ».";
+        }
+        catch (Exception exception) when (exception is IOException or InvalidOperationException or UriFormatException or System.ComponentModel.Win32Exception)
+        {
+            _downloadNote.Text = "Impossible d’ouvrir ce fichier : " + exception.Message;
+        }
+    }
+
+    private void OpenDownloadWith()
+    {
+        if (!UsableDownload(out var path)) return;
+        try { DesktopPreviewLauncher.OpenWith?.Invoke(path); }
+        catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception or IOException)
+        {
+            _downloadNote.Text = "Impossible d’ouvrir ce fichier avec une autre application : " + exception.Message;
+        }
+    }
+
+    private void ShowDownloadFolder()
+    {
+        if (!UsableDownload(out var path)) return;
+        try { Process.Start(new ProcessStartInfo("explorer.exe", "/select,\"" + path + "\"") { UseShellExecute = false }); }
+        catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            _downloadNote.Text = "Impossible d’ouvrir le dossier : " + exception.Message;
+        }
+    }
+
+    /// <summary>Only a 3D file still in the buffer is opened: never a program or a script.</summary>
+    private bool UsableDownload(out string path)
+    {
+        path = _download?.Path ?? string.Empty;
+        if (path.Length > 0 && File.Exists(path) && DownloadBuffer.IsModelFile(path) && !ExecutableFileGuard.IsExecutable(path)) return true;
+        _downloadNote.Text = "Ce fichier n’est plus dans le tampon.";
+        return false;
+    }
+
+    // ---- site choice -----------------------------------------------------------------------------------------------
+
+    /// <summary>The site choice: chips by category, with select all. One instance on the start page, one in the "Sites" panel.</summary>
+    private Control BuildChooser()
+    {
+        var selectAll = new Button { Classes = { "ghost" } };
+        selectAll.Click += (_, _) => SetAllSites(!AllSitesSelected);
+        _selectAlls.Add(selectAll);
         var header = new Grid
         {
             ColumnDefinitions = new ColumnDefinitions("*,Auto"),
-            Children = { new TextBlock { Text = "Sites interrogés", Classes = { "card-title" }, VerticalAlignment = VerticalAlignment.Center }, _selectAll }
+            Children = { new TextBlock { Text = "Sites interrogés par une recherche", Classes = { "card-title" }, VerticalAlignment = VerticalAlignment.Center }, selectAll }
         };
-        Grid.SetColumn(_selectAll, 1);
+        Grid.SetColumn(selectAll, 1);
 
-        var groups = new StackPanel { Spacing = 8 };
+        var groups = new StackPanel { Spacing = 6 };
         foreach (var group in ModelSearchSite.Defaults.GroupBy(site => site.Category))
         {
             var chips = new WrapPanel { Orientation = Orientation.Horizontal };
             foreach (var site in group)
             {
-                var chip = new Button { Content = site.Name, Classes = { "filter-chip" }, Margin = new Thickness(0, 0, 6, 6) };
+                var name = site.Name;
+                var chip = new Button { Content = name, Classes = { "filter-chip" }, Margin = new Thickness(0, 0, 6, 6) };
                 if (site.Note.Length > 0) ToolTip.SetTip(chip, site.Note);
-                chip.Click += (_, _) => { Toggle(site.Name); };
-                _chips[site] = chip;
+                chip.Click += (_, _) => Toggle(name);
+                _chips.Add((name, chip));
                 chips.Children.Add(chip);
             }
             var row = new Grid { ColumnDefinitions = new ColumnDefinitions("170,*") };
@@ -179,36 +300,36 @@ public sealed class ModelBrowserView : UserControl
             groups.Children.Add(row);
         }
 
-        _sitePanel.Child = new StackPanel
+        var hint = new TextBlock { Classes = { "caption" }, IsVisible = false, Foreground = (IBrush?)Application.Current?.FindResource("WarningBrush") };
+        _siteHints.Add(hint);
+        return new StackPanel
         {
             Spacing = 10,
-            Children =
-            {
-                header, groups, _siteHint,
-                new TextBlock { Text = LicenceReminder, Classes = { "caption" }, TextWrapping = TextWrapping.Wrap }
-            }
+            Children = { header, groups, hint, new TextBlock { Text = LicenceReminder, Classes = { "caption" }, TextWrapping = TextWrapping.Wrap } }
         };
     }
 
-    private const string LicenceReminder = "Vérifiez la licence de chaque modèle avant de l’imprimer pour un client : beaucoup sont réservés à l’usage personnel (CC BY-NC, « non commercial »).";
-
-    private Control BuildEmptyState()
+    private Control BuildStartPage()
     {
-        var icon = Icons.Glyph("IconSearch", 40);
+        var icon = Icons.Glyph("IconSearch", 36);
         icon.Opacity = 0.6;
+        icon.HorizontalAlignment = HorizontalAlignment.Center;
         var title = new TextBlock { Text = "Cherchez un modèle sur plusieurs sites à la fois", Classes = { "section-title" }, HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap };
         var steps = new TextBlock
         {
-            Text = "Saisissez un mot-clé puis Entrée : un onglet s’ouvre pour chaque site coché, le premier de la liste s’affiche. Nozzlehub interroge à lui seul une dizaine de plateformes.",
-            Classes = { "muted" }, HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxWidth = 520
+            Text = "Saisissez un mot-clé dans la barre puis Entrée : un onglet s’ouvre pour chaque site coché, le premier de la liste s’affiche. Une adresse s’ouvre directement.",
+            Classes = { "muted" }, HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap
         };
-        var shortcuts = new TextBlock { Text = "Ctrl+L adresse · Ctrl+T nouvel onglet · Ctrl+W fermer l’onglet · F5 actualiser", Classes = { "caption" }, HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxWidth = 520 };
-        return new StackPanel { Spacing = 12, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Children = { icon, title, steps, shortcuts } };
+        var card = new Border { Classes = { "card-raised" }, Child = BuildChooser() };
+        var shortcuts = new TextBlock { Text = "Ctrl+L barre · Ctrl+T nouvel onglet · Ctrl+W fermer l’onglet · F5 actualiser", Classes = { "caption" }, HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center };
+        return new ScrollViewer
+        {
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            Content = new StackPanel { Spacing = 14, MaxWidth = 760, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 28, 0, 20), Children = { icon, title, steps, card, shortcuts } }
+        };
     }
 
-    // ---- site selection ------------------------------------------------------------------------------------------
-
-    private bool AllSitesSelected => _chips.Keys.All(site => _selected.Contains(site.Name));
+    private bool AllSitesSelected => _chips.Select(chip => chip.Name).Distinct().All(_selected.Contains);
 
     private void Toggle(string name)
     {
@@ -218,21 +339,21 @@ public sealed class ModelBrowserView : UserControl
 
     private void SetAllSites(bool selected)
     {
-        foreach (var site in _chips.Keys)
+        foreach (var site in ModelSearchSite.Defaults)
             if (selected) _selected.Add(site.Name); else _selected.Remove(site.Name);
         UpdateSelectionUi();
     }
 
     private void UpdateSelectionUi()
     {
-        foreach (var (site, chip) in _chips)
+        foreach (var (name, chip) in _chips)
         {
-            var on = _selected.Contains(site.Name);
+            var on = _selected.Contains(name);
             if (on) chip.Classes.Add("selected"); else chip.Classes.Remove("selected");
-            AutomationProperties.SetName(chip, site.Name + (on ? ", sélectionné" : ", non sélectionné"));
+            AutomationProperties.SetName(chip, name + (on ? ", sélectionné" : ", non sélectionné"));
         }
-        _selectAll.Content = AllSitesSelected ? "Tout désélectionner" : "Tout sélectionner";
-        _siteHint.IsVisible = false;
+        foreach (var selectAll in _selectAlls) selectAll.Content = AllSitesSelected ? "Tout désélectionner" : "Tout sélectionner";
+        foreach (var hint in _siteHints) hint.IsVisible = false;
         UpdateSitesButton();
     }
 
@@ -241,28 +362,39 @@ public sealed class ModelBrowserView : UserControl
         _sitesButton.Content = new StackPanel
         {
             Orientation = Orientation.Horizontal, Spacing = 8,
-            Children = { new TextBlock { Text = $"Sites · {_selected.Count}/{_chips.Count}", VerticalAlignment = VerticalAlignment.Center }, Icons.Glyph(_sitePanel.IsVisible ? "IconChevronUp" : "IconChevronDown", 14) }
+            Children = { new TextBlock { Text = $"Sites · {_selected.Count}/{ModelSearchSite.Defaults.Count}", VerticalAlignment = VerticalAlignment.Center }, Icons.Glyph(_sitePanel.IsVisible ? "IconChevronUp" : "IconChevronDown", 14) }
         };
     }
 
+    /// <summary>The panel folds over the page area; before any tab exists the start page already shows the choice.</summary>
     private void SetSitesOpen(bool open)
     {
-        _sitePanel.IsVisible = open;
+        _sitePanel.IsVisible = open && _tabs.Count > 0;
         UpdateSitesButton();
     }
 
-    // ---- search and tabs -----------------------------------------------------------------------------------------
+    // ---- the bar's box: a keyword searches the sites, an address opens ------------------------------------------------
+
+    private void SubmitOmnibox()
+    {
+        var text = (_omnibox.Text ?? string.Empty).Trim();
+        if (text.Length == 0) return;
+        if (ModelSearchUrlBuilder.TryParseAddress(text) is { } address)
+        {
+            if (_active is null) Select(AddTab(address, "Nouvel onglet"));
+            else { Load(_active, address); Select(_active); }
+            return;
+        }
+        SearchSelectedSites(text);
+    }
 
     /// <summary>Opens (or reuses) one tab per ticked site and shows the first of the list.</summary>
-    private void SearchSelectedSites()
+    private void SearchSelectedSites(string text)
     {
-        var text = (_query.Text ?? string.Empty).Trim();
-        if (text.Length == 0) { _query.Focus(); return; }
-        var chosen = _chips.Keys.Where(site => _selected.Contains(site.Name)).ToList();
+        var chosen = ModelSearchSite.Defaults.Where(site => _selected.Contains(site.Name)).ToList();
         if (chosen.Count == 0)
         {
-            _siteHint.Text = "Cochez au moins un site pour lancer la recherche.";
-            _siteHint.IsVisible = true;
+            foreach (var hint in _siteHints) { hint.Text = "Cochez au moins un site pour lancer la recherche."; hint.IsVisible = true; }
             SetSitesOpen(true);
             return;
         }
@@ -279,13 +411,6 @@ public sealed class ModelBrowserView : UserControl
         SetSitesOpen(false);
     }
 
-    private void NavigateActive(string text)
-    {
-        if (ModelSearchUrlBuilder.FromAddressBar(text) is not { } uri) return;
-        if (_active is null) { Select(AddTab(uri, "Nouvel onglet")); return; }
-        Load(_active, uri);
-    }
-
     /// <summary>Points a tab at an address: a loaded tab navigates now, a sleeping one loads it when it is shown.</summary>
     private void Load(BrowserTab tab, Uri uri)
     {
@@ -294,11 +419,13 @@ public sealed class ModelBrowserView : UserControl
         else if (tab == _active) Wake(tab);
     }
 
+    // ---- tabs ------------------------------------------------------------------------------------------------------------
+
     private void OpenBlankTab()
     {
         var tab = AddTab(null, "Nouvel onglet");
         Select(tab);
-        _address.Focus();
+        _omnibox.Focus();
     }
 
     /// <summary>Adds the tab header only: the web view is created when the tab is first shown, which keeps a 16-site search light.</summary>
@@ -317,9 +444,13 @@ public sealed class ModelBrowserView : UserControl
         _tabs.Add(tab);
         _tabStrip.Children.Insert(_tabStrip.Children.Count - 1, header);
         _tabRow.IsVisible = true;
-        _emptyState.IsVisible = false;
+        _startPage.IsVisible = false;
+        UpdateToolbarShape();
         return tab;
     }
+
+    /// <summary>The bar joins the selected tab: square at the corner under the tabs, rounded all round when there are none.</summary>
+    private void UpdateToolbarShape() => _toolbar.CornerRadius = _tabRow.IsVisible ? new CornerRadius(0, 8, 8, 8) : new CornerRadius(8);
 
     /// <summary>Creates the web view of a tab (the page loads from <see cref="BrowserTab.Address"/>).</summary>
     private void Wake(BrowserTab tab)
@@ -369,7 +500,7 @@ public sealed class ModelBrowserView : UserControl
         }
         // the page budget: the most recently shown pages stay loaded, the others sleep
         foreach (var extra in _tabs.Where(t => t.View is not null).OrderByDescending(t => t.LastShown).Skip(MaxLivePages).ToList()) Sleep(extra);
-        _address.Text = tab.Address is { } address && address.AbsoluteUri != "about:blank" ? address.AbsoluteUri : string.Empty;
+        _omnibox.Text = tab.Address is { } address && address.AbsoluteUri != "about:blank" ? address.AbsoluteUri : string.Empty;
         RefreshChrome();
     }
 
@@ -387,10 +518,12 @@ public sealed class ModelBrowserView : UserControl
         if (_tabs.Count == 0)
         {
             _tabRow.IsVisible = false;
-            _emptyState.IsVisible = true;
-            _address.Text = string.Empty;
-            SetSitesOpen(true);
-            _query.Focus();
+            _startPage.IsVisible = true;
+            _sitePanel.IsVisible = false;
+            _omnibox.Text = string.Empty;
+            UpdateToolbarShape();
+            UpdateSitesButton();
+            _omnibox.Focus();
         }
         RefreshChrome();
     }
@@ -421,7 +554,7 @@ public sealed class ModelBrowserView : UserControl
             if (Uri.TryCreate(pair[0], UriKind.Absolute, out var page) && page.Scheme is "http" or "https")
             {
                 tab.Address = page;
-                if (tab == _active && !_address.IsFocused) _address.Text = page.AbsoluteUri;
+                if (tab == _active && !_omnibox.IsFocused) _omnibox.Text = page.AbsoluteUri;
             }
             if (tab == _active) RefreshChrome();
         }
@@ -448,7 +581,7 @@ public sealed class ModelBrowserView : UserControl
         if (_active is { View: null } sleeping)
         {
             Wake(sleeping);
-            foreach (var other in _tabs.Where(t => t != sleeping && t.View is { } view)) other.View!.IsVisible = false;
+            foreach (var other in _tabs.Where(t => t != sleeping && t.View is not null)) other.View!.IsVisible = false;
         }
         foreach (var tab in _tabs.Where(t => t != _active && t.View is not null && now - t.LastShown >= TabSleepAfter).ToList()) Sleep(tab);
     }
@@ -470,7 +603,7 @@ public sealed class ModelBrowserView : UserControl
     private void View_KeyDown(object? sender, KeyEventArgs e)
     {
         var control = e.KeyModifiers == KeyModifiers.Control;
-        if (control && e.Key == Key.L) { _address.Focus(); _address.SelectAll(); e.Handled = true; }
+        if (control && e.Key == Key.L) { _omnibox.Focus(); _omnibox.SelectAll(); e.Handled = true; }
         else if (control && e.Key == Key.T) { OpenBlankTab(); e.Handled = true; }
         else if (control && e.Key == Key.W && _active is { } tab) { CloseTab(tab); e.Handled = true; }
         else if ((e.Key == Key.F5 || (control && e.Key == Key.R)) && _active is not null) { _active.View?.Refresh(); e.Handled = true; }

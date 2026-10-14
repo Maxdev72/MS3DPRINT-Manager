@@ -66,7 +66,11 @@ Une imprimante a un prix d’achat, une durée de vie et une puissance : son co�
 Printables, Thingiverse, Thangs, Cults3D, MyMiniFactory) et « Rechercher » : un onglet s'ouvre par site, dans un
 navigateur intégré, dont le premier de la liste s'affiche (précédent, suivant, actualiser, barre d'adresse,
 nouvel onglet, fermeture, ouverture dans le navigateur de Windows ; `Ctrl+L`, `Ctrl+T`, `Ctrl+W`, `F5`). Le bouton
-« Sites » replie ou déplie le choix des sites. Les liens qui s'ouvrent dans une nouvelle fenêtre ouvrent un onglet. La page a besoin d'Internet et du composant Microsoft Edge
+« Sites » replie ou déplie le choix des sites. Les liens qui s'ouvrent dans une nouvelle fenêtre ouvrent un onglet.
+Les fichiers téléchargés par ce navigateur ne vont pas dans vos Téléchargements : ils arrivent dans un tampon du logiciel
+(`%LOCALAPPDATA%\MS3DPRINT Manager	ampon`, vidé après 7 jours) et, pour un STL, 3MF, OBJ, STEP ou AMF complet, une bande
+propose « Ouvrir dans le slicer » (l'application que Windows associe à ce type de fichier), « Autre application… » ou
+« Afficher le dossier ». Rien ne s'ouvre sans clic. La page a besoin d'Internet et du composant Microsoft Edge
 WebView2 (présent sous Windows 11, à installer au besoin sous Windows 10) ; les cookies et le cache des sites sont
 gardés dans `%LOCALAPPDATA%\MS3DPRINT Manager\webview`, pas dans le dossier de livraison.
 

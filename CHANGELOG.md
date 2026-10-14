@@ -2,6 +2,10 @@
 
 ## 14 octobre 2026
 
+### Nozzlehub retiré, tampon pour les téléchargements
+- Nozzlehub est retiré de la liste des sites (15 sites restent) ; Yeggi, Printables et MakerWorld sont cochés par défaut. Anycubic (Makeronline) n'a pas d'adresse de recherche directe et n'est donc plus proposé par ce biais.
+- Les fichiers téléchargés dans le navigateur intégré ne vont plus dans vos Téléchargements : ils arrivent dans un tampon du logiciel (`%LOCALAPPDATA%\MS3DPRINT Manager\tampon`, vidé après 7 jours). Dès qu'un fichier STL, 3MF, OBJ, STEP ou AMF est complet, une bande « Fichier 3D reçu » propose **Ouvrir dans le slicer** (l'application que Windows associe au type de fichier), **Autre application…** et **Afficher le dossier**. Rien ne s'ouvre sans votre clic ; programmes et scripts restent bloqués.
+- Le haut de la page devient une seule barre façon navigateur : un seul champ pour un mot-clé (recherche sur les sites cochés) ou une adresse (ouverte directement). Le choix des sites est sur la page de démarrage, puis dans le bouton « Sites ».
 ### Recherche de modèles 3D : mémoire et rapidité
 - Les pages ne se chargent plus toutes en même temps : un onglet n'est créé que lorsqu'on l'affiche (une recherche sur 16 sites n'en charge qu'un). Mesure : 1,3 Go de mémoire pour le navigateur intégré avant, environ 1 Go après, avec 16 sites cochés.
 - Trois pages au plus restent chargées ; les autres onglets passent « en veille » (nom grisé) et se rechargent à leur adresse quand on les ouvre.

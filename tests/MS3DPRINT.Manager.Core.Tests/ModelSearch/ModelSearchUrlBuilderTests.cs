@@ -41,10 +41,10 @@ public sealed class ModelSearchUrlBuilderTests
         Assert.Equal("https://www.yeggi.com/q/spatule%20mastic/", ModelSearchUrlBuilder.FromAddressBar("spatule mastic")!.AbsoluteUri);
 
     [Fact]
-    public void Defaults_are_sixteen_distinct_sites_each_with_a_category_and_a_note()
+    public void Defaults_are_fifteen_distinct_sites_each_with_a_category_and_a_note()
     {
-        Assert.Equal(16, ModelSearchSite.Defaults.Count);
-        Assert.Equal(16, ModelSearchSite.Defaults.Select(site => site.Name).Distinct().Count());
+        Assert.Equal(15, ModelSearchSite.Defaults.Count);
+        Assert.Equal(15, ModelSearchSite.Defaults.Select(site => site.Name).Distinct().Count());
         Assert.All(ModelSearchSite.Defaults, site =>
         {
             Assert.False(string.IsNullOrWhiteSpace(site.Category));
@@ -52,4 +52,21 @@ public sealed class ModelSearchUrlBuilderTests
         });
         Assert.Equal(4, ModelSearchSite.Defaults.Select(site => site.Category).Distinct().Count());
     }
+
+    [Theory]
+    [InlineData("https://www.printables.com/model/1", "https://www.printables.com/model/1")]
+    [InlineData("printables.com", "https://printables.com/")]
+    [InlineData("  http://localhost:8765/a  ", "http://localhost:8765/a")]
+    public void TryParseAddress_recognises_addresses(string text, string expected) =>
+        Assert.Equal(expected, ModelSearchUrlBuilder.TryParseAddress(text)!.AbsoluteUri);
+
+    [Theory]
+    [InlineData("spatule mastic")]
+    [InlineData("spatule")]
+    [InlineData("support casque v2.0 impression")]
+    [InlineData("")]
+    [InlineData("javascript:alert(1)")]
+    [InlineData("file:///c:/secret.txt")]
+    public void TryParseAddress_leaves_words_and_unsafe_schemes_alone(string text) =>
+        Assert.Null(ModelSearchUrlBuilder.TryParseAddress(text));
 }

@@ -64,7 +64,7 @@ Bambu Lab, Prusa, Creality, Zortrax et XYZprinting sont les fabricants dont j'ai
 
 | Outil | Adresse | Particularités | Logiciel |
 |---|---|---|---|
-| Nozzlehub | nozzlehub.de | Nouveau ; une seule recherche sur une dizaine de plateformes (MakerWorld, Printables, Creality Cloud, Thingiverse, Cults3D, MyMiniFactory, Thangs, Nexprint, Snapmaker Space, Makeronline, Sketchfab en option) ; filtres gratuit, période, tri, **licences autorisant la vente** ; comparaison de coûts ; adresse `?q=` vérifiée (6 358 résultats pour « spatule ») | ✔ |
+| Nozzlehub *(retiré de la liste du logiciel à la demande de l'utilisateur)* | nozzlehub.de | Nouveau ; une seule recherche sur une dizaine de plateformes (MakerWorld, Printables, Creality Cloud, Thingiverse, Cults3D, MyMiniFactory, Thangs, Nexprint, Snapmaker Space, Makeronline, Sketchfab en option) ; filtres gratuit, période, tri, **licences autorisant la vente** ; comparaison de coûts ; adresse `?q=` vérifiée (6 358 résultats pour « spatule ») | ✔ |
 | Yeggi | yeggi.com | Le plus connu ; indexe Thingiverse, GrabCAD, 3DLT et beaucoup d'autres ; filtre gratuit/payant ; renvoie au site d'origine | ✔ |
 | Thangs | thangs.com | Recherche par géométrie (forme) et texte ; revendique plus de 14 millions de fichiers | ✔ |
 | STLFinder | stlfinder.com | Une douzaine de dépôts (Thingiverse, Cults3D, Pinshape…), filtre gratuit/payant, appli Android | |

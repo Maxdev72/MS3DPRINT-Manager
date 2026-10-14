@@ -11,7 +11,6 @@ public sealed record ModelSearchSite(string Name, string SearchUrlTemplate, bool
 
     public static IReadOnlyList<ModelSearchSite> Defaults { get; } =
     [
-        new("Nozzlehub", "https://nozzlehub.de/?q={q}", Category: SearchEngines, Note: "Réunit en une liste Printables, MakerWorld, Creality Cloud, Thingiverse, Cults3D, MyMiniFactory, Thangs, Nexprint, Snapmaker Space et Makeronline (Anycubic). Filtre les licences qui autorisent la vente."),
         new("Yeggi", "https://www.yeggi.com/q/{q}/", Category: SearchEngines, Note: "Cherche dans de nombreux dépôts à la fois et renvoie au site d’origine."),
         new("Thangs", "https://thangs.com/search/{q}?scope=all", Category: SearchEngines, Note: "Recherche par texte ou par forme ; héberge aussi des modèles."),
         new("Printables", "https://www.printables.com/search/models?q={q}", Category: Communities, Note: "Prusa : la communauté la mieux modérée."),

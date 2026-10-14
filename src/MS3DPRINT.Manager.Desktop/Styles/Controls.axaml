@@ -328,6 +328,13 @@
   <Style Selector="Button.tool:disabled Path.icon, ToggleButton.tool:disabled Path.icon"><Setter Property="Opacity" Value="0.4" /></Style>
 
   <!-- ============ Browser tabs (model search page) ============ -->
+  <!-- the bar under the tabs: same surface as the selected tab, so the tab and the bar read as one piece -->
+  <Style Selector="Border.browser-toolbar">
+    <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="6" />
+  </Style>
   <Style Selector="Button.browser-tab">
     <Setter Property="MinHeight" Value="34" />
     <Setter Property="Padding" Value="12,0,6,0" />
