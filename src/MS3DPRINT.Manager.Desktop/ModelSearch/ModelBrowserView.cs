@@ -31,12 +31,20 @@ public sealed class ModelBrowserView : UserControl
         /// <summary>Where this tab is, or what it loads when it wakes up.</summary>
         public Uri? Address { get; set; }
         public bool Loading { get; set; }
+        /// <summary>A page that costs a lot of memory: never loaded in the background.</summary>
+        public bool Heavy { get; init; }
+        /// <summary>True once the page of the current web view has finished loading at least once.</summary>
+        public bool Navigated { get; set; }
+        /// <summary>Small dot in the tab header while its page loads.</summary>
+        public required Border LoadingDot { get; init; }
         public DateTime LastShown { get; set; } = DateTime.UtcNow;
     }
 
     // Memory budget: each loaded page costs one to three hundred MB, so only a few stay loaded and the others sleep.
-    private const int MaxLivePages = 3;
-    private static readonly TimeSpan TabSleepAfter = TimeSpan.FromMinutes(3);
+    private const int MaxLivePages = 5;
+    private static readonly TimeSpan TabSleepAfter = TimeSpan.FromMinutes(10);
+    // the tabs behind the shown one load in the background, one at a time, so that a click shows a page that is already there
+    private static readonly TimeSpan PreloadTimeout = TimeSpan.FromSeconds(25);
     private static readonly TimeSpan PageSleepAfter = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan BufferKeeps = TimeSpan.FromDays(7);
 
@@ -80,6 +88,9 @@ public sealed class ModelBrowserView : UserControl
     private BufferedFile? _download;
 
     private BrowserTab? _active;
+    private readonly Queue<BrowserTab> _preload = new();
+    private BrowserTab? _preloading;
+    private DateTime _preloadStarted;
     private bool _polling;
     private DateTime? _hiddenSince;
 
@@ -89,7 +100,7 @@ public sealed class ModelBrowserView : UserControl
     public ModelBrowserView()
     {
         foreach (var site in ModelSearchSite.Defaults)
-            if (site.Name is "Yeggi" or "Printables" or "MakerWorld") _selected.Add(site.Name);
+            if (site.Name is "Thangs" or "Printables" or "MakerWorld") _selected.Add(site.Name);
 
         PrepareDownloads();
 
@@ -156,7 +167,7 @@ public sealed class ModelBrowserView : UserControl
 
         UpdateSelectionUi();
         UpdateToolbarShape();
-        _follow.Tick += async (_, _) => { ManageMemory(); await FollowActivePageAsync(); };
+        _follow.Tick += async (_, _) => { ManageMemory(); PreloadTick(); await FollowActivePageAsync(); };
         AttachedToVisualTree += (_, _) => { _follow.Start(); FocusInput(); UpdateStartAnimation(); };
         DetachedFromVisualTree += (_, _) => { _follow.Stop(); _typing.Stop(); };
         KeyDown += View_KeyDown;
@@ -472,22 +483,73 @@ public sealed class ModelBrowserView : UserControl
         }
 
         BrowserTab? first = null;
+        var behind = new List<BrowserTab>();
         foreach (var site in chosen)
         {
             if (ModelSearchUrlBuilder.Build(site, text) is not { } uri) continue;
             var tab = _tabs.FirstOrDefault(existing => existing.Site == site.Name) ?? AddTab(uri, site.Name, site.Name);
             Load(tab, uri);
-            first ??= tab;
+            if (first is null) first = tab; else behind.Add(tab);
         }
-        if (first is not null) Select(first);
+        if (first is not null)
+        {
+            Select(first);
+            StartPreload(behind);
+        }
         SetSitesOpen(false);
+    }
+
+    // ---- background loading of the other tabs ------------------------------------------------------------------------------
+
+    private void StartPreload(IEnumerable<BrowserTab> tabs)
+    {
+        _preload.Clear();
+        _preloading = null;
+        foreach (var tab in tabs) _preload.Enqueue(tab);
+    }
+
+    /// <summary>Loads the next queued tab, hidden behind the shown one, while there is room in the page budget.</summary>
+    private void PreloadNext()
+    {
+        _preloading = null;
+        while (_preload.Count > 0)
+        {
+            if (_tabs.Count(t => t.View is not null) >= MaxLivePages) { _preload.Clear(); return; }
+            var next = _preload.Dequeue();
+            if (!_tabs.Contains(next) || next.View is not null || next.Address is null || next == _active || next.Heavy) continue;
+            Wake(next);
+            if (next.View is { } view) view.IsVisible = false;
+            _preloading = next;
+            _preloadStarted = DateTime.UtcNow;
+            RefreshChrome();
+            return;
+        }
+    }
+
+    /// <summary>A page finished loading: if it was the shown one or the one being preloaded, the next queued tab goes.</summary>
+    private void OnPageLoaded(BrowserTab tab)
+    {
+        if (_preload.Count == 0 && _preloading is null) return;
+        if (tab == _preloading || (_preloading is null && tab == _active)) PreloadNext();
+    }
+
+    private void PreloadTick()
+    {
+        if (!IsEffectivelyVisible || (_preload.Count == 0 && _preloading is null)) return;
+        // a page that never says it is done, or a shown page that already finished: do not stall the queue
+        if (_preloading is { } current && (DateTime.UtcNow - _preloadStarted > PreloadTimeout || !_tabs.Contains(current) || current.View is null)) PreloadNext();
+        else if (_preloading is null && _active is { Navigated: true, Loading: false }) PreloadNext();
     }
 
     /// <summary>Points a tab at an address: a loaded tab navigates now, a sleeping one loads it when it is shown.</summary>
     private void Load(BrowserTab tab, Uri uri)
     {
         tab.Address = uri;
-        if (tab.View is { } view) view.Navigate(uri);
+        if (tab.View is { } view)
+        {
+            if (tab == _active) { tab.Navigated = false; view.Navigate(uri); }
+            else Sleep(tab);
+        }
         else if (tab == _active) Wake(tab);
     }
 
@@ -506,9 +568,10 @@ public sealed class ModelBrowserView : UserControl
         var label = new TextBlock { Text = title, MaxWidth = 150, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
         var close = new Button { Content = Icons.Glyph("IconClose", 12), Classes = { "tab-close" } };
         Describe(close, "Fermer l’onglet (Ctrl+W)");
-        var header = new Button { Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { label, close } }, Classes = { "browser-tab", "sleeping" } };
+        var dot = new Border { Width = 7, Height = 7, CornerRadius = new CornerRadius(4), VerticalAlignment = VerticalAlignment.Center, IsVisible = false, Background = (IBrush?)Application.Current?.FindResource("AccentBrush") };
+        var header = new Button { Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { label, dot, close } }, Classes = { "browser-tab", "sleeping" } };
         AutomationProperties.SetName(header, "Onglet " + title);
-        var tab = new BrowserTab { Header = header, Site = site, Address = uri };
+        var tab = new BrowserTab { Header = header, Site = site, Address = uri, LoadingDot = dot, Heavy = ModelSearchSite.Defaults.Any(known => known.Name == site && known.Heavy) };
         header.Click += (_, _) => Select(tab);
         header.PointerReleased += (_, e) => { if (e.InitialPressMouseButton == MouseButton.Middle) CloseTab(tab); };
         close.Click += (_, e) => { e.Handled = true; CloseTab(tab); };
@@ -537,13 +600,14 @@ public sealed class ModelBrowserView : UserControl
         // created visible: the native engine is only started for a control that is shown when it is attached; Select hides the others
         var view = new NativeWebView();
         tab.View = view;
+        tab.Navigated = false;
         // cookies and cache go with the user's other application data, not next to the executable (which is delivered in a synchronised folder)
         // (the Windows-specific event arguments are not visible to this platform-neutral project, hence the reflection)
         view.EnvironmentRequested += (_, e) => e.GetType().GetProperty("UserDataFolder")?.SetValue(e, WebDataFolder);
         var address = tab.Address;
         if (address is not null) view.AdapterCreated += (_, _) => view.Navigate(address);
         view.NavigationStarted += (_, _) => { tab.Loading = true; RefreshChrome(); };
-        view.NavigationCompleted += async (_, _) => { tab.Loading = false; RefreshChrome(); await ReadPageAsync(tab); };
+        view.NavigationCompleted += async (_, _) => { tab.Loading = false; tab.Navigated = true; RefreshChrome(); await ReadPageAsync(tab); OnPageLoaded(tab); };
         view.NewWindowRequested += (_, e) =>
         {
             e.Handled = true;
@@ -610,6 +674,7 @@ public sealed class ModelBrowserView : UserControl
     /// <summary>Back/forward availability, loading bar and the "open outside" button follow the active tab.</summary>
     private void RefreshChrome()
     {
+        foreach (var tab in _tabs) tab.LoadingDot.IsVisible = tab.Loading && tab.View is not null;
         var active = _active;
         _back.IsEnabled = active?.View?.CanGoBack == true;
         _forward.IsEnabled = active?.View?.CanGoForward == true;

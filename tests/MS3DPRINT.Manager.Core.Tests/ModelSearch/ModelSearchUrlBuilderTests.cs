@@ -69,4 +69,15 @@ public sealed class ModelSearchUrlBuilderTests
     [InlineData("file:///c:/secret.txt")]
     public void TryParseAddress_leaves_words_and_unsafe_schemes_alone(string text) =>
         Assert.Null(ModelSearchUrlBuilder.TryParseAddress(text));
+
+    [Fact]
+    public void Yeggi_is_flagged_heavy_and_lighter_sites_are_not()
+    {
+        Assert.True(ModelSearchSite.Defaults.Single(site => site.Name == "Yeggi").Heavy);
+        Assert.All(ModelSearchSite.Defaults.Where(site => site.Name != "Yeggi"), site => Assert.False(site.Heavy));
+    }
+
+    [Fact]
+    public void The_first_search_engine_of_the_list_is_a_light_one()
+        => Assert.False(ModelSearchSite.Defaults.First().Heavy);
 }
