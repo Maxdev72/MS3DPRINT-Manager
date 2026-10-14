@@ -2,6 +2,11 @@
 
 ## 14 octobre 2026
 
+### Recherche de modèles 3D : mémoire et rapidité
+- Les pages ne se chargent plus toutes en même temps : un onglet n'est créé que lorsqu'on l'affiche (une recherche sur 16 sites n'en charge qu'un). Mesure : 1,3 Go de mémoire pour le navigateur intégré avant, environ 1 Go après, avec 16 sites cochés.
+- Trois pages au plus restent chargées ; les autres onglets passent « en veille » (nom grisé) et se rechargent à leur adresse quand on les ouvre.
+- Un onglet non regardé depuis 3 minutes passe en veille, et toutes les pages se libèrent après 5 minutes passées sur une autre page du logiciel : la mémoire revient alors à celle du logiciel seul.
+
 ### Recherche de modèles 3D : plus de place pour le navigateur
 - Le haut de la page tient en une ligne : champ de recherche, bouton « Sites · 3/16 » et « Rechercher ». Les sites se choisissent par pastilles groupées par catégorie dans un panneau qui se replie après la recherche (le bouton « Sites » le rouvre), avec « Tout sélectionner / Tout désélectionner ».
 - Une recherche affiche d'abord l'onglet du premier site de la liste (au lieu du dernier ouvert).

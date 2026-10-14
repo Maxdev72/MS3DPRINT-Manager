@@ -342,6 +342,9 @@
   <Style Selector="Button.browser-tab.selected"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="BorderBrush" Value="Transparent" /><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
   <Style Selector="Button.browser-tab TextBlock"><Setter Property="Foreground" Value="{Binding $parent[Button].Foreground}" /></Style>
   <Style Selector="Button.browser-tab Path.icon"><Setter Property="Stroke" Value="{Binding $parent[Button].Foreground}" /></Style>
+  <!-- a tab whose page is released to save memory: dimmed, loaded again when shown -->
+  <Style Selector="Button.browser-tab.sleeping TextBlock"><Setter Property="Opacity" Value="0.6" /></Style>
+  <Style Selector="Button.browser-tab.sleeping:pointerover TextBlock"><Setter Property="Opacity" Value="1" /></Style>
   <Style Selector="Button.tab-close">
     <Setter Property="Width" Value="22" />
     <Setter Property="Height" Value="22" />

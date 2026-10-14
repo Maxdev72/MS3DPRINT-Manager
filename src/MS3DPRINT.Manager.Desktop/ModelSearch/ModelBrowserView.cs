@@ -19,14 +19,23 @@ public sealed class ModelBrowserView : UserControl
 {
     private sealed class BrowserTab
     {
-        public required NativeWebView View { get; init; }
+        /// <summary>The live web view; null while the tab sleeps (its page is released and loaded again when the tab is shown).</summary>
+        public NativeWebView? View { get; set; }
         public required Button Header { get; init; }
         /// <summary>The site this tab searches, so that a new search reuses it instead of opening a duplicate.</summary>
         public string? Site { get; init; }
+        /// <summary>Where this tab is, or what it loads when it wakes up.</summary>
+        public Uri? Address { get; set; }
         public bool Loading { get; set; }
+        public DateTime LastShown { get; set; } = DateTime.UtcNow;
     }
 
     private const double ToolbarHeight = 40;
+
+    // Memory budget: each loaded page costs one to three hundred MB, so only a few stay loaded and the others sleep.
+    private const int MaxLivePages = 3;
+    private static readonly TimeSpan TabSleepAfter = TimeSpan.FromMinutes(3);
+    private static readonly TimeSpan PageSleepAfter = TimeSpan.FromMinutes(5);
 
     private readonly List<BrowserTab> _tabs = [];
     private readonly Dictionary<ModelSearchSite, Button> _chips = [];
@@ -51,6 +60,7 @@ public sealed class ModelBrowserView : UserControl
     private readonly DispatcherTimer _follow = new() { Interval = TimeSpan.FromMilliseconds(1200) };
     private BrowserTab? _active;
     private bool _polling;
+    private DateTime? _hiddenSince;
 
     public static string WebDataFolder { get; set; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MS3DPRINT Manager", "webview");
@@ -96,9 +106,9 @@ public sealed class ModelBrowserView : UserControl
         Describe(_forward, "Page suivante");
         Describe(_reload, "Actualiser (F5)");
         Describe(_external, "Ouvrir cette page dans le navigateur de Windows (utile pour une connexion ou une vérification « humain »)");
-        _back.Click += (_, _) => _active?.View.GoBack();
-        _forward.Click += (_, _) => _active?.View.GoForward();
-        _reload.Click += (_, _) => _active?.View.Refresh();
+        _back.Click += (_, _) => _active?.View?.GoBack();
+        _forward.Click += (_, _) => _active?.View?.GoForward();
+        _reload.Click += (_, _) => _active?.View?.Refresh();
         _newTab.Click += (_, _) => OpenBlankTab();
         _external.Click += async (_, _) => await OpenExternalAsync();
         _address.KeyDown += (_, e) => { if (e.Key == Key.Enter) { NavigateActive(_address.Text ?? string.Empty); e.Handled = true; } };
@@ -126,7 +136,7 @@ public sealed class ModelBrowserView : UserControl
         Content = root;
 
         UpdateSelectionUi();
-        _follow.Tick += async (_, _) => await FollowActivePageAsync();
+        _follow.Tick += async (_, _) => { ManageMemory(); await FollowActivePageAsync(); };
         AttachedToVisualTree += (_, _) => { _follow.Start(); _query.Focus(); };
         DetachedFromVisualTree += (_, _) => _follow.Stop();
         KeyDown += View_KeyDown;
@@ -261,13 +271,8 @@ public sealed class ModelBrowserView : UserControl
         foreach (var site in chosen)
         {
             if (ModelSearchUrlBuilder.Build(site, text) is not { } uri) continue;
-            BrowserTab tab;
-            if (_tabs.FirstOrDefault(existing => existing.Site == site.Name) is { } existing)
-            {
-                existing.View.Navigate(uri);
-                tab = existing;
-            }
-            else tab = AddTab(uri, site.Name, site.Name);
+            var tab = _tabs.FirstOrDefault(existing => existing.Site == site.Name) ?? AddTab(uri, site.Name, site.Name);
+            Load(tab, uri);
             first ??= tab;
         }
         if (first is not null) Select(first);
@@ -278,7 +283,15 @@ public sealed class ModelBrowserView : UserControl
     {
         if (ModelSearchUrlBuilder.FromAddressBar(text) is not { } uri) return;
         if (_active is null) { Select(AddTab(uri, "Nouvel onglet")); return; }
-        _active.View.Navigate(uri);
+        Load(_active, uri);
+    }
+
+    /// <summary>Points a tab at an address: a loaded tab navigates now, a sleeping one loads it when it is shown.</summary>
+    private void Load(BrowserTab tab, Uri uri)
+    {
+        tab.Address = uri;
+        if (tab.View is { } view) view.Navigate(uri);
+        else if (tab == _active) Wake(tab);
     }
 
     private void OpenBlankTab()
@@ -288,24 +301,38 @@ public sealed class ModelBrowserView : UserControl
         _address.Focus();
     }
 
+    /// <summary>Adds the tab header only: the web view is created when the tab is first shown, which keeps a 16-site search light.</summary>
     private BrowserTab AddTab(Uri? uri, string title, string? site = null)
     {
-        // created visible: the native engine is only started for a control that is shown when it is attached; Select hides the others afterwards
-        var view = new NativeWebView();
         var label = new TextBlock { Text = title, MaxWidth = 150, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
         var close = new Button { Content = Icons.Glyph("IconClose", 12), Classes = { "tab-close" } };
         Describe(close, "Fermer l’onglet (Ctrl+W)");
-        var header = new Button { Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { label, close } }, Classes = { "browser-tab" } };
+        var header = new Button { Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { label, close } }, Classes = { "browser-tab", "sleeping" } };
         AutomationProperties.SetName(header, "Onglet " + title);
-        var tab = new BrowserTab { View = view, Header = header, Site = site };
+        var tab = new BrowserTab { Header = header, Site = site, Address = uri };
         header.Click += (_, _) => Select(tab);
         header.PointerReleased += (_, e) => { if (e.InitialPressMouseButton == MouseButton.Middle) CloseTab(tab); };
         close.Click += (_, e) => { e.Handled = true; CloseTab(tab); };
 
+        _tabs.Add(tab);
+        _tabStrip.Children.Insert(_tabStrip.Children.Count - 1, header);
+        _tabRow.IsVisible = true;
+        _emptyState.IsVisible = false;
+        return tab;
+    }
+
+    /// <summary>Creates the web view of a tab (the page loads from <see cref="BrowserTab.Address"/>).</summary>
+    private void Wake(BrowserTab tab)
+    {
+        if (tab.View is not null) return;
+        // created visible: the native engine is only started for a control that is shown when it is attached; Select hides the others
+        var view = new NativeWebView();
+        tab.View = view;
         // cookies and cache go with the user's other application data, not next to the executable (which is delivered in a synchronised folder)
         // (the Windows-specific event arguments are not visible to this platform-neutral project, hence the reflection)
         view.EnvironmentRequested += (_, e) => e.GetType().GetProperty("UserDataFolder")?.SetValue(e, WebDataFolder);
-        if (uri is not null) view.AdapterCreated += (_, _) => view.Navigate(uri);
+        var address = tab.Address;
+        if (address is not null) view.AdapterCreated += (_, _) => view.Navigate(address);
         view.NavigationStarted += (_, _) => { tab.Loading = true; RefreshChrome(); };
         view.NavigationCompleted += async (_, _) => { tab.Loading = false; RefreshChrome(); await ReadPageAsync(tab); };
         view.NewWindowRequested += (_, e) =>
@@ -313,34 +340,45 @@ public sealed class ModelBrowserView : UserControl
             e.Handled = true;
             if (e.Request is { } request) Select(AddTab(request, "Nouvel onglet"));
         };
-
-        _tabs.Add(tab);
-        _tabStrip.Children.Insert(_tabStrip.Children.Count - 1, header);
         _viewHost.Children.Add(view);
-        _tabRow.IsVisible = true;
-        _emptyState.IsVisible = false;
-        return tab;
+        tab.Header.Classes.Remove("sleeping");
+    }
+
+    /// <summary>Releases the web page (and its browser processes) but keeps the tab and its address.</summary>
+    private void Sleep(BrowserTab tab)
+    {
+        if (tab.View is not { } view) return;
+        if (view.Source is { Scheme: "http" or "https" } current && tab.Address is null) tab.Address = current;
+        _viewHost.Children.Remove(view);
+        tab.View = null;
+        tab.Loading = false;
+        tab.Header.Classes.Add("sleeping");
+        if (tab == _active) RefreshChrome();
     }
 
     private void Select(BrowserTab tab)
     {
         _active = tab;
+        tab.LastShown = DateTime.UtcNow;
+        Wake(tab);
         foreach (var other in _tabs)
         {
             var current = other == tab;
-            other.View.IsVisible = current;
+            if (other.View is { } view) view.IsVisible = current;
             if (current) other.Header.Classes.Add("selected"); else other.Header.Classes.Remove("selected");
         }
-        _address.Text = tab.View.Source is { } source && source.AbsoluteUri != "about:blank" ? source.AbsoluteUri : string.Empty;
+        // the page budget: the most recently shown pages stay loaded, the others sleep
+        foreach (var extra in _tabs.Where(t => t.View is not null).OrderByDescending(t => t.LastShown).Skip(MaxLivePages).ToList()) Sleep(extra);
+        _address.Text = tab.Address is { } address && address.AbsoluteUri != "about:blank" ? address.AbsoluteUri : string.Empty;
         RefreshChrome();
     }
 
     private void CloseTab(BrowserTab tab)
     {
         var index = _tabs.IndexOf(tab);
+        Sleep(tab);
         _tabs.Remove(tab);
         _tabStrip.Children.Remove(tab.Header);
-        _viewHost.Children.Remove(tab.View);
         if (_active == tab)
         {
             _active = null;
@@ -361,26 +399,30 @@ public sealed class ModelBrowserView : UserControl
     private void RefreshChrome()
     {
         var active = _active;
-        _back.IsEnabled = active?.View.CanGoBack == true;
-        _forward.IsEnabled = active?.View.CanGoForward == true;
+        _back.IsEnabled = active?.View?.CanGoBack == true;
+        _forward.IsEnabled = active?.View?.CanGoForward == true;
         _progress.IsVisible = active?.Loading == true;
-        _external.IsEnabled = active?.View.Source is { Scheme: "http" or "https" };
+        _external.IsEnabled = active?.Address is { Scheme: "http" or "https" };
     }
 
     /// <summary>Reads the address and title the page shows now: single-page sites change both without a navigation event.</summary>
     private async Task ReadPageAsync(BrowserTab tab)
     {
+        if (tab.View is not { } view) return;
         try
         {
-            var raw = await tab.View.InvokeScript("JSON.stringify([location.href, document.title])");
+            var raw = await view.InvokeScript("JSON.stringify([location.href, document.title])");
             if (string.IsNullOrWhiteSpace(raw)) return;
             // some engines hand the JSON string back as a JSON string of itself
             var json = raw.StartsWith('"') ? JsonSerializer.Deserialize<string>(raw) ?? raw : raw;
             var pair = JsonSerializer.Deserialize<string[]>(json);
             if (pair is not { Length: 2 }) return;
             if (!string.IsNullOrWhiteSpace(pair[1])) ToolTip.SetTip(tab.Header, pair[1]);
-            if (tab == _active && !_address.IsFocused && Uri.TryCreate(pair[0], UriKind.Absolute, out var page) && page.Scheme is "http" or "https")
-                _address.Text = page.AbsoluteUri;
+            if (Uri.TryCreate(pair[0], UriKind.Absolute, out var page) && page.Scheme is "http" or "https")
+            {
+                tab.Address = page;
+                if (tab == _active && !_address.IsFocused) _address.Text = page.AbsoluteUri;
+            }
             if (tab == _active) RefreshChrome();
         }
         catch (Exception exception) when (exception is JsonException or InvalidOperationException or NotSupportedException or ArgumentException)
@@ -389,9 +431,31 @@ public sealed class ModelBrowserView : UserControl
         }
     }
 
+    /// <summary>
+    /// Keeps the memory in check: a page not looked at for a few minutes sleeps, and when the user works on another page of the
+    /// application, every page sleeps after a while. They are loaded again, where they were, when shown.
+    /// </summary>
+    private void ManageMemory()
+    {
+        var now = DateTime.UtcNow;
+        if (!IsEffectivelyVisible)
+        {
+            _hiddenSince ??= now;
+            if (now - _hiddenSince >= PageSleepAfter) foreach (var tab in _tabs.ToList()) Sleep(tab);
+            return;
+        }
+        _hiddenSince = null;
+        if (_active is { View: null } sleeping)
+        {
+            Wake(sleeping);
+            foreach (var other in _tabs.Where(t => t != sleeping && t.View is { } view)) other.View!.IsVisible = false;
+        }
+        foreach (var tab in _tabs.Where(t => t != _active && t.View is not null && now - t.LastShown >= TabSleepAfter).ToList()) Sleep(tab);
+    }
+
     private async Task FollowActivePageAsync()
     {
-        if (_polling || _active is not { } tab || !IsEffectivelyVisible) return;
+        if (_polling || _active is not { View: not null } tab || !IsEffectivelyVisible) return;
         _polling = true;
         try { await ReadPageAsync(tab); }
         finally { _polling = false; }
@@ -399,7 +463,7 @@ public sealed class ModelBrowserView : UserControl
 
     private async Task OpenExternalAsync()
     {
-        if (_active?.View.Source is not { Scheme: "http" or "https" } page) return;
+        if (_active?.Address is not { Scheme: "http" or "https" } page) return;
         if (TopLevel.GetTopLevel(this)?.Launcher is { } launcher) await launcher.LaunchUriAsync(page);
     }
 
@@ -409,6 +473,6 @@ public sealed class ModelBrowserView : UserControl
         if (control && e.Key == Key.L) { _address.Focus(); _address.SelectAll(); e.Handled = true; }
         else if (control && e.Key == Key.T) { OpenBlankTab(); e.Handled = true; }
         else if (control && e.Key == Key.W && _active is { } tab) { CloseTab(tab); e.Handled = true; }
-        else if ((e.Key == Key.F5 || (control && e.Key == Key.R)) && _active is not null) { _active.View.Refresh(); e.Handled = true; }
+        else if ((e.Key == Key.F5 || (control && e.Key == Key.R)) && _active is not null) { _active.View?.Refresh(); e.Handled = true; }
     }
 }
