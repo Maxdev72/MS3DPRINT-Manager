@@ -15,6 +15,9 @@ public abstract class DialogWindow : Window
 {
     private Button? _primary;
 
+    /// <summary>The heading of the dialog, for a dialog whose heading follows its content.</summary>
+    protected TextBlock? HeadingText { get; private set; }
+
     protected DialogWindow()
     {
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
@@ -38,7 +41,8 @@ public abstract class DialogWindow : Window
         actions.Children.Add(primary);
 
         var form = new StackPanel { Margin = new Thickness(26, 24, 26, 14), Spacing = 14 };
-        form.Children.Add(new TextBlock { Text = heading, Classes = { "section-title" }, TextWrapping = TextWrapping.Wrap });
+        HeadingText = new TextBlock { Text = heading, Classes = { "section-title" }, TextWrapping = TextWrapping.Wrap };
+        form.Children.Add(HeadingText);
         if (!string.IsNullOrWhiteSpace(description))
             form.Children.Add(new TextBlock { Text = description, Classes = { "muted" }, TextWrapping = TextWrapping.Wrap });
         foreach (var control in body) form.Children.Add(control);

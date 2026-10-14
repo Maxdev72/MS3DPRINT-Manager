@@ -18,11 +18,12 @@ public sealed class DownloadDialog : DialogWindow
 {
     private const string LicenceReminder = "Vérifiez la licence de chaque modèle avant de l’imprimer pour un client : beaucoup sont réservés à l’usage personnel (CC BY-NC, « non commercial »).";
 
-    private readonly StackPanel _rows = new() { Spacing = 4 };
+    private readonly StackPanel _rows = new() { Spacing = 2 };
+    private readonly TextBlock _summary = new() { Classes = { "muted" }, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _note = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
     private readonly Button _open = new() { Content = "Ouvrir dans le slicer" };
-    private readonly Button _openWith = new() { Content = "Autre application…", Classes = { "ghost" }, HorizontalAlignment = HorizontalAlignment.Left };
-    private readonly Button _store = new() { Content = "Ranger dans un projet…", Classes = { "ghost" }, HorizontalAlignment = HorizontalAlignment.Left };
+    private readonly Button _openWith = new() { Content = Icons.Label("IconOpen", "Autre application", 15), Classes = { "ghost" } };
+    private readonly Button _store = new() { Content = Icons.Label("IconMove", "Ranger dans un projet", 15), Classes = { "ghost" } };
     private readonly List<(BufferedFile File, CheckBox Box, Control Row)> _files = [];
     private readonly Func<Task<string?>>? _pickFolder;
     private bool _busy;
@@ -38,18 +39,30 @@ public sealed class DownloadDialog : DialogWindow
         _open.Click += async (_, _) => await OpenAsync();
         _openWith.Click += (_, _) => OpenWith();
         _store.Click += async (_, _) => await StoreAsync();
-        var more = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { _openWith, _store } };
-        var folder = new Button { Content = "Afficher le dossier" };
+        var folder = new Button { Content = Icons.Label("IconProjects", "Afficher le dossier", 15), Classes = { "ghost" } };
         folder.Click += (_, _) => ShowFolder();
+        // the three side actions are quiet links under the list; the footer keeps only "Fermer" and the main action
+        var more = new WrapPanel { Orientation = Orientation.Horizontal, Children = { _store, _openWith, folder } };
         var close = new Button { Content = "Fermer" };
         close.Click += (_, _) => Close(false);
 
         var list = new Border
         {
-            Classes = { "card-raised" }, Padding = new Thickness(10, 8),
+            Classes = { "card-raised" }, Padding = new Thickness(6),
             Child = new ScrollViewer { MaxHeight = 260, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled, Content = _rows }
         };
-        Layout("Téléchargement terminé", LicenceReminder, [list, more, _note], _open, close, extraAction: folder);
+        // the licence reminder is a calm note of its own, not a paragraph under the heading
+        var licence = new Border
+        {
+            Background = (IBrush?)Application.Current?.FindResource("WarningSoftBrush"), CornerRadius = new CornerRadius(8), Padding = new Thickness(12, 9),
+            Child = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 10,
+                Children = { Icons.Glyph("IconInfo", 16), new TextBlock { Text = LicenceReminder, Classes = { "caption" }, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center } }
+            }
+        };
+        Grid.SetColumn(((Grid)licence.Child).Children[1], 1);
+        Layout("Téléchargement terminé", null, [_summary, list, licence, more, _note], _open, close);
     }
 
     /// <summary>Adds files to the list (all ticked). Safe to call while the window is open.</summary>
@@ -58,13 +71,15 @@ public sealed class DownloadDialog : DialogWindow
         foreach (var file in files)
         {
             if (_files.Any(known => string.Equals(known.File.Path, file.Path, StringComparison.OrdinalIgnoreCase))) continue;
-            var box = new CheckBox { IsChecked = true };
+            var box = new CheckBox { IsChecked = true, VerticalAlignment = VerticalAlignment.Center };
             box.IsCheckedChanged += (_, _) => Refresh();
-            var name = new TextBlock { Text = file.Name, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
+            var name = new TextBlock { Text = Path.GetFileNameWithoutExtension(file.Name), TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center, FontWeight = FontWeight.Medium };
             ToolTip.SetTip(name, file.Path);
-            var size = new TextBlock { Text = SizeText(file.Length), Classes = { "muted" }, VerticalAlignment = VerticalAlignment.Center };
-            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 8, Children = { box, name, size } };
-            Grid.SetColumn(name, 1); Grid.SetColumn(size, 2);
+            var format = new Border { Classes = { "badge", "info" }, Child = new TextBlock { Text = Path.GetExtension(file.Name).TrimStart('.').ToUpperInvariant() } };
+            var size = new TextBlock { Text = SizeText(file.Length), Classes = { "muted" }, VerticalAlignment = VerticalAlignment.Center, MinWidth = 52, TextAlignment = TextAlignment.Right };
+            var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,Auto,*,Auto,Auto"), ColumnSpacing = 10, Children = { box, Icons.Glyph("IconCube", 18), name, format, size } };
+            Grid.SetColumn(grid.Children[1], 1); Grid.SetColumn(name, 2); Grid.SetColumn(format, 3); Grid.SetColumn(size, 4);
+            var row = new Border { Padding = new Thickness(8, 7), CornerRadius = new CornerRadius(8), Child = grid };
             _files.Add((file, box, row));
             _rows.Children.Add(row);
         }
@@ -80,12 +95,19 @@ public sealed class DownloadDialog : DialogWindow
     private void Refresh()
     {
         var ticked = _files.Count(item => item.Box.IsChecked == true);
-        Title = _files.Count > 1 ? _files.Count + " fichiers 3D reçus" : _files.Count == 1 ? "Fichier 3D reçu" : "Téléchargement terminé";
+        var heading = _files.Count > 1 ? _files.Count + " modèles 3D reçus" : _files.Count == 1 ? "Modèle 3D reçu" : "Téléchargement terminé";
+        Title = heading;
+        if (HeadingText is { } headingText) headingText.Text = heading;
+        // a tick box only makes sense when there is a choice to make
+        foreach (var item in _files) item.Box.IsVisible = _files.Count > 1;
+        var weight = _files.Sum(item => item.File.Length);
+        _summary.Text = _files.Count == 0 ? string.Empty
+            : (_files.Count > 1 ? _files.Count + " fichiers · " : "") + SizeText(weight) + " · dans le tampon du logiciel";
         _open.IsEnabled = !_busy && ticked > 0;
         _open.Content = ticked > 1 ? "Ouvrir les " + ticked + " dans le slicer" : "Ouvrir dans le slicer";
         _openWith.IsVisible = ticked == 1;
         _store.IsVisible = _pickFolder is not null && ticked > 0;
-        _note.Text = "Rangé dans le tampon du logiciel (pas dans vos Téléchargements).";
+        _note.Text = string.Empty;
     }
 
     /// <summary>Moves the ticked files out of the buffer into a folder of the workspace: what is kept there is no longer cleaned up.</summary>

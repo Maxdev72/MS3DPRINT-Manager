@@ -17,6 +17,11 @@
 - Deuxième passe sur cette page : titre plus grand avec sa phrase d'aide juste dessous, champ de recherche plus haut aux coins plus doux, un léger halo de la couleur d'accent derrière la recherche, et les quatre groupes de sites rangés deux par deux (le nom du groupe au-dessus de ses sites) au lieu d'une longue colonne. « Tout sélectionner » prend la couleur d'accent.
 - Un clic sur un nom de site ne fait plus bouger la page : la place de la coche est toujours réservée (un « + » discret sur les sites décochés, une coche sur les sites cochés), donc les pastilles gardent leur largeur et les lignes ne se réorganisent plus.
 
+### Fenêtre de téléchargement plus claire
+- Le titre suit le contenu (« Modèle 3D reçu », « 3 modèles 3D reçus »), avec le nombre de fichiers et le poids total juste dessous.
+- Chaque fichier est une ligne propre : icône, nom sans l'extension, pastille du format (STL, 3MF…) et taille ; les cases à cocher n'apparaissent que s'il y a plusieurs fichiers à choisir.
+- Le rappel de licence devient une note à part, et les actions secondaires (« Ranger dans un projet », « Autre application », « Afficher le dossier ») passent sous la liste avec une icône ; le pied de fenêtre ne garde que « Fermer » et l'action principale.
+
 ### Barre d'adresse du navigateur
 - Le champ d'adresse est « creusé » dans la barre (plus sombre qu'elle, coins plus doux, trait d'accent quand on y écrit) : il se lit comme un champ de saisie et non comme un bouton de plus.
 - À gauche de l'adresse, un cadenas indique une page en https ; une page en http affiche un avertissement (« connexion non chiffrée ») ; la loupe revient dès qu'on écrit dans le champ.
