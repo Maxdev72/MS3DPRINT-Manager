@@ -2,6 +2,10 @@
 
 ## 14 octobre 2026
 
+### Corrections de la recherche de modèles 3D
+- Plus de notification « Une erreur inattendue s'est produite (0x8007139F) » : le logiciel lit l'adresse de la page affichée toutes les 1,2 seconde, et le moteur web répond « état incorrect » pendant qu'une page démarre ou se ferme. Cette réponse est maintenant ignorée (elle ne servait qu'à rafraîchir la barre d'adresse), et la lecture n'est tentée que sur une page chargée. Les boutons précédent, suivant et actualiser et l'ouverture d'adresse sont protégés de la même façon.
+- Un clic dans le champ de recherche de la page de démarrage arrête l'animation et affiche le texte fixe « Rechercher un modèle 3D ou saisir une adresse » ; elle reprend si vous quittez le champ sans rien saisir.
+
 ### Onglets chargés l'un après l'autre
 - Après une recherche, le premier onglet s'affiche et les autres se chargent en arrière-plan, **un à la fois** (chacun démarre quand le précédent a fini, ou après 25 secondes), pour qu'un clic sur un onglet montre une page déjà prête. Un point bleu sur l'onglet indique qu'il charge ; un nom grisé, qu'il n'est pas encore chargé.
 - Jusqu'à 5 pages restent chargées ; au-delà, la moins récemment vue se met en veille. Un onglet non regardé pendant 10 minutes se met en veille.

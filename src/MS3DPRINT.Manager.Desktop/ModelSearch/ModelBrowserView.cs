@@ -76,6 +76,9 @@ public sealed class ModelBrowserView : UserControl
     ];
     private int _exampleIndex, _typedLength, _pauseTicks, _blink;
     private bool _erasing;
+    /// <summary>Set by a click in the box: the user is about to type, the animation steps aside until the box is left.</summary>
+    private bool _animationPaused;
+    private const string StaticHint = "Rechercher un modèle 3D ou saisir une adresse";
     private readonly ProgressBar _progress = new() { IsIndeterminate = true, Height = 2, MinHeight = 2, IsVisible = false };
     private readonly Button _back = new() { Classes = { "tool" }, IsEnabled = false };
     private readonly Button _forward = new() { Classes = { "tool" }, IsEnabled = false };
@@ -119,9 +122,9 @@ public sealed class ModelBrowserView : UserControl
         Describe(_reload, "Actualiser (F5)");
         Describe(_newTab, "Nouvel onglet (Ctrl+T)");
         Describe(_external, "Ouvrir cette page dans le navigateur de Windows (utile pour une connexion ou une vérification « humain »)");
-        _back.Click += (_, _) => _active?.View?.GoBack();
-        _forward.Click += (_, _) => _active?.View?.GoForward();
-        _reload.Click += (_, _) => _active?.View?.Refresh();
+        _back.Click += (_, _) => Engine(() => _active?.View?.GoBack());
+        _forward.Click += (_, _) => Engine(() => _active?.View?.GoForward());
+        _reload.Click += (_, _) => Engine(() => _active?.View?.Refresh());
         _newTab.Click += (_, _) => OpenBlankTab();
         _external.Click += async (_, _) => await OpenExternalAsync();
 
@@ -129,6 +132,7 @@ public sealed class ModelBrowserView : UserControl
         _omnibox.KeyDown += (_, e) => { if (e.Key == Key.Enter) { Submit(_omnibox.Text); e.Handled = true; } };
         _startInput.KeyDown += (_, e) => { if (e.Key == Key.Enter) { Submit(_startInput.Text); e.Handled = true; } };
         _startInput.TextChanged += (_, _) => UpdateStartAnimation();
+        _startInput.LostFocus += (_, _) => { _animationPaused = false; UpdateStartAnimation(); };
         _typing.Tick += (_, _) => TypeStep();
         _omnibox.GotFocus += (_, _) => Dispatcher.UIThread.Post(() => _omnibox.SelectAll());
         AutomationProperties.SetName(_omnibox, "Rechercher un modèle 3D ou saisir une adresse");
@@ -182,6 +186,18 @@ public sealed class ModelBrowserView : UserControl
         if (Environment.GetEnvironmentVariable("MS3DPRINT_TEST_QUERY") is { Length: > 0 } testQuery)
             AttachedToVisualTree += (_, _) => Dispatcher.UIThread.Post(() => { if (_tabs.Count == 0) SearchSelectedSites(testQuery); });
 #endif
+    }
+
+    /// <summary>Runs a call to the web engine; when it is not ready for it (invalid state) the call is simply skipped.</summary>
+    private static void Engine(Action action) => Engine(() => { action(); return true; });
+
+    private static bool Engine(Func<bool> call)
+    {
+        try { return call(); }
+        catch (Exception exception) when (exception is System.Runtime.InteropServices.COMException or InvalidOperationException or ObjectDisposedException or NotSupportedException)
+        {
+            return false;
+        }
     }
 
     private static void Describe(Button button, string text)
@@ -354,6 +370,8 @@ public sealed class ModelBrowserView : UserControl
         };
         Grid.SetColumn(_startInput, 1);
         Grid.SetColumn(go, 2);
+        // a click anywhere in the box stops the animation (the text box handles its own clicks, hence handledEventsToo)
+        inputBox.AddHandler(InputElement.PointerPressedEvent, (_, _) => { _animationPaused = true; UpdateStartAnimation(); }, handledEventsToo: true);
 
         var steps = new TextBlock
         {
@@ -381,8 +399,9 @@ public sealed class ModelBrowserView : UserControl
     /// <summary>The animation runs only while the start page is on show with an empty box; with reduced motion the example stays still.</summary>
     private void UpdateStartAnimation()
     {
-        var wanted = _startPage.IsVisible && string.IsNullOrEmpty(_startInput.Text);
-        if (!wanted) { _typing.Stop(); if (string.IsNullOrEmpty(_startInput.Text)) _startInput.PlaceholderText = null; return; }
+        var empty = string.IsNullOrEmpty(_startInput.Text);
+        var wanted = _startPage.IsVisible && empty && !_animationPaused;
+        if (!wanted) { _typing.Stop(); if (empty) _startInput.PlaceholderText = StaticHint; return; }
         if (DesktopApplication.ReduceMotion) { _typing.Stop(); _startInput.PlaceholderText = ExampleQueries[0]; return; }
         if (!_typing.IsEnabled) _typing.Start();
     }
@@ -390,7 +409,7 @@ public sealed class ModelBrowserView : UserControl
     /// <summary>One step of the typing: letter by letter, a pause on the finished example, quicker deletion, then the next example.</summary>
     private void TypeStep()
     {
-        if (!IsEffectivelyVisible || !_startPage.IsVisible || !string.IsNullOrEmpty(_startInput.Text)) return;
+        if (!IsEffectivelyVisible || !_startPage.IsVisible || _animationPaused || !string.IsNullOrEmpty(_startInput.Text)) return;
         _blink++;
         var text = ExampleQueries[_exampleIndex];
         if (_pauseTicks > 0) _pauseTicks--;
@@ -551,7 +570,7 @@ public sealed class ModelBrowserView : UserControl
         tab.Address = uri;
         if (tab.View is { } view)
         {
-            if (tab == _active) { tab.Navigated = false; view.Navigate(uri); }
+            if (tab == _active) { tab.Navigated = false; Engine(() => view.Navigate(uri)); }
             else Sleep(tab);
         }
         else if (tab == _active) Wake(tab);
@@ -609,7 +628,7 @@ public sealed class ModelBrowserView : UserControl
         // (the Windows-specific event arguments are not visible to this platform-neutral project, hence the reflection)
         view.EnvironmentRequested += (_, e) => e.GetType().GetProperty("UserDataFolder")?.SetValue(e, WebDataFolder);
         var address = tab.Address;
-        if (address is not null) view.AdapterCreated += (_, _) => view.Navigate(address);
+        if (address is not null) view.AdapterCreated += (_, _) => Engine(() => view.Navigate(address));
         view.NavigationStarted += (_, _) => { tab.Loading = true; RefreshChrome(); };
         view.NavigationCompleted += async (_, _) => { tab.Loading = false; tab.Navigated = true; RefreshChrome(); await ReadPageAsync(tab); OnPageLoaded(tab); };
         view.NewWindowRequested += (_, e) =>
@@ -680,8 +699,8 @@ public sealed class ModelBrowserView : UserControl
     {
         foreach (var tab in _tabs) tab.LoadingDot.IsVisible = tab.Loading && tab.View is not null;
         var active = _active;
-        _back.IsEnabled = active?.View?.CanGoBack == true;
-        _forward.IsEnabled = active?.View?.CanGoForward == true;
+        _back.IsEnabled = Engine(() => active?.View?.CanGoBack == true);
+        _forward.IsEnabled = Engine(() => active?.View?.CanGoForward == true);
         _progress.IsVisible = active?.Loading == true;
         _external.IsEnabled = active?.Address is { Scheme: "http" or "https" };
     }
@@ -706,9 +725,11 @@ public sealed class ModelBrowserView : UserControl
             }
             if (tab == _active) RefreshChrome();
         }
-        catch (Exception exception) when (exception is JsonException or InvalidOperationException or NotSupportedException or ArgumentException)
+        catch (Exception exception) when (exception is JsonException or InvalidOperationException or NotSupportedException or ArgumentException
+            or System.Runtime.InteropServices.COMException or ObjectDisposedException)
         {
-            // a page that refuses scripts keeps the address it was opened with
+            // a page that refuses scripts, or an engine not ready (0x8007139F, "invalid state") while a page starts or closes,
+            // keeps the address it was opened with: this is only a refresh of the address bar, never worth an error message
         }
     }
 
@@ -736,7 +757,7 @@ public sealed class ModelBrowserView : UserControl
 
     private async Task FollowActivePageAsync()
     {
-        if (_polling || _active is not { View: not null } tab || !IsEffectivelyVisible) return;
+        if (_polling || _active is not { View: not null, Navigated: true, Loading: false } tab || !IsEffectivelyVisible) return;
         _polling = true;
         try { await ReadPageAsync(tab); }
         finally { _polling = false; }
@@ -754,6 +775,6 @@ public sealed class ModelBrowserView : UserControl
         if (control && e.Key == Key.L) { FocusInput(selectAll: true); e.Handled = true; }
         else if (control && e.Key == Key.T) { OpenBlankTab(); e.Handled = true; }
         else if (control && e.Key == Key.W && _active is { } tab) { CloseTab(tab); e.Handled = true; }
-        else if ((e.Key == Key.F5 || (control && e.Key == Key.R)) && _active is not null) { _active.View?.Refresh(); e.Handled = true; }
+        else if ((e.Key == Key.F5 || (control && e.Key == Key.R)) && _active is not null) { Engine(() => _active.View?.Refresh()); e.Handled = true; }
     }
 }
