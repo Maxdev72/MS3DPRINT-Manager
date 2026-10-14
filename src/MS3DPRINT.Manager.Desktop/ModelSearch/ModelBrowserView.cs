@@ -60,6 +60,8 @@ public sealed class ModelBrowserView : UserControl
     private readonly List<TextBlock> _siteHints = [];
     private readonly List<TextBlock> _siteCounts = [];
 
+    // left of the address: a magnifier while one types, else a padlock (https) or a warning (http) for the page shown
+    private readonly ContentControl _omniIcon = new() { VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBox _omnibox = new() { PlaceholderText = "Rechercher un modèle 3D ou saisir une adresse", VerticalAlignment = VerticalAlignment.Center };
     private readonly Button _sitesButton = new() { MinHeight = 36 };
     private readonly Border _sitePanel = new() { Classes = { "card-raised" }, IsVisible = false };
@@ -138,12 +140,14 @@ public sealed class ModelBrowserView : UserControl
         _startInput.TextChanged += (_, _) => UpdateStartAnimation();
         _startInput.LostFocus += (_, _) => { _animationPaused = false; UpdateStartAnimation(); };
         _typing.Tick += (_, _) => TypeStep();
-        _omnibox.GotFocus += (_, _) => Dispatcher.UIThread.Post(() => _omnibox.SelectAll());
+        _omnibox.GotFocus += (_, _) => { UpdateOmniIcon(); Dispatcher.UIThread.Post(() => _omnibox.SelectAll()); };
+        _omnibox.LostFocus += (_, _) => UpdateOmniIcon();
+        UpdateOmniIcon();
         AutomationProperties.SetName(_omnibox, "Rechercher un modèle 3D ou saisir une adresse");
         var omniBorder = new Border
         {
             Classes = { "search-box" }, Height = 36,
-            Child = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 8, Children = { Icons.Glyph("IconSearch", 18), _omnibox } }
+            Child = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 8, Children = { _omniIcon, _omnibox } }
         };
         Grid.SetColumn(_omnibox, 1);
 
@@ -691,8 +695,21 @@ public sealed class ModelBrowserView : UserControl
         return tip;
     }
 
+    private void UpdateOmniIcon()
+    {
+        var address = _active?.Address;
+        var secure = address is { Scheme: "https" };
+        var insecure = address is { Scheme: "http" };
+        var typing = _omnibox.IsFocused || (!secure && !insecure);
+        var key = typing ? "IconSearch" : secure ? "IconLock" : "IconAlert";
+        _omniIcon.Content = Icons.Glyph(key, 17);
+        _omniIcon.Opacity = typing || secure ? 1 : 0.9;
+        ToolTip.SetTip(_omniIcon, typing ? null : secure ? "Connexion chiffrée (https)" : "Connexion non chiffrée (http) : n’y saisissez rien de sensible");
+    }
+
     private void RefreshChrome()
     {
+        UpdateOmniIcon();
         foreach (var tab in _tabs)
         {
             tab.LoadingDot.IsVisible = tab.Loading && tab.View is not null;

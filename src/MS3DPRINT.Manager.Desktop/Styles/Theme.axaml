@@ -76,6 +76,7 @@
       <StreamGeometry x:Key="IconPlus">M12 5v14 M5 12h14</StreamGeometry>
       <StreamGeometry x:Key="IconRefresh">M20 12a8 8 0 1 1-2.3-5.7 M20 4v4.5h-4.5</StreamGeometry>
       <StreamGeometry x:Key="IconSearch">M10.5 3a7.5 7.5 0 1 0 0 15 7.5 7.5 0 0 0 0-15Z M16 16l5 5</StreamGeometry>
+      <StreamGeometry x:Key="IconLock">M6 11h12v9H6Z M8.5 11V8a3.5 3.5 0 0 1 7 0v3</StreamGeometry>
       <StreamGeometry x:Key="IconCheck">M5 12.5l4.5 4.5L19 7.5</StreamGeometry>
       <StreamGeometry x:Key="IconAlert">M12 4 21.5 20h-19Z M12 10v4.5 M12 17.4h.01</StreamGeometry>
       <StreamGeometry x:Key="IconInfo">M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17Z M12 11v5.5 M12 7.6h.01</StreamGeometry>

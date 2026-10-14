@@ -17,6 +17,10 @@
 - Deuxième passe sur cette page : titre plus grand avec sa phrase d'aide juste dessous, champ de recherche plus haut aux coins plus doux, un léger halo de la couleur d'accent derrière la recherche, et les quatre groupes de sites rangés deux par deux (le nom du groupe au-dessus de ses sites) au lieu d'une longue colonne. « Tout sélectionner » prend la couleur d'accent.
 - Un clic sur un nom de site ne fait plus bouger la page : la place de la coche est toujours réservée (un « + » discret sur les sites décochés, une coche sur les sites cochés), donc les pastilles gardent leur largeur et les lignes ne se réorganisent plus.
 
+### Barre d'adresse du navigateur
+- Le champ d'adresse est « creusé » dans la barre (plus sombre qu'elle, coins plus doux, trait d'accent quand on y écrit) : il se lit comme un champ de saisie et non comme un bouton de plus.
+- À gauche de l'adresse, un cadenas indique une page en https ; une page en http affiche un avertissement (« connexion non chiffrée ») ; la loupe revient dès qu'on écrit dans le champ.
+
 ### Barre d'onglets du navigateur
 - L'onglet affiché porte un fin trait d'accent en haut et reste soudé à la barre d'adresse ; la croix de fermeture n'apparaît que sur l'onglet affiché et sous le pointeur (fini les huit croix alignées).
 - Une infobulle sur chaque onglet donne son nom, le site et, pour un onglet en veille, « la page se charge au clic ». L'onglet choisi est toujours ramené dans la zone visible quand il y a beaucoup d'onglets.
