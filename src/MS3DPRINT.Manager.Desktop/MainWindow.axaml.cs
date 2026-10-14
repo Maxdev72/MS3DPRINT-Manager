@@ -178,7 +178,7 @@ public partial class MainWindow : Window
 
     private double _lastWindowWidth;
 
-    /// <summary>The 3D viewer uses the whole width; every other page keeps its comfortable reading width.</summary>
+    /// <summary>The 3D viewer and the model search (a browser) use the whole width; every other page keeps its comfortable reading width.</summary>
     private void RefreshCentralWidth() => UpdateCentralWorkspaceWidth(_lastWindowWidth > 0 ? _lastWindowWidth : Width);
 
     private void UpdateCentralWorkspaceWidth(double windowWidth)
@@ -191,7 +191,7 @@ public partial class MainWindow : Window
         RootGrid.ColumnDefinitions[0].Width = new GridLength(sidebarWidth);
         const double centralMargins = 68;
         var available = Math.Max(0, windowWidth - sidebarWidth - centralMargins);
-        var wide = ViewerWorkspacePanel.IsVisible;
+        var wide = ViewerWorkspacePanel.IsVisible || ModelSearchWorkspacePanel.IsVisible;
         CentralWorkspace.MaxWidth = wide ? double.PositiveInfinity : 1200;
         CentralWorkspace.Width = wide ? available : Math.Min(1200, available);
     }

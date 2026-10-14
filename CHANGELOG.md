@@ -7,6 +7,7 @@
 - Barre d'adresse (une adresse ou un texte à rechercher), précédent, suivant, actualiser, nouvel onglet, fermeture d'onglet ; un lien qui demande une nouvelle fenêtre s'ouvre dans un onglet.
 - Le navigateur garde ses cookies et son cache dans `%LOCALAPPDATA%\MS3DPRINT Manager\webview` et non à côté de l'exécutable.
 - Le logiciel déclare maintenant les versions de Windows qu'il prend en charge (manifeste), ce que le navigateur intégré exige pour s'afficher.
+- La page occupe toute la largeur de la fenêtre, comme un navigateur (comme le visualiseur 3D), au lieu de la largeur de lecture des autres pages.
 - `Ctrl+0` ouvre la dixième page (Paramètres), `Ctrl+9` la neuvième.
 
 ## 13 octobre 2026

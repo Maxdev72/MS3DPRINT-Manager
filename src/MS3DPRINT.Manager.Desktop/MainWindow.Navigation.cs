@@ -44,6 +44,7 @@ public partial class MainWindow
         TrashWorkspacePanel.IsVisible = destination == "Corbeille";
         SettingsWorkspacePanel.IsVisible = destination == "Paramètres";
         FolderWorkspacePanel.IsVisible = false;
+        RefreshCentralWidth();
         if (ViewerWorkspacePanel.IsVisible) { _modelViewer?.Release(); ViewerWorkspacePanel.IsVisible = false; ViewerNavButton.Classes.Remove("selected"); _hiddenByViewer = []; RefreshCentralWidth(); }
         ClearBreadcrumb();
         FadeIn(destination switch
