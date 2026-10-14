@@ -2,6 +2,12 @@
 
 ## 14 octobre 2026
 
+### Recherche de modèles 3D : communautés des fabricants
+- Quatre sites s'ajoutent : **Nozzlehub** (moteur qui réunit Printables, MakerWorld, Creality Cloud, Thingiverse, Cults3D, MyMiniFactory, Thangs, Nexprint, Snapmaker Space et Makeronline, avec un filtre sur les licences qui autorisent la vente), et les plateformes de fabricants **Creality Cloud**, **Nexprint** (Elegoo) et **Snapmaker Space**. MakerWorld (Bambu Lab) rejoint ce nouveau groupe « Fabricants d'imprimantes » : la liste compte 16 sites en 4 catégories.
+- Anycubic (Makeronline) n'a pas d'adresse de recherche directe : ses modèles se trouvent via Nozzlehub. Aucune plateforme de modèles n'a été trouvée pour Flashforge, Qidi, Sovol ni Artillery.
+- Nozzlehub est coché par défaut avec Printables et MakerWorld.
+- Relancer une recherche réutilise l'onglet existant de chaque site au lieu d'en ouvrir un second.
+
 ### Recherche de modèles 3D : douze sites, par catégories
 - Cinq sites s'ajoutent à la recherche : Sketchfab (modèles téléchargeables), GrabCAD, TraceParts, Smithsonian 3D et CGTrader. Les douze sites sont rangés par catégories (moteurs de recherche, communautés, besoins précis) avec une infobulle qui décrit chacun.
 - Un bouton « Tout sélectionner / Tout désélectionner » coche ou décoche tous les sites d'un coup ; il propose l'action inverse une fois tous les sites cochés.

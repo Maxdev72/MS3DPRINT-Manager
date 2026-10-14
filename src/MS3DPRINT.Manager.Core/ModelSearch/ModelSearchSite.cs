@@ -6,17 +6,22 @@ public sealed record ModelSearchSite(string Name, string SearchUrlTemplate, bool
     public const string QueryPlaceholder = "{q}";
     public const string SearchEngines = "Moteurs de recherche";
     public const string Communities = "Communautés";
+    public const string Manufacturers = "Fabricants d’imprimantes";
     public const string SpecificNeeds = "Besoins précis";
 
     public static IReadOnlyList<ModelSearchSite> Defaults { get; } =
     [
+        new("Nozzlehub", "https://nozzlehub.de/?q={q}", Category: SearchEngines, Note: "Réunit en une liste Printables, MakerWorld, Creality Cloud, Thingiverse, Cults3D, MyMiniFactory, Thangs, Nexprint, Snapmaker Space et Makeronline (Anycubic). Filtre les licences qui autorisent la vente."),
         new("Yeggi", "https://www.yeggi.com/q/{q}/", Category: SearchEngines, Note: "Cherche dans de nombreux dépôts à la fois et renvoie au site d’origine."),
         new("Thangs", "https://thangs.com/search/{q}?scope=all", Category: SearchEngines, Note: "Recherche par texte ou par forme ; héberge aussi des modèles."),
-        new("MakerWorld", "https://makerworld.com/fr/search/models?keyword={q}", Category: Communities, Note: "Bambu Lab : profils d’impression prêts pour vos imprimantes Bambu."),
         new("Printables", "https://www.printables.com/search/models?q={q}", Category: Communities, Note: "Prusa : la communauté la mieux modérée."),
         new("Thingiverse", "https://www.thingiverse.com/search?q={q}&type=things", Category: Communities, Note: "Le plus grand choix gratuit ; licences très variables."),
         new("Cults3D", "https://cults3d.com/fr/recherche?q={q}", Category: Communities, Note: "Place de marché française : designs gratuits et payants, licence commerciale souvent proposée."),
         new("MyMiniFactory", "https://www.myminifactory.com/search/?query={q}", Category: Communities, Note: "Figurines, décors et accessoires, imprimabilité testée."),
+        new("MakerWorld", "https://makerworld.com/fr/search/models?keyword={q}", Category: Manufacturers, Note: "Bambu Lab : profils d’impression prêts pour vos imprimantes Bambu."),
+        new("Creality Cloud", "https://www.crealitycloud.com/search?q={q}", Category: Manufacturers, Note: "Creality : plus d’un million de modèles, qualité variable."),
+        new("Nexprint", "https://www.nexprint.com/en/search/works?keyword={q}", Category: Manufacturers, Note: "Elegoo : plateforme ouverte, intégrée à Elegoo Slicer et OrcaSlicer."),
+        new("Snapmaker Space", "https://space.snapmaker.com/en/search/models?keyword={q}", Category: Manufacturers, Note: "Snapmaker : modèles multicolores et multimatières (U1), encore en bêta."),
         new("Sketchfab", "https://sketchfab.com/search?q={q}&features=downloadable&type=models", Category: SpecificNeeds, Note: "Formes organiques, accessoires, décors ; seulement les modèles téléchargeables. Vérifiez la licence."),
         new("GrabCAD", "https://grabcad.com/library?query={q}", Category: SpecificNeeds, Note: "Pièces mécaniques et pièces de rechange d’ingénieurs (compte gratuit pour télécharger)."),
         new("TraceParts", "https://www.traceparts.com/en/search?Keywords={q}", Category: SpecificNeeds, Note: "Cotes exactes de pièces standard (visserie, roulements…) ; référence plus que modèle à imprimer."),

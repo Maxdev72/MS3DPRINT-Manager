@@ -15,6 +15,8 @@ public sealed class ModelBrowserView : UserControl
         public required NativeWebView View { get; init; }
         public required Button Header { get; init; }
         public required TextBlock Title { get; init; }
+        /// <summary>The site this tab searches, so that a new search reuses it instead of opening a duplicate.</summary>
+        public string? Site { get; init; }
     }
 
     private readonly List<BrowserTab> _tabs = [];
@@ -41,7 +43,7 @@ public sealed class ModelBrowserView : UserControl
             var checks = new WrapPanel { Orientation = Orientation.Horizontal };
             foreach (var site in group)
             {
-                var check = new CheckBox { Content = site.Name, IsChecked = site.Name is "Yeggi" or "MakerWorld" or "Printables", Margin = new Thickness(0, 0, 14, 0) };
+                var check = new CheckBox { Content = site.Name, IsChecked = site.Name is "Nozzlehub" or "MakerWorld" or "Printables", Margin = new Thickness(0, 0, 14, 0) };
                 if (site.Note.Length > 0) ToolTip.SetTip(check, site.Note);
                 check.IsCheckedChanged += (_, _) => UpdateSelectAll();
                 _sites[site] = check;
@@ -102,7 +104,12 @@ public sealed class ModelBrowserView : UserControl
         foreach (var (site, check) in _sites)
         {
             if (check.IsChecked != true || ModelSearchUrlBuilder.Build(site, text) is not { } uri) continue;
-            AddTab(uri, site.Name);
+            if (_tabs.FirstOrDefault(tab => tab.Site == site.Name) is { } existing)
+            {
+                existing.View.Navigate(uri);
+                Select(existing);
+            }
+            else AddTab(uri, site.Name, site.Name);
         }
     }
 
@@ -112,14 +119,14 @@ public sealed class ModelBrowserView : UserControl
         _active.View.Navigate(uri);
     }
 
-    private void AddTab(Uri uri, string title)
+    private void AddTab(Uri uri, string title, string? site = null)
     {
         // created visible: the native engine is only started for a control that is shown when it is attached; Select hides the others afterwards
         var view = new NativeWebView();
         var label = new TextBlock { Text = title, MaxWidth = 140, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
         var close = new Button { Content = Icons.Glyph("IconClose"), Padding = new Thickness(4), MinWidth = 0, MinHeight = 0 };
         var header = new Button { Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { label, close } } };
-        var tab = new BrowserTab { View = view, Header = header, Title = label };
+        var tab = new BrowserTab { View = view, Header = header, Title = label, Site = site };
         header.Click += (_, _) => Select(tab);
         close.Click += (_, e) => { e.Handled = true; CloseTab(tab); };
 

@@ -45,10 +45,26 @@ Date : 14 octobre 2026. Établi par recherche web (guides comparatifs 2025-2026,
 
 Bambu Lab, Prusa, Creality, Zortrax et XYZprinting sont les fabricants dont j'ai confirmé une bibliothèque de modèles. Pour Anycubic, Elegoo, Snapmaker et Flashforge, mes recherches n'ont rien confirmé : à regarder sur leurs sites.
 
+### Plateformes de fabricants d'imprimantes (complément du 14 octobre)
+
+| Fabricant | Plateforme | Adresse | Notes | Logiciel |
+|---|---|---|---|---|
+| Bambu Lab | MakerWorld | makerworld.com | Voir ci-dessus | ✔ |
+| Prusa | Printables | printables.com | Voir ci-dessus | ✔ |
+| Creality | Creality Cloud | crealitycloud.com | Adresse de recherche : `/search?q=` (vérifiée : `keyword` n'est pas reconnu) | ✔ |
+| Elegoo | Nexprint | nexprint.com | Lancée en août 2025, ouverte, intégrée à Elegoo Slicer et OrcaSlicer ; recherche : `/en/search/works?keyword=` (relevée dans l'index de Google, non testée dans le logiciel) | ✔ |
+| Snapmaker | Snapmaker Space | space.snapmaker.com | Modèles multicolores et multimatières pour la U1, bêta ouverte ; recherche : `/en/search/models?keyword=` (vérifiée) | ✔ |
+| Anycubic | Makeronline | makeronline.com | La requête ne passe pas par l'adresse (essais `/en/search?keyword=`, `/en/search/spatule`, `/en/searchResult?keyword=` : redirection ou 404) ; accessible via Nozzlehub | |
+| Ultimaker | Thingiverse | thingiverse.com | Passé à MyMiniFactory en 2026 | ✔ |
+| Formlabs | Pinshape | pinshape.com | Statut 2026 à vérifier | |
+| eufyMake (Anker) | Make It Real | makeitreal-beta.eufymake.com | Imprimantes UV ; cité par un guide d'eufyMake | |
+| Flashforge, Qidi, Sovol, Artillery | — | — | **Aucune plateforme de modèles trouvée** (Flashforge a seulement son logiciel Flash Studio) | |
+
 ## 2. Moteurs de recherche et agrégateurs
 
 | Outil | Adresse | Particularités | Logiciel |
 |---|---|---|---|
+| Nozzlehub | nozzlehub.de | Nouveau ; une seule recherche sur une dizaine de plateformes (MakerWorld, Printables, Creality Cloud, Thingiverse, Cults3D, MyMiniFactory, Thangs, Nexprint, Snapmaker Space, Makeronline, Sketchfab en option) ; filtres gratuit, période, tri, **licences autorisant la vente** ; comparaison de coûts ; adresse `?q=` vérifiée (6 358 résultats pour « spatule ») | ✔ |
 | Yeggi | yeggi.com | Le plus connu ; indexe Thingiverse, GrabCAD, 3DLT et beaucoup d'autres ; filtre gratuit/payant ; renvoie au site d'origine | ✔ |
 | Thangs | thangs.com | Recherche par géométrie (forme) et texte ; revendique plus de 14 millions de fichiers | ✔ |
 | STLFinder | stlfinder.com | Une douzaine de dépôts (Thingiverse, Cults3D, Pinshape…), filtre gratuit/payant, appli Android | |
