@@ -59,46 +59,85 @@ public partial class MainWindow
     {
         var workspaceRoot = WorkspaceRoot;
         StorageList.Children.Clear();
-        StorageList.Spacing = 14;
+        StorageList.Spacing = 16;
+        // cards stay readable on a wide window instead of stretching across it
+        StorageList.MaxWidth = 960;
+        StorageList.HorizontalAlignment = HorizontalAlignment.Left;
         var providers = await Task.Run(() => new WorkspaceStorageReader().Load(workspaceRoot));
 
-        Border Card(string title, string description, params Control[] content)
+        Border Card(string title, string description, Control? headerAction, params Control[] content)
         {
-            var stack = new StackPanel { Spacing = 12 };
-            var heading = new StackPanel { Spacing = 2 };
+            var stack = new StackPanel { Spacing = 14 };
+            var heading = new StackPanel { Spacing = 3 };
             heading.Children.Add(new TextBlock { Text = title, Classes = { "card-title" } });
-            heading.Children.Add(new TextBlock { Text = description, Classes = { "caption" }, TextWrapping = TextWrapping.Wrap });
-            stack.Children.Add(heading);
+            if (description.Length > 0) heading.Children.Add(new TextBlock { Text = description, Classes = { "muted" }, TextWrapping = TextWrapping.Wrap });
+            Control header = heading;
+            if (headerAction is not null)
+            {
+                var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { heading, headerAction } };
+                Grid.SetColumn(headerAction, 1);
+                header = row;
+            }
+            stack.Children.Add(header);
             foreach (var control in content) stack.Children.Add(control);
-            return new Border { Classes = { "card-raised" }, Padding = new Avalonia.Thickness(20), Child = stack };
+            return new Border { Classes = { "card-raised" }, Padding = new Avalonia.Thickness(22, 20), Child = stack };
         }
 
-        var open = new Button { Content = "Ouvrir l’espace de travail", Tag = workspaceRoot };
+        // ---- workspace: the folder is shown as a field one can select from, and the three actions follow
+        var path = new SelectableTextBlock { Text = workspaceRoot, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center };
+        var pathField = new Border
+        {
+            Background = (IBrush?)Avalonia.Application.Current?.FindResource("SurfaceBrush"), CornerRadius = new Avalonia.CornerRadius(8),
+            BorderBrush = (IBrush?)Avalonia.Application.Current?.FindResource("SubtleBorderBrush"), BorderThickness = new Avalonia.Thickness(1), Padding = new Avalonia.Thickness(12, 10),
+            Child = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 10, Children = { Icons.Glyph("IconProjects", 18), path } }
+        };
+        Grid.SetColumn(path, 1);
+
+        var open = new Button { Content = Icons.Label("IconOpen", "Ouvrir l’espace de travail", 16), Tag = workspaceRoot };
         open.Click += OpenFolder_Click;
-        var verify = new Button { Content = "Vérifier l’arborescence" };
+        var verify = new Button { Content = Icons.Label("IconCheck", "Vérifier l’arborescence", 16) };
         verify.Click += VerifyWorkspace_Click;
-        var change = new Button { Content = "Changer d’espace de travail…" };
+        var change = new Button { Content = Icons.Label("IconMove", "Changer d’espace de travail…", 16) };
         change.Click += ChangeWorkspace_Click;
         var fixedByEnvironment = MS3DPRINT.Manager.Core.Storage.WorkspaceLocation.IsFixedByEnvironment;
         change.IsEnabled = !fixedByEnvironment;
-        if (fixedByEnvironment) ToolTip.SetTip(change, "L’espace de travail est imposé par la variable d’environnement MS3DPRINT_WORKSPACE.");
-        StorageList.Children.Add(Card("Espace de travail", workspaceRoot,
-            new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { open, verify, change } }));
+        var actions = new WrapPanel { Orientation = Orientation.Horizontal };
+        foreach (var button in new[] { open, verify, change }) { button.Margin = new Avalonia.Thickness(0, 0, 8, 8); actions.Children.Add(button); }
+        var workspaceContent = new List<Control> { pathField, actions };
+        if (fixedByEnvironment)
+            workspaceContent.Add(new TextBlock { Text = "Cet espace de travail est imposé par la variable d’environnement MS3DPRINT_WORKSPACE : il ne peut pas être changé ici.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap });
+        StorageList.Children.Add(Card("Espace de travail", "Le dossier qui contient vos clients, projets et collections.", null, workspaceContent.ToArray()));
 
+        // ---- storage: where the folders can be synchronised, with the folder when there is one
         var providerRows = new StackPanel { Spacing = 0 };
         foreach (var provider in providers)
         {
-            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), MinHeight = 40 };
-            row.Children.Add(new TextBlock { Text = provider.DisplayName, VerticalAlignment = VerticalAlignment.Center });
+            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), MinHeight = 48, ColumnSpacing = 12 };
+            var name = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Spacing = 1, Children = { new TextBlock { Text = provider.DisplayName, FontWeight = FontWeight.Medium } } };
+            if (provider.IsAvailable && !string.IsNullOrWhiteSpace(provider.RootPath) && !string.Equals(Path.TrimEndingDirectorySeparator(provider.RootPath), Path.TrimEndingDirectorySeparator(workspaceRoot), StringComparison.OrdinalIgnoreCase))
+                name.Children.Add(new TextBlock { Text = provider.RootPath, Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis });
+            row.Children.Add(name);
             var badge = new Border { Classes = { "badge", provider.IsAvailable ? "success" : "neutral" }, Child = new TextBlock { Text = provider.IsAvailable ? "Disponible" : "Non configuré" } };
             Grid.SetColumn(badge, 1);
             row.Children.Add(badge);
             providerRows.Children.Add(new Border { BorderBrush = (IBrush?)Avalonia.Application.Current?.FindResource("SubtleBorderBrush"), BorderThickness = new Avalonia.Thickness(0, 0, 0, 1), Child = row });
         }
-        StorageList.Children.Add(Card("Stockage", "Emplacements où vos dossiers peuvent être synchronisés.", providerRows));
+        var refresh = new Button { Content = Icons.Label("IconRefresh", "Actualiser", 16), Classes = { "ghost" }, VerticalAlignment = VerticalAlignment.Top };
+        refresh.Click += RefreshSettings_Click;
+        StorageList.Children.Add(Card("Stockage", "Emplacements où vos dossiers peuvent être synchronisés.", refresh, providerRows));
 
-        var changelog = new Button { Content = "Journal des modifications", HorizontalAlignment = HorizontalAlignment.Left };
+        // ---- about: the version tells which build is installed
+        var informational = typeof(MainWindow).Assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+            .OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion ?? string.Empty;
+        var plus = informational.IndexOf('+');
+        var version = plus < 0 ? informational : informational[..plus];
+        var revision = plus >= 0 ? informational[(plus + 1)..] : string.Empty;
+        var versionText = version.Length == 0 ? string.Empty : "Version " + version + (revision.Length >= 7 ? " · révision " + revision[..7] : string.Empty);
+        var changelog = new Button { Content = Icons.Label("IconFile", "Journal des modifications", 16), HorizontalAlignment = HorizontalAlignment.Left };
         changelog.Click += Changelog_Click;
-        StorageList.Children.Add(Card("À propos", "MS3DPRINT Manager : gestion de vos clients, projets, collections, filaments, imprimantes et estimations.", changelog));
+        var about = new List<Control>();
+        if (versionText.Length > 0) about.Add(new TextBlock { Text = versionText, Classes = { "caption" } });
+        about.Add(changelog);
+        StorageList.Children.Add(Card("MS3DPRINT Manager", "Gestion de vos clients, projets, collections, filaments, imprimantes et estimations.", null, about.ToArray()));
     }
 }

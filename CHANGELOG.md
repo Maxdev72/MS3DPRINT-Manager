@@ -17,6 +17,11 @@
 - Deuxième passe sur cette page : titre plus grand avec sa phrase d'aide juste dessous, champ de recherche plus haut aux coins plus doux, un léger halo de la couleur d'accent derrière la recherche, et les quatre groupes de sites rangés deux par deux (le nom du groupe au-dessus de ses sites) au lieu d'une longue colonne. « Tout sélectionner » prend la couleur d'accent.
 - Un clic sur un nom de site ne fait plus bouger la page : la place de la coche est toujours réservée (un « + » discret sur les sites décochés, une coche sur les sites cochés), donc les pastilles gardent leur largeur et les lignes ne se réorganisent plus.
 
+### Page Paramètres remise en ordre
+- Fini la phrase répétée sous le titre et le bouton « Actualiser » seul sur sa ligne : « Actualiser » est maintenant dans la carte « Stockage ».
+- Le dossier de l'espace de travail s'affiche dans un champ dont on peut sélectionner le texte (pour le copier), les trois actions portent une icône, et quand l'espace est imposé par la variable `MS3DPRINT_WORKSPACE`, la raison est écrite sous les boutons au lieu d'être cachée dans une infobulle.
+- Chaque lieu de stockage disponible indique son dossier, et la carte du bas affiche la **version et la révision** du logiciel installé (utile pour savoir quelle livraison tourne). Les cartes ne s'étirent plus sur toute la largeur d'une grande fenêtre.
+
 ### Fenêtre de téléchargement plus claire
 - Le titre suit le contenu (« Modèle 3D reçu », « 3 modèles 3D reçus »), avec le nombre de fichiers et le poids total juste dessous.
 - Chaque fichier est une ligne propre : icône, nom sans l'extension, pastille du format (STL, 3MF…) et taille ; les cases à cocher n'apparaissent que s'il y a plusieurs fichiers à choisir.
