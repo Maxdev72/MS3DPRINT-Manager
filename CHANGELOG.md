@@ -15,6 +15,11 @@
 - Le titre du choix affiche le nombre de sites cochés (« 3 sur 15 »), et les sites cochés portent une coche, plus seulement une couleur.
 - Le bouton de recherche devient un vrai bouton d'action, la phrase d'aide est raccourcie, les espacements suivent le contenu (serrés dans un groupe, larges entre les groupes) et les raccourcis clavier s'affichent comme des touches.
 - Deuxième passe sur cette page : titre plus grand avec sa phrase d'aide juste dessous, champ de recherche plus haut aux coins plus doux, un léger halo de la couleur d'accent derrière la recherche, et les quatre groupes de sites rangés deux par deux (le nom du groupe au-dessus de ses sites) au lieu d'une longue colonne. « Tout sélectionner » prend la couleur d'accent.
+- Un clic sur un nom de site ne fait plus bouger la page : la place de la coche est toujours réservée (un « + » discret sur les sites décochés, une coche sur les sites cochés), donc les pastilles gardent leur largeur et les lignes ne se réorganisent plus.
+
+### Barre d'onglets du navigateur
+- L'onglet affiché porte un fin trait d'accent en haut et reste soudé à la barre d'adresse ; la croix de fermeture n'apparaît que sur l'onglet affiché et sous le pointeur (fini les huit croix alignées).
+- Une infobulle sur chaque onglet donne son nom, le site et, pour un onglet en veille, « la page se charge au clic ». L'onglet choisi est toujours ramené dans la zone visible quand il y a beaucoup d'onglets.
 
 ### Tampon de téléchargement sous contrôle
 - Le tampon garde **2 jours** (au lieu de 7) et **1 Go au plus** : quand il dépasse, les fichiers et dossiers de ZIP les plus anciens sont supprimés en premier. Les téléchargements en cours et les fichiers affichés dans la fenêtre de téléchargement ne sont jamais supprimés.

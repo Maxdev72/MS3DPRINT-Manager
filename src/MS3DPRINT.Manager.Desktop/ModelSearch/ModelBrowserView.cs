@@ -284,7 +284,15 @@ public sealed class ModelBrowserView : UserControl
             foreach (var site in group)
             {
                 var name = site.Name;
-                var chip = new Button { Content = name, Classes = { "filter-chip" }, Margin = new Thickness(0, 0, 6, 6) };
+                var chip = new Button
+                {
+                    Content = new StackPanel
+                    {
+                        Orientation = Orientation.Horizontal, Spacing = 6,
+                        Children = { new Grid { Children = { Icons.Glyph("IconPlus", 14), Icons.Glyph("IconCheck", 14) } }, new TextBlock { Text = name, VerticalAlignment = VerticalAlignment.Center } }
+                    },
+                    Classes = { "filter-chip" }, Margin = new Thickness(0, 0, 6, 6)
+                };
                 if (site.Note.Length > 0) ToolTip.SetTip(chip, site.Note);
                 chip.Click += (_, _) => Toggle(name);
                 _chips.Add((name, chip));
@@ -430,8 +438,8 @@ public sealed class ModelBrowserView : UserControl
         {
             var on = _selected.Contains(name);
             if (on) chip.Classes.Add("selected"); else chip.Classes.Remove("selected");
-            // a tick, not the colour alone, says that the site is ticked
-            chip.Content = on ? Icons.Label("IconCheck", name, 14) : name;
+            // a tick (or a faint plus when off), not the colour alone, says whether the site is ticked; the place is always the same, so a click moves nothing
+            if (chip.Content is StackPanel { Children: [Grid { Children: [Control plus, Control tick] }, ..] }) { tick.Opacity = on ? 1 : 0; plus.Opacity = on ? 0 : 0.5; }
             AutomationProperties.SetName(chip, name + (on ? ", sélectionné" : ", non sélectionné"));
         }
         foreach (var selectAll in _selectAlls) selectAll.Content = AllSitesSelected ? "Tout désélectionner" : "Tout sélectionner";
@@ -643,6 +651,7 @@ public sealed class ModelBrowserView : UserControl
         // the page budget: the most recently shown pages stay loaded, the others sleep
         foreach (var extra in _tabs.Where(t => t.View is not null).OrderByDescending(t => t.LastShown).Skip(MaxLivePages).ToList()) Sleep(extra);
         _omnibox.Text = tab.Address is { } address && address.AbsoluteUri != "about:blank" ? address.AbsoluteUri : string.Empty;
+        tab.Header.BringIntoView();
         RefreshChrome();
     }
 
@@ -672,9 +681,23 @@ public sealed class ModelBrowserView : UserControl
     }
 
     /// <summary>Back/forward availability, loading bar and the "open outside" button follow the active tab.</summary>
+    /// <summary>What a tab says when the pointer rests on it: its name, its address, and that it is asleep when it is.</summary>
+    private static string TabTip(BrowserTab tab)
+    {
+        var name = tab.Header.Content is StackPanel { Children: [TextBlock label, ..] } ? label.Text ?? string.Empty : string.Empty;
+        var tip = name;
+        if (tab.Address is { Scheme: "http" or "https" } address) tip += Environment.NewLine + address.Host;
+        if (tab.View is null) tip += Environment.NewLine + "En veille : la page se charge au clic";
+        return tip;
+    }
+
     private void RefreshChrome()
     {
-        foreach (var tab in _tabs) tab.LoadingDot.IsVisible = tab.Loading && tab.View is not null;
+        foreach (var tab in _tabs)
+        {
+            tab.LoadingDot.IsVisible = tab.Loading && tab.View is not null;
+            ToolTip.SetTip(tab.Header, TabTip(tab));
+        }
         var active = _active;
         _back.IsEnabled = Engine(() => active?.View?.CanGoBack == true);
         _forward.IsEnabled = Engine(() => active?.View?.CanGoForward == true);
