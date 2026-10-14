@@ -87,12 +87,9 @@ public sealed class ModelBrowserView : UserControl
     private readonly Button _external = new() { Classes = { "tool" }, IsEnabled = false };
     private readonly DispatcherTimer _follow = new() { Interval = TimeSpan.FromMilliseconds(1200) };
 
-    // downloads: the buffer folder, and the bar that offers a finished 3D file to the slicer
+    // downloads: the buffer folder, and the one window that offers finished 3D files to the slicer
     private readonly DownloadBuffer _buffer = new(DownloadBuffer.DefaultFolder);
-    private readonly Border _downloadBar = new() { Classes = { "card-raised" }, IsVisible = false };
-    private readonly TextBlock _downloadName = new() { FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis };
-    private readonly TextBlock _downloadNote = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
-    private BufferedFile? _download;
+    private DownloadDialog? _downloadDialog;
 
     private BrowserTab? _active;
     private readonly Queue<BrowserTab> _preload = new();
@@ -168,7 +165,7 @@ public sealed class ModelBrowserView : UserControl
         _startPage = BuildStartPage();
         _viewHost.Children.Add(_startPage);
 
-        var chrome = new StackPanel { Spacing = 0, Children = { _tabRow, _toolbar, _progress, BuildDownloadBar(), _sitePanel } };
+        var chrome = new StackPanel { Spacing = 0, Children = { _tabRow, _toolbar, _progress, _sitePanel } };
         var root = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), RowSpacing = 6, Children = { chrome, _viewHost } };
         Grid.SetRow(_viewHost, 1);
         Content = root;
@@ -214,7 +211,8 @@ public sealed class ModelBrowserView : UserControl
         try
         {
             _buffer.PrepareProfile(WebDataFolder);
-            _buffer.FileReady += file => Dispatcher.UIThread.Post(() => ShowDownload(file));
+            _buffer.FileReady += file => Dispatcher.UIThread.Post(() => ShowDownload([file], null));
+            _buffer.BatchReady += batch => Dispatcher.UIThread.Post(() => ShowDownload(batch.Files, batch.Problem));
             _buffer.StartWatching();
             _ = Task.Run(() => _buffer.PurgeOlderThan(BufferKeeps));
         }
@@ -224,86 +222,21 @@ public sealed class ModelBrowserView : UserControl
         }
     }
 
-    private Control BuildDownloadBar()
+    /// <summary>
+    /// Shows the download window, or adds to it when it is already open: several files in a row never make several windows.
+    /// </summary>
+    private void ShowDownload(IReadOnlyList<BufferedFile> files, string? problem)
     {
-        var open = new Button { Content = "Ouvrir dans le slicer", Classes = { "primary-action" } };
-        var openWith = new Button { Content = "Autre application…" };
-        var folder = new Button { Content = "Afficher le dossier" };
-        var close = new Button { Content = Icons.Glyph("IconClose", 14), Classes = { "tool" } };
-        Describe(close, "Masquer cette bande");
-        open.Click += async (_, _) => await OpenDownloadAsync();
-        openWith.Click += (_, _) => OpenDownloadWith();
-        folder.Click += (_, _) => ShowDownloadFolder();
-        close.Click += (_, _) => _downloadBar.IsVisible = false;
-
-        var text = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center, Children = { _downloadName, _downloadNote } };
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center, Children = { open, openWith, folder, close } };
-        var layout = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 12, Children = { Icons.Glyph("IconCube", 22), text, buttons } };
-        Grid.SetColumn(text, 1);
-        Grid.SetColumn(buttons, 2);
-        _downloadBar.Padding = new Thickness(12, 8);
-        _downloadBar.Margin = new Thickness(0, 6, 0, 0);
-        _downloadBar.Child = layout;
-        return _downloadBar;
-    }
-
-    private void ShowDownload(BufferedFile file)
-    {
-        _download = file;
-        _downloadName.Text = "Fichier 3D reçu : " + file.Name;
-        _downloadNote.Text = SizeText(file.Length) + " · rangé dans le tampon du logiciel (pas dans vos Téléchargements). Vérifiez la licence avant d’imprimer pour un client.";
-        _downloadBar.IsVisible = true;
-    }
-
-    private static string SizeText(long bytes)
-    {
-        var french = CultureInfo.GetCultureInfo("fr-FR");
-        return bytes >= 1024 * 1024 ? (bytes / 1048576d).ToString("0.#", french) + " Mo" : Math.Max(1, bytes / 1024d).ToString("0", french) + " Ko";
-    }
-
-    /// <summary>Opens the file with the application Windows has for its type: the slicer, once it is set as the default for 3D files.</summary>
-    private async Task OpenDownloadAsync()
-    {
-        if (!UsableDownload(out var path)) return;
-        try
+        if (_downloadDialog is null)
         {
-            if (TopLevel.GetTopLevel(this)?.Launcher is { } launcher && await launcher.LaunchUriAsync(new Uri(path))) return;
+            var dialog = new DownloadDialog();
+            dialog.Closed += (_, _) => { if (ReferenceEquals(_downloadDialog, dialog)) _downloadDialog = null; };
+            _downloadDialog = dialog;
+            if (TopLevel.GetTopLevel(this) is Window owner) dialog.Show(owner); else dialog.Show();
         }
-        catch (Exception exception) when (exception is IOException or InvalidOperationException or UriFormatException or System.ComponentModel.Win32Exception)
-        {
-            // no application for this type: the slicer installed here, else the "Open with" window
-        }
-        if (SlicerLauncher.TryOpen(path) is { } slicer) { _downloadNote.Text = "Ouvert dans " + slicer + "."; return; }
-        OpenDownloadWith();
-    }
-
-    private void OpenDownloadWith()
-    {
-        if (!UsableDownload(out var path)) return;
-        try { DesktopPreviewLauncher.OpenWith?.Invoke(path); }
-        catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception or IOException)
-        {
-            _downloadNote.Text = "Impossible d’ouvrir ce fichier avec une autre application : " + exception.Message;
-        }
-    }
-
-    private void ShowDownloadFolder()
-    {
-        if (!UsableDownload(out var path)) return;
-        try { Process.Start(new ProcessStartInfo("explorer.exe", "/select,\"" + path + "\"") { UseShellExecute = false }); }
-        catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
-        {
-            _downloadNote.Text = "Impossible d’ouvrir le dossier : " + exception.Message;
-        }
-    }
-
-    /// <summary>Only a 3D file still in the buffer is opened: never a program or a script.</summary>
-    private bool UsableDownload(out string path)
-    {
-        path = _download?.Path ?? string.Empty;
-        if (path.Length > 0 && File.Exists(path) && DownloadBuffer.IsModelFile(path) && !ExecutableFileGuard.IsExecutable(path)) return true;
-        _downloadNote.Text = "Ce fichier n’est plus dans le tampon.";
-        return false;
+        _downloadDialog.Add(files);
+        if (problem is not null) _downloadDialog.Say(problem);
+        _downloadDialog.Activate();
     }
 
     // ---- site choice -----------------------------------------------------------------------------------------------

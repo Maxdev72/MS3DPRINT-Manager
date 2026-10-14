@@ -100,10 +100,89 @@ public sealed class DownloadBufferTests : IDisposable
         buffer.StartWatching();
 
         await File.WriteAllTextAsync(Path.Combine(folder, "notes.txt"), "bonjour");
-        await File.WriteAllBytesAsync(Path.Combine(folder, "archive.zip"), new byte[100]);
         await Task.Delay(1800);
 
         Assert.Equal(0, count);
+    }
+
+    private static void WriteZip(string path, params (string Name, string Content)[] entries)
+    {
+        using var stream = File.Create(path);
+        using var zip = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Create);
+        foreach (var (name, content) in entries)
+        {
+            using var writer = new StreamWriter(zip.CreateEntry(name).Open());
+            writer.Write(content);
+        }
+    }
+
+    [Fact]
+    public async Task A_downloaded_zip_is_opened_in_the_background_and_its_models_announced_together()
+    {
+        var folder = Path.Combine(_root, "tampon");
+        using var buffer = new DownloadBuffer(folder);
+        var ready = new TaskCompletionSource<BufferedBatch>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var singles = 0;
+        buffer.FileReady += _ => Interlocked.Increment(ref singles);
+        buffer.BatchReady += batch => ready.TrySetResult(batch);
+        buffer.StartWatching();
+
+        var temporary = Path.Combine(folder, "pack.zip.crdownload");
+        WriteZip(temporary, ("pack/corps.stl", "a"), ("pack/couvercle.3mf", "bb"), ("pack/lisez-moi.txt", "x"), ("pack/photo.jpg", "x"));
+        File.Move(temporary, Path.Combine(folder, "pack.zip"));
+
+        var batch = await ready.Task.WaitAsync(TimeSpan.FromSeconds(15));
+
+        Assert.Null(batch.Problem);
+        Assert.Equal(["corps.stl", "couvercle.3mf"], batch.Files.Select(f => f.Name).Order().ToArray());
+        Assert.All(batch.Files, file => Assert.True(File.Exists(file.Path)));
+        Assert.False(File.Exists(Path.Combine(folder, "pack.zip")));
+        await Task.Delay(800);
+        Assert.Equal(0, singles);
+    }
+
+    [Fact]
+    public void Extraction_keeps_only_models_flat_and_never_writes_outside_the_target()
+    {
+        Directory.CreateDirectory(_root);
+        var zip = Path.Combine(_root, "piege.zip");
+        WriteZip(zip, ("../../dehors.stl", "evil"), ("a/piece.stl", "1"), ("b/piece.stl", "2"), ("__MACOSX/._piece.stl", "x"), ("run.exe", "x"));
+        var target = Path.Combine(_root, "cible");
+
+        var result = DownloadArchive.ExtractModels(zip, target);
+
+        Assert.Null(result.Problem);
+        Assert.Equal(3, result.Files.Count);
+        Assert.All(result.Files, file => Assert.Equal(target, Path.GetDirectoryName(file.Path)));
+        Assert.Contains(result.Files, file => file.Name == "piece (2).stl");
+        Assert.False(File.Exists(Path.Combine(_root, "dehors.stl")));
+    }
+
+    [Fact]
+    public void An_archive_without_models_or_unreadable_gives_a_message_instead_of_files()
+    {
+        Directory.CreateDirectory(_root);
+        var empty = Path.Combine(_root, "vide.zip");
+        WriteZip(empty, ("notes.txt", "x"));
+        var broken = Path.Combine(_root, "casse.zip");
+        File.WriteAllBytes(broken, new byte[100]);
+
+        Assert.Contains("aucun fichier 3D", DownloadArchive.ExtractModels(empty, Path.Combine(_root, "c1")).Problem);
+        Assert.NotNull(DownloadArchive.ExtractModels(broken, Path.Combine(_root, "c2")).Problem);
+    }
+
+    [Fact]
+    public void PurgeOlderThan_also_removes_old_folders_of_opened_archives()
+    {
+        var folder = Path.Combine(_root, "tampon");
+        var old = Path.Combine(folder, "pack-abc123");
+        Directory.CreateDirectory(old);
+        File.WriteAllText(Path.Combine(old, "a.stl"), "x");
+        Directory.SetLastWriteTimeUtc(old, DateTime.UtcNow.AddDays(-10));
+
+        new DownloadBuffer(folder).PurgeOlderThan(TimeSpan.FromDays(7));
+
+        Assert.False(Directory.Exists(old));
     }
 
     [Fact]

@@ -2,6 +2,12 @@
 
 ## 14 octobre 2026 (suite)
 
+### Téléchargements : ZIP ouverts en silence et fenêtre centrée
+- Un fichier **ZIP** téléchargé depuis la recherche de modèles est ouvert en arrière-plan : seuls les fichiers 3D (STL, 3MF, OBJ, STEP, AMF) sont gardés, le ZIP est supprimé. Les archives piégées sont neutralisées (aucun fichier n'est écrit hors du dossier du tampon, tailles et nombre de fichiers limités) ; une archive sans modèle ou protégée par mot de passe affiche un message clair.
+- La bande de téléchargement est remplacée par une **fenêtre centrée sur le logiciel** : liste des fichiers avec case à cocher, rappel de licence, « Ouvrir dans le slicer », « Autre application… » et « Afficher le dossier ».
+- **Jamais plusieurs fenêtres ni plusieurs slicers** : les fichiers qui arrivent pendant que la fenêtre est ouverte s'ajoutent à sa liste, et « Ouvrir » envoie tous les fichiers cochés dans **un seul** lancement du slicer ; le bouton reste grisé 3 secondes pour éviter un second clic.
+- Les dossiers de ZIP ouverts sont supprimés du tampon après 7 jours, comme les fichiers.
+
 ### Fichiers 3MF, déplacements et aperçu agrandi
 - Les fichiers **3MF** (Bambu Studio, OrcaSlicer, PrusaSlicer, CAD) s'ouvrent maintenant dans le visualiseur 3D et ont une vignette dans les listes : tous les objets du plateau, avec leur position, les assemblages de composants et les unités du fichier ; les supports et objets non imprimables sont ignorés.
 - « Déplacer » (fichier, dossier, client, collection) ne lance plus l'Explorateur Windows : un sélecteur de dossier intégré, limité à l'espace de travail, permet de parcourir et de choisir la destination.
