@@ -46,7 +46,9 @@ public sealed class ModelBrowserView : UserControl
     // the tabs behind the shown one load in the background, one at a time, so that a click shows a page that is already there
     private static readonly TimeSpan PreloadTimeout = TimeSpan.FromSeconds(25);
     private static readonly TimeSpan PageSleepAfter = TimeSpan.FromMinutes(5);
-    private static readonly TimeSpan BufferKeeps = TimeSpan.FromDays(7);
+    // the buffer is a stopover: two days, and at most 1 GB (the oldest go first)
+    private static readonly TimeSpan BufferKeeps = TimeSpan.FromDays(2);
+    private const long BufferMaxBytes = 1L * 1024 * 1024 * 1024;
 
     private const string LicenceReminder = "Vérifiez la licence de chaque modèle avant de l’imprimer pour un client : beaucoup sont réservés à l’usage personnel (CC BY-NC, « non commercial »).";
 
@@ -90,6 +92,10 @@ public sealed class ModelBrowserView : UserControl
     // downloads: the buffer folder, and the one window that offers finished 3D files to the slicer
     private readonly DownloadBuffer _buffer = new(DownloadBuffer.DefaultFolder);
     private DownloadDialog? _downloadDialog;
+    private bool _exitCleanupHooked;
+
+    /// <summary>Asks for a destination folder in the workspace, for "Ranger dans un projet" (set by the main window).</summary>
+    public Func<Task<string?>>? PickWorkspaceFolder { get; set; }
 
     private BrowserTab? _active;
     private readonly Queue<BrowserTab> _preload = new();
@@ -173,7 +179,16 @@ public sealed class ModelBrowserView : UserControl
         UpdateSelectionUi();
         UpdateToolbarShape();
         _follow.Tick += async (_, _) => { ManageMemory(); PreloadTick(); await FollowActivePageAsync(); };
-        AttachedToVisualTree += (_, _) => { _follow.Start(); FocusInput(); UpdateStartAnimation(); };
+        AttachedToVisualTree += (_, _) =>
+        {
+            _follow.Start(); FocusInput(); UpdateStartAnimation();
+            // the buffer is also tidied when the application closes
+            if (!_exitCleanupHooked && TopLevel.GetTopLevel(this) is Window window)
+            {
+                _exitCleanupHooked = true;
+                window.Closed += (_, _) => { try { _buffer.Maintain(BufferKeeps, BufferMaxBytes); } catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { } };
+            }
+        };
         DetachedFromVisualTree += (_, _) => { _follow.Stop(); _typing.Stop(); };
         KeyDown += View_KeyDown;
 #if DEBUG
@@ -214,7 +229,7 @@ public sealed class ModelBrowserView : UserControl
             _buffer.FileReady += file => Dispatcher.UIThread.Post(() => ShowDownload([file], null));
             _buffer.BatchReady += batch => Dispatcher.UIThread.Post(() => ShowDownload(batch.Files, batch.Problem));
             _buffer.StartWatching();
-            _ = Task.Run(() => _buffer.PurgeOlderThan(BufferKeeps));
+            _ = Task.Run(() => _buffer.Maintain(BufferKeeps, BufferMaxBytes));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
@@ -229,7 +244,7 @@ public sealed class ModelBrowserView : UserControl
     {
         if (_downloadDialog is null)
         {
-            var dialog = new DownloadDialog();
+            var dialog = new DownloadDialog(PickWorkspaceFolder);
             dialog.Closed += (_, _) => { if (ReferenceEquals(_downloadDialog, dialog)) _downloadDialog = null; };
             _downloadDialog = dialog;
             if (TopLevel.GetTopLevel(this) is Window owner) dialog.Show(owner); else dialog.Show();
@@ -237,6 +252,9 @@ public sealed class ModelBrowserView : UserControl
         _downloadDialog.Add(files);
         if (problem is not null) _downloadDialog.Say(problem);
         _downloadDialog.Activate();
+        // after every download: what the user is looking at stays, the rest is trimmed to the age and size limits
+        var shown = _downloadDialog.Paths;
+        _ = Task.Run(() => { try { _buffer.Maintain(BufferKeeps, BufferMaxBytes, shown); } catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { } });
     }
 
     // ---- site choice -----------------------------------------------------------------------------------------------

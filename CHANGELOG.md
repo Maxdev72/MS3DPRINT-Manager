@@ -10,6 +10,11 @@
 - Le panneau « Téléchargements » du moteur web n'est plus désactivé : cet essai faisait apparaître un carré rouge sur la page.
 - Le chargement à la suite va jusqu'à **8 pages** au lieu de 5 (huit sites cochés se chargent tous, un à un) ; au-delà, ou pour Yeggi, l'onglet se charge au clic. Plus de pages chargées, c'est plus de mémoire : environ 450 à 620 Mo par page.
 
+### Tampon de téléchargement sous contrôle
+- Le tampon garde **2 jours** (au lieu de 7) et **1 Go au plus** : quand il dépasse, les fichiers et dossiers de ZIP les plus anciens sont supprimés en premier. Les téléchargements en cours et les fichiers affichés dans la fenêtre de téléchargement ne sont jamais supprimés.
+- Le nettoyage se fait à chaque téléchargement terminé, au chargement de la page et à la fermeture du logiciel.
+- Nouveau bouton **« Ranger dans un projet… »** dans la fenêtre de téléchargement : les fichiers cochés sont déplacés du tampon vers un dossier de l'espace de travail (sélecteur intégré), sans jamais remplacer un fichier existant ; ils ne sont plus jamais nettoyés.
+
 ### Fichiers 3MF, déplacements et aperçu agrandi
 - Les fichiers **3MF** (Bambu Studio, OrcaSlicer, PrusaSlicer, CAD) s'ouvrent maintenant dans le visualiseur 3D et ont une vignette dans les listes : tous les objets du plateau, avec leur position, les assemblages de composants et les unités du fichier ; les supports et objets non imprimables sont ignorés.
 - « Déplacer » (fichier, dossier, client, collection) ne lance plus l'Explorateur Windows : un sélecteur de dossier intégré, limité à l'espace de travail, permet de parcourir et de choisir la destination.

@@ -87,7 +87,7 @@ public static class DownloadArchive
         return clean.Length == 0 ? "modele" + Path.GetExtension(name) : clean;
     }
 
-    private static string UniquePath(string folder, string name)
+    internal static string UniquePath(string folder, string name)
     {
         var path = Path.Combine(folder, name);
         for (var i = 2; File.Exists(path); i++)

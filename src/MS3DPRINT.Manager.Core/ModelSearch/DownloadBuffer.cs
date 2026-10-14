@@ -120,6 +120,74 @@ public sealed class DownloadBuffer : IDisposable
         return removed;
     }
 
+    /// <summary>Removes what is older than <paramref name="age"/>, then the oldest entries until the buffer weighs at most <paramref name="maxBytes"/>.</summary>
+    public int Maintain(TimeSpan age, long maxBytes, IEnumerable<string>? keep = null)
+        => PurgeOlderThan(age) + TrimToSize(maxBytes, keep);
+
+    /// <summary>
+    /// Deletes the oldest files and opened-ZIP folders until the buffer weighs at most <paramref name="maxBytes"/>. What is still being
+    /// downloaded (<c>.crdownload</c>, <c>.tmp</c>) and the <paramref name="keep"/> paths (files being offered to the user) are never removed.
+    /// </summary>
+    public int TrimToSize(long maxBytes, IEnumerable<string>? keep = null)
+    {
+        if (!Directory.Exists(Folder)) return 0;
+        var kept = (keep ?? []).Select(Path.GetFullPath).ToList();
+        bool IsKept(string entry) => kept.Any(path => string.Equals(path, entry, StringComparison.OrdinalIgnoreCase)
+                                                     || path.StartsWith(entry + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase));
+
+        var entries = new List<(string Path, bool IsDirectory, long Size, DateTime Written)>();
+        try
+        {
+            foreach (var file in Directory.EnumerateFiles(Folder))
+            {
+                var info = new FileInfo(file);
+                entries.Add((file, false, info.Length, info.LastWriteTimeUtc));
+            }
+            foreach (var directory in Directory.EnumerateDirectories(Folder))
+            {
+                long size = 0;
+                foreach (var inside in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories)) size += new FileInfo(inside).Length;
+                entries.Add((directory, true, size, Directory.GetLastWriteTimeUtc(directory)));
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { return 0; }
+
+        var total = entries.Sum(entry => entry.Size);
+        var removed = 0;
+        foreach (var entry in entries.OrderBy(entry => entry.Written))
+        {
+            if (total <= maxBytes) break;
+            var name = System.IO.Path.GetFileName(entry.Path);
+            if (name.EndsWith(".crdownload", StringComparison.OrdinalIgnoreCase) || name.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase) || IsKept(entry.Path)) continue;
+            try
+            {
+                if (entry.IsDirectory) Directory.Delete(entry.Path, true); else File.Delete(entry.Path);
+                total -= entry.Size;
+                removed++;
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { }
+        }
+        return removed;
+    }
+
+    /// <summary>
+    /// Moves 3D files out of the buffer into <paramref name="folder"/> (the user keeps them), never replacing a file already there;
+    /// returns the new paths. Anything that is not a model, or cannot be moved, stays where it is.
+    /// </summary>
+    public static IReadOnlyList<string> MoveModels(IEnumerable<string> paths, string folder)
+    {
+        if (!Directory.Exists(folder)) throw new DirectoryNotFoundException("Le dossier de destination n’existe plus.");
+        var moved = new List<string>();
+        foreach (var path in paths)
+        {
+            if (!IsModelFile(path) || !File.Exists(path)) continue;
+            var destination = DownloadArchive.UniquePath(folder, System.IO.Path.GetFileName(path));
+            try { File.Move(path, destination); moved.Add(destination); }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { }
+        }
+        return moved;
+    }
+
     private void Consider(string path)
     {
         if (!IsModelFile(path) && !IsArchive(path)) return;

@@ -22,17 +22,23 @@ public sealed class DownloadDialog : DialogWindow
     private readonly TextBlock _note = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
     private readonly Button _open = new() { Content = "Ouvrir dans le slicer" };
     private readonly Button _openWith = new() { Content = "Autre application…", Classes = { "ghost" }, HorizontalAlignment = HorizontalAlignment.Left };
-    private readonly List<(BufferedFile File, CheckBox Box)> _files = [];
+    private readonly Button _store = new() { Content = "Ranger dans un projet…", Classes = { "ghost" }, HorizontalAlignment = HorizontalAlignment.Left };
+    private readonly List<(BufferedFile File, CheckBox Box, Control Row)> _files = [];
+    private readonly Func<Task<string?>>? _pickFolder;
     private bool _busy;
 
-    public DownloadDialog()
+    /// <param name="pickFolder">Asks the user for a folder of the workspace (null: the "store" action is not offered).</param>
+    public DownloadDialog(Func<Task<string?>>? pickFolder = null)
     {
+        _pickFolder = pickFolder;
         Title = "Téléchargement terminé";
         Width = 560; MinWidth = 440; SizeToContent = SizeToContent.Height; MaxHeight = 640;
         CanResize = false;
 
         _open.Click += async (_, _) => await OpenAsync();
         _openWith.Click += (_, _) => OpenWith();
+        _store.Click += async (_, _) => await StoreAsync();
+        var more = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { _openWith, _store } };
         var folder = new Button { Content = "Afficher le dossier" };
         folder.Click += (_, _) => ShowFolder();
         var close = new Button { Content = "Fermer" };
@@ -43,7 +49,7 @@ public sealed class DownloadDialog : DialogWindow
             Classes = { "card-raised" }, Padding = new Thickness(10, 8),
             Child = new ScrollViewer { MaxHeight = 260, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled, Content = _rows }
         };
-        Layout("Téléchargement terminé", LicenceReminder, [list, _openWith, _note], _open, close, extraAction: folder);
+        Layout("Téléchargement terminé", LicenceReminder, [list, more, _note], _open, close, extraAction: folder);
     }
 
     /// <summary>Adds files to the list (all ticked). Safe to call while the window is open.</summary>
@@ -59,11 +65,14 @@ public sealed class DownloadDialog : DialogWindow
             var size = new TextBlock { Text = SizeText(file.Length), Classes = { "muted" }, VerticalAlignment = VerticalAlignment.Center };
             var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 8, Children = { box, name, size } };
             Grid.SetColumn(name, 1); Grid.SetColumn(size, 2);
-            _files.Add((file, box));
+            _files.Add((file, box, row));
             _rows.Children.Add(row);
         }
         Refresh();
     }
+
+    /// <summary>The files listed, so that the buffer clean-up never removes what the user is looking at.</summary>
+    public IReadOnlyList<string> Paths => _files.Select(item => item.File.Path).ToList();
 
     /// <summary>Shows a ZIP that could not give any file: the message replaces nothing already listed.</summary>
     public void Say(string message) => _note.Text = message;
@@ -75,7 +84,38 @@ public sealed class DownloadDialog : DialogWindow
         _open.IsEnabled = !_busy && ticked > 0;
         _open.Content = ticked > 1 ? "Ouvrir les " + ticked + " dans le slicer" : "Ouvrir dans le slicer";
         _openWith.IsVisible = ticked == 1;
+        _store.IsVisible = _pickFolder is not null && ticked > 0;
         _note.Text = "Rangé dans le tampon du logiciel (pas dans vos Téléchargements).";
+    }
+
+    /// <summary>Moves the ticked files out of the buffer into a folder of the workspace: what is kept there is no longer cleaned up.</summary>
+    private async Task StoreAsync()
+    {
+        if (_pickFolder is null || _busy) return;
+        var paths = Ticked();
+        if (paths.Count == 0) return;
+        _busy = true;
+        try
+        {
+            var folder = await _pickFolder();
+            if (string.IsNullOrWhiteSpace(folder)) return;
+            IReadOnlyList<string> moved;
+            try { moved = DownloadBuffer.MoveModels(paths, folder); }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                _note.Text = "Impossible de ranger ces fichiers : " + exception.Message;
+                return;
+            }
+            // the rows of the files that left the buffer go; the others stay in the list
+            foreach (var item in _files.Where(item => !File.Exists(item.File.Path)).ToList())
+            {
+                _rows.Children.Remove(item.Row);
+                _files.Remove(item);
+            }
+            Refresh();
+            _note.Text = moved.Count + (moved.Count > 1 ? " fichiers rangés dans « " : " fichier rangé dans « ") + Path.GetFileName(folder.TrimEnd('\\', '/')) + " ».";
+        }
+        finally { _busy = false; }
     }
 
     private List<string> Ticked()

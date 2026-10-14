@@ -185,6 +185,78 @@ public sealed class DownloadBufferTests : IDisposable
         Assert.False(Directory.Exists(old));
     }
 
+    private static void Fill(string path, int bytes, int daysOld)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllBytes(path, new byte[bytes]);
+        File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddDays(-daysOld));
+    }
+
+    [Fact]
+    public void TrimToSize_removes_the_oldest_first_and_stops_under_the_limit()
+    {
+        var folder = Path.Combine(_root, "tampon");
+        Fill(Path.Combine(folder, "vieux.stl"), 400, 3);
+        Fill(Path.Combine(folder, "milieu.stl"), 400, 2);
+        Fill(Path.Combine(folder, "recent.stl"), 400, 1);
+
+        var removed = new DownloadBuffer(folder).TrimToSize(900);
+
+        Assert.Equal(1, removed);
+        Assert.False(File.Exists(Path.Combine(folder, "vieux.stl")));
+        Assert.True(File.Exists(Path.Combine(folder, "milieu.stl")));
+        Assert.True(File.Exists(Path.Combine(folder, "recent.stl")));
+    }
+
+    [Fact]
+    public void TrimToSize_counts_opened_zip_folders_and_spares_downloads_in_progress_and_kept_files()
+    {
+        var folder = Path.Combine(_root, "tampon");
+        Fill(Path.Combine(folder, "pack-abc123", "a.stl"), 600, 5);
+        Fill(Path.Combine(folder, "pack-abc123", "b.stl"), 600, 5);
+        Fill(Path.Combine(folder, "en-cours.stl.crdownload"), 500, 9);
+        Fill(Path.Combine(folder, "offert.stl"), 500, 8);
+        Fill(Path.Combine(folder, "autre.stl"), 500, 1);
+
+        new DownloadBuffer(folder).TrimToSize(1000, keep: [Path.Combine(folder, "offert.stl")]);
+
+        Assert.False(Directory.Exists(Path.Combine(folder, "pack-abc123")));
+        Assert.True(File.Exists(Path.Combine(folder, "en-cours.stl.crdownload")));
+        Assert.True(File.Exists(Path.Combine(folder, "offert.stl")));
+    }
+
+    [Fact]
+    public void A_file_inside_a_kept_zip_folder_keeps_the_whole_folder()
+    {
+        var folder = Path.Combine(_root, "tampon");
+        var inside = Path.Combine(folder, "pack-abc123", "a.stl");
+        Fill(inside, 800, 5);
+        Fill(Path.Combine(folder, "autre.stl"), 800, 1);
+
+        new DownloadBuffer(folder).TrimToSize(100, keep: [inside]);
+
+        Assert.True(File.Exists(inside));
+    }
+
+    [Fact]
+    public void MoveModels_keeps_existing_files_and_leaves_what_is_not_a_model()
+    {
+        var folder = Path.Combine(_root, "tampon");
+        var target = Path.Combine(_root, "projet");
+        Directory.CreateDirectory(target);
+        File.WriteAllText(Path.Combine(target, "piece.stl"), "deja la");
+        Fill(Path.Combine(folder, "piece.stl"), 10, 0);
+        Fill(Path.Combine(folder, "notes.txt"), 10, 0);
+
+        var moved = DownloadBuffer.MoveModels([Path.Combine(folder, "piece.stl"), Path.Combine(folder, "notes.txt")], target);
+
+        Assert.Equal([Path.Combine(target, "piece (2).stl")], moved);
+        Assert.Equal("deja la", File.ReadAllText(Path.Combine(target, "piece.stl")));
+        Assert.True(File.Exists(Path.Combine(folder, "notes.txt")));
+        Assert.False(File.Exists(Path.Combine(folder, "piece.stl")));
+        Assert.Throws<DirectoryNotFoundException>(() => DownloadBuffer.MoveModels([], Path.Combine(_root, "absent")));
+    }
+
     [Fact]
     public void PurgeOlderThan_removes_only_old_files()
     {

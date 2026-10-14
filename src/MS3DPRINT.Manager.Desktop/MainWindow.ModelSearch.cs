@@ -8,6 +8,9 @@ public partial class MainWindow
     private void EnsureModelSearchPage()
     {
         if (ModelSearchWorkspacePanel.Child is not null) return;
-        ModelSearchWorkspacePanel.Child = new ModelBrowserView();
+        ModelSearchWorkspacePanel.Child = new ModelBrowserView
+        {
+            PickWorkspaceFolder = () => PickWorkspaceFolderAsync(WorkspaceRoot, "Ranger les modèles reçus")
+        };
     }
 }
