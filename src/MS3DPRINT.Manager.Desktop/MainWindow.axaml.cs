@@ -189,9 +189,14 @@ public partial class MainWindow : Window
         if (compact) Classes.Add("compact"); else Classes.Remove("compact");
         var sidebarWidth = compact ? 68d : 232d;
         RootGrid.ColumnDefinitions[0].Width = new GridLength(sidebarWidth);
-        const double centralMargins = 68;
+        // The model search is a browser: its page chrome is thinned so the web page gets the room.
+        var browser = ModelSearchWorkspacePanel.IsVisible;
+        CentralWorkspace.Margin = browser ? new Avalonia.Thickness(16, 12) : new Avalonia.Thickness(34, 28);
+        CentralWorkspace.RowSpacing = browser ? 8 : 24;
+        PageSubtitle.IsVisible = !browser;
+        var centralMargins = browser ? 32d : 68d;
         var available = Math.Max(0, windowWidth - sidebarWidth - centralMargins);
-        var wide = ViewerWorkspacePanel.IsVisible || ModelSearchWorkspacePanel.IsVisible;
+        var wide = ViewerWorkspacePanel.IsVisible || browser;
         CentralWorkspace.MaxWidth = wide ? double.PositiveInfinity : 1200;
         CentralWorkspace.Width = wide ? available : Math.Min(1200, available);
     }

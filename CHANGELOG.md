@@ -2,6 +2,13 @@
 
 ## 14 octobre 2026
 
+### Recherche de modèles 3D : plus de place pour le navigateur
+- Le haut de la page tient en une ligne : champ de recherche, bouton « Sites · 3/16 » et « Rechercher ». Les sites se choisissent par pastilles groupées par catégorie dans un panneau qui se replie après la recherche (le bouton « Sites » le rouvre), avec « Tout sélectionner / Tout désélectionner ».
+- Une recherche affiche d'abord l'onglet du premier site de la liste (au lieu du dernier ouvert).
+- Barre d'onglets et barre de navigation façon navigateur : « + » juste après le dernier onglet, fermeture par la croix ou le clic du milieu, précédent et suivant grisés quand ils ne servent pas, barre de chargement, bouton « Ouvrir dans le navigateur de Windows » (utile pour une connexion ou une vérification « humain »).
+- L'adresse affichée suit la page même quand le site change de page sans la recharger, et le titre de la page s'affiche en infobulle sur l'onglet.
+- Raccourcis : `Ctrl+L` (adresse), `Ctrl+T` (nouvel onglet), `Ctrl+W` (fermer l'onglet), `F5` (actualiser).
+- La page gagne de la hauteur et de la largeur : marges réduites et sous-titre masqué ; un état vide explique le fonctionnement.
 ### Recherche de modèles 3D : communautés des fabricants
 - Quatre sites s'ajoutent : **Nozzlehub** (moteur qui réunit Printables, MakerWorld, Creality Cloud, Thingiverse, Cults3D, MyMiniFactory, Thangs, Nexprint, Snapmaker Space et Makeronline, avec un filtre sur les licences qui autorisent la vente), et les plateformes de fabricants **Creality Cloud**, **Nexprint** (Elegoo) et **Snapmaker Space**. MakerWorld (Bambu Lab) rejoint ce nouveau groupe « Fabricants d'imprimantes » : la liste compte 16 sites en 4 catégories.
 - Anycubic (Makeronline) n'a pas d'adresse de recherche directe : ses modèles se trouvent via Nozzlehub. Aucune plateforme de modèles n'a été trouvée pour Flashforge, Qidi, Sovol ni Artillery.

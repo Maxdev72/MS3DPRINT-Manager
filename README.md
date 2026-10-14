@@ -64,8 +64,9 @@ Une imprimante a un prix d’achat, une durée de vie et une puissance : son co�
 
 **Modèles 3D (recherche multi-sites).** Saisissez ce que vous cherchez, cochez les sites (Yeggi, MakerWorld,
 Printables, Thingiverse, Thangs, Cults3D, MyMiniFactory) et « Rechercher » : un onglet s'ouvre par site, dans un
-navigateur intégré (précédent, suivant, actualiser, barre d'adresse, nouvel onglet, fermeture). Les liens qui
-s'ouvrent dans une nouvelle fenêtre ouvrent un onglet. La page a besoin d'Internet et du composant Microsoft Edge
+navigateur intégré, dont le premier de la liste s'affiche (précédent, suivant, actualiser, barre d'adresse,
+nouvel onglet, fermeture, ouverture dans le navigateur de Windows ; `Ctrl+L`, `Ctrl+T`, `Ctrl+W`, `F5`). Le bouton
+« Sites » replie ou déplie le choix des sites. Les liens qui s'ouvrent dans une nouvelle fenêtre ouvrent un onglet. La page a besoin d'Internet et du composant Microsoft Edge
 WebView2 (présent sous Windows 11, à installer au besoin sous Windows 10) ; les cookies et le cache des sites sont
 gardés dans `%LOCALAPPDATA%\MS3DPRINT Manager\webview`, pas dans le dossier de livraison.
 
