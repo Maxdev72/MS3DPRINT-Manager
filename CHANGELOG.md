@@ -14,6 +14,7 @@
 - Le choix des sites n'est plus enfermé dans une carte : il se pose directement sur la page, sous la recherche, qui reste le seul élément en relief.
 - Le titre du choix affiche le nombre de sites cochés (« 3 sur 15 »), et les sites cochés portent une coche, plus seulement une couleur.
 - Le bouton de recherche devient un vrai bouton d'action, la phrase d'aide est raccourcie, les espacements suivent le contenu (serrés dans un groupe, larges entre les groupes) et les raccourcis clavier s'affichent comme des touches.
+- Deuxième passe sur cette page : titre plus grand avec sa phrase d'aide juste dessous, champ de recherche plus haut aux coins plus doux, un léger halo de la couleur d'accent derrière la recherche, et les quatre groupes de sites rangés deux par deux (le nom du groupe au-dessus de ses sites) au lieu d'une longue colonne. « Tout sélectionner » prend la couleur d'accent.
 
 ### Tampon de téléchargement sous contrôle
 - Le tampon garde **2 jours** (au lieu de 7) et **1 Go au plus** : quand il dépasse, les fichiers et dossiers de ZIP les plus anciens sont supprimés en premier. Les téléchargements en cours et les fichiers affichés dans la fenêtre de téléchargement ne sont jamais supprimés.

@@ -263,7 +263,7 @@ public sealed class ModelBrowserView : UserControl
     /// <summary>The site choice: chips by category, with select all. One instance on the start page, one in the "Sites" panel.</summary>
     private Control BuildChooser()
     {
-        var selectAll = new Button { Classes = { "ghost" } };
+        var selectAll = new Button { Classes = { "ghost" }, Foreground = (IBrush?)Application.Current?.FindResource("AccentBrush") };
         selectAll.Click += (_, _) => SetAllSites(!AllSitesSelected);
         _selectAlls.Add(selectAll);
         var count = new TextBlock { Classes = { "caption" }, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 1, 0, 0) };
@@ -276,7 +276,8 @@ public sealed class ModelBrowserView : UserControl
         var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { title, selectAll } };
         Grid.SetColumn(selectAll, 1);
 
-        var groups = new StackPanel { Spacing = 6 };
+        var groups = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*"), ColumnSpacing = 28 };
+        var groupIndex = 0;
         foreach (var group in ModelSearchSite.Defaults.GroupBy(site => site.Category))
         {
             var chips = new WrapPanel { Orientation = Orientation.Horizontal };
@@ -289,12 +290,13 @@ public sealed class ModelBrowserView : UserControl
                 _chips.Add((name, chip));
                 chips.Children.Add(chip);
             }
-            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("170,*") };
-            var label = new TextBlock { Text = group.Key, Classes = { "caption" }, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 8, 0, 0) };
-            Grid.SetColumn(chips, 1);
-            row.Children.Add(label);
-            row.Children.Add(chips);
-            groups.Children.Add(row);
+            var label = new TextBlock { Text = group.Key, Classes = { "caption" }, FontWeight = FontWeight.SemiBold, Margin = new Thickness(2, 0, 0, 8) };
+            var cell = new StackPanel { Margin = new Thickness(0, 0, 0, 14), Children = { label, chips } };
+            if (groupIndex % 2 == 0) groups.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            Grid.SetRow(cell, groupIndex / 2);
+            Grid.SetColumn(cell, groupIndex % 2);
+            groups.Children.Add(cell);
+            groupIndex++;
         }
 
         var hint = new TextBlock { Classes = { "caption" }, IsVisible = false, Foreground = (IBrush?)Application.Current?.FindResource("WarningBrush") };
@@ -308,7 +310,12 @@ public sealed class ModelBrowserView : UserControl
 
     private Control BuildStartPage()
     {
-        var title = new TextBlock { Text = "Cherchez un modèle sur plusieurs sites à la fois", Classes = { "page-title" }, HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 22) };
+        var title = new TextBlock { Text = "Cherchez un modèle sur plusieurs sites à la fois", Classes = { "page-title" }, FontSize = 34, LetterSpacing = -0.6, HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap };
+        var lead = new TextBlock
+        {
+            Text = "Un onglet s’ouvre pour chaque site coché. Vous pouvez aussi saisir une adresse.", FontSize = 14, Classes = { "muted" },
+            HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 26)
+        };
 
         _startInput.Classes.Add("search-input");
         AutomationProperties.SetName(_startInput, "Rechercher un modèle 3D ou saisir une adresse");
@@ -317,7 +324,7 @@ public sealed class ModelBrowserView : UserControl
         go.Click += (_, _) => Submit(_startInput.Text);
         var inputBox = new Border
         {
-            Classes = { "search-box" }, Height = 58, MaxWidth = 680, HorizontalAlignment = HorizontalAlignment.Stretch,
+            Classes = { "search-box" }, Height = 60, MaxWidth = 700, CornerRadius = new CornerRadius(14), HorizontalAlignment = HorizontalAlignment.Stretch,
             Child = new Grid
             {
                 ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 10,
@@ -329,14 +336,9 @@ public sealed class ModelBrowserView : UserControl
         // a click anywhere in the box stops the animation (the text box handles its own clicks, hence handledEventsToo)
         inputBox.AddHandler(InputElement.PointerPressedEvent, (_, _) => { _animationPaused = true; UpdateStartAnimation(); }, handledEventsToo: true);
 
-        var steps = new TextBlock
-        {
-            Text = "Un onglet s’ouvre pour chaque site coché. Vous pouvez aussi saisir une adresse.",
-            Classes = { "caption" }, HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 12, 0, 0)
-        };
         // the site choice sits on the page itself, not in a box of its own: the search box is the only raised thing here
         var chooser = BuildChooser();
-        chooser.Margin = new Thickness(4, 34, 4, 0);
+        chooser.Margin = new Thickness(4, 44, 4, 0);
         var shortcuts = new WrapPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 30, 0, 0) };
         foreach (var (keys, meaning) in new[] { ("Ctrl+L", "barre"), ("Ctrl+T", "nouvel onglet"), ("Ctrl+W", "fermer l’onglet"), ("F5", "actualiser") })
         {
@@ -349,9 +351,17 @@ public sealed class ModelBrowserView : UserControl
         var column = new StackPanel
         {
             Spacing = 0, MaxWidth = 760, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(0, 0, 0, 48), Children = { title, inputBox, steps, chooser, shortcuts }
+            Margin = new Thickness(0, 0, 0, 48), Children = { title, lead, inputBox, chooser, shortcuts }
         };
         var holder = new Grid { Margin = new Thickness(0, 16), Children = { column } };
+        // a very faint glow of the accent colour behind the search, so that the page is not a flat sheet
+        if (Application.Current?.FindResource("AccentBrush") is ISolidColorBrush accent)
+            holder.Background = new RadialGradientBrush
+            {
+                Center = new RelativePoint(0.5, 0.38, RelativeUnit.Relative), GradientOrigin = new RelativePoint(0.5, 0.38, RelativeUnit.Relative),
+                RadiusX = RelativeScalar.Parse("55%"), RadiusY = RelativeScalar.Parse("55%"),
+                GradientStops = { new GradientStop(Color.FromArgb(0x1C, accent.Color.R, accent.Color.G, accent.Color.B), 0), new GradientStop(Color.FromArgb(0, accent.Color.R, accent.Color.G, accent.Color.B), 1) }
+            };
         var scroll = new ScrollViewer { HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, Content = holder };
         // the column fills the viewport so that it can be centred in it; a window too short for it scrolls
         scroll.SizeChanged += (_, e) => holder.MinHeight = Math.Max(0, e.NewSize.Height - 32);
