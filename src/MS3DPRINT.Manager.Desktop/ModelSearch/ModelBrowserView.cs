@@ -57,6 +57,13 @@ public sealed class ModelBrowserView : UserControl
     private readonly Grid _tabRow = new() { IsVisible = false };
     private readonly Grid _viewHost = new();
     private readonly Control _startPage;
+    // the start page has its own big search box; an example is typed into it, like someone searching
+    private readonly TextBox _startInput = new() { VerticalAlignment = VerticalAlignment.Center, FontSize = 16 };
+    private readonly DispatcherTimer _typing = new() { Interval = TimeSpan.FromMilliseconds(65) };
+    private static readonly string[] ExampleQueries =
+        ["spatule mastic", "support casque audio", "boîte de rangement vis", "engrenage 20 dents", "clip câble bureau", "pied de meuble réglable"];
+    private int _exampleIndex, _typedLength, _pauseTicks, _blink;
+    private bool _erasing;
     private readonly ProgressBar _progress = new() { IsIndeterminate = true, Height = 2, MinHeight = 2, IsVisible = false };
     private readonly Button _back = new() { Classes = { "tool" }, IsEnabled = false };
     private readonly Button _forward = new() { Classes = { "tool" }, IsEnabled = false };
@@ -104,7 +111,10 @@ public sealed class ModelBrowserView : UserControl
         _external.Click += async (_, _) => await OpenExternalAsync();
 
         _omnibox.Classes.Add("search-input");
-        _omnibox.KeyDown += (_, e) => { if (e.Key == Key.Enter) { SubmitOmnibox(); e.Handled = true; } };
+        _omnibox.KeyDown += (_, e) => { if (e.Key == Key.Enter) { Submit(_omnibox.Text); e.Handled = true; } };
+        _startInput.KeyDown += (_, e) => { if (e.Key == Key.Enter) { Submit(_startInput.Text); e.Handled = true; } };
+        _startInput.TextChanged += (_, _) => UpdateStartAnimation();
+        _typing.Tick += (_, _) => TypeStep();
         _omnibox.GotFocus += (_, _) => Dispatcher.UIThread.Post(() => _omnibox.SelectAll());
         AutomationProperties.SetName(_omnibox, "Rechercher un modèle 3D ou saisir une adresse");
         var omniBorder = new Border
@@ -147,8 +157,8 @@ public sealed class ModelBrowserView : UserControl
         UpdateSelectionUi();
         UpdateToolbarShape();
         _follow.Tick += async (_, _) => { ManageMemory(); await FollowActivePageAsync(); };
-        AttachedToVisualTree += (_, _) => { _follow.Start(); _omnibox.Focus(); };
-        DetachedFromVisualTree += (_, _) => _follow.Stop();
+        AttachedToVisualTree += (_, _) => { _follow.Start(); FocusInput(); UpdateStartAnimation(); };
+        DetachedFromVisualTree += (_, _) => { _follow.Stop(); _typing.Stop(); };
         KeyDown += View_KeyDown;
 #if DEBUG
         // development hook (Debug builds only): opens an address when the page appears, to test downloads without clicking
@@ -311,22 +321,84 @@ public sealed class ModelBrowserView : UserControl
 
     private Control BuildStartPage()
     {
-        var icon = Icons.Glyph("IconSearch", 36);
-        icon.Opacity = 0.6;
-        icon.HorizontalAlignment = HorizontalAlignment.Center;
-        var title = new TextBlock { Text = "Cherchez un modèle sur plusieurs sites à la fois", Classes = { "section-title" }, HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap };
+        var title = new TextBlock { Text = "Cherchez un modèle sur plusieurs sites à la fois", Classes = { "page-title" }, HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap };
+
+        _startInput.Classes.Add("search-input");
+        AutomationProperties.SetName(_startInput, "Rechercher un modèle 3D ou saisir une adresse");
+        var go = new Button { Content = Icons.Glyph("IconArrowRight", 18), Classes = { "tool" } };
+        Describe(go, "Lancer la recherche (Entrée)");
+        go.Click += (_, _) => Submit(_startInput.Text);
+        var inputBox = new Border
+        {
+            Classes = { "search-box" }, Height = 52, MaxWidth = 640, HorizontalAlignment = HorizontalAlignment.Stretch,
+            Child = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 10,
+                Children = { Icons.Glyph("IconSearch", 20), _startInput, go }
+            }
+        };
+        Grid.SetColumn(_startInput, 1);
+        Grid.SetColumn(go, 2);
+
         var steps = new TextBlock
         {
-            Text = "Saisissez un mot-clé dans la barre puis Entrée : un onglet s’ouvre pour chaque site coché, le premier de la liste s’affiche. Une adresse s’ouvre directement.",
-            Classes = { "muted" }, HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap
+            Text = "Entrée : un onglet s’ouvre pour chaque site coché, le premier de la liste s’affiche. Une adresse s’ouvre directement.",
+            Classes = { "caption" }, HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap
         };
-        var card = new Border { Classes = { "card-raised" }, Child = BuildChooser() };
+        var card = new Border { Classes = { "card-raised" }, Child = BuildChooser(), Margin = new Thickness(0, 14, 0, 0) };
         var shortcuts = new TextBlock { Text = "Ctrl+L barre · Ctrl+T nouvel onglet · Ctrl+W fermer l’onglet · F5 actualiser", Classes = { "caption" }, HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center };
-        return new ScrollViewer
+
+        // centred in the page, a little above the middle (the eye reads the middle of a page slightly higher than its true centre)
+        var column = new StackPanel
         {
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            Content = new StackPanel { Spacing = 14, MaxWidth = 760, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 28, 0, 20), Children = { icon, title, steps, card, shortcuts } }
+            Spacing = 14, MaxWidth = 760, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 0, 48), Children = { title, inputBox, steps, card, shortcuts }
         };
+        var holder = new Grid { Margin = new Thickness(0, 16), Children = { column } };
+        var scroll = new ScrollViewer { HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, Content = holder };
+        // the column fills the viewport so that it can be centred in it; a window too short for it scrolls
+        scroll.SizeChanged += (_, e) => holder.MinHeight = Math.Max(0, e.NewSize.Height - 32);
+        return scroll;
+    }
+
+    // ---- start page animation: examples typed into the search box ----------------------------------------------------
+
+    /// <summary>The animation runs only while the start page is on show with an empty box; with reduced motion the example stays still.</summary>
+    private void UpdateStartAnimation()
+    {
+        var wanted = _startPage.IsVisible && string.IsNullOrEmpty(_startInput.Text);
+        if (!wanted) { _typing.Stop(); if (string.IsNullOrEmpty(_startInput.Text)) _startInput.PlaceholderText = null; return; }
+        if (DesktopApplication.ReduceMotion) { _typing.Stop(); _startInput.PlaceholderText = ExampleQueries[0]; return; }
+        if (!_typing.IsEnabled) _typing.Start();
+    }
+
+    /// <summary>One step of the typing: letter by letter, a pause on the finished example, quicker deletion, then the next example.</summary>
+    private void TypeStep()
+    {
+        if (!IsEffectivelyVisible || !_startPage.IsVisible || !string.IsNullOrEmpty(_startInput.Text)) return;
+        _blink++;
+        var text = ExampleQueries[_exampleIndex];
+        if (_pauseTicks > 0) _pauseTicks--;
+        else if (!_erasing)
+        {
+            _typedLength++;
+            if (_typedLength >= text.Length) { _typedLength = text.Length; _erasing = true; _pauseTicks = 26; }
+        }
+        else
+        {
+            _typedLength = Math.Max(0, _typedLength - 2);
+            if (_typedLength == 0) { _erasing = false; _exampleIndex = (_exampleIndex + 1) % ExampleQueries.Length; _pauseTicks = 8; }
+        }
+        // a thin caret that blinks, as in a field being typed in
+        _startInput.PlaceholderText = text[.._typedLength] + (_blink / 6 % 2 == 0 ? "|" : " ");
+    }
+
+    /// <summary>The start page's own box while it is on show, the bar's box otherwise.</summary>
+    private void FocusInput(bool selectAll = false)
+    {
+        var input = _startPage.IsVisible ? _startInput : _omnibox;
+        input.Focus();
+        if (selectAll) input.SelectAll();
     }
 
     private bool AllSitesSelected => _chips.Select(chip => chip.Name).Distinct().All(_selected.Contains);
@@ -375,9 +447,9 @@ public sealed class ModelBrowserView : UserControl
 
     // ---- the bar's box: a keyword searches the sites, an address opens ------------------------------------------------
 
-    private void SubmitOmnibox()
+    private void Submit(string? typed)
     {
-        var text = (_omnibox.Text ?? string.Empty).Trim();
+        var text = (typed ?? string.Empty).Trim();
         if (text.Length == 0) return;
         if (ModelSearchUrlBuilder.TryParseAddress(text) is { } address)
         {
@@ -446,11 +518,17 @@ public sealed class ModelBrowserView : UserControl
         _tabRow.IsVisible = true;
         _startPage.IsVisible = false;
         UpdateToolbarShape();
+        UpdateStartAnimation();
         return tab;
     }
 
     /// <summary>The bar joins the selected tab: square at the corner under the tabs, rounded all round when there are none.</summary>
-    private void UpdateToolbarShape() => _toolbar.CornerRadius = _tabRow.IsVisible ? new CornerRadius(0, 8, 8, 8) : new CornerRadius(8);
+    private void UpdateToolbarShape()
+    {
+        _toolbar.CornerRadius = _tabRow.IsVisible ? new CornerRadius(0, 8, 8, 8) : new CornerRadius(8);
+        // before the first search the start page has its own search box: the bar would only repeat it
+        _toolbar.IsVisible = _tabRow.IsVisible;
+    }
 
     /// <summary>Creates the web view of a tab (the page loads from <see cref="BrowserTab.Address"/>).</summary>
     private void Wake(BrowserTab tab)
@@ -523,7 +601,8 @@ public sealed class ModelBrowserView : UserControl
             _omnibox.Text = string.Empty;
             UpdateToolbarShape();
             UpdateSitesButton();
-            _omnibox.Focus();
+            UpdateStartAnimation();
+            FocusInput();
         }
         RefreshChrome();
     }
@@ -603,7 +682,7 @@ public sealed class ModelBrowserView : UserControl
     private void View_KeyDown(object? sender, KeyEventArgs e)
     {
         var control = e.KeyModifiers == KeyModifiers.Control;
-        if (control && e.Key == Key.L) { _omnibox.Focus(); _omnibox.SelectAll(); e.Handled = true; }
+        if (control && e.Key == Key.L) { FocusInput(selectAll: true); e.Handled = true; }
         else if (control && e.Key == Key.T) { OpenBlankTab(); e.Handled = true; }
         else if (control && e.Key == Key.W && _active is { } tab) { CloseTab(tab); e.Handled = true; }
         else if ((e.Key == Key.F5 || (control && e.Key == Key.R)) && _active is not null) { _active.View?.Refresh(); e.Handled = true; }

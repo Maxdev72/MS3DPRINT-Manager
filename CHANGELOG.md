@@ -2,6 +2,10 @@
 
 ## 14 octobre 2026
 
+### Page de démarrage des modèles 3D
+- Avant la première recherche, la page est centrée au milieu de la fenêtre, avec un grand champ de recherche intégré (la barre du haut n'apparaît qu'une fois des onglets ouverts). Une flèche à droite du champ lance la recherche, comme Entrée.
+- Des exemples (« spatule mastic », « support casque audio »…) se tapent lettre par lettre dans le champ, puis s'effacent. L'animation s'arrête dès que vous saisissez quelque chose, ou quand la page n'est plus affichée, et reste fixe si Windows demande moins d'animations.
+
 ### Nozzlehub retiré, tampon pour les téléchargements
 - Nozzlehub est retiré de la liste des sites (15 sites restent) ; Yeggi, Printables et MakerWorld sont cochés par défaut. Anycubic (Makeronline) n'a pas d'adresse de recherche directe et n'est donc plus proposé par ce biais.
 - Les fichiers téléchargés dans le navigateur intégré ne vont plus dans vos Téléchargements : ils arrivent dans un tampon du logiciel (`%LOCALAPPDATA%\MS3DPRINT Manager\tampon`, vidé après 7 jours). Dès qu'un fichier STL, 3MF, OBJ, STEP ou AMF est complet, une bande « Fichier 3D reçu » propose **Ouvrir dans le slicer** (l'application que Windows associe au type de fichier), **Autre application…** et **Afficher le dossier**. Rien ne s'ouvre sans votre clic ; programmes et scripts restent bloqués.
