@@ -135,8 +135,8 @@ public partial class MainWindow
     private async void MoveCollection_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: MS3DPRINT.Manager.Core.Collections.CollectionItemSummary item }) return;
-        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = "Choisir le dossier de destination", AllowMultiple = false });
-        var destination = folders.FirstOrDefault()?.TryGetLocalPath();
+        var destination = await PickWorkspaceFolderAsync(Path.GetDirectoryName(item.Path) ?? WorkspaceRoot,
+            "Déplacer « " + Path.GetFileName(item.Path) + " »", item.Path);
         if (string.IsNullOrWhiteSpace(destination)) return;
         try
         {

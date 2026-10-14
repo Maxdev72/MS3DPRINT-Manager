@@ -17,16 +17,23 @@ public static class MeshLoader
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (!ThreeDFileSupport.IsPreviewable(path))
-            throw new NotSupportedException("Seuls les fichiers STL et OBJ sont pris en charge.");
+            throw new NotSupportedException("Seuls les fichiers STL, OBJ et 3MF sont pris en charge.");
         if (new FileInfo(path) is { Exists: true } info && info.Length > MaxFileBytes)
             throw new InvalidDataException($"Ce fichier fait {info.Length / (1024 * 1024)} Mo : au-delà de {MaxFileBytes / (1024 * 1024)} Mo, il est trop volumineux pour être affiché.");
 
-        var mesh = Path.GetExtension(path).Equals(".obj", StringComparison.OrdinalIgnoreCase)
-            ? LoadObj(path, cancellationToken)
+        var extension = Path.GetExtension(path);
+        var mesh = extension.Equals(".obj", StringComparison.OrdinalIgnoreCase) ? LoadObj(path, cancellationToken)
+            : extension.Equals(".3mf", StringComparison.OrdinalIgnoreCase) ? LoadThreeMf(path, cancellationToken)
             : LoadStl(path, cancellationToken);
         if (mesh.TriangleCount == 0 || !float.IsFinite(mesh.Size.X + mesh.Size.Y + mesh.Size.Z))
             throw new InvalidDataException(EmptyMessage);
         return mesh;
+    }
+
+    private static MeshModel LoadThreeMf(string path, CancellationToken cancellationToken)
+    {
+        try { return ThreeMfReader.Load(path, cancellationToken); }
+        catch (System.Xml.XmlException exception) { throw new InvalidDataException("Fichier 3MF illisible : " + exception.Message, exception); }
     }
 
     private static MeshModel LoadStl(string path, CancellationToken cancellationToken)

@@ -331,8 +331,8 @@ public partial class MainWindow
     private async void MoveClient_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: ClientSummary client }) return;
-        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = "Choisir le dossier de destination", AllowMultiple = false });
-        var destination = folders.FirstOrDefault()?.TryGetLocalPath();
+        var destination = await PickWorkspaceFolderAsync(Path.GetDirectoryName(client.ClientPath) ?? WorkspaceRoot,
+            "Déplacer le client « " + Path.GetFileName(client.ClientPath) + " »", client.ClientPath);
         if (string.IsNullOrWhiteSpace(destination)) return;
         try
         {

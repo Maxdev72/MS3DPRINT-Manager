@@ -112,6 +112,13 @@ public partial class MainWindow
 
     private List<Control> _hiddenByFolderWorkspace = [];
 
+    /// <summary>Asks, in the application, for a folder of the workspace (the system folder window opens Explorer and lets the user leave it).</summary>
+    private async Task<string?> PickWorkspaceFolderAsync(string start, string heading, string? excluded = null)
+    {
+        var dialog = new FolderPickerWindow(WorkspaceRoot, start, heading, "Choisissez le dossier de destination dans l’espace de travail.", excluded);
+        return await dialog.ShowDialog<bool>(this) ? dialog.SelectedFolder : null;
+    }
+
     private IEnumerable<Control> WorkspacePanels() =>
     [
         DashboardStats, DashboardContent, ProjectsWorkspacePanel, ClientsWorkspacePanel, CollectionsWorkspacePanel,

@@ -86,7 +86,7 @@ et téléphones, à la demande et sans indexation. `↑` `↓` puis `Entrée` ou
 
 **Aperçus.** Les images s’affichent dans le logiciel. Les PDF s’ouvrent dans une fenêtre intégrée (pages, zoom,
 ajustement à la largeur) avec un bouton **Imprimer…** qui ouvre la boîte d’impression de Windows. Les fichiers
-STL et OBJ s’ouvrent dans le **visualiseur 3D** (rotation, zoom, déplacement, solide ou filaire, couleur,
+STL, OBJ et 3MF s’ouvrent dans le **visualiseur 3D** (rotation, zoom, déplacement, solide ou filaire, couleur,
 dimensions en unités du modèle) ; son test de parois est facultatif et indicatif : il demande l’échelle en
 millimètres et un seuil, signale des zones potentiellement fines et n’est pas une garantie d’imprimabilité.
 Les autres formats s’ouvrent avec l’application Windows associée (**Ouvrir avec…** pour en choisir une).

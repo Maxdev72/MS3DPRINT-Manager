@@ -121,7 +121,7 @@ public sealed class ModelViewerView : UserControl
 
         // viewport with its empty state and a navigation hint
         var hint = new TextBlock { Text = "Clic gauche : tourner · Clic droit : déplacer · Molette : zoom · R recentrer · W filaire · G grille · P image", Classes = { "caption" }, Margin = new Thickness(14, 0, 14, 10), VerticalAlignment = VerticalAlignment.Bottom, IsHitTestVisible = false };
-        _emptyState.Children.Add(new TextBlock { Text = "Déposez un fichier STL ou OBJ ici", FontSize = 16, FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Center });
+        _emptyState.Children.Add(new TextBlock { Text = "Déposez un fichier STL, OBJ ou 3MF ici", FontSize = 16, FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Center });
         _emptyState.Children.Add(new TextBlock { Text = "ou choisissez-en un sur votre ordinateur", Classes = { "muted" }, HorizontalAlignment = HorizontalAlignment.Center });
         var emptyBrowse = new Button { Content = Icons.Label("IconOpen", "Ouvrir un fichier"), Classes = { "primary-action" }, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 6, 0, 0) };
         emptyBrowse.Click += async (_, _) => await BrowseAsync();
@@ -482,7 +482,7 @@ public sealed class ModelViewerView : UserControl
         {
             Title = "Choisir un fichier 3D",
             AllowMultiple = false,
-            FileTypeFilter = [new FilePickerFileType("Modèles 3D (STL, OBJ)") { Patterns = ["*.stl", "*.obj"] }]
+            FileTypeFilter = [new FilePickerFileType("Modèles 3D (STL, OBJ, 3MF)") { Patterns = ["*.stl", "*.obj", "*.3mf"] }]
         });
         var local = files.FirstOrDefault()?.TryGetLocalPath();
         if (string.IsNullOrWhiteSpace(local)) return;
@@ -800,7 +800,7 @@ public sealed class ModelViewerView : UserControl
         {
             Title = "Choisir l’autre version du modèle",
             AllowMultiple = false,
-            FileTypeFilter = [new FilePickerFileType("Modèles 3D (STL, OBJ)") { Patterns = ["*.stl", "*.obj"] }]
+            FileTypeFilter = [new FilePickerFileType("Modèles 3D (STL, OBJ, 3MF)") { Patterns = ["*.stl", "*.obj", "*.3mf"] }]
         });
         var local = files.FirstOrDefault()?.TryGetLocalPath();
         if (string.IsNullOrWhiteSpace(local)) return;

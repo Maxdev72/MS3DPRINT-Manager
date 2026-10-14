@@ -7,14 +7,15 @@ public sealed class ThreeDFileSupportTests
     [Theory]
     [InlineData("piece.stl")]
     [InlineData("piece.OBJ")]
-    public void IsPreviewable_AcceptsStlAndObj(string path)
+    [InlineData("plateau.3mf")]
+    [InlineData("plateau.3MF")]
+    public void IsPreviewable_AcceptsStlObjAnd3mf(string path)
     {
         Assert.True(ThreeDFileSupport.IsPreviewable(path));
     }
 
     [Theory]
     [InlineData("piece.step")]
-    [InlineData("piece.3mf")]
     [InlineData("plan.pdf")]
     public void IsPreviewable_RejectsFormatsNotSupportedByTheBuiltInViewer(string path)
     {

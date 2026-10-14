@@ -5,7 +5,9 @@ public static class ThreeDFileSupport
     public static bool IsPreviewable(string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
-        return Path.GetExtension(path).Equals(".stl", StringComparison.OrdinalIgnoreCase) ||
-               Path.GetExtension(path).Equals(".obj", StringComparison.OrdinalIgnoreCase);
+        var extension = Path.GetExtension(path);
+        return extension.Equals(".stl", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".obj", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".3mf", StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -1,5 +1,12 @@
 # Journal des modifications
 
+## 14 octobre 2026 (suite)
+
+### Fichiers 3MF, déplacements et aperçu agrandi
+- Les fichiers **3MF** (Bambu Studio, OrcaSlicer, PrusaSlicer, CAD) s'ouvrent maintenant dans le visualiseur 3D et ont une vignette dans les listes : tous les objets du plateau, avec leur position, les assemblages de composants et les unités du fichier ; les supports et objets non imprimables sont ignorés.
+- « Déplacer » (fichier, dossier, client, collection) ne lance plus l'Explorateur Windows : un sélecteur de dossier intégré, limité à l'espace de travail, permet de parcourir et de choisir la destination.
+- Quand le pointeur reste sur un fichier 3D dans une liste, un **aperçu agrandi** (360 px) s'affiche à côté ; il est calculé à la première visite puis gardé sur le disque.
+
 ## 14 octobre 2026
 
 ### Ouvrir un fichier sans application associée

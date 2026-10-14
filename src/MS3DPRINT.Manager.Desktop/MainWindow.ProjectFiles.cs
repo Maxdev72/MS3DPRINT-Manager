@@ -250,8 +250,9 @@ public partial class MainWindow
     private async void MoveProjectEntry_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: ProjectDirectoryContext context }) return;
-        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = "Choisir le dossier de destination", AllowMultiple = false });
-        var destination = folders.FirstOrDefault()?.TryGetLocalPath();
+        var isFolder = Directory.Exists(context.Path);
+        var destination = await PickWorkspaceFolderAsync(Path.GetDirectoryName(context.Path) ?? WorkspaceRoot,
+            "Déplacer « " + Path.GetFileName(context.Path) + " »", isFolder ? context.Path : null);
         if (string.IsNullOrWhiteSpace(destination)) return;
         try
         {

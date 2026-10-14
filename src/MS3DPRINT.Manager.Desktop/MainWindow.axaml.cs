@@ -140,6 +140,9 @@ public partial class MainWindow : Window
             case "filament": CreateFilament_Click(this, new RoutedEventArgs()); break;
             case "collection": CreateCollection_Click(this, new RoutedEventArgs()); break;
             case "viewer": ShowModelViewer(Environment.GetEnvironmentVariable("MS3DPRINT_START_MODEL")); break;
+#if DEBUG
+            case "picker": _ = PickWorkspaceFolderAsync(WorkspaceRoot, "Déplacer « essai.stl »"); break;
+#endif
             case "toast":
                 Notify("Projet créé avec succès.");
                 Notify("Impossible d’écrire dans ce dossier : accès refusé.", error: true);

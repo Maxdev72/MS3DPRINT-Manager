@@ -106,10 +106,50 @@ public partial class MainWindow
             icon.VerticalAlignment = VerticalAlignment.Center;
             row.Children.Add(slot);
             _ = ShowThumbnailAsync(modelPath, picture, frame, icon);
+            AttachLargePreview(row, modelPath, text);
         }
         else row.Children.Add(icon);
         row.Children.Add(new TextBlock { Text = text, FontWeight = accentIcon ? FontWeight.SemiBold : FontWeight.Normal, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center });
         return row;
+    }
+
+    /// <summary>A larger picture of the model when the pointer rests on its row; the picture is made on the first visit and kept.</summary>
+    private static void AttachLargePreview(StackPanel row, string modelPath, string title)
+    {
+        const double size = MS3DPRINT.Manager.Desktop.Viewer.ModelThumbnails.PreviewSize;
+        var picture = new Avalonia.Controls.Image { Width = size, Height = size, Stretch = Stretch.Uniform };
+        var waiting = new TextBlock { Text = "Aperçu en cours…", Classes = { "caption" }, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+        var frame = new Border { Width = size, Height = size, CornerRadius = new Avalonia.CornerRadius(8), ClipToBounds = true, Background = new SolidColorBrush(Color.FromRgb(0x0E, 0x15, 0x22)), Child = new Panel { Children = { waiting, picture } } };
+        var caption = new TextBlock { Text = title, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = size };
+        // the whole name cell answers, not only the picture and the words
+        row.Background = Brushes.Transparent;
+        row.HorizontalAlignment = HorizontalAlignment.Stretch;
+        ToolTip.SetTip(row, new StackPanel { Spacing = 8, Children = { frame, caption } });
+        ToolTip.SetShowDelay(row, 350);
+        ToolTip.SetPlacement(row, Avalonia.Controls.PlacementMode.Right);
+#if DEBUG
+        // development hook (Debug builds only): opens the first preview by itself, to check it without a pointer
+        if (Environment.GetEnvironmentVariable("MS3DPRINT_TEST_TIP") == "1")
+            Dispatcher.UIThread.Post(() => DispatcherTimer.RunOnce(() => { _ = ShowLargePreviewAsync(modelPath, picture, waiting); ToolTip.SetIsOpen(row, true); }, TimeSpan.FromSeconds(3)));
+#endif
+        var started = false;
+        row.PointerEntered += (_, _) =>
+        {
+            if (started) return;
+            started = true;
+            _ = ShowLargePreviewAsync(modelPath, picture, waiting);
+        };
+    }
+
+    private static async Task ShowLargePreviewAsync(string modelPath, Avalonia.Controls.Image picture, TextBlock waiting)
+    {
+        var bitmap = await MS3DPRINT.Manager.Desktop.Viewer.ModelThumbnails.GetAsync(modelPath, default, MS3DPRINT.Manager.Desktop.Viewer.ModelThumbnails.PreviewSize);
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (bitmap is null) { waiting.Text = "Aperçu indisponible pour ce fichier."; return; }
+            picture.Source = bitmap;
+            waiting.IsVisible = false;
+        });
     }
 
     private static async Task ShowThumbnailAsync(string modelPath, Avalonia.Controls.Image picture, Control frame, Control icon)
