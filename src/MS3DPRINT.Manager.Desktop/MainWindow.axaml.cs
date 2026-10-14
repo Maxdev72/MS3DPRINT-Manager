@@ -97,8 +97,9 @@ public partial class MainWindow : Window
         EnsureOnScreen();
         UpdateCentralWorkspaceWidth(Bounds.Width);
         var shortcut = 1;
-        foreach (var navigation in NavigationButtons().Take(9))
-            ToolTip.SetTip(navigation, $"{navigation.Tag} (Ctrl+{shortcut++})");
+        // Ctrl+1 to Ctrl+9, then Ctrl+0 for the tenth page
+        foreach (var navigation in NavigationButtons().Take(10))
+            ToolTip.SetTip(navigation, $"{navigation.Tag} (Ctrl+{shortcut++ % 10})");
         await PreloadAsync();
         // MS3DPRINT_START_PAGE=Clients opens that page directly (screenshots, demos).
         if (Environment.GetEnvironmentVariable("MS3DPRINT_START_PAGE") is { Length: > 0 } page &&
@@ -254,6 +255,7 @@ public partial class MainWindow : Window
         ["Filaments"] = "Votre stock de matières et leurs coûts.",
         ["Estimations"] = "Calculez un prix de vente à partir de vos coûts réels.",
         ["Imprimantes"] = "Votre parc machines et leurs coûts horaires.",
+        ["Modèles 3D"] = "Cherchez un modèle sur plusieurs sites à la fois, dans des onglets.",
         ["Corbeille"] = "Retrouvez et restaurez ce que vous avez supprimé.",
         ["Paramètres"] = "Stockage, arborescence et journal des modifications."
     };

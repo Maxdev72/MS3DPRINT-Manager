@@ -1,5 +1,14 @@
 # Journal des modifications
 
+## 14 octobre 2026
+
+### Recherche de modèles 3D sur plusieurs sites
+- Nouvelle page « Modèles 3D » (menu Outils) : une saisie, des cases à cocher pour Yeggi, MakerWorld, Printables, Thingiverse, Thangs, Cults3D et MyMiniFactory, et un onglet de navigateur intégré s'ouvre par site coché sur les résultats.
+- Barre d'adresse (une adresse ou un texte à rechercher), précédent, suivant, actualiser, nouvel onglet, fermeture d'onglet ; un lien qui demande une nouvelle fenêtre s'ouvre dans un onglet.
+- Le navigateur garde ses cookies et son cache dans `%LOCALAPPDATA%\MS3DPRINT Manager\webview` et non à côté de l'exécutable.
+- Le logiciel déclare maintenant les versions de Windows qu'il prend en charge (manifeste), ce que le navigateur intégré exige pour s'afficher.
+- `Ctrl+0` ouvre la dixième page (Paramètres), `Ctrl+9` la neuvième.
+
 ## 13 octobre 2026
 
 ### Audit : robustesse

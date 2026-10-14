@@ -37,6 +37,7 @@
             <Button Classes="nav-item" Tag="Imprimantes" Click="NavigationButton_Click" AutomationProperties.Name="Imprimantes"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconPrinters}" /><TextBlock Classes="nav-label" Text="Imprimantes" /></StackPanel></Button>
             <Button Classes="nav-item" Tag="Corbeille" Click="NavigationButton_Click" AutomationProperties.Name="Corbeille"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconTrash}" /><TextBlock Classes="nav-label" Text="Corbeille" /></StackPanel></Button>
             <TextBlock Text="OUTILS" Classes="overline nav-label" Margin="12,20,0,8" />
+            <Button Classes="nav-item" Tag="Modèles 3D" Click="NavigationButton_Click" AutomationProperties.Name="Modèles 3D"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconSearch}" /><TextBlock Classes="nav-label" Text="Modèles 3D" /></StackPanel></Button>
             <Button x:Name="ViewerNavButton" Classes="nav-item" Click="OpenThreeDViewer_Click" AutomationProperties.Name="Visualiseur 3D"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconCube}" /><TextBlock Classes="nav-label" Text="Visualiseur 3D" /></StackPanel></Button>
           </StackPanel>
         </ScrollViewer>
@@ -209,6 +210,7 @@
           <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel x:Name="PrinterList" HorizontalAlignment="Stretch" Spacing="0" Margin="0,0,10,0" /></ScrollViewer>
         </Grid>
       </Border>
+      <Border x:Name="ModelSearchWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="panel" />
       <Border x:Name="TrashWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="panel">
         <Grid RowDefinitions="Auto,*" RowSpacing="16"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock Text="Éléments supprimés de façon réversible." Classes="muted" /></StackPanel><Button Grid.Column="1"  Click="RefreshTrash_Click" AutomationProperties.Name="Actualiser"><StackPanel Orientation="Horizontal" Spacing="6"><Path Classes="icon icon-sm" Data="{StaticResource IconRefresh}" /><TextBlock Text="Actualiser" /></StackPanel></Button></Grid><ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel x:Name="TrashList" HorizontalAlignment="Stretch" Spacing="0" Margin="0,0,10,0" /></ScrollViewer></Grid>
       </Border>

@@ -40,6 +40,7 @@ public partial class MainWindow
         FilamentsWorkspacePanel.IsVisible = destination == "Filaments";
         EstimatesWorkspacePanel.IsVisible = destination == "Estimations";
         PrintersWorkspacePanel.IsVisible = destination == "Imprimantes";
+        ModelSearchWorkspacePanel.IsVisible = destination == "Modèles 3D";
         TrashWorkspacePanel.IsVisible = destination == "Corbeille";
         SettingsWorkspacePanel.IsVisible = destination == "Paramètres";
         FolderWorkspacePanel.IsVisible = false;
@@ -49,7 +50,7 @@ public partial class MainWindow
         {
             "Projets" => ProjectsWorkspacePanel, "Clients" => ClientsWorkspacePanel, "Collections" => CollectionsWorkspacePanel,
             "Filaments" => FilamentsWorkspacePanel, "Estimations" => EstimatesWorkspacePanel, "Imprimantes" => PrintersWorkspacePanel,
-            "Corbeille" => TrashWorkspacePanel, "Paramètres" => SettingsWorkspacePanel, _ => null
+            "Modèles 3D" => ModelSearchWorkspacePanel, "Corbeille" => TrashWorkspacePanel, "Paramètres" => SettingsWorkspacePanel, _ => null
         });
         _selectedNavigationButton = NavigationButtons().FirstOrDefault(button => button.Tag as string == destination);
     }
@@ -122,6 +123,8 @@ public partial class MainWindow
         var trashVisible = destination == "Corbeille";
         var settingsVisible = destination == "Paramètres";
 
+        if (destination == "Modèles 3D") EnsureModelSearchPage();
+
         BeginBusy();
         try
         {
@@ -170,8 +173,8 @@ public partial class MainWindow
             CreateProject_Click(this, new RoutedEventArgs());
             e.Handled = true;
         }
-        else if (e.Key is >= Key.D1 and <= Key.D9 &&
-                 NavigationButtons().ElementAtOrDefault(e.Key - Key.D1) is { } target)
+        else if (e.Key is >= Key.D0 and <= Key.D9 &&
+                 NavigationButtons().ElementAtOrDefault(e.Key == Key.D0 ? 9 : e.Key - Key.D1) is { } target)
         {
             NavigationButton_Click(target, new RoutedEventArgs());
             e.Handled = true;

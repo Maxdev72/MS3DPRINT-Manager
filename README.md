@@ -35,7 +35,7 @@ registre local nécessaire pour retrouver ces codes.
 ## Utilisation
 
 **Navigation.** Le menu de gauche donne accès à l’Accueil, aux Projets, Clients, Collections, Filaments,
-Estimations, Imprimantes, à la Corbeille et aux Paramètres. `Ctrl+1` à `Ctrl+9` changent de page, `Ctrl+N`
+Estimations, Imprimantes, à la Corbeille, aux Modèles 3D (recherche) et aux Paramètres. `Ctrl+1` à `Ctrl+9`, puis `Ctrl+0`, changent de page, `Ctrl+N`
 crée un projet et `Ctrl+K` ouvre la recherche. Sous 1100 px de large, le menu se réduit à une barre d’icônes.
 Le logiciel retient la taille de sa fenêtre. Un fil d’Ariane cliquable indique où l’on se trouve dans un projet
 ou une fiche client.
@@ -61,6 +61,13 @@ projet** crée un projet pour ce client.
 **Collections, filaments, imprimantes.** Les collections regroupent modèles 3D, produits et fournisseurs (filtre
 par type). Un filament a une marque, un nom, une matière, une couleur, un prix au kilo et un indicateur abrasif.
 Une imprimante a un prix d’achat, une durée de vie et une puissance : son coût horaire alimente les estimations.
+
+**Modèles 3D (recherche multi-sites).** Saisissez ce que vous cherchez, cochez les sites (Yeggi, MakerWorld,
+Printables, Thingiverse, Thangs, Cults3D, MyMiniFactory) et « Rechercher » : un onglet s'ouvre par site, dans un
+navigateur intégré (précédent, suivant, actualiser, barre d'adresse, nouvel onglet, fermeture). Les liens qui
+s'ouvrent dans une nouvelle fenêtre ouvrent un onglet. La page a besoin d'Internet et du composant Microsoft Edge
+WebView2 (présent sous Windows 11, à installer au besoin sous Windows 10) ; les cookies et le cache des sites sont
+gardés dans `%LOCALAPPDATA%\MS3DPRINT Manager\webview`, pas dans le dossier de livraison.
 
 **Estimations.** Choisissez le type de prestation (impression 3D, modélisation seule, ou les deux), le filament
 et l’imprimante. L’électricité se calcule en direct à partir de la durée machine, de la puissance de l’imprimante
