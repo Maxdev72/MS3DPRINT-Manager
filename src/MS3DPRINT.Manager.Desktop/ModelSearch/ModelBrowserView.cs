@@ -560,7 +560,12 @@ public sealed class ModelBrowserView : UserControl
         tab.Navigated = false;
         // cookies and cache go with the user's other application data, not next to the executable (which is delivered in a synchronised folder)
         // (the Windows-specific event arguments are not visible to this platform-neutral project, hence the reflection)
-        view.EnvironmentRequested += (_, e) => e.GetType().GetProperty("UserDataFolder")?.SetValue(e, WebDataFolder);
+        view.EnvironmentRequested += (_, e) =>
+        {
+            e.GetType().GetProperty("UserDataFolder")?.SetValue(e, WebDataFolder);
+            // the engine's own "Téléchargements" panel is switched off: the application shows its own window when a file arrives
+            e.GetType().GetProperty("AdditionalBrowserArguments")?.SetValue(e, "--disable-features=DownloadBubble,DownloadBubbleV2,msDownloadsHub");
+        };
         var address = tab.Address;
         if (address is not null) view.AdapterCreated += (_, _) => Engine(() => view.Navigate(address));
         view.NavigationStarted += (_, _) => { tab.Loading = true; RefreshChrome(); };

@@ -7,6 +7,7 @@
 - La bande de téléchargement est remplacée par une **fenêtre centrée sur le logiciel** : liste des fichiers avec case à cocher, rappel de licence, « Ouvrir dans le slicer », « Autre application… » et « Afficher le dossier ».
 - **Jamais plusieurs fenêtres ni plusieurs slicers** : les fichiers qui arrivent pendant que la fenêtre est ouverte s'ajoutent à sa liste, et « Ouvrir » envoie tous les fichiers cochés dans **un seul** lancement du slicer ; le bouton reste grisé 3 secondes pour éviter un second clic.
 - Les dossiers de ZIP ouverts sont supprimés du tampon après 7 jours, comme les fichiers.
+- Le panneau « Téléchargements » du moteur web est désactivé (essai) : seule la fenêtre du logiciel s'affiche. Si le panneau apparaît encore, une autre méthode sera utilisée. Un fichier refusé par l'antivirus de Windows (« Échec de l'analyse antivirus ») n'arrive jamais jusqu'au logiciel.
 
 ### Fichiers 3MF, déplacements et aperçu agrandi
 - Les fichiers **3MF** (Bambu Studio, OrcaSlicer, PrusaSlicer, CAD) s'ouvrent maintenant dans le visualiseur 3D et ont une vignette dans les listes : tous les objets du plateau, avec leur position, les assemblages de composants et les unités du fichier ; les supports et objets non imprimables sont ignorés.
