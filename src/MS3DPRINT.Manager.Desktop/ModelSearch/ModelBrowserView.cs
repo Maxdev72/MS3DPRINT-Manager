@@ -26,8 +26,9 @@ public sealed class ModelBrowserView : UserControl
     private readonly Button _forward = new() { Content = Icons.Glyph("IconArrowRight") };
     private readonly Button _reload = new() { Content = Icons.Glyph("IconRefresh") };
     private readonly Button _newTab = new() { Content = Icons.Glyph("IconPlus") };
-    private readonly WrapPanel _siteChecks = new() { Orientation = Orientation.Horizontal };
+    private readonly StackPanel _siteChecks = new() { Spacing = 4 };
     private readonly Dictionary<ModelSearchSite, CheckBox> _sites = [];
+    private readonly Button _selectAll = new() { HorizontalAlignment = HorizontalAlignment.Left };
     private BrowserTab? _active;
 
     public static string WebDataFolder { get; set; } = Path.Combine(
@@ -35,12 +36,32 @@ public sealed class ModelBrowserView : UserControl
 
     public ModelBrowserView()
     {
-        foreach (var site in ModelSearchSite.Defaults)
+        foreach (var group in ModelSearchSite.Defaults.GroupBy(site => site.Category))
         {
-            var check = new CheckBox { Content = site.Name, IsChecked = site.Name is "Yeggi" or "MakerWorld" or "Printables", Margin = new Thickness(0, 0, 14, 0) };
-            _sites[site] = check;
-            _siteChecks.Children.Add(check);
+            var checks = new WrapPanel { Orientation = Orientation.Horizontal };
+            foreach (var site in group)
+            {
+                var check = new CheckBox { Content = site.Name, IsChecked = site.Name is "Yeggi" or "MakerWorld" or "Printables", Margin = new Thickness(0, 0, 14, 0) };
+                if (site.Note.Length > 0) ToolTip.SetTip(check, site.Note);
+                check.IsCheckedChanged += (_, _) => UpdateSelectAll();
+                _sites[site] = check;
+                checks.Children.Add(check);
+            }
+            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("150,*") };
+            var label = new TextBlock { Text = group.Key, Classes = { "caption" }, VerticalAlignment = VerticalAlignment.Center };
+            Grid.SetColumn(checks, 1);
+            row.Children.Add(label);
+            row.Children.Add(checks);
+            _siteChecks.Children.Add(row);
         }
+        _selectAll.Click += (_, _) => SetAllSites(!AllSitesChecked);
+        _siteChecks.Children.Insert(0, _selectAll);
+        UpdateSelectAll();
+        _siteChecks.Children.Add(new TextBlock
+        {
+            Text = "Vérifiez la licence de chaque modèle avant de l’imprimer pour un client : beaucoup sont réservés à l’usage personnel (CC BY-NC, « non commercial »).",
+            Classes = { "caption" }, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0)
+        });
 
         var search = new Button { Content = "Rechercher", Classes = { "primary-action" } };
         search.Click += (_, _) => SearchSelectedSites();
@@ -63,6 +84,16 @@ public sealed class ModelBrowserView : UserControl
         Grid.SetRow(_viewHost, 1);
         Content = root;
     }
+
+    private bool AllSitesChecked => _sites.Values.All(check => check.IsChecked == true);
+
+    private void SetAllSites(bool ticked)
+    {
+        foreach (var check in _sites.Values) check.IsChecked = ticked;
+    }
+
+    /// <summary>The button offers what a click would do: select everything, or clear everything once all are ticked.</summary>
+    private void UpdateSelectAll() => _selectAll.Content = AllSitesChecked ? "Tout désélectionner" : "Tout sélectionner";
 
     /// <summary>Opens one tab per ticked site on the results of <see cref="_query"/>.</summary>
     private void SearchSelectedSites()

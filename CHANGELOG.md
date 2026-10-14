@@ -2,6 +2,12 @@
 
 ## 14 octobre 2026
 
+### Recherche de modèles 3D : douze sites, par catégories
+- Cinq sites s'ajoutent à la recherche : Sketchfab (modèles téléchargeables), GrabCAD, TraceParts, Smithsonian 3D et CGTrader. Les douze sites sont rangés par catégories (moteurs de recherche, communautés, besoins précis) avec une infobulle qui décrit chacun.
+- Un bouton « Tout sélectionner / Tout désélectionner » coche ou décoche tous les sites d'un coup ; il propose l'action inverse une fois tous les sites cochés.
+- Un rappel invite à vérifier la licence de chaque modèle avant de l'imprimer pour un client.
+- Le site Smithsonian 3D peut demander une vérification « je suis humain » au premier accès ; elle reste à votre charge.
+
 ### Recherche de modèles 3D sur plusieurs sites
 - Nouvelle page « Modèles 3D » (menu Outils) : une saisie, des cases à cocher pour Yeggi, MakerWorld, Printables, Thingiverse, Thangs, Cults3D et MyMiniFactory, et un onglet de navigateur intégré s'ouvre par site coché sur les résultats.
 - Barre d'adresse (une adresse ou un texte à rechercher), précédent, suivant, actualiser, nouvel onglet, fermeture d'onglet ; un lien qui demande une nouvelle fenêtre s'ouvre dans un onglet.

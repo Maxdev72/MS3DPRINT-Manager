@@ -39,4 +39,17 @@ public sealed class ModelSearchUrlBuilderTests
     [Fact]
     public void FromAddressBar_searches_free_text() =>
         Assert.Equal("https://www.yeggi.com/q/spatule%20mastic/", ModelSearchUrlBuilder.FromAddressBar("spatule mastic")!.AbsoluteUri);
+
+    [Fact]
+    public void Defaults_are_twelve_distinct_sites_each_with_a_category_and_a_note()
+    {
+        Assert.Equal(12, ModelSearchSite.Defaults.Count);
+        Assert.Equal(12, ModelSearchSite.Defaults.Select(site => site.Name).Distinct().Count());
+        Assert.All(ModelSearchSite.Defaults, site =>
+        {
+            Assert.False(string.IsNullOrWhiteSpace(site.Category));
+            Assert.False(string.IsNullOrWhiteSpace(site.Note));
+        });
+        Assert.Equal(3, ModelSearchSite.Defaults.Select(site => site.Category).Distinct().Count());
+    }
 }
