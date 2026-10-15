@@ -225,6 +225,9 @@ public partial class MainWindow
         return new Border { BorderBrush = (IBrush?)Avalonia.Application.Current?.FindResource("SubtleBorderBrush"), BorderThickness = new Avalonia.Thickness(0, 0, 0, 1), Child = row };
     }
 
+    /// <summary>Project, client, status, due date, actions.</summary>
+    private const string ProjectRowColumns = "2*,*,110,130,64";
+
     private const string TrashRowColumns = "2*,*,130";
 
     private const string ClientRowColumns = "2*,80,*,110,64";

@@ -17,6 +17,11 @@
 - Deuxième passe sur cette page : titre plus grand avec sa phrase d'aide juste dessous, champ de recherche plus haut aux coins plus doux, un léger halo de la couleur d'accent derrière la recherche, et les quatre groupes de sites rangés deux par deux (le nom du groupe au-dessus de ses sites) au lieu d'une longue colonne. « Tout sélectionner » prend la couleur d'accent.
 - Un clic sur un nom de site ne fait plus bouger la page : la place de la coche est toujours réservée (un « + » discret sur les sites décochés, une coche sur les sites cochés), donc les pastilles gardent leur largeur et les lignes ne se réorganisent plus.
 
+### Page Projets plus dense et plus utile
+- Une seule barre d'outils au lieu de deux lignes : filtre, pastilles de statut, nombre de projets, actualiser (icône) et « Créer » tiennent sur la même ligne, ce qui donne plus de place à la liste.
+- Nouvelle colonne **Échéance**, triable. Une échéance dépassée sur un projet non terminé s'affiche « En retard · jj/mm » en couleur d'alerte.
+- La référence du projet est écrite petite et discrète devant son nom, qui devient le texte qui ressort.
+
 ### Creality Cloud
 - La recherche ouvre maintenant la page des modèles (`/fr/search/models?q=…`) : l'ancienne adresse affichait une page de résultats vide, sans aucun modèle.
 

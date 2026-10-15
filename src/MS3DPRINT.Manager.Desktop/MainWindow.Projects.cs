@@ -152,7 +152,7 @@ public partial class MainWindow
         }
 
         projects = SortProjects(projects);
-        ProjectList.Children.Add(CreateSortableHeader(ActionRowColumns, ["PROJET", "CLIENT", "STATUT", "ACTIONS"], _projectSortColumn, _projectSortAscending, column =>
+        ProjectList.Children.Add(CreateSortableHeader(ProjectRowColumns, ["PROJET", "CLIENT", "STATUT", "ÉCHÉANCE", "ACTIONS"], _projectSortColumn, _projectSortAscending, column =>
         {
             _projectSortAscending = _projectSortColumn != column || !_projectSortAscending;
             _projectSortColumn = column;
@@ -167,11 +167,37 @@ public partial class MainWindow
             var rename = new Button { Content = Icons.Label("IconRename", "Renommer"), Tag = project }; rename.Click += RenameProject_Click;
             var move = new Button { Content = Icons.Label("IconMove", "Déplacer"), Tag = project }; move.Click += MoveProject_Click;
             var trash = new Button { Content = Icons.Label("IconTrash", "Corbeille"), Tag = project }; trash.Click += TrashProject_Click;
-            ProjectList.Children.Add(CreateActionRow(open, CreateOverflowActions(folder, edit, rename, move, trash),
-                CreateCompactTableCell($"{project.Reference} · {project.Title()}", prominent: true),
+            ProjectList.Children.Add(CreateActionRow(ProjectRowColumns, open, CreateOverflowActions(folder, edit, rename, move, trash),
+                CreateProjectNameCell(project),
                 CreateCompactTableCell(project.ClientTitle()),
-                CreateStatusBadge(project.StatusLabel)));
+                CreateStatusBadge(project.StatusLabel),
+                CreateDueDateCell(project)));
         }
+    }
+
+    /// <summary>The reference small and quiet, then the name that identifies the project at a glance.</summary>
+    private static Control CreateProjectNameCell(ProjectSummary project)
+    {
+        var reference = new TextBlock { Text = project.Reference, Classes = { "caption" }, VerticalAlignment = VerticalAlignment.Center };
+        var title = new TextBlock { Text = project.Title(), FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
+        ToolTip.SetTip(title, project.Reference + " · " + project.Title());
+        return new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Children = { reference, title } };
+    }
+
+    /// <summary>The due date; one that has passed on a project that is not finished is said so, in the warning colour.</summary>
+    private static Control CreateDueDateCell(ProjectSummary project)
+    {
+        if (project.Profile?.DueDate is not { } due) return new TextBlock { Text = "—", Classes = { "faint" }, VerticalAlignment = VerticalAlignment.Center };
+        var late = project.StatusLabel != "TERMINE" && due < DateOnly.FromDateTime(DateTime.Today);
+        var text = new TextBlock { Text = late ? $"En retard · {due:dd/MM}" : $"{due:dd/MM/yyyy}", VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
+        if (late)
+        {
+            text.Foreground = (IBrush?)Avalonia.Application.Current?.FindResource("WarningBrush") ?? Brushes.Orange;
+            text.FontWeight = FontWeight.SemiBold;
+            ToolTip.SetTip(text, $"Prévu le {due:dd/MM/yyyy}");
+        }
+        else text.Classes.Add("muted");
+        return text;
     }
 
     private ProjectSummary[] SortProjects(ProjectSummary[] projects)
@@ -181,6 +207,7 @@ public partial class MainWindow
         {
             1 => projects.OrderBy(project => project.ClientTitle(), StringComparer.CurrentCultureIgnoreCase),
             2 => projects.OrderBy(project => project.StatusLabel switch { "DEVIS" => 0, "EN_COURS" => 1, "TERMINE" => 2, _ => 3 }),
+            3 => projects.OrderBy(project => project.Profile?.DueDate is null).ThenBy(project => project.Profile?.DueDate),
             _ => projects.OrderBy(project => project.Title(), StringComparer.CurrentCultureIgnoreCase)
         };
         return (_projectSortAscending ? ordered : ordered.Reverse()).ToArray();
