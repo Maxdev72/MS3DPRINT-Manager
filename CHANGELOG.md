@@ -22,6 +22,7 @@
 - **Filaments, Imprimantes, Collections, Corbeille, Estimations, Clients, Projets** : « Actualiser » devient un bouton-icône placé avant l'action principale (« Créer », « Ajouter ») ; la deuxième phrase de présentation, qui répétait celle du titre, disparaît.
 - Le champ de recherche globale ne coupe plus son texte (« Projet, client, fichier… »).
 - Sur l'accueil, les deux cartes prennent la hauteur de leur contenu au lieu de s'étirer jusqu'en bas de la fenêtre.
+- Le sous-titre du visualiseur 3D cite aussi les fichiers 3MF.
 
 ### Page Projets plus dense et plus utile
 - Une seule barre d'outils au lieu de deux lignes : filtre, pastilles de statut, nombre de projets, actualiser (icône) et « Créer » tiennent sur la même ligne, ce qui donne plus de place à la liste.

@@ -61,7 +61,7 @@ public partial class MainWindow
         }
         _ = _modelViewer.ReloadFilamentsAsync();
         PageTitle.Text = "Visualiseur 3D";
-        PageSubtitle.Text = "Déposez un STL ou un OBJ, ou ouvrez un fichier.";
+        PageSubtitle.Text = "Déposez un STL, un OBJ ou un 3MF, ou ouvrez un fichier.";
         if (path is null) return;
         try { await _modelViewer.LoadModelAsync(path); }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
