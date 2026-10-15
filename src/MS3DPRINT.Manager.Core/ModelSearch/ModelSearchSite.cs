@@ -19,7 +19,7 @@ public sealed record ModelSearchSite(string Name, string SearchUrlTemplate, bool
         new("Cults3D", "https://cults3d.com/fr/recherche?q={q}", Category: Communities, Note: "Place de marché française : designs gratuits et payants, licence commerciale souvent proposée."),
         new("MyMiniFactory", "https://www.myminifactory.com/search/?query={q}", Category: Communities, Note: "Figurines, décors et accessoires, imprimabilité testée."),
         new("MakerWorld", "https://makerworld.com/fr/search/models?keyword={q}", Category: Manufacturers, Note: "Bambu Lab : profils d’impression prêts pour vos imprimantes Bambu."),
-        new("Creality Cloud", "https://www.crealitycloud.com/search?q={q}", Category: Manufacturers, Note: "Creality : plus d’un million de modèles, qualité variable."),
+        new("Creality Cloud", "https://www.crealitycloud.com/fr/search/models?q={q}", Category: Manufacturers, Note: "Creality : plus d’un million de modèles, qualité variable."),
         new("Nexprint", "https://www.nexprint.com/en/search/works?keyword={q}", Category: Manufacturers, Note: "Elegoo : plateforme ouverte, intégrée à Elegoo Slicer et OrcaSlicer."),
         new("Snapmaker Space", "https://space.snapmaker.com/en/search/models?keyword={q}", Category: Manufacturers, Note: "Snapmaker : modèles multicolores et multimatières (U1), encore en bêta."),
         new("Sketchfab", "https://sketchfab.com/search?q={q}&features=downloadable&type=models", Category: SpecificNeeds, Note: "Formes organiques, accessoires, décors ; seulement les modèles téléchargeables. Vérifiez la licence."),

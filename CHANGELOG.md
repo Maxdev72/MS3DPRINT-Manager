@@ -17,6 +17,9 @@
 - Deuxième passe sur cette page : titre plus grand avec sa phrase d'aide juste dessous, champ de recherche plus haut aux coins plus doux, un léger halo de la couleur d'accent derrière la recherche, et les quatre groupes de sites rangés deux par deux (le nom du groupe au-dessus de ses sites) au lieu d'une longue colonne. « Tout sélectionner » prend la couleur d'accent.
 - Un clic sur un nom de site ne fait plus bouger la page : la place de la coche est toujours réservée (un « + » discret sur les sites décochés, une coche sur les sites cochés), donc les pastilles gardent leur largeur et les lignes ne se réorganisent plus.
 
+### Creality Cloud
+- La recherche ouvre maintenant la page des modèles (`/fr/search/models?q=…`) : l'ancienne adresse affichait une page de résultats vide, sans aucun modèle.
+
 ### Page Paramètres remise en ordre
 - Fini la phrase répétée sous le titre et le bouton « Actualiser » seul sur sa ligne : « Actualiser » est maintenant dans la carte « Stockage ».
 - Le dossier de l'espace de travail s'affiche dans un champ dont on peut sélectionner le texte (pour le copier), les trois actions portent une icône, et quand l'espace est imposé par la variable `MS3DPRINT_WORKSPACE`, la raison est écrite sous les boutons au lieu d'être cachée dans une infobulle.
