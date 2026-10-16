@@ -57,12 +57,12 @@ modifier le modèle chargé (irréversible).
 
 ```
 OrientationProposal AutoOrient.Propose(PrintMesh mesh, EstimateSettings settings, MachineProfile? machine,
-                                       AutoOrientGoal goal, Vector3? plateMm, CancellationToken token)
+                                       AutoOrientGoal goal, Vector3? plateMm, IProgress<double>? progress, CancellationToken cancellationToken)
 ```
 - **Candidats** : les 6 directions d'axes et les 12 plus grandes familles de faces (normales regroupées à 5°, pondérées par l'aire),
   chacune posée vers le bas.
 - **Note** de chaque candidat, avec le moteur : matière de supports, durée, surface de contact de la base (stabilité), hauteur,
-  dépassement du plateau. Un candidat qui déborde est écarté ; une base de moins de 20 mm² est pénalisée.
+  dépassement du plateau. Un candidat qui déborde reçoit une forte pénalité : il n'est choisi que si aucun ne tient ; une base de moins de 20 mm² est pénalisée.
 - `AutoOrientGoal` : `FewestSupports` (défaut), `Fastest`, `MostStable`.
 - Égalité : un meilleur candidat à moins de 0,02 de la note normalisée de l'orientation actuelle laisse la pièce telle quelle. Le drapeau `Limited` de la proposition indique seulement que, au-delà d'un million de triangles, seuls les six axes ont été essayés.
 - Résultat : la rotation (`Quaternion`), les chiffres du meilleur candidat et de l'orientation actuelle, pour afficher le gain
@@ -130,7 +130,7 @@ automatique. Les actions sont désactivées pendant la comparaison de deux versi
 Automatiques (xUnit) :
 - `ModelOrientation` : poser sur −Z un cube incliné ; `RotateAxis` quatre fois 90° = identité ; la base est à Z = 0 et le centre en X/Y à 0 ; angles d'Euler aller-retour.
 - `PlateSize.Parse` : formats courants, virgule décimale, valeurs non numériques, ordre, plateaux ronds (`null`).
-- `AutoOrient` : un T posé sur la tête sort la pièce à plat sans support ; un champignon se retourne cap vers le bas ; un cube ne bouge pas (égalité, rotation identité) ; candidat qui déborde écarté ; annulation.
+- `AutoOrient` : un T posé sur la tête sort la pièce à plat sans support ; un champignon se retourne cap vers le bas ; un cube ne bouge pas (égalité, rotation identité) ; candidat qui déborde pénalisé (choisi seulement si aucun ne tient) ; annulation.
 - `StlWriter` : relecture par `MeshLoader`, mêmes sommets, échelle en mm.
 - Découpe : l'argument `--scale` n'est pas passé pour un STL temporaire en mm (test de `BuildArguments` existant étendu).
 
