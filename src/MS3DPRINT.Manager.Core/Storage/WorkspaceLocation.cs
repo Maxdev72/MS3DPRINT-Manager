@@ -25,6 +25,9 @@ public sealed class WorkspaceLocation
     /// <summary>True when the environment variable fixes the workspace, so the settings cannot change it.</summary>
     public static bool IsFixedByEnvironment => !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(EnvironmentVariable));
 
+    /// <summary>True on a first launch: nothing chosen yet and the historical default folder does not exist on this computer.</summary>
+    public bool NeedsSetup => !IsFixedByEnvironment && ReadStored() is null && !Directory.Exists(DefaultRoot);
+
     public string Resolve()
     {
         if (Environment.GetEnvironmentVariable(EnvironmentVariable) is { Length: > 0 } fromEnvironment && !string.IsNullOrWhiteSpace(fromEnvironment))

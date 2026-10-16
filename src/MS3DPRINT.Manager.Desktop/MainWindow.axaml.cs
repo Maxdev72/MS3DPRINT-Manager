@@ -101,6 +101,7 @@ public partial class MainWindow : Window
         // Ctrl+1 to Ctrl+9, then Ctrl+0 for the tenth page
         foreach (var navigation in NavigationButtons().Take(10))
             ToolTip.SetTip(navigation, $"{navigation.Tag} (Ctrl+{shortcut++ % 10})");
+        if (_workspaceLocation.NeedsSetup) await RunWorkspaceSetupAsync();
         await PreloadAsync();
         // MS3DPRINT_START_PAGE=Clients opens that page directly (screenshots, demos).
         if (Environment.GetEnvironmentVariable("MS3DPRINT_START_PAGE") is { Length: > 0 } page &&
@@ -132,7 +133,7 @@ public partial class MainWindow : Window
                 await LoadClientDetailAsync(found);
             }
         }
-        // MS3DPRINT_START_DIALOG=client|project|printer|filament|collection|template|viewer|toast opens that dialog (screenshots, demos).
+        // MS3DPRINT_START_DIALOG=client|project|printer|filament|collection|template|setup|viewer|toast opens that dialog (screenshots, demos).
         switch (Environment.GetEnvironmentVariable("MS3DPRINT_START_DIALOG"))
         {
             case "client": CreateClient_Click(this, new RoutedEventArgs()); break;
@@ -141,6 +142,7 @@ public partial class MainWindow : Window
             case "filament": CreateFilament_Click(this, new RoutedEventArgs()); break;
             case "collection": CreateCollection_Click(this, new RoutedEventArgs()); break;
             case "template": EditProjectTemplate_Click(this, new RoutedEventArgs()); break;
+            case "setup": _ = RunWorkspaceSetupAsync(); break;
             case "viewer": ShowModelViewer(Environment.GetEnvironmentVariable("MS3DPRINT_START_MODEL")); break;
 #if DEBUG
             case "picker": _ = PickWorkspaceFolderAsync(WorkspaceRoot, "Déplacer « essai.stl »"); break;

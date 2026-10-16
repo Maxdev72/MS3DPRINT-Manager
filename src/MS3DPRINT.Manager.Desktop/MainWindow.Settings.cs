@@ -40,6 +40,55 @@ public partial class MainWindow
         { Notify(exception.Message, error: true); }
     }
 
+    /// <summary>Makes <paramref name="root"/> the workspace: creates it with the base folders, remembers it and reloads the data.</summary>
+    private async Task<bool> ActivateWorkspaceAsync(string root)
+    {
+        try
+        {
+            var full = Path.GetFullPath(root);
+            await Task.Run(() =>
+            {
+                Directory.CreateDirectory(full);
+                new MS3DPRINT.Manager.Core.Storage.FolderTreeService().EnsureMainStructure(full);
+            });
+            _workspaceLocation.Save(full);
+            await PreloadAsync(force: true);
+            return true;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            Notify(exception.Message, error: true);
+            return false;
+        }
+    }
+
+    private async void UseSyncFolder_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: ValueTuple<string, string> choice }) return;
+        if (!await new UseWorkspaceWindow(choice.Item1, choice.Item2).ShowDialog<bool>(this)) return;
+        if (await ActivateWorkspaceAsync(choice.Item2))
+        {
+            Notify("Espace de travail changé : " + choice.Item2);
+            await LoadSettingsAsync();
+        }
+    }
+
+    /// <summary>First launch: asks where to keep the data, offering the synchronised folders found on the computer.</summary>
+    private async Task RunWorkspaceSetupAsync()
+    {
+        var detected = await Task.Run(() => MS3DPRINT.Manager.Core.Storage.SyncFolderDetector.ForThisComputer().Detect());
+        var local = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), MS3DPRINT.Manager.Core.Storage.SyncFolderDetector.WorkspaceFolderName);
+        var dialog = new WorkspaceSetupWindow(detected, local);
+        var confirmed = await dialog.ShowDialog<bool>(this);
+        var root = confirmed ? dialog.SelectedRoot : local;
+        if (confirmed && root is null)
+        {
+            var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = "Choisir l’espace de travail", AllowMultiple = false });
+            root = folders.FirstOrDefault()?.TryGetLocalPath() is { Length: > 0 } chosen ? chosen : local;
+        }
+        await ActivateWorkspaceAsync(root ?? local);
+    }
+
     private async void RefreshSettings_Click(object? sender, RoutedEventArgs e) => await LoadSettingsAsync();
 
     private async void ChangeWorkspace_Click(object? sender, RoutedEventArgs e)
@@ -156,23 +205,33 @@ public partial class MainWindow
         };
         StorageList.Children.Add(Card("Performances", "Part du processeur que les calculs lourds peuvent utiliser : estimations, orientation automatique, aperçus et rendu logiciel.", null, modeBox, modeText));
 
-        // ---- storage: where the folders can be synchronised, with the folder when there is one
+        // ---- storage: the synchronised folders found on this computer; the clients of the services do the synchronising
         var providerRows = new StackPanel { Spacing = 0 };
         foreach (var provider in providers)
         {
-            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), MinHeight = 48, ColumnSpacing = 12 };
+            var isLocal = provider.Kind == MS3DPRINT.Manager.Core.Storage.StorageProviderKind.LocalFolder;
+            var inUse = provider.IsAvailable && !string.IsNullOrWhiteSpace(provider.RootPath) && MS3DPRINT.Manager.Core.Storage.StorageProviderCatalog.IsInside(workspaceRoot, provider.RootPath);
+            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), MinHeight = 52, ColumnSpacing = 12 };
             var name = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Spacing = 1, Children = { new TextBlock { Text = provider.DisplayName, FontWeight = FontWeight.Medium } } };
-            if (provider.IsAvailable && !string.IsNullOrWhiteSpace(provider.RootPath) && !string.Equals(Path.TrimEndingDirectorySeparator(provider.RootPath), Path.TrimEndingDirectorySeparator(workspaceRoot), StringComparison.OrdinalIgnoreCase))
+            if (provider.IsAvailable && !string.IsNullOrWhiteSpace(provider.RootPath))
                 name.Children.Add(new TextBlock { Text = provider.RootPath, Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis });
             row.Children.Add(name);
-            var badge = new Border { Classes = { "badge", provider.IsAvailable ? "success" : "neutral" }, Child = new TextBlock { Text = provider.IsAvailable ? "Disponible" : "Non configuré" } };
+            var state = isLocal ? (inUse ? "Espace de travail" : "Dossier local") : inUse ? "Espace de travail" : provider.IsAvailable ? "Détecté" : "Non détecté";
+            var badge = new Border { Classes = { "badge", inUse ? "info" : provider.IsAvailable ? "success" : "neutral" }, VerticalAlignment = VerticalAlignment.Center, Child = new TextBlock { Text = state } };
             Grid.SetColumn(badge, 1);
             row.Children.Add(badge);
+            if (!isLocal && provider.IsAvailable && !inUse && provider.RootPath is { } syncPath)
+            {
+                var use = new Button { Content = "Utiliser", Tag = (provider.DisplayName, MS3DPRINT.Manager.Core.Storage.SyncFolderDetector.WorkspaceIn(new MS3DPRINT.Manager.Core.Storage.SyncFolder(provider.Kind, syncPath))), VerticalAlignment = VerticalAlignment.Center };
+                use.Click += UseSyncFolder_Click;
+                Grid.SetColumn(use, 2);
+                row.Children.Add(use);
+            }
             providerRows.Children.Add(new Border { BorderBrush = (IBrush?)Avalonia.Application.Current?.FindResource("SubtleBorderBrush"), BorderThickness = new Avalonia.Thickness(0, 0, 0, 1), Child = row });
         }
         var refresh = new Button { Content = Icons.Label("IconRefresh", "Actualiser", 16), Classes = { "ghost" }, VerticalAlignment = VerticalAlignment.Top };
         refresh.Click += RefreshSettings_Click;
-        StorageList.Children.Add(Card("Stockage", "Emplacements où vos dossiers peuvent être synchronisés.", refresh, providerRows));
+        StorageList.Children.Add(Card("Stockage", "Nextcloud, Google Drive et Dropbox : le logiciel utilise le dossier synchronisé par leur application, il ne se connecte pas à ces services lui-même.", refresh, providerRows));
 
         // ---- about: the version tells which build is installed
         var informational = typeof(MainWindow).Assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
