@@ -12,6 +12,27 @@ public sealed class ViewCamera
     public double PanX { get; set; }
     public double PanY { get; set; }
 
+    /// <summary>Practically no limit: a millionth of the model to a billion times its size, only there to keep the arithmetic finite.</summary>
+    public const double MinZoom = 1e-6;
+    public const double MaxZoom = 1e9;
+
+    /// <summary>
+    /// Zooms by a factor around a point of the view: the spot under the cursor stays under the cursor, so the user can dive into any
+    /// detail of the model or back out without ever reaching a limit. The pan is in the same units as the other camera methods.
+    /// </summary>
+    public void ZoomAt(double factor, double cursorX, double cursorY, double width, double height)
+    {
+        if (!double.IsFinite(factor) || factor <= 0) return;
+        var next = Math.Clamp(Zoom * factor, MinZoom, MaxZoom);
+        var applied = next / Zoom;
+        var scale = height / 760.0;
+        var offsetX = cursorX - width / 2;
+        var offsetY = cursorY - height / 2;
+        PanX = (offsetX - (offsetX - PanX * scale) * applied) / scale;
+        PanY = (offsetY - (offsetY - PanY * scale) * applied) / scale;
+        Zoom = next;
+    }
+
     public void Reset()
     {
         Yaw = -0.6; Pitch = 0.45; Zoom = 1; PanX = 0; PanY = 0;
@@ -94,7 +115,7 @@ public static class SoftwareRenderer
     {
         var rotation = BuildRotation(camera);
         var center = mesh.Center;
-        var distance = mesh.Radius * 2.9 / Math.Max(0.02, camera.Zoom);
+        var distance = mesh.Radius * 2.9 / Math.Max(ViewCamera.MinZoom, camera.Zoom);
         var focal = height * 0.5 / Math.Tan(FieldOfView / 2);
         var scale = height / 760.0; // pan is expressed for a 760 px high view
         var cx = width / 2.0 + camera.PanX * scale;

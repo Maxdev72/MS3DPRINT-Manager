@@ -93,7 +93,9 @@ public partial class MainWindow
         if (EstimateProject.ItemsSource is IEnumerable<ProjectSummary> projects)
             EstimateProject.SelectedItem = projects.FirstOrDefault(project => seed.ModelPath.StartsWith(project.ProjectPath, StringComparison.OrdinalIgnoreCase));
         GoToEstimateStep(1);
-        Notify(seed.DurationHours is null ? "Estimation préparée à partir du modèle : vérifiez la durée machine." : "Estimation préparée : poids et durée viennent du découpeur.");
+        Notify(seed.DurationHours is null ? "Estimation préparée à partir du modèle : vérifiez la durée machine."
+            : seed.PrinterModel is null ? "Estimation préparée : poids et durée estimés par le logiciel, à vérifier."
+            : "Estimation préparée : poids et durée viennent du découpeur.");
     }
 
     /// <summary>

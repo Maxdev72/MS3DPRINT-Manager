@@ -1,5 +1,18 @@
 # Journal des modifications
 
+## 16 octobre 2026
+
+### Visualiseur 3D : estimation instantanée et contrôle de faisabilité
+- **Poids, durée et filament estimés tout de suite**, sans attendre le découpeur et même sans Bambu Studio installé : un moteur d'estimation maison découpe le modèle en couches et calcule les parois, le remplissage, les dessus et dessous. Il n'est calé sur aucune imprimante en particulier mais sur la **moyenne de cinq imprimantes** Bambu Lab (450 découpes de comparaison). Le poids est juste à 3 % près. Quand le découpeur a répondu, ses valeurs exactes remplacent l'estimation.
+- La **durée** dépend de la rapidité réelle de la machine : la moyenne peut s'écarter d'environ 25 %. Le réglage **« Vitesse de la machine »** (moyenne, rapide, lente) ramène l'écart à environ 6 %. Le **débit maximal du matériau** (PLA, PETG, ABS, ASA, TPU, PA, PC, PVA) est pris en compte : le PETG et surtout le TPU sont plus lents que le PLA.
+- Nouvelle case **« Avec supports »**, cochée par défaut : elle compte la matière des supports dans l'estimation et est transmise à Bambu Studio. Les pièces sans surplomb n'en reçoivent pas.
+- Nouvelle section **Faisabilité** dans l'onglet Analyse, calculée dès l'ouverture du modèle : maillage non étanche, arêtes partagées par trop de faces, faces retournées, pièces séparées, parois trop fines pour la buse, surplombs (aire et matière de supports), base posée trop petite, unités probablement fausses. Chaque point a une gravité (erreur, avertissement, information) et un bouton **« Voir sur le modèle »** qui surligne les zones concernées.
+- Le verdict (« Imprimable », « Imprimable avec réserves », « À corriger avant impression ») s'affiche aussi dans l'onglet Infos.
+- « Créer une estimation avec ce modèle » reprend la durée estimée quand le découpeur n'a pas répondu.
+- **Grille au sol infinie** : elle ne s'arrête plus à quelques longueurs de la pièce. Elle s'étend jusqu'à l'horizon à n'importe quel zoom, avec des lignes plus espacées qui prennent le relais quand on s'éloigne, et se fond dans le fond à l'horizon.
+- **Zoom sans limite** dans le visualiseur : la molette zoome vers le **curseur** (le point visé reste sous le curseur) sans butée, de très loin jusqu'à l'intérieur de la pièce. Les plans de coupe de la caméra suivent la distance : le modèle n'est plus tronqué de près et ne scintille plus de loin. En mode « Logiciel (processeur) », les triangles passant derrière la caméra restent ignorés à très fort zoom.
+- Limites : les supports sont sous-estimés sur les pièces organiques, une pièce flottante n'est pas détectée, et ce contrôle géométrique ne remplace pas un essai dans le découpeur. Détails et mesures dans `docs/estimateur-banc-de-comparaison.md`.
+
 ## 14 octobre 2026 (suite)
 
 ### Téléchargements : ZIP ouverts en silence et fenêtre centrée

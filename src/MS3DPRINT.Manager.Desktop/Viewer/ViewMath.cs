@@ -10,7 +10,7 @@ public static class ViewMath
     private static Matrix4x4 Rotation(ViewCamera camera) =>
         Matrix4x4.CreateRotationZ((float)camera.Yaw) * Matrix4x4.CreateRotationX((float)camera.Pitch);
 
-    private static double Distance(MeshModel mesh, ViewCamera camera) => mesh.Radius * 2.9 / Math.Max(0.02, camera.Zoom);
+    private static double Distance(MeshModel mesh, ViewCamera camera) => mesh.Radius * 2.9 / Math.Max(ViewCamera.MinZoom, camera.Zoom);
 
     /// <summary>Screen position (x right, y down, in the units of <paramref name="width"/> and <paramref name="height"/>) of a model point.</summary>
     public static bool TryProject(MeshModel mesh, ViewCamera camera, double width, double height, Vector3 point, out double x, out double y)

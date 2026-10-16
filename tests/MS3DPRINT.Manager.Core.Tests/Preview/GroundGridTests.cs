@@ -1,20 +1,9 @@
-using System.Numerics;
 using MS3DPRINT.Manager.Desktop.Viewer;
 
 namespace MS3DPRINT.Manager.Core.Tests.Preview;
 
 public sealed class GroundGridTests
 {
-    private static MeshModel Cube(float size, Vector3 at)
-    {
-        Vector3[] corners =
-        [
-            at, at + new Vector3(size, 0, 0), at + new Vector3(0, size, 0), at + new Vector3(0, 0, size),
-            at + new Vector3(size, size, size)
-        ];
-        return new MeshModel(corners, [0, 1, 2, 1, 2, 4, 0, 3, 1]);
-    }
-
     [Theory]
     [InlineData(100, 10)]
     [InlineData(35, 5)]
@@ -27,47 +16,22 @@ public sealed class GroundGridTests
         => Assert.Equal(expected, GroundGrid.NiceSpacingMillimetres(extentMillimetres), 6);
 
     [Fact]
-    public void Grid_lies_just_under_the_base_of_the_model_and_comes_in_line_pairs()
-    {
-        var mesh = Cube(40, new Vector3(5, 5, 12));
-        var (positions, colors) = GroundGrid.Build(mesh, 10, new Vector3(0.06f, 0.1f, 0.14f));
+    public void The_requested_cell_size_is_kept()
+        => Assert.Equal(10f, GroundGrid.Spacing(10, 40));
 
-        Assert.Equal(positions.Length, colors.Length);
-        Assert.Equal(0, positions.Length / 3 % 2);
-        for (var i = 2; i < positions.Length; i += 3)
-        {
-            Assert.True(positions[i] <= 12f);
-            Assert.True(positions[i] > 11.9f);
-        }
-        Assert.All(colors, channel => Assert.InRange(channel, 0f, 1f));
-    }
+    [Theory]
+    [InlineData(0f)]
+    [InlineData(-5f)]
+    [InlineData(float.NaN)]
+    [InlineData(float.PositiveInfinity)]
+    public void An_invalid_cell_size_falls_back_to_a_fifth_of_the_model_radius(float requested)
+        => Assert.Equal(8f, GroundGrid.Spacing(requested, 40));
 
     [Fact]
-    public void Lines_fade_into_the_background_far_from_the_model()
-    {
-        var background = new Vector3(0.06f, 0.1f, 0.14f);
-        var (positions, colors) = GroundGrid.Build(Cube(40, Vector3.Zero), 10, background);
-
-        var farthest = 0;
-        var nearest = 0;
-        float Distance(int vertex) => new Vector2(positions[vertex * 3] - 20, positions[vertex * 3 + 1] - 20).Length();
-        for (var vertex = 1; vertex < positions.Length / 3; vertex++)
-        {
-            if (Distance(vertex) > Distance(farthest)) farthest = vertex;
-            if (Distance(vertex) < Distance(nearest)) nearest = vertex;
-        }
-        var far = new Vector3(colors[farthest * 3], colors[farthest * 3 + 1], colors[farthest * 3 + 2]);
-        var near = new Vector3(colors[nearest * 3], colors[nearest * 3 + 1], colors[nearest * 3 + 2]);
-
-        Assert.True(Vector3.Distance(far, background) < 0.01f);
-        Assert.True(Vector3.Distance(near, background) > 0.05f);
-    }
+    public void The_cell_size_never_reaches_zero_even_for_a_point_like_model()
+        => Assert.True(GroundGrid.Spacing(0, 0) > 0);
 
     [Fact]
-    public void Invalid_spacing_falls_back_to_a_size_derived_from_the_model()
-    {
-        var (positions, _) = GroundGrid.Build(Cube(40, Vector3.Zero), 0, Vector3.Zero);
-        Assert.NotEmpty(positions);
-        Assert.All(positions, value => Assert.True(float.IsFinite(value)));
-    }
+    public void Coarser_lines_are_brighter_than_the_cell_lines()
+        => Assert.True(GroundGrid.Major.Length() > GroundGrid.Minor.Length());
 }

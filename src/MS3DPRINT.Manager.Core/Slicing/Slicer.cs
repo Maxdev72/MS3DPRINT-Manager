@@ -15,7 +15,7 @@ public sealed record SlicerMachine(string Name, string PrinterModel, string File
     public bool CanBeSlicedAutomatically => ExtruderCount <= 1;
 }
 
-public sealed record SliceRequest(string ModelPath, SlicerMachine Machine, string ProcessName, string? FilamentName, int? InfillPercent = null, int? WallLoops = null, double MillimetresPerUnit = 1);
+public sealed record SliceRequest(string ModelPath, SlicerMachine Machine, string ProcessName, string? FilamentName, int? InfillPercent = null, int? WallLoops = null, double MillimetresPerUnit = 1, bool? Supports = null);
 
 /// <summary>Print time and filament use computed by the slicer for one plate.</summary>
 public sealed record SliceResult(double TimeSeconds, double FilamentLengthMm, double FilamentDiameterMm, double LayerHeight, double InfillPercent, int WallLoops, int Layers)
@@ -147,6 +147,8 @@ public sealed class SliceRunner(SlicerInstall install)
         if (request.FilamentName is not null) { arguments.Add("--load-filaments"); arguments.Add(profiles.FilamentFile(request.FilamentName)); }
         if (request.InfillPercent is { } infill) { arguments.Add("--sparse-infill-density"); arguments.Add(infill.ToString(CultureInfo.InvariantCulture) + "%"); }
         if (request.WallLoops is { } walls) { arguments.Add("--wall-loops"); arguments.Add(walls.ToString(CultureInfo.InvariantCulture)); }
+        // a switch option takes its value after an equals sign: "--enable-support 1" would be read as a second model file
+        if (request.Supports is { } supports) arguments.Add("--enable-support=" + (supports ? "1" : "0"));
         // slicers read STL and OBJ as millimetres: a model drawn in another unit is scaled to millimetres
         if (Math.Abs(request.MillimetresPerUnit - 1) > 1e-9) { arguments.Add("--scale"); arguments.Add(request.MillimetresPerUnit.ToString("G9", CultureInfo.InvariantCulture)); }
         arguments.Add(request.ModelPath);

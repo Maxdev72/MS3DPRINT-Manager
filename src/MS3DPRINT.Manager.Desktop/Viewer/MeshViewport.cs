@@ -200,7 +200,8 @@ public sealed class MeshViewport : Control, IMeshViewport
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
         base.OnPointerWheelChanged(e);
-        Camera.Zoom = Math.Clamp(Camera.Zoom * Math.Pow(1.12, e.Delta.Y), 0.05, 40);
+        var cursor = e.GetPosition(this);
+        Camera.ZoomAt(Math.Pow(1.12, e.Delta.Y), cursor.X, cursor.Y, Bounds.Width, Bounds.Height);
         RequestRender(interactive: true);
         e.Handled = true;
     }

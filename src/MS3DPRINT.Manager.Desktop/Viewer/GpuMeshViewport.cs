@@ -70,8 +70,8 @@ public sealed class GpuMeshViewport : OpenGlControlBase
     private const float BackgroundR = 0x10 / 255f, BackgroundG = 0x19 / 255f, BackgroundB = 0x23 / 255f;
 
     private GlApi? _gl;
-    private int _solidProgram, _pointProgram, _gridProgram, _gridVao, _gridPositionBuffer, _gridColorBuffer, _gridCount;
-    private bool _gridDirty = true;
+    private int _solidProgram, _pointProgram, _gridProgram, _gridVao;
+    private float[] _inverseViewProjection = new float[16];
     private float _gridSpacing;
     private int _meshVao, _wireVao, _pointVao;
     private int _positionBuffer, _indexBuffer, _wireBuffer, _pointBuffer;
@@ -100,7 +100,7 @@ public sealed class GpuMeshViewport : OpenGlControlBase
     public float GridSpacing
     {
         get => _gridSpacing;
-        set { _gridSpacing = value; _gridDirty = true; }
+        set { _gridSpacing = value; }
     }
 
     private TaskCompletionSource<CapturedImage?>? _capture;
@@ -158,7 +158,6 @@ public sealed class GpuMeshViewport : OpenGlControlBase
         _mesh = mesh;
         _meshDirty = true;
         _wireDirty = true;
-        _gridDirty = true;
         Markers = null;
         Camera.Reset();
         RequestRender(false);
@@ -186,10 +185,7 @@ public sealed class GpuMeshViewport : OpenGlControlBase
             _solidProgram = _gl.BuildProgram(header + SolidVertex, header + SolidFragment);
             _pointProgram = _gl.BuildProgram(header + PointVertex, header + PointFragment);
             _gridProgram = _gl.BuildProgram(header + GridVertex, header + GridFragment);
-            _gridPositionBuffer = _gl.GenBuffer();
-            _gridColorBuffer = _gl.GenBuffer();
             _gridVao = _gl.GenVertexArray();
-            _gridDirty = true;
             _positionBuffer = _gl.GenBuffer();
             _indexBuffer = _gl.GenBuffer();
             _wireBuffer = _gl.GenBuffer();
@@ -219,7 +215,7 @@ public sealed class GpuMeshViewport : OpenGlControlBase
         _gl.DeleteProgram(_solidProgram);
         _gl.DeleteProgram(_pointProgram);
         _gl.DeleteProgram(_gridProgram);
-        _gl.DeleteBuffer(_gridPositionBuffer); _gl.DeleteBuffer(_gridColorBuffer); _gl.DeleteVertexArray(_gridVao);
+        _gl.DeleteVertexArray(_gridVao);
         _gl.DeleteBuffer(_positionBuffer); _gl.DeleteBuffer(_indexBuffer); _gl.DeleteBuffer(_wireBuffer); _gl.DeleteBuffer(_pointBuffer);
         _gl.DeleteVertexArray(_meshVao); _gl.DeleteVertexArray(_wireVao); _gl.DeleteVertexArray(_pointVao);
         _gl.DeleteBuffer(_secondPosition); _gl.DeleteBuffer(_secondIndex); _gl.DeleteBuffer(_secondWire);
@@ -273,13 +269,22 @@ public sealed class GpuMeshViewport : OpenGlControlBase
         var mesh = _mesh!;
         var (view, projection) = BuildMatrices(mesh, width, height);
         var color = ModelColor;
-        if (ShowGrid && _gridCount > 0)
+        if (ShowGrid)
         {
-            _gl!.UseProgram(_gridProgram);
-            _gl.UniformMatrix(_gl.GetUniformLocation(_gridProgram, "uView"), view);
-            _gl.UniformMatrix(_gl.GetUniformLocation(_gridProgram, "uProj"), projection);
+            // one triangle over the whole view: every pixel finds where its ray meets the floor, so the grid has no edge and no far plane.
+            // It is drawn first and without depth, the model then covers it.
+            _gl!.Disable(GlApi.DepthTest);
+            _gl.UseProgram(_gridProgram);
+            _gl.UniformMatrix(_gl.GetUniformLocation(_gridProgram, "uInverseViewProjection"), _inverseViewProjection);
+            // a hair under the base so that a flat bottom does not flicker against the grid
+            _gl.Uniform1(_gl.GetUniformLocation(_gridProgram, "uPlaneZ"), mesh.Min.Z - mesh.Radius * 0.0005f);
+            _gl.Uniform1(_gl.GetUniformLocation(_gridProgram, "uSpacing"), GroundGrid.Spacing(_gridSpacing, mesh.Radius));
+            _gl.Uniform3(_gl.GetUniformLocation(_gridProgram, "uBackground"), BackgroundR, BackgroundG, BackgroundB);
+            _gl.Uniform3(_gl.GetUniformLocation(_gridProgram, "uMinor"), GroundGrid.Minor.X, GroundGrid.Minor.Y, GroundGrid.Minor.Z);
+            _gl.Uniform3(_gl.GetUniformLocation(_gridProgram, "uMajor"), GroundGrid.Major.X, GroundGrid.Major.Y, GroundGrid.Major.Z);
             _gl.BindVertexArray(_gridVao);
-            _gl.DrawArrays(GlApi.Lines, 0, _gridCount);
+            _gl.DrawArrays(GlApi.Triangles, 0, 3);
+            _gl.Enable(GlApi.DepthTest);
         }
         _gl!.UseProgram(_solidProgram);
         _gl.UniformMatrix(_gl.GetUniformLocation(_solidProgram, "uView"), view);
@@ -335,13 +340,15 @@ public sealed class GpuMeshViewport : OpenGlControlBase
         var rotation = Matrix4x4.CreateRotationZ((float)Camera.Yaw) * Matrix4x4.CreateRotationX((float)Camera.Pitch);
         var view = Matrix4x4.CreateTranslation(-mesh.Center) * rotation;
         var radius = mesh.Radius;
-        var distance = radius * 2.9 / Math.Max(0.02, Camera.Zoom);
+        var distance = radius * 2.9 / Math.Max(ViewCamera.MinZoom, Camera.Zoom);
         var focal = height * 0.5 / Math.Tan(FieldOfView / 2);
         var panScale = height / 760.0;
         var kx = (float)(2 * Camera.PanX * panScale / width);
         var ky = (float)(-2 * Camera.PanY * panScale / height);
-        var near = Math.Max(radius * 0.002, 1e-6);
-        var far = distance + radius * 2;
+        // the clipping planes follow the camera, so the model is neither cut when the view dives into it nor flickers when it is far away:
+        // from outside, the near plane sits halfway to the closest point of the model; from close or inside, it stays a sliver in front of the eye
+        var near = distance > radius * 1.5 ? (distance - radius) * 0.5 : Math.Max(distance * 0.02, radius * 1e-9);
+        var far = distance + radius * 1.5;
         var a = (float)((far + near) / (far - near));
         var b = (float)(-2 * far * near / (far - near));
         var d = (float)distance;
@@ -350,6 +357,8 @@ public sealed class GpuMeshViewport : OpenGlControlBase
             kx, ky, a, 1,
             0, (float)(2 * focal / height), 0, 0,
             kx * d, ky * d, a * d + b, d);
+        // the grid unprojects pixels: (view × projection) inverted, laid out like the other matrices
+        _inverseViewProjection = Matrix4x4.Invert(view * projection, out var inverse) ? ToColumnMajor(inverse) : ToColumnMajor(Matrix4x4.Identity);
         return (ToColumnMajor(view), ToColumnMajor(projection));
     }
 
@@ -373,22 +382,6 @@ public sealed class GpuMeshViewport : OpenGlControlBase
         {
             _wireDirty = false;
             _wireCount = UploadWire(gl, wireMesh, _wireVao, _positionBuffer, _wireBuffer);
-        }
-        if (_gridDirty && ShowGrid && _mesh is { } gridMesh)
-        {
-            _gridDirty = false;
-            var (positions, colors) = GroundGrid.Build(gridMesh, _gridSpacing, new Vector3(BackgroundR, BackgroundG, BackgroundB));
-            gl.BindVertexArray(_gridVao);
-            gl.BindBuffer(GlApi.ArrayBuffer, _gridPositionBuffer);
-            gl.BufferData(GlApi.ArrayBuffer, positions, positions.Length * 4);
-            gl.EnableVertexAttribArray(0);
-            gl.VertexAttribPointerFloat(0, 3, 12);
-            gl.BindBuffer(GlApi.ArrayBuffer, _gridColorBuffer);
-            gl.BufferData(GlApi.ArrayBuffer, colors, colors.Length * 4);
-            gl.EnableVertexAttribArray(1);
-            gl.VertexAttribPointerFloat(1, 3, 12);
-            gl.BindVertexArray(0);
-            _gridCount = positions.Length / 3;
         }
         if (_secondDirty)
         {
@@ -531,21 +524,56 @@ void main() {
 }";
 
     private const string GridVertex = @"
-layout(location = 0) in vec3 aPos;
-layout(location = 1) in vec3 aColor;
-uniform mat4 uView;
-uniform mat4 uProj;
-out vec3 vColor;
+out vec2 vNdc;
 void main() {
-    vColor = aColor;
-    gl_Position = uProj * (uView * vec4(aPos, 1.0));
+    // a triangle that covers the screen, made from the vertex number alone
+    vec2 corner = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));
+    vNdc = corner * 2.0 - 1.0;
+    gl_Position = vec4(vNdc, 0.0, 1.0);
 }";
 
     private const string GridFragment = @"
-in vec3 vColor;
+in vec2 vNdc;
+uniform mat4 uInverseViewProjection;
+uniform float uPlaneZ;
+uniform float uSpacing;
+uniform vec3 uBackground;
+uniform vec3 uMinor;
+uniform vec3 uMajor;
 out vec4 outColor;
+
+// Lines of one cell size, one pixel wide whatever the distance. When they come closer than a few pixels they would blur into
+// a haze, so they fade out and the next, coarser, level takes over.
+float level(vec2 p, float cell) {
+    vec2 coord = p / cell;
+    vec2 width = max(fwidth(coord), vec2(1e-7));
+    vec2 g = abs(fract(coord - 0.5) - 0.5) / width;
+    float line = 1.0 - min(min(g.x, g.y), 1.0);
+    return line * (1.0 - smoothstep(0.12, 0.5, max(width.x, width.y)));
+}
+
 void main() {
-    outColor = vec4(vColor, 1.0);
+    vec4 nearPoint = uInverseViewProjection * vec4(vNdc, -1.0, 1.0);
+    vec4 farPoint = uInverseViewProjection * vec4(vNdc, 1.0, 1.0);
+    vec3 origin = nearPoint.xyz / nearPoint.w;
+    vec3 direction = farPoint.xyz / farPoint.w - origin;
+    if (abs(direction.z) < 1e-12) discard;
+    float t = (uPlaneZ - origin.z) / direction.z;
+    if (t <= 0.0) discard;
+    vec2 p = (origin + direction * t).xy;
+
+    float minor = level(p, uSpacing);
+    float major = 0.0;
+    float cell = uSpacing * 5.0;
+    for (int k = 0; k < 7; k++) {
+        major = max(major, level(p, cell));
+        cell *= 5.0;
+    }
+    vec3 color = mix(uBackground, uMinor, minor);
+    color = mix(color, uMajor, major);
+    // towards the horizon the floor dissolves into the background
+    float elevation = abs(direction.z) / length(direction);
+    outColor = vec4(mix(uBackground, color, smoothstep(0.0, 0.06, elevation)), 1.0);
 }";
 
     private const string PointVertex = @"

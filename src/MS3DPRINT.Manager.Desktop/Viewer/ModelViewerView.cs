@@ -15,7 +15,7 @@ using MS3DPRINT.Manager.Core.Slicing;
 namespace MS3DPRINT.Manager.Desktop.Viewer;
 
 /// <summary>Native 3D viewer for STL and OBJ files, shown inside the main window, with a thin-wall advisory analysis.</summary>
-public sealed class ModelViewerView : UserControl
+public sealed partial class ModelViewerView : UserControl
 {
     private static readonly (string Name, string Hex)[] Palette =
     [
@@ -214,22 +214,25 @@ public sealed class ModelViewerView : UserControl
         _slicerPanel.Children.Add(_sliceButton);
         _slicerPanel.Children.Add(_sliceStatus);
         _slicerMachine.SelectionChanged += (_, _) => { FillQualities(); ScheduleSlice(); };
-        _slicerQuality.SelectionChanged += (_, _) => ScheduleSlice();
+        _slicerQuality.SelectionChanged += (_, _) => { ScheduleSlice(); ScheduleAssessment(); };
         _sliceButton.Click += async (_, _) => await RunSliceAsync();
         _sliceDelay.Tick += async (_, _) => { _sliceDelay.Stop(); await RunSliceAsync(); };
         _createEstimate.Click += (_, _) =>
         {
             if (_modelPath is null) return;
             var choice = _material.SelectedItem as MaterialChoice;
-            EstimateRequested?.Invoke(new ModelEstimateSeed(Path.GetFileNameWithoutExtension(_modelPath), _estimatedMass, choice?.FilamentKey, _modelPath, _slice?.TimeHours, _slice is null ? null : _sliceMachineUsed?.PrinterModel));
+            EstimateRequested?.Invoke(new ModelEstimateSeed(Path.GetFileNameWithoutExtension(_modelPath), _estimatedMass, choice?.FilamentKey, _modelPath, _slice?.TimeHours ?? _quick?.TimeSeconds / 3600, _slice is null ? null : _sliceMachineUsed?.PrinterModel));
         };
         _material.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<MaterialChoice>((choice, _) => new TextBlock { Text = choice?.Label ?? string.Empty });
         _material.ItemsSource = MeshVolume.Presets.ToList();
         _material.SelectedIndex = 0;
-        _material.SelectionChanged += (_, _) => { RefreshVolume(); ScheduleSlice(); };
-        _infill.TextChanged += (_, _) => { RefreshVolume(); ScheduleSlice(); };
-        _walls.TextChanged += (_, _) => { RefreshVolume(); ScheduleSlice(); };
-        _scale.TextChanged += (_, _) => { RefreshVolume(); ScheduleSlice(); if (!_applyingUnit) SaveCustomScale(); };
+        _material.SelectionChanged += (_, _) => { RefreshVolume(); ScheduleSlice(); ScheduleAssessment(); };
+        _infill.TextChanged += (_, _) => { RefreshVolume(); ScheduleSlice(); ScheduleAssessment(); };
+        _walls.TextChanged += (_, _) => { RefreshVolume(); ScheduleSlice(); ScheduleAssessment(); };
+        _scale.TextChanged += (_, _) => { RefreshVolume(); ScheduleSlice(); ScheduleAssessment(); if (!_applyingUnit) SaveCustomScale(); };
+        _speedClass.ItemsSource = ModelAssessment.SpeedClasses.Select(speed => speed.Label).ToList();
+        _speedClass.SelectedIndex = 0;
+        InitializeAssessment();
         RefreshVolume();
         _hex.LostFocus += (_, _) => ApplyColor();
         _hex.KeyDown += (_, e) => { if (e.Key == Key.Enter) { ApplyColor(); e.Handled = true; } };
@@ -267,11 +270,11 @@ public sealed class ModelViewerView : UserControl
             Spacing = 10,
             Children =
             {
-                _title, _location, _dimensions, _message,
+                _title, _location, _dimensions, _message, _feasibilityChip,
                 Muted("Unités du modèle"), _units, _scale, _unitsNote,
                 FormKit.SectionLabel("Résultats"), _volumeResult, _volumeRows, Muted("Matière"), _material,
                 new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,*,Auto"), ColumnSpacing = 8, Children = { _infill, Place(Unit("% remplissage"), 1), Place(_walls, 2), Place(Unit("mm parois"), 3) } },
-                _volumeNote,
+                _supports, Muted("Vitesse de la machine"), _speedClass, _volumeNote,
                 FormKit.SectionLabel("Durée d’impression"), _slicerPanel
             }
         };
@@ -286,6 +289,8 @@ public sealed class ModelViewerView : UserControl
                 limits, analysisButtons, _analysisSummary, _analysis
             }
         };
+        var feasibility = FeasibilityControls();
+        for (var i = 0; i < feasibility.Length; i++) analysisTab.Children.Insert(i, feasibility[i]);
         _tabs = [infoTab, displayTab, toolsTab, analysisTab];
         var tabRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
         _tabButtons = TabNames.Select((name, index) =>
@@ -381,6 +386,8 @@ public sealed class ModelViewerView : UserControl
         _loadVersion++;
         _activeLoad?.Cancel();
         _activeAnalysis?.Cancel();
+        _assessDelay.Stop();
+        _assessCancel?.Cancel();
     }
 
     private static Control Place(Control control, int column) { Grid.SetColumn(control, column); return control; }
@@ -546,6 +553,8 @@ public sealed class ModelViewerView : UserControl
             _ = ComputeMeasuresAsync(mesh, version);
             _slice = null;
             ScheduleSlice();
+            ClearAssessment();
+            ScheduleAssessment();
             _viewport.SetMesh(mesh);
             _emptyState.IsVisible = false;
             _analyze.IsEnabled = _activeAnalysis is null;
@@ -559,6 +568,16 @@ public sealed class ModelViewerView : UserControl
             // development hook, like the other MS3DPRINT_START_* variables: open with a second version already loaded
             if (Environment.GetEnvironmentVariable("MS3DPRINT_START_COMPARE") is { Length: > 0 } startCompare) _ = LoadSecondAsync(startCompare);
             _message.Text = $"{mesh.TriangleCount:N0} triangles · chargé en {stopwatch.Elapsed.TotalSeconds:N1} s.";
+            // development hook, like the other MS3DPRINT_START_* variables: open with the ground grid shown
+            if (Environment.GetEnvironmentVariable("MS3DPRINT_START_GRID") == "1") _grid.IsChecked = true;
+            // development hook, like the other MS3DPRINT_START_* variables: open with this zoom (1 frames the whole model)
+            if (double.TryParse(Environment.GetEnvironmentVariable("MS3DPRINT_START_ZOOM"), NumberStyles.Float, CultureInfo.InvariantCulture, out var startZoom) && startZoom > 0)
+            {
+                _viewport.Camera.Zoom = startZoom;
+                _viewport.RequestRender(false);
+            }
+            // development hook, like the other MS3DPRINT_START_* variables: open on this tab of the side panel (0 to 3)
+            if (int.TryParse(Environment.GetEnvironmentVariable("MS3DPRINT_START_TAB"), out var startTab) && startTab >= 0 && startTab < _tabs.Length) ShowTab(startTab);
             ModelLoaded?.Invoke(Path.GetFileName(path));
             _viewport.Visual.Focus();
         }
@@ -583,7 +602,7 @@ public sealed class ModelViewerView : UserControl
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException) { return; }
         var selected = (_material.SelectedItem as MaterialChoice)?.Label;
         var choices = new List<MaterialChoice>(MeshVolume.Presets);
-        choices.AddRange(filaments.Select(f => new MaterialChoice($"{f.Brand} {f.Name} ({f.Material}, {f.PricePerKg:0.##} €/kg)", MeshVolume.DensityFor(f.Material), f.PricePerKg, $"{f.Brand} {f.Name}")));
+        choices.AddRange(filaments.Select(f => new MaterialChoice($"{f.Brand} {f.Name} ({f.Material}, {f.PricePerKg:0.##} €/kg)", MeshVolume.DensityFor(f.Material), f.PricePerKg, $"{f.Brand} {f.Name}", MaxFlowMm3S: MeshVolume.MaxFlowFor(f.Material))));
         _material.ItemsSource = choices;
         _material.SelectedItem = choices.FirstOrDefault(c => c.Label == selected) ?? choices[0];
     }
@@ -646,7 +665,7 @@ public sealed class ModelViewerView : UserControl
         var material = _material.SelectedItem as MaterialChoice;
         int? infill = double.TryParse(_infill.Text?.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var infillValue) && infillValue is >= 0 and <= 100 ? (int)Math.Round(infillValue) : null;
         int? loops = double.TryParse(_walls.Text?.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var wallMm) && wallMm > 0 ? Math.Max(1, (int)Math.Round(wallMm / 0.4)) : null;
-        var request = new SliceRequest(_modelPath, machine, quality, _slicerProfiles.FilamentFor(machine, material?.MaterialName), infill, loops, MeasureScale);
+        var request = new SliceRequest(_modelPath, machine, quality, _slicerProfiles.FilamentFor(machine, material?.MaterialName), infill, loops, MeasureScale, _supports.IsChecked == true);
         var path = _modelPath;
         _sliceButton.IsEnabled = false;
         _slice = null;
@@ -736,6 +755,15 @@ public sealed class ModelViewerView : UserControl
                 main.Add(("Poids", mass.ToString("0.#", french) + " g"));
                 details.Add(("Filament", (sliced.FilamentLengthMm / 1000).ToString("0.##", french) + " m"));
             }
+            else if (_quick is { } quick)
+            {
+                // the weight follows the material at once; the rest is recomputed a moment after each change
+                mass = quick.WeightGrams / _quickDensity * material.Density;
+                main.Add(("Durée estimée", FormatDuration(quick.TimeSeconds / 3600)));
+                main.Add(("Poids estimé", mass.ToString("0.#", french) + " g"));
+                details.Add(("Filament", (quick.FilamentLengthMm / 1000).ToString("0.##", french) + " m"));
+                if (quick.SupportVolumeMm3 > 0) details.Add(("Supports", (quick.SupportVolumeMm3 / 1000).ToString("0.##", french) + " cm³ de matière"));
+            }
             else main.Add(("Poids estimé", $"{mass.ToString("0.#", french)} g à {infill:0.##} %"));
             if (material.PricePerKg is { } price) main.Add(("Coût matière", $"{(decimal)mass * price / 1000m:0.00} €"));
             _estimatedMass = mass;
@@ -766,7 +794,9 @@ public sealed class ModelViewerView : UserControl
             false => "Maillage ouvert : le volume n’est qu’approximatif, corrigez le maillage avant de vous y fier. ",
             null => "Fermeture du maillage non vérifiée (modèle très volumineux). ",
             _ => string.Empty
-        }) + (_slice is null ? "Estimation indicative : le découpeur donnera le poids et la durée exacts." : "Durée et poids calculés par le découpeur.");
+        }) + (_slice is not null ? "Durée et poids calculés par le découpeur."
+            : _quick is not null ? "Estimation rapide du logiciel, sans découpeur : poids en général à ±5 %. La durée est une moyenne de plusieurs imprimantes : elle peut s’écarter d’environ 25 % selon la vitesse réelle de votre machine (réglage ci-dessus). Le découpeur donnera les valeurs exactes."
+            : "Estimation indicative : le découpeur donnera le poids et la durée exacts.");
     }
 
     /// <summary>Applies the cutting plane to the 3D view and says where it cuts, in millimetres from the base of the model.</summary>

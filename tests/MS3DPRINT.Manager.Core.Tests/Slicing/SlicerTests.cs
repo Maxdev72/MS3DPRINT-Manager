@@ -118,6 +118,23 @@ public sealed class SlicerTests : IDisposable
     }
 
     [Fact]
+    public void BuildArguments_SwitchesSupportsWithAnEqualsSignAndLeavesThemAloneWhenUnasked()
+    {
+        var install = new SlicerInstall("Bambu Studio", "bambu-studio.exe", _root);
+        var profiles = new SlicerProfiles(install);
+        var machine = profiles.Machines()[0];
+
+        var on = SliceRunner.BuildArguments(install, profiles, new SliceRequest("m.stl", machine, "0.20mm Standard @BBL A1", null, Supports: true), "out");
+        var off = SliceRunner.BuildArguments(install, profiles, new SliceRequest("m.stl", machine, "0.20mm Standard @BBL A1", null, Supports: false), "out");
+        var unset = SliceRunner.BuildArguments(install, profiles, new SliceRequest("m.stl", machine, "0.20mm Standard @BBL A1", null), "out");
+
+        Assert.Contains("--enable-support=1", on);
+        Assert.Contains("--enable-support=0", off);
+        Assert.DoesNotContain(unset, argument => argument.StartsWith("--enable-support", StringComparison.Ordinal));
+        Assert.Equal("m.stl", on[^1]);
+    }
+
+    [Fact]
     public void ParseResult_ReadsLengthDiameterAndLayersFromTheHeader()
     {
         const string header = "; model printing time: 1h 7m 9s; total estimated time: 1h 7m 10s\n; total layer number: 70\n; total filament length [mm] : 3005.10\n; filament_diameter: 1.75\n";

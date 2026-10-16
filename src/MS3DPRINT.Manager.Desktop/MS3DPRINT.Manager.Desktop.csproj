@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MS3DPRINT.Manager.Core\MS3DPRINT.Manager.Core.csproj" />
+    <ProjectReference Include="..\MS3DPRINT.Estimator\MS3DPRINT.Estimator.csproj" />
   </ItemGroup>
 
   <ItemGroup>

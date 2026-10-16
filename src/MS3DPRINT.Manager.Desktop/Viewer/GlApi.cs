@@ -173,6 +173,7 @@ internal sealed class GlApi
     public bool FramebufferIsComplete() => _checkFramebufferStatus(Framebuffer) == FramebufferComplete;
     public void Resolve(int width, int height) => _blitFramebuffer(0, 0, width, height, 0, 0, width, height, ColorBufferBit, Nearest);
     public int GetUniformLocation(int program, string name) => _getUniformLocation(program, name);
+    public void Uniform1(int location, float x) => _uniform1(location, x);
     public void Uniform3(int location, float x, float y, float z) => _uniform3(location, x, y, z);
     public void Uniform4(int location, float x, float y, float z, float w) => _uniform4(location, x, y, z, w);
     public void UniformMatrix(int location, float[] columnMajor) => _uniformMatrix4(location, 1, 0, columnMajor);
