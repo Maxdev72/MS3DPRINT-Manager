@@ -111,8 +111,9 @@ public sealed class CreateClientWindow : DialogWindow
              FormKit.Field("E-mail", _email), FormKit.Field("Portable", _mobile),
              FormKit.Field("Adresse", _address), _addressResults, _status, _error], create);
         UpdateCodePreview();
-        Closed += (_, _) => { _companySearch?.Cancel(); _addressSearch?.Cancel(); };
     }
+
+    protected override void OnDialogClosed() { _companySearch?.Cancel(); _addressSearch?.Cancel(); }
 
     private void TryClose()
     {

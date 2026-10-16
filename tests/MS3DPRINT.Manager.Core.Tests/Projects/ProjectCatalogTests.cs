@@ -74,15 +74,25 @@ public sealed class ProjectCatalogTests : IDisposable
     }
 
     [Theory]
-    [InlineData(ProjectStatus.Quote, "DEVIS")]
-    [InlineData(ProjectStatus.InProgress, "EN_COURS")]
-    [InlineData(ProjectStatus.Completed, "TERMINE")]
-    public void ProjectSummary_ProvidesFrenchStatusLabels(ProjectStatus status, string expected)
+    [InlineData(ProjectStatus.Quote, "A_FAIRE", 0)]
+    [InlineData(ProjectStatus.InProgress, "EN_COURS", 50)]
+    [InlineData(ProjectStatus.Completed, "TERMINE", 100)]
+    public void ProjectSummary_ProvidesFrenchStatusLabels(ProjectStatus status, string expected, int progress)
     {
         var project = new ProjectSummary("CLIENT", _root, _root, "CLI-2026-001", "CLI-2026-001_TEST", new ProjectProfile(
             Guid.NewGuid(), Guid.NewGuid(), "CLI", "CLI-2026-001", "CLI-2026-001_TEST", "TEST", status,
             DateTimeOffset.UtcNow, null, null, null, DateTimeOffset.UtcNow));
 
         Assert.Equal(expected, project.StatusLabel);
+        Assert.Equal(progress, project.ProgressPercent);
+    }
+
+    [Fact]
+    public void A_project_without_a_sheet_is_to_do_at_zero_percent()
+    {
+        var project = new ProjectSummary("CLIENT", _root, _root, "CLI-2026-001", "CLI-2026-001_TEST", null);
+
+        Assert.Equal("A_FAIRE", project.StatusLabel);
+        Assert.Equal(0, project.ProgressPercent);
     }
 }

@@ -30,7 +30,7 @@ public sealed class EditProjectWindow : DialogWindow
         // names made from folder names come back in capitals with underscores and no accents: propose them readable
         _suggestedName = DisplayNames.Format(profile.ProjectName);
         _name = new TextBox { Text = _suggestedName };
-        _status = new ComboBox { ItemsSource = Enum.GetValues<ProjectStatus>(), SelectedItem = profile.Status };
+        _status = new ComboBox { ItemsSource = Enum.GetValues<ProjectStatus>(), SelectedItem = profile.Status, ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<ProjectStatus>((value, _) => new TextBlock { Text = StatusText(value) }) };
         _dueDate = new TextBox { Text = profile.DueDate?.ToString("yyyy-MM-dd") ?? string.Empty, PlaceholderText = "ex. 2026-11-30" };
         _description = new TextBox { Text = profile.Description ?? string.Empty, PlaceholderText = "Description", AcceptsReturn = true, TextWrapping = Avalonia.Media.TextWrapping.Wrap, MinHeight = 90 };
         _notes = new TextBox { Text = profile.Notes ?? string.Empty, PlaceholderText = "Notes internes", AcceptsReturn = true, TextWrapping = Avalonia.Media.TextWrapping.Wrap, MinHeight = 90 };
@@ -58,6 +58,8 @@ public sealed class EditProjectWindow : DialogWindow
         DueDate = date;
         Close(true);
     }
+
+    private static string StatusText(ProjectStatus status) => status switch { ProjectStatus.InProgress => "En cours", ProjectStatus.Completed => "Terminé", _ => "À faire" };
 
     private static string? Normalize(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

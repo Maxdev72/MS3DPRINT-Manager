@@ -62,9 +62,61 @@ public abstract class DialogWindow : Window
         Content = root;
     }
 
+    // ---- side panel hosting: the same dialog can be shown in the main window instead of its own window ----
+
+    private Action<bool>? _panelDone;
+
+    /// <summary>Width the dialog takes as a side panel.</summary>
+    internal double PanelWidth => double.IsNaN(Width) ? 460 : Math.Clamp(Width, 440, 600);
+
+    /// <summary>Hands the content over to the panel; <paramref name="done"/> is called once, with the result, when the dialog closes.</summary>
+    internal Control BeginPanel(Action<bool> done)
+    {
+        _panelDone = done;
+        var content = (Control)Content!;
+        Content = null;
+        return content;
+    }
+
+    internal void RaisePanelOpened() => OnOpened(EventArgs.Empty);
+
+    /// <summary>Called when the dialog closes, in its own window or in the panel.</summary>
+    protected virtual void OnDialogClosed() { }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        base.OnClosed(e);
+        OnDialogClosed();
+    }
+
+    /// <summary>Closes the dialog with its result (true confirms), whether it sits in a window or in the side panel.</summary>
+    public new void Close(object? dialogResult)
+    {
+        if (_panelDone is { } done)
+        {
+            _panelDone = null;
+            OnDialogClosed();
+            done(dialogResult is true);
+        }
+        else base.Close(dialogResult);
+    }
+
+    /// <summary>Shows the dialog in the side panel of the main window; any other owner gets a regular window.</summary>
+    public new async Task<TResult> ShowDialog<TResult>(Window owner)
+    {
+        if (typeof(TResult) == typeof(bool) && owner is MainWindow { CanShowPanel: true } main)
+            return (TResult)(object)await main.ShowPanelAsync(this);
+        return await base.ShowDialog<TResult>(owner);
+    }
+
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
+        HandleKey(e);
+    }
+
+    internal void HandleKey(KeyEventArgs e)
+    {
         if (e.Handled) return;
         if (e.Key == Key.Escape)
         {

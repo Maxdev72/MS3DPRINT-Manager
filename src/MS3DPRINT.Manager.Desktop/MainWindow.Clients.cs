@@ -207,7 +207,7 @@ public partial class MainWindow
                 open.Click += ProjectEntry_Click;
                 ClientList.Children.Add(CreateActionRow(open, null,
                     CreateCompactTableCell($"{project.Reference} · {project.Title()}", prominent: true),
-                    CreateStatusBadge(project.Profile is null ? "À compléter" : project.StatusLabel),
+                    CreateProjectStatusCell(project),
                     CreateCompactTableCell(project.Profile?.DueDate is { } due ? $"{due:dd/MM/yyyy}" : "—")));
             }
         }

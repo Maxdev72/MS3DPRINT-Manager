@@ -76,7 +76,7 @@
         <Grid ColumnDefinitions="*,Auto,*,Auto,*">
           <StackPanel Spacing="2"><TextBlock Text="Projets" Classes="caption" /><TextBlock x:Name="ProjectCountText" Text="—" Classes="metric" /><TextBlock Text="dans votre espace de travail" Classes="caption" /></StackPanel>
           <Border Grid.Column="1" Width="1" Background="{DynamicResource SubtleBorderBrush}" Margin="24,2" />
-          <StackPanel Grid.Column="2" Spacing="2"><TextBlock Text="Devis" Classes="caption" /><TextBlock x:Name="QuoteCountText" Text="—" Classes="metric" /><TextBlock Text="à chiffrer" Classes="caption" /></StackPanel>
+          <StackPanel Grid.Column="2" Spacing="2"><TextBlock Text="À faire" Classes="caption" /><TextBlock x:Name="QuoteCountText" Text="—" Classes="metric" /><TextBlock Text="pas encore démarrés" Classes="caption" /></StackPanel>
           <Border Grid.Column="3" Width="1" Background="{DynamicResource SubtleBorderBrush}" Margin="24,2" />
           <StackPanel Grid.Column="4" Spacing="2"><TextBlock Text="En cours" Classes="caption" /><TextBlock x:Name="InProgressCountText" Text="—" Classes="metric" /><TextBlock Text="en fabrication" Classes="caption" /></StackPanel>
         </Grid>
@@ -107,7 +107,7 @@
         <Grid RowDefinitions="Auto,*" RowSpacing="12">
           <Grid x:Name="ProjectFilterBar" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
             <Border Classes="search-box" Height="36" HorizontalAlignment="Left" Width="280"><Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"><Path Classes="icon" Data="{StaticResource IconSearch}" /><TextBox x:Name="ProjectFilterBox" Grid.Column="1" Classes="search-input" PlaceholderText="Filtrer les projets…" TextChanged="ProjectFilterText_Changed" AutomationProperties.Name="Filtrer les projets…" /></Grid></Border>
-            <WrapPanel x:Name="ProjectStatusFilters" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"><Button Classes="filter-chip selected" Content="Tous" Tag="" Click="ProjectFilter_Click" Margin="0,0,6,0" /><Button Classes="filter-chip" Content="Devis" Tag="DEVIS" Click="ProjectFilter_Click" Margin="0,0,6,0" /><Button Classes="filter-chip" Content="En cours" Tag="EN_COURS" Click="ProjectFilter_Click" Margin="0,0,6,0" /><Button Classes="filter-chip" Content="Terminés" Tag="TERMINE" Click="ProjectFilter_Click" Margin="0,0,6,0" /><Button Classes="filter-chip" Content="À compléter" Tag="TODO" Click="ProjectFilter_Click" Margin="0,0,6,0" /></WrapPanel>
+            <WrapPanel x:Name="ProjectStatusFilters" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"><Button Classes="filter-chip selected" Content="Tous" Tag="" Click="ProjectFilter_Click" Margin="0,0,6,0" /><Button Classes="filter-chip" Content="À faire" Tag="A_FAIRE" Click="ProjectFilter_Click" Margin="0,0,6,0" /><Button Classes="filter-chip" Content="En cours" Tag="EN_COURS" Click="ProjectFilter_Click" Margin="0,0,6,0" /><Button Classes="filter-chip" Content="Terminés" Tag="TERMINE" Click="ProjectFilter_Click" Margin="0,0,6,0" /><Button Classes="filter-chip" Content="À compléter" Tag="TODO" Click="ProjectFilter_Click" Margin="0,0,6,0" /></WrapPanel>
             <StackPanel x:Name="ProjectsPanelHeader" Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
               <TextBlock x:Name="ProjectsPanelTitle" Text="Tous les projets" Classes="section-title" IsVisible="False" />
               <TextBlock x:Name="ProjectsPanelSubtitle" Text="Catalogue lu depuis votre espace de travail." Classes="caption" VerticalAlignment="Center" />
@@ -230,6 +230,16 @@
     </Border>
     </Grid>
       <ProgressBar x:Name="BusyBar" Grid.Column="1" Classes="busy" IsIndeterminate="True" IsVisible="False" VerticalAlignment="Top" />
-    <StackPanel x:Name="ToastHost" Grid.Column="1" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,28,24" Spacing="8" />
+    <Grid x:Name="SidePanelOverlay" Grid.ColumnSpan="2" IsVisible="False" ZIndex="100" KeyDown="SidePanel_KeyDown">
+      <Border Background="#99060A12" />
+      <Border x:Name="SidePanel" HorizontalAlignment="Right" Width="460" Background="{DynamicResource RaisedSurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0" BoxShadow="-12 0 36 0 #66000000">
+        <Border.Styles>
+          <Style Selector="Border#SidePanel"><Setter Property="RenderTransform" Value="translateX(520px)" /><Setter Property="Transitions"><Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="CubicEaseOut" /></Transitions></Setter></Style>
+          <Style Selector="Border#SidePanel.open"><Setter Property="RenderTransform" Value="translateX(0px)" /></Style>
+        </Border.Styles>
+        <Border x:Name="SidePanelBody" />
+      </Border>
+    </Grid>
+    <StackPanel x:Name="ToastHost" Grid.Column="1" ZIndex="200" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,28,24" Spacing="8" />
   </Grid>
 </Window>

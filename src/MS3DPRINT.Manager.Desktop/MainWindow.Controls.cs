@@ -19,17 +19,57 @@ namespace MS3DPRINT.Manager.Desktop;
 /// <summary>Shared building blocks for lists: tables, rows, badges, empty states and action menus.</summary>
 public partial class MainWindow
 {
-    /// <summary>Coloured pill for a project status label (DEVIS, EN_COURS, TERMINE or "À compléter").</summary>
+    /// <summary>Coloured pill for a project status label (A_FAIRE, EN_COURS or TERMINE).</summary>
     private static Border CreateStatusBadge(string statusLabel)
     {
         var (text, variant) = statusLabel switch
         {
-            "DEVIS" => ("Devis", "warning"),
             "EN_COURS" => ("En cours", "info"),
             "TERMINE" => ("Terminé", "success"),
-            _ => (statusLabel, "neutral")
+            _ => ("À faire", "neutral")
         };
         return new Border { Classes = { "badge", variant }, Child = new TextBlock { Text = text } };
+    }
+
+    /// <summary>Status of a project: a ring filled to its progress, the percentage, then the status pill.</summary>
+    private static Control CreateProjectStatusCell(ProjectSummary project)
+    {
+        var percent = project.ProgressPercent;
+        var brushKey = project.StatusLabel switch { "TERMINE" => "SuccessBrush", "EN_COURS" => "AccentBrush", _ => "FaintTextBrush" };
+        var brush = (IBrush?)Avalonia.Application.Current?.FindResource(brushKey) ?? Brushes.Gray;
+        var track = (IBrush?)Avalonia.Application.Current?.FindResource("BorderBrush") ?? Brushes.DimGray;
+        const double size = 18, thickness = 2.5, radius = (size - thickness) / 2, centre = size / 2;
+
+        var ring = new Panel { Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center };
+        ring.Children.Add(new Avalonia.Controls.Shapes.Ellipse { Width = size, Height = size, Stroke = track, StrokeThickness = thickness });
+        if (percent >= 100)
+            ring.Children.Add(new Avalonia.Controls.Shapes.Ellipse { Width = size, Height = size, Stroke = brush, StrokeThickness = thickness });
+        else if (percent > 0)
+        {
+            var angle = percent / 100.0 * 2 * Math.PI;
+            var figure = new PathFigure { StartPoint = new Avalonia.Point(centre, centre - radius), IsClosed = false };
+            figure.Segments!.Add(new ArcSegment
+            {
+                Point = new Avalonia.Point(centre + radius * Math.Sin(angle), centre - radius * Math.Cos(angle)),
+                Size = new Avalonia.Size(radius, radius),
+                SweepDirection = SweepDirection.Clockwise,
+                IsLargeArc = percent > 50
+            });
+            var geometry = new PathGeometry();
+            geometry.Figures!.Add(figure);
+            ring.Children.Add(new Avalonia.Controls.Shapes.Path
+            {
+                Data = geometry,
+                Stroke = brush, StrokeThickness = thickness, StrokeLineCap = PenLineCap.Round
+            });
+        }
+
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
+        row.Children.Add(ring);
+        row.Children.Add(new TextBlock { Text = $"{percent} %", MinWidth = 34, Classes = { "caption" }, VerticalAlignment = VerticalAlignment.Center });
+        row.Children.Add(CreateStatusBadge(project.StatusLabel));
+        ToolTip.SetTip(row, $"Avancement : {percent} %");
+        return row;
     }
 
     /// <summary>Friendly empty state: icon, explanation and, when useful, the action that fills the list.</summary>
@@ -207,7 +247,7 @@ public partial class MainWindow
         }
         for (var index = 0; index < cells.Length; index++)
         {
-            cells[index].IsHitTestVisible = open is null;
+            cells[index].IsHitTestVisible = open is null || cells[index].Classes.Contains("interactive-cell");
             cells[index].VerticalAlignment = VerticalAlignment.Center;
             Grid.SetColumn(cells[index], index);
             row.Children.Add(cells[index]);
@@ -226,7 +266,7 @@ public partial class MainWindow
     }
 
     /// <summary>Project, client, status, due date, actions.</summary>
-    private const string ProjectRowColumns = "2*,*,110,130,64";
+    private const string ProjectRowColumns = "2*,*,190,130,64";
 
     private const string TrashRowColumns = "2*,*,130";
 

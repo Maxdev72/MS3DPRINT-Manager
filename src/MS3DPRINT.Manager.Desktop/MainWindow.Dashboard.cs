@@ -34,7 +34,7 @@ public partial class MainWindow
             var text = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
             text.Children.Add(new TextBlock { Text = $"{project.Reference} · {project.Title()}", FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
             text.Children.Add(new TextBlock { Text = project.ClientTitle(), Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis });
-            var badge = CreateStatusBadge(project.StatusLabel);
+            var badge = CreateProjectStatusCell(project);
             Grid.SetColumn(badge, 1);
             content.Children.Add(text);
             content.Children.Add(badge);

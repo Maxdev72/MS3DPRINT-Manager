@@ -122,7 +122,7 @@ public partial class MainWindow
     {
         "" => true,
         "TODO" => project.Profile is null,
-        var status => project.Profile is not null && project.StatusLabel == status
+        var status => project.StatusLabel == status
     };
 
     private void RenderProjects()
@@ -170,8 +170,54 @@ public partial class MainWindow
             ProjectList.Children.Add(CreateActionRow(ProjectRowColumns, open, CreateOverflowActions(folder, edit, rename, move, trash),
                 CreateProjectNameCell(project),
                 CreateCompactTableCell(project.ClientTitle()),
-                CreateStatusBadge(project.StatusLabel),
+                CreateStatusPicker(project),
                 CreateDueDateCell(project)));
+        }
+    }
+
+    /// <summary>The status of a project in the list; clicking it offers the three statuses, without opening the sheet.</summary>
+    private Control CreateStatusPicker(ProjectSummary project)
+    {
+        var options = new[] { (ProjectStatus.Quote, "À faire · 0 %"), (ProjectStatus.InProgress, "En cours · 50 %"), (ProjectStatus.Completed, "Terminé · 100 %") }
+            .Select(option =>
+            {
+                var button = new Button { Content = option.Item2 };
+                button.Click += async (_, _) => await SetProjectStatusAsync(project, option.Item1);
+                return button;
+            }).ToArray();
+        var menu = (Flyout)CreateOverflowActions(PlacementMode.BottomEdgeAlignedLeft, options).Tag!;
+        var picker = new Button { Content = CreateProjectStatusCell(project), Classes = { "ghost", "interactive-cell" }, Padding = new Avalonia.Thickness(6, 4), HorizontalAlignment = HorizontalAlignment.Left };
+        ToolTip.SetTip(picker, "Changer le statut");
+        Avalonia.Automation.AutomationProperties.SetName(picker, "Changer le statut de " + project.Reference);
+        picker.Click += (_, _) => menu.ShowAt(picker);
+        return picker;
+    }
+
+    private async Task SetProjectStatusAsync(ProjectSummary project, ProjectStatus status)
+    {
+        try
+        {
+            var root = WorkspaceRoot;
+            var profile = project.Profile;
+            if (profile is null)
+            {
+                // a project from before the sheets: its sheet is created now, named after its folder, then the status is set
+                var client = (await Task.Run(() => new WorkspaceClientReader().Load(root)))
+                    .FirstOrDefault(candidate => string.Equals(candidate.ClientPath, project.ClientPath, StringComparison.OrdinalIgnoreCase));
+                if (client?.Profile is null) { Notify("Complétez d’abord la fiche de ce client historique.", error: true); return; }
+                var name = DisplayNames.Format(project.ProjectName);
+                profile = await Task.Run(() => new WorkspaceProjectCreator().CompleteExisting(root, project, client.Profile, name));
+            }
+            else if (profile.Status == status) return;
+            var updated = await Task.Run(() => new WorkspaceProfileEditor().UpdateProject(root, profile, status, profile.DueDate, profile.Description, profile.Notes));
+            _allProjects = _allProjects.Select(candidate => candidate.ProjectPath == project.ProjectPath ? project with { Profile = updated } : candidate).ToList();
+            RenderProjects();
+            Notify(status switch { ProjectStatus.Completed => "Projet terminé.", ProjectStatus.InProgress => "Projet en cours.", _ => "Projet à faire." });
+            await PreloadAsync(force: true);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        {
+            Notify(exception.Message, error: true);
         }
     }
 
@@ -206,7 +252,7 @@ public partial class MainWindow
         IOrderedEnumerable<ProjectSummary> ordered = _projectSortColumn switch
         {
             1 => projects.OrderBy(project => project.ClientTitle(), StringComparer.CurrentCultureIgnoreCase),
-            2 => projects.OrderBy(project => project.StatusLabel switch { "DEVIS" => 0, "EN_COURS" => 1, "TERMINE" => 2, _ => 3 }),
+            2 => projects.OrderBy(project => project.StatusLabel switch { "A_FAIRE" => 0, "EN_COURS" => 1, _ => 2 }),
             3 => projects.OrderBy(project => project.Profile?.DueDate is null).ThenBy(project => project.Profile?.DueDate),
             _ => projects.OrderBy(project => project.Title(), StringComparer.CurrentCultureIgnoreCase)
         };
@@ -262,7 +308,7 @@ public partial class MainWindow
     {
         var edit = new Button { Content = Icons.Label("IconEdit", "Modifier la fiche"), Tag = project, VerticalAlignment = VerticalAlignment.Center };
         edit.Click += EditProject_Click;
-        var badge = CreateStatusBadge(project.Profile is null ? "À compléter" : project.StatusLabel);
+        var badge = CreateProjectStatusCell(project);
 
         var summary = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, VerticalAlignment = VerticalAlignment.Center };
         summary.Children.Add(badge);
