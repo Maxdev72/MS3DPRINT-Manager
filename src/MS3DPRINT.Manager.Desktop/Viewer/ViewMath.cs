@@ -51,7 +51,7 @@ public static class MeshPicker
         var bestT = float.PositiveInfinity;
         var bestTriangle = -1;
         var gate = new object();
-        Parallel.For(0, (count + 8191) / 8192, block =>
+        Parallel.For(0, (count + 8191) / 8192, MS3DPRINT.Estimator.Parallelism.Options(), block =>
         {
             var localT = float.PositiveInfinity;
             var localTriangle = -1;

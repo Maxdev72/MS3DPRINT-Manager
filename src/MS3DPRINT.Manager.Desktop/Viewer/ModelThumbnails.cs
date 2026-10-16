@@ -18,7 +18,9 @@ public static class ModelThumbnails
     public const int PreviewSize = 360;
     private const long MaxFileBytes = 40L * 1024 * 1024;
     private const uint Background = 0xFF0E1522;
-    private static readonly SemaphoreSlim Gate = new(2);
+    private static SemaphoreSlim _gate = new(MS3DPRINT.Estimator.Parallelism.ThumbnailSlots);
+
+    static ModelThumbnails() => MS3DPRINT.Estimator.Parallelism.Changed += () => Volatile.Write(ref _gate, new SemaphoreSlim(MS3DPRINT.Estimator.Parallelism.ThumbnailSlots));
     private static readonly TimeSpan MaxAge = TimeSpan.FromDays(90);
     private static int _pruned;
 
@@ -61,9 +63,11 @@ public static class ModelThumbnails
             var info = new FileInfo(path);
             var cached = CachePath(path, info.Length, info.LastWriteTimeUtc, size);
             if (File.Exists(cached)) return new Bitmap(cached);
-            await Gate.WaitAsync(cancellationToken);
+            // the queue is replaced when the performance mode changes: each request releases the one it entered
+            var gate = Volatile.Read(ref _gate);
+            await gate.WaitAsync(cancellationToken);
             try { return await Task.Run(() => Render(path, cached, size, cancellationToken), cancellationToken); }
-            finally { Gate.Release(); }
+            finally { gate.Release(); }
         }
         catch (Exception exception) when (exception is IOException or InvalidDataException or NotSupportedException or FormatException
             or UnauthorizedAccessException or ArgumentException or OperationCanceledException)

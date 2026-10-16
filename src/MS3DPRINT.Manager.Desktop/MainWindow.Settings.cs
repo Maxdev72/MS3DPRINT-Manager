@@ -135,6 +135,27 @@ public partial class MainWindow
             preview.Children.Add(new TextBlock { Text = folder.Category is { } category ? $"{folder.Path}  ·  {ProjectTemplate.Label(category)}" : folder.Path, Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis });
         StorageList.Children.Add(Card("Arborescence des projets", "Dossiers créés dans chaque nouveau projet et classement des fichiers importés. Les projets existants ne changent pas.", null, preview, editTemplate));
 
+        // ---- performance: how much of the processor the heavy work may take
+        var performanceStore = new PerformanceSettings();
+        var modes = Enum.GetValues<MS3DPRINT.Estimator.PerformanceMode>();
+        var currentMode = MS3DPRINT.Estimator.Parallelism.Mode;
+        var modeBox = new ComboBox { ItemsSource = modes, SelectedItem = currentMode, MinWidth = 220, HorizontalAlignment = HorizontalAlignment.Left };
+        modeBox.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<MS3DPRINT.Estimator.PerformanceMode>((mode, _) => new TextBlock { Text = PerformanceSettings.Label(mode) });
+        var modeText = new TextBlock { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
+        void ShowMode(MS3DPRINT.Estimator.PerformanceMode mode) => modeText.Text = PerformanceSettings.Description(mode) +
+            $" Ici : {MS3DPRINT.Estimator.Parallelism.ThreadsFor(mode, Environment.ProcessorCount)} thread(s) sur {Environment.ProcessorCount}.";
+        ShowMode(currentMode);
+        modeBox.SelectionChanged += (_, _) =>
+        {
+            if (modeBox.SelectedItem is not MS3DPRINT.Estimator.PerformanceMode chosen || chosen == MS3DPRINT.Estimator.Parallelism.Mode) return;
+            MS3DPRINT.Estimator.Parallelism.Apply(chosen);
+            ShowMode(chosen);
+            try { performanceStore.Save(chosen); }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            { Notify("Le réglage est appliqué mais n’a pas pu être enregistré : " + exception.Message, error: true); }
+        };
+        StorageList.Children.Add(Card("Performances", "Part du processeur que les calculs lourds peuvent utiliser : estimations, orientation automatique, aperçus et rendu logiciel.", null, modeBox, modeText));
+
         // ---- storage: where the folders can be synchronised, with the folder when there is one
         var providerRows = new StackPanel { Spacing = 0 };
         foreach (var provider in providers)

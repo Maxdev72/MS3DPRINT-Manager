@@ -49,6 +49,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        MS3DPRINT.Estimator.Parallelism.Apply(new PerformanceSettings().Load());
         if (DesktopApplication.ReduceMotion) Classes.Add("reduce-motion");
         if (_placement.Load() is { } saved)
         {

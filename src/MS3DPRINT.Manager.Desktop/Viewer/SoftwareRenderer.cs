@@ -125,7 +125,7 @@ public static class SoftwareRenderer
         var screenY = new float[count];
         var inverseDepth = new float[count];
         var positions = mesh.Positions;
-        Parallel.For(0, (count + 4095) / 4096, block =>
+        Parallel.For(0, (count + 4095) / 4096, MS3DPRINT.Estimator.Parallelism.Options(), block =>
         {
             var end = Math.Min(count, (block + 1) * 4096);
             for (var i = block * 4096; i < end; i++)
@@ -162,7 +162,7 @@ public static class SoftwareRenderer
         var sx = projection.ScreenX; var sy = projection.ScreenY; var iz = projection.InverseDepth;
 
         // Pre-pass: cull, shade, and compute each triangle's pixel rows.
-        Parallel.For(0, (triangleCount + 4095) / 4096, block =>
+        Parallel.For(0, (triangleCount + 4095) / 4096, MS3DPRINT.Estimator.Parallelism.Options(), block =>
         {
             var end = Math.Min(triangleCount, (block + 1) * 4096);
             for (var t = block * 4096; t < end; t++)
@@ -184,9 +184,9 @@ public static class SoftwareRenderer
         cancellationToken.ThrowIfCancellationRequested();
 
         var depthBuffer = new float[width * height];
-        var bands = Math.Max(1, Math.Min(Environment.ProcessorCount * 2, height / 8));
+        var bands = Math.Max(1, Math.Min(MS3DPRINT.Estimator.Parallelism.MaxThreads * 2, height / 8));
         var baseR = (baseColor >> 16) & 0xFF; var baseG = (baseColor >> 8) & 0xFF; var baseB = baseColor & 0xFF;
-        Parallel.For(0, bands, band =>
+        Parallel.For(0, bands, MS3DPRINT.Estimator.Parallelism.Options(), band =>
         {
             var rowStart = band * height / bands;
             var rowEnd = (band + 1) * height / bands - 1;

@@ -63,23 +63,32 @@ public static class AutoOrient
             rotations.Add(rotation);
         }
 
-        var raw = new List<(Quaternion Rotation, double Support, double Time, double Base, double Height, bool Fits)>();
-        for (var i = 0; i < rotations.Count; i++)
+        // the candidates are independent: they are measured side by side, within the thread budget of the software
+        var measured = new (Quaternion Rotation, double Support, double Time, double Base, double Height, bool Fits)?[rotations.Count];
+        var done = 0;
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var rotation = rotations[i];
-            var placed = mesh.Oriented(rotation);
-            try
+            Parallel.For(0, rotations.Count, Parallelism.Options(cancellationToken), i =>
             {
-                var estimate = PrintEstimator.Estimate(placed, measuring, machine, cancellationToken);
-                raw.Add((rotation, estimate.SupportVolumeMm3, estimate.TimeSeconds, estimate.BaseAreaMm2, placed.Size.Z, Fits(placed.Size, plateMm)));
-            }
-            catch (ArgumentException) when (i > 0)
-            {
-                // a position the estimator refuses (far too many layers) is simply not a candidate
-            }
-            progress?.Report((i + 1.0) / rotations.Count);
+                var rotation = rotations[i];
+                var placed = mesh.Oriented(rotation);
+                try
+                {
+                    var estimate = PrintEstimator.Estimate(placed, measuring, machine, cancellationToken);
+                    measured[i] = (rotation, estimate.SupportVolumeMm3, estimate.TimeSeconds, estimate.BaseAreaMm2, placed.Size.Z, Fits(placed.Size, plateMm));
+                }
+                catch (ArgumentException) when (i > 0)
+                {
+                    // a position the estimator refuses (far too many layers) is simply not a candidate
+                }
+                progress?.Report(Interlocked.Increment(ref done) / (double)rotations.Count);
+            });
         }
+        catch (AggregateException failure) when (failure.InnerExceptions.Count > 0)
+        {
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure.InnerExceptions[0]).Throw();
+        }
+        var raw = measured.Where(entry => entry is not null).Select(entry => entry!.Value).ToList();
 
         var maxSupport = Math.Max(1, raw.Max(r => r.Support));
         var maxTime = Math.Max(1, raw.Max(r => r.Time));
