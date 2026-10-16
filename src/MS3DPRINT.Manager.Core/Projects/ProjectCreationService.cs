@@ -45,7 +45,8 @@ public sealed class ProjectCreationService
                 .Select(Path.GetFileName).OfType<string>().Concat(reservations.ExistingNames()).ToArray();
             var reference = ProjectReferenceGenerator.Create(clientCode, year, existingNames, projectName);
             reservations.Reserve($"{reference.ClientCode}-{reference.Year:D4}-{reference.Sequence:D3}");
-            _folders.CreateTree(Path.Combine(fullClientPath, reference.FolderName), FolderTemplates.Project);
+            var template = new ProjectTemplateStore(new WorkspaceMetadataPaths(WorkspaceRoot(fullClientPath))).Load();
+            _folders.CreateTree(Path.Combine(fullClientPath, reference.FolderName), template.Paths);
             return reference;
         }
         finally

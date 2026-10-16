@@ -1,10 +1,11 @@
 using MS3DPRINT.Manager.Core.Projects;
+using MS3DPRINT.Manager.Core.Templates;
 
 namespace MS3DPRINT.Manager.Core.Files;
 
 public static partial class ProjectFileClassifier
 {
-    public static ProjectFileDestination Suggest(string sourceFileName, string projectFolderName)
+    public static ProjectFileDestination Suggest(string sourceFileName, string projectFolderName, ProjectTemplate? template = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceFileName);
         ArgumentException.ThrowIfNullOrWhiteSpace(projectFolderName);
@@ -20,7 +21,7 @@ public static partial class ProjectFileClassifier
 
         var extension = Path.GetExtension(fileName);
         var category = CategoryFor(extension);
-        return new ProjectFileDestination(category, DirectoryFor(category), stem + "__" + reference + extension);
+        return new ProjectFileDestination(category, (template ?? ProjectTemplate.Default).DirectoryFor(category), stem + "__" + reference + extension);
     }
 
     /// <summary>
@@ -46,14 +47,4 @@ public static partial class ProjectFileClassifier
         ".3MF" => ProjectFileCategory.ThreeMf,
         _ => ProjectFileCategory.ClientFiles
     };
-
-    private static string DirectoryFor(ProjectFileCategory category) => category switch
-    {
-        ProjectFileCategory.Documents => "01_DEVIS_FACTURES",
-        ProjectFileCategory.Step => Path.Combine("03_CAO_3D", "02_STEP"),
-        ProjectFileCategory.Stl => Path.Combine("03_CAO_3D", "03_STL"),
-        ProjectFileCategory.ThreeMf => Path.Combine("04_IMPRESSION_3D", "02_3MF"),
-        _ => "02_FICHIERS_CLIENT"
-    };
-
 }

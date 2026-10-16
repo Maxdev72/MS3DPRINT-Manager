@@ -10,6 +10,8 @@ using MS3DPRINT.Manager.Core.Clients;
 using MS3DPRINT.Manager.Core.Files;
 using MS3DPRINT.Manager.Core.Projects;
 using MS3DPRINT.Manager.Core.Printers;
+using MS3DPRINT.Manager.Core.Templates;
+using MS3DPRINT.Manager.Core.Workspace;
 using MS3DPRINT.Manager.Core.Estimates;
 using MS3DPRINT.Manager.Desktop.Dashboard;
 using MS3DPRINT.Manager.Desktop.Viewer;
@@ -21,6 +23,22 @@ public partial class MainWindow
 {
     private async void Changelog_Click(object? sender, RoutedEventArgs e)
         => await new ChangelogWindow().ShowDialog(this);
+
+    private async void EditProjectTemplate_Click(object? sender, RoutedEventArgs e)
+    {
+        var root = WorkspaceRoot;
+        var store = new ProjectTemplateStore(new WorkspaceMetadataPaths(root));
+        var dialog = new ProjectTemplateWindow(store.Load());
+        if (!await dialog.ShowDialog<bool>(this)) return;
+        try
+        {
+            if (dialog.ResetRequested) { store.Reset(); Notify("Modèle standard rétabli pour les nouveaux projets."); }
+            else if (dialog.Result is { } template) { store.Save(template); Notify("Arborescence des projets enregistrée."); }
+            await LoadSettingsAsync();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        { Notify(exception.Message, error: true); }
+    }
 
     private async void RefreshSettings_Click(object? sender, RoutedEventArgs e) => await LoadSettingsAsync();
 
@@ -107,6 +125,15 @@ public partial class MainWindow
         if (fixedByEnvironment)
             workspaceContent.Add(new TextBlock { Text = "Cet espace de travail est imposé par la variable d’environnement MS3DPRINT_WORKSPACE : il ne peut pas être changé ici.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap });
         StorageList.Children.Add(Card("Espace de travail", "Le dossier qui contient vos clients, projets et collections.", null, workspaceContent.ToArray()));
+
+        // ---- project template: folders created in each new project
+        var template = new ProjectTemplateStore(new WorkspaceMetadataPaths(workspaceRoot)).Load();
+        var editTemplate = new Button { Content = Icons.Label("IconEdit", "Modifier l’arborescence…", 16), HorizontalAlignment = HorizontalAlignment.Left };
+        editTemplate.Click += EditProjectTemplate_Click;
+        var preview = new StackPanel { Spacing = 2 };
+        foreach (var folder in template.Folders)
+            preview.Children.Add(new TextBlock { Text = folder.Category is { } category ? $"{folder.Path}  ·  {ProjectTemplate.Label(category)}" : folder.Path, Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis });
+        StorageList.Children.Add(Card("Arborescence des projets", "Dossiers créés dans chaque nouveau projet et classement des fichiers importés. Les projets existants ne changent pas.", null, preview, editTemplate));
 
         // ---- storage: where the folders can be synchronised, with the folder when there is one
         var providerRows = new StackPanel { Spacing = 0 };

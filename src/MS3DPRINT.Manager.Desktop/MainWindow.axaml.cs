@@ -131,7 +131,7 @@ public partial class MainWindow : Window
                 await LoadClientDetailAsync(found);
             }
         }
-        // MS3DPRINT_START_DIALOG=client|project|printer|filament|collection|viewer|toast opens that dialog (screenshots, demos).
+        // MS3DPRINT_START_DIALOG=client|project|printer|filament|collection|template|viewer|toast opens that dialog (screenshots, demos).
         switch (Environment.GetEnvironmentVariable("MS3DPRINT_START_DIALOG"))
         {
             case "client": CreateClient_Click(this, new RoutedEventArgs()); break;
@@ -139,6 +139,7 @@ public partial class MainWindow : Window
             case "printer": CreatePrinter_Click(this, new RoutedEventArgs()); break;
             case "filament": CreateFilament_Click(this, new RoutedEventArgs()); break;
             case "collection": CreateCollection_Click(this, new RoutedEventArgs()); break;
+            case "template": EditProjectTemplate_Click(this, new RoutedEventArgs()); break;
             case "viewer": ShowModelViewer(Environment.GetEnvironmentVariable("MS3DPRINT_START_MODEL")); break;
 #if DEBUG
             case "picker": _ = PickWorkspaceFolderAsync(WorkspaceRoot, "Déplacer « essai.stl »"); break;

@@ -28,6 +28,23 @@ public sealed class ProjectCreationServiceTests : IDisposable
     }
 
     [Fact]
+    public void Create_UsesTheTemplateSavedInTheWorkspace()
+    {
+        var client = Directory.CreateDirectory(Path.Combine(_root, "01_CLIENTS", "MPO")).FullName;
+        new MS3DPRINT.Manager.Core.Templates.ProjectTemplateStore(new MS3DPRINT.Manager.Core.Workspace.WorkspaceMetadataPaths(_root)).Save(
+            new MS3DPRINT.Manager.Core.Templates.ProjectTemplate([
+                new("Brief"), new("Pieces/STL", MS3DPRINT.Manager.Core.Files.ProjectFileCategory.Stl), new("Divers", MS3DPRINT.Manager.Core.Files.ProjectFileCategory.ClientFiles)]));
+
+        var project = new ProjectCreationService(new FolderTreeService()).Create(client, "MPO", 2026, "Essai");
+
+        var path = Path.Combine(client, project.FolderName);
+        Assert.True(Directory.Exists(Path.Combine(path, "Brief")));
+        Assert.True(Directory.Exists(Path.Combine(path, "Pieces", "STL")));
+        Assert.True(Directory.Exists(Path.Combine(path, "Divers")));
+        Assert.False(Directory.Exists(Path.Combine(path, "00_BRIEF_CLIENT")));
+    }
+
+    [Fact]
     public void Create_NeverReusesReferencesAfterMoveOrTrashAndAllowsRestore()
     {
         var client = Directory.CreateDirectory(Path.Combine(_root, "01_CLIENTS", "MPO")).FullName;

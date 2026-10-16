@@ -9,6 +9,8 @@ using Avalonia.Platform.Storage;
 using MS3DPRINT.Manager.Core.Clients;
 using MS3DPRINT.Manager.Core.Files;
 using MS3DPRINT.Manager.Core.Projects;
+using MS3DPRINT.Manager.Core.Templates;
+using MS3DPRINT.Manager.Core.Workspace;
 using MS3DPRINT.Manager.Core.Printers;
 using MS3DPRINT.Manager.Core.Estimates;
 using MS3DPRINT.Manager.Desktop.Dashboard;
@@ -170,7 +172,7 @@ public partial class MainWindow
         if (atRoot)
         {
             destinations = await Task.Run(() => ImportDestinations(context.Item1.ProjectPath));
-            try { suggestedFolder = Path.Combine(context.Item1.ProjectPath, ProjectFileClassifier.Suggest(originalName, context.Item1.FolderName).RelativeDirectory); }
+            try { suggestedFolder = Path.Combine(context.Item1.ProjectPath, ProjectFileClassifier.Suggest(originalName, context.Item1.FolderName, new ProjectTemplateStore(new WorkspaceMetadataPaths(WorkspaceRoot)).Load()).RelativeDirectory); }
             catch (ArgumentException) { }
         }
         var naming = new ImportNameWindow(originalName, ProjectFileClassifier.SuggestImportName(originalName, context.Item1.Reference), context.Item1.Reference, destinations, suggestedFolder);
