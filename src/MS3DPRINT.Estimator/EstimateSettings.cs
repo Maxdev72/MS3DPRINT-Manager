@@ -106,7 +106,7 @@ public sealed record EstimateResult(
     double WeightGrams, double FilamentLengthMm, double TimeSeconds, int LayerCount,
     double WallVolumeMm3, double SkinVolumeMm3, double InfillVolumeMm3, double SupportVolumeMm3,
     double ModelVolumeMm3, Vector3 SizeMm, IReadOnlyList<EstimateWarning> Warnings,
-    double ContourLengthMm = 0, int IslandCount = 0, double TurningRadians = 0, double OverhangAreaMm2 = 0)
+    double ContourLengthMm = 0, int IslandCount = 0, double TurningRadians = 0, double OverhangAreaMm2 = 0, double BaseAreaMm2 = 0)
 {
     public double PrintedVolumeMm3 => WallVolumeMm3 + SkinVolumeMm3 + InfillVolumeMm3 + SupportVolumeMm3;
 }

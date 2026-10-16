@@ -81,7 +81,7 @@ public static class PrintEstimator
         var filamentArea = Math.PI * Math.Pow(machine.FilamentDiameterMm / 2, 2);
         return new EstimateResult(printed / 1000 * settings.DensityGcm3, printed / filamentArea, seconds, area.Length,
             wallVolume, skinVolume, infillVolume, supportVolume, modelVolume, mesh.Size, warnings,
-            sections.Sum(section => section.Perimeter), islands, turning, overhang);
+            sections.Sum(section => section.Perimeter), islands, turning, overhang, area[0]);
     }
 
     /// <summary>The last layer is as thin as what is left of the model height.</summary>

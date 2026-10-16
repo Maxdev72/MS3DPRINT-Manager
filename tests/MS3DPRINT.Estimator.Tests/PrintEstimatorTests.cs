@@ -296,4 +296,12 @@ public sealed class PrintEstimatorTests
         Assert.Throws<ArgumentException>(() => new PrintMesh([new(0, 0, 0)], [0, 1, 2]));
         Assert.Throws<ArgumentException>(() => new PrintMesh([new(0, 0, 0), new(float.NaN, 0, 0), new(0, 1, 0)], [0, 1, 2]));
     }
+
+    [Fact]
+    public void TheBaseAreaIsTheSectionOnTheBed()
+    {
+        var result = PrintEstimator.Estimate(Cube(), new EstimateSettings());
+
+        Assert.Equal(400, result.BaseAreaMm2, 0);
+    }
 }
