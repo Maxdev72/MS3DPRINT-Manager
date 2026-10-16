@@ -533,6 +533,7 @@ public sealed partial class ModelViewerView : UserControl
         path = Path.GetFullPath(path);
         var version = ++_loadVersion;
         _activeAnalysis?.Cancel();
+        _autoOrientCancel?.Cancel();
         _activeLoad?.Cancel();
         _analyze.IsEnabled = false;
         _analysisSummary.IsVisible = false;
@@ -1212,7 +1213,7 @@ public sealed partial class ModelViewerView : UserControl
                 }
                 return WallThicknessAnalyzer.Analyze(triangles, scale, threshold, cancellation.Token);
             }, cancellation.Token);
-            if (version != _loadVersion || cancellation.IsCancellationRequested) return;
+            if (version != _loadVersion || cancellation.IsCancellationRequested || !ReferenceEquals(_mesh, mesh)) return;
             _viewport.Markers = result.ThinSamples.Select(sample => sample.Position).ToArray();
             _viewport.RequestRender(false);
             var topologyBlocksAnalysis = result.BoundaryEdges != 0 || result.NonManifoldEdges != 0 || result.InconsistentEdges != 0 || result.InvalidTriangles != 0;
@@ -1226,8 +1227,8 @@ public sealed partial class ModelViewerView : UserControl
                 (result.BudgetExhausted ? "Budget atteint : analyse partielle. " : "") +
                 "Sondage non exhaustif : détails fins et parois obliques peuvent être manqués, auto-intersections non vérifiées. L’absence d’alerte ne garantit pas l’imprimabilité ; vérifiez dans le trancheur.";
         }
-        catch (OperationCanceledException) { if (version == _loadVersion) _analysis.Text = "Analyse annulée."; }
-        catch (ArgumentException exception) { if (version == _loadVersion) _analysis.Text = "Analyse indisponible : " + exception.Message; }
+        catch (OperationCanceledException) { if (version == _loadVersion && ReferenceEquals(_mesh, mesh)) _analysis.Text = "Analyse annulée."; }
+        catch (ArgumentException exception) { if (version == _loadVersion && ReferenceEquals(_mesh, mesh)) _analysis.Text = "Analyse indisponible : " + exception.Message; }
         finally
         {
             if (ReferenceEquals(_activeAnalysis, cancellation)) _activeAnalysis = null;

@@ -45,17 +45,23 @@ public sealed partial class ModelViewerView
     }
 
     /// <summary>Takes the plate from the choice, tells whether the part fits, shows it, and checks the feasibility against it.</summary>
+    /// <summary>The custom text could not be read and the generic plate stands in for it.</summary>
+    private bool _plateTextUnreadable;
+
     private void ApplyPlate()
     {
         var choice = _plateChoice.SelectedItem as PlateChoice;
         if (choice?.Custom == true)
         {
             _plateText.IsVisible = true;
-            _plate = PlateSize.Parse(_plateText.Text) ?? PlateSize.Default;
+            var parsed = PlateSize.Parse(_plateText.Text);
+            _plateTextUnreadable = parsed is null;
+            _plate = parsed ?? PlateSize.Default;
         }
         else
         {
             _plateText.IsVisible = false;
+            _plateTextUnreadable = false;
             _plate = choice?.Size ?? PlateSize.Default;
         }
         PushPlate(_viewport);
@@ -67,12 +73,13 @@ public sealed partial class ModelViewerView
     private void PushPlate(IMeshViewport viewport)
     {
         var scale = MeasureScale > 0 ? MeasureScale : 1;
+        var unreadable = _plateTextUnreadable ? "Dimensions illisibles : le plateau générique 256 × 256 × 256 mm est utilisé. " : string.Empty;
         viewport.PlateHalfWidth = (float)(_plate.WidthMm / 2 / scale);
         viewport.PlateHalfDepth = (float)(_plate.DepthMm / 2 / scale);
         if (_mesh is not { } mesh)
         {
             viewport.PlateOverflow = false;
-            _plateStatus.Text = $"Plateau {_plate.Label}.";
+            _plateStatus.Text = $"{unreadable}Plateau {_plate.Label}.";
             return;
         }
         var size = mesh.Size * (float)scale;
@@ -80,13 +87,13 @@ public sealed partial class ModelViewerView
         viewport.PlateOverflow = overflow != Vector3.Zero;
         if (overflow == Vector3.Zero)
         {
-            _plateStatus.Text = $"Plateau {_plate.Label} : la pièce tient.";
+            _plateStatus.Text = $"{unreadable}Plateau {_plate.Label} : la pièce tient.";
             return;
         }
         var parts = new List<string>();
         if (overflow.X > 0) parts.Add($"{overflow.X.ToString("0.#", French)} mm en largeur");
         if (overflow.Y > 0) parts.Add($"{overflow.Y.ToString("0.#", French)} mm en profondeur");
         if (overflow.Z > 0) parts.Add($"{overflow.Z.ToString("0.#", French)} mm en hauteur");
-        _plateStatus.Text = $"Plateau {_plate.Label} : la pièce dépasse de {string.Join(", ", parts)}. Essayez une autre orientation.";
+        _plateStatus.Text = $"{unreadable}Plateau {_plate.Label} : la pièce dépasse de {string.Join(", ", parts)}. Essayez une autre orientation.";
     }
 }

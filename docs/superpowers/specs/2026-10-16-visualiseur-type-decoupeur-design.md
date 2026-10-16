@@ -113,7 +113,7 @@ Le volume (`_measures`) n'est pas recalculé : une rotation ne le change pas.
 Onglet **Outils** : groupe « Orientation » avec les boutons X+/X−/Y+/Y−/Z+/Z−, trois champs d'angles, « Poser sur une face »,
 « Orientation automatique », « Réinitialiser », « Enregistrer le modèle orienté ». Onglet **Infos** : sélecteur « Plateau » sous
 « Vitesse de la machine », et une ligne « Plateau 256 × 256 × 256 mm — la pièce tient / dépasse de … ». Touche O : orientation
-automatique. Les actions sont désactivées pendant la comparaison de deux versions (la comparaison est effacée si l'on tourne).
+automatique. La comparaison de deux versions est effacée si l'on tourne la pièce.
 
 ## 7. Gestion des cas limites
 

@@ -64,14 +64,21 @@ public sealed partial class ModelViewerView
         _orientGroup.Children.Add(turns);
         _orientGroup.Children.Add(Muted("Angles en degrés (X, puis Y, puis Z)"));
         _orientGroup.Children.Add(angles);
-        _autoOrient.Click += async (_, _) => await AutoOrientAsync();
+        _autoOrient.Click += async (_, _) => await GuardedAsync(AutoOrientAsync);
         _orientGroup.Children.Add(Muted("Orientation automatique : objectif"));
         _orientGroup.Children.Add(_autoGoal);
         _orientGroup.Children.Add(_autoOrient);
-        _saveOriented.Click += async (_, _) => await SaveOrientedAsync();
+        _saveOriented.Click += async (_, _) => await GuardedAsync(SaveOrientedAsync);
         _orientGroup.Children.Add(_saveOriented);
         _orientGroup.Children.Add(_resetOrientation);
         _orientGroup.Children.Add(_orientStatus);
+    }
+
+    /// <summary>Runs a flow started from an async void handler: nothing may escape, or the process would crash.</summary>
+    private async Task GuardedAsync(Func<Task> flow)
+    {
+        try { await flow(); }
+        catch (Exception exception) { _orientStatus.Text = "Opération impossible : " + exception.Message; }
     }
 
     /// <summary>
@@ -101,11 +108,16 @@ public sealed partial class ModelViewerView
         {
             var proposal = await Task.Run(() => AutoOrient.Propose(ModelAssessment.ToPrintMesh(mesh, scale), settings, machine, goal, plate, progress, cancellation.Token), cancellation.Token);
             if (version != _loadVersion || !ReferenceEquals(_mesh, mesh)) { _orientStatus.Text = string.Empty; return; }
+            if (cancellation.IsCancellationRequested) { _orientStatus.Text = "Évaluation annulée."; return; }
+            // a mesh with holes gives estimates that cannot be trusted
+            var unreliable = _feasibility?.Issues.Any(issue => issue.Code is FeasibilityCode.OpenMesh or FeasibilityCode.NonManifold) == true
+                ? " Le maillage n'est pas étanche : ce résultat est peu fiable."
+                : string.Empty;
             if (!proposal.IsImprovement)
             {
-                _orientStatus.Text = proposal.Current.FitsPlate
+                _orientStatus.Text = (proposal.Current.FitsPlate
                     ? "L’orientation actuelle est déjà la meilleure parmi celles essayées."
-                    : "Aucune orientation essayée ne tient sur le plateau : la pièce est trop grande.";
+                    : "Aucune orientation essayée ne tient sur le plateau : la pièce est trop grande.") + unreliable;
                 return;
             }
             _orientation.Compose(proposal.Best.Rotation);
@@ -114,10 +126,12 @@ public sealed partial class ModelViewerView
             var minutes = (proposal.Best.TimeSeconds - proposal.Current.TimeSeconds) / 60;
             _orientStatus.Text = $"Orientation appliquée : supports {supports:+0.##;−0.##;0} cm³, durée {minutes:+0;−0;0} min"
                 + (proposal.Best.FitsPlate ? "." : ", mais la pièce dépasse encore du plateau.")
-                + (proposal.Limited ? " Modèle très volumineux : seuls les six axes ont été essayés." : string.Empty);
+                + (proposal.Limited ? " Modèle très volumineux : seuls les six axes ont été essayés." : string.Empty)
+                + unreliable;
         }
         catch (OperationCanceledException) { _orientStatus.Text = "Évaluation annulée."; }
         catch (ArgumentException exception) { _orientStatus.Text = "Évaluation impossible : " + exception.Message; }
+        catch (Exception exception) { _orientStatus.Text = "Évaluation impossible : " + exception.Message; }
         finally
         {
             _autoOrientCancel = null;
@@ -171,6 +185,10 @@ public sealed partial class ModelViewerView
         ClearComparison();
         ClearMeasures();
         _cutToggle.IsChecked = false;
+        // a wall analysis in flight or finished belongs to the old position: stop it and clear its text (the viewport drops the markers)
+        _activeAnalysis?.Cancel();
+        _analysisSummary.IsVisible = false;
+        _analysis.Text = "Analyse indicative sur échantillons, sans certification d’imprimabilité. Aucun fichier n’est modifié.";
         _mesh = mesh;
         _overlay.Mesh = mesh;
         var camera = _viewport.Camera;
@@ -204,14 +222,13 @@ public sealed partial class ModelViewerView
         if (_faceToggle.IsChecked != true || _mesh is not { } mesh) return;
         var bounds = _viewport.Visual.Bounds;
         var camera = new ViewCamera { Yaw = _viewport.Camera.Yaw, Pitch = _viewport.Camera.Pitch, Zoom = _viewport.Camera.Zoom, PanX = _viewport.Camera.PanX, PanY = _viewport.Camera.PanY };
-        var inverted = _measures?.Inverted == true;
+        var cutPlane = _viewport.CutPlane;
         var picked = await Task.Run(() =>
         {
             var (origin, direction) = ViewMath.Ray(mesh, camera, bounds.Width, bounds.Height, click.X, click.Y);
-            if (!MeshPicker.TryPick(mesh, origin, direction, out _, out var triangle)) return (System.Numerics.Vector3?)null;
+            if (!MeshPicker.TryPick(mesh, origin, direction, out _, out var triangle, cutPlane)) return (System.Numerics.Vector3?)null;
             var normal = mesh.Normals[triangle];
             if (normal.Length() < 1e-6f) return null; // degenerate triangle: no usable face
-            if (inverted) normal = -normal;
             // the face that looks at the camera is the outer one, whichever way the triangle is wound
             if (System.Numerics.Vector3.Dot(normal, direction) > 0) normal = -normal;
             return normal;
@@ -251,19 +268,19 @@ public sealed partial class ModelViewerView
         if (_mesh is not { } mesh || _modelPath is null) return;
         var storage = TopLevel.GetTopLevel(this)?.StorageProvider;
         if (storage is null) return;
-        var folder = Path.GetDirectoryName(_modelPath);
-        var file = await storage.SaveFilePickerAsync(new FilePickerSaveOptions
-        {
-            Title = "Enregistrer le modèle orienté",
-            SuggestedFileName = Path.GetFileNameWithoutExtension(_modelPath) + "__orienté",
-            DefaultExtension = "stl",
-            FileTypeChoices = [new FilePickerFileType("STL (millimètres)") { Patterns = ["*.stl"] }],
-            SuggestedStartLocation = folder is null ? null : await storage.TryGetFolderFromPathAsync(folder)
-        });
-        var local = file?.TryGetLocalPath();
-        if (string.IsNullOrWhiteSpace(local)) return;
         try
         {
+            var folder = Path.GetDirectoryName(_modelPath);
+            var file = await storage.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = "Enregistrer le modèle orienté",
+                SuggestedFileName = Path.GetFileNameWithoutExtension(_modelPath) + "__orienté",
+                DefaultExtension = "stl",
+                FileTypeChoices = [new FilePickerFileType("STL (millimètres)") { Patterns = ["*.stl"] }],
+                SuggestedStartLocation = folder is null ? null : await storage.TryGetFolderFromPathAsync(folder)
+            });
+            var local = file?.TryGetLocalPath();
+            if (string.IsNullOrWhiteSpace(local)) return;
             if (string.Equals(Path.GetFullPath(local), Path.GetFullPath(_modelPath), StringComparison.OrdinalIgnoreCase))
             {
                 _orientStatus.Text = "Choisissez un autre nom : le fichier d’origine n’est jamais remplacé.";
@@ -274,6 +291,10 @@ public sealed partial class ModelViewerView
             _orientStatus.Text = "Modèle orienté enregistré : " + Path.GetFileName(local) + ".";
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            _orientStatus.Text = "Enregistrement impossible : " + exception.Message;
+        }
+        catch (Exception exception)
         {
             _orientStatus.Text = "Enregistrement impossible : " + exception.Message;
         }
