@@ -15,6 +15,14 @@ public sealed class ModelOrientation
 
     public void Reset() => Rotation = Quaternion.Identity;
 
+    /// <summary>An angle for a field: one decimal at most, decimal comma, and "0" (never "-0") for a value that rounds to zero.</summary>
+    public static string FormatAngle(float degrees)
+    {
+        var rounded = Math.Round(degrees, 1, MidpointRounding.AwayFromZero);
+        if (rounded == 0) rounded = 0;
+        return rounded.ToString("0.#", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+    }
+
     /// <summary>Turns the part about an axis of the plate (0 = X, 1 = Y, 2 = Z) after its current orientation.</summary>
     public void RotateAxis(int axis, double degrees)
     {

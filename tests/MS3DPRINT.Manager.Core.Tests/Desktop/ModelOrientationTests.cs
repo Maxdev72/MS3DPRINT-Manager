@@ -12,6 +12,15 @@ public sealed class ModelOrientationTests
         return new MeshModel(corners, faces);
     }
 
+    [Theory]
+    [InlineData(-0.0f, "0")]
+    [InlineData(-0.04f, "0")]
+    [InlineData(12.34f, "12,3")]
+    [InlineData(-12.36f, "-12,4")]
+    [InlineData(90f, "90")]
+    public void An_angle_is_formatted_with_one_decimal_and_never_as_negative_zero(float degrees, string expected) =>
+        Assert.Equal(expected, ModelOrientation.FormatAngle(degrees));
+
     [Fact]
     public void A_new_orientation_is_the_identity_and_still_stands_the_part_on_the_plate()
     {

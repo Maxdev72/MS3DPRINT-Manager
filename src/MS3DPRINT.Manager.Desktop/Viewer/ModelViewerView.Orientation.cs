@@ -161,9 +161,9 @@ public sealed partial class ModelViewerView
     {
         _syncingAngles = true;
         var angles = _orientation.EulerDegrees;
-        _angleX.Text = angles.X.ToString("0.#", French);
-        _angleY.Text = angles.Y.ToString("0.#", French);
-        _angleZ.Text = angles.Z.ToString("0.#", French);
+        _angleX.Text = ModelOrientation.FormatAngle(angles.X);
+        _angleY.Text = ModelOrientation.FormatAngle(angles.Y);
+        _angleZ.Text = ModelOrientation.FormatAngle(angles.Z);
         _syncingAngles = false;
         _resetOrientation.IsEnabled = !_orientation.IsIdentity;
     }
