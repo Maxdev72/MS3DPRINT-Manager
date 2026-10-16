@@ -45,18 +45,30 @@ public static class AutoOrient
                 if (normals.All(known => Vector3.Dot(known, family) < 0.99985f)) normals.Add(family);
 
         var measuring = settings with { Supports = SupportMode.Auto };
+        var zTurn = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI / 2);
+        // rotations to measure; the first is always the part as given (identity), never turned
+        var rotations = new List<Quaternion> { Quaternion.Identity };
+        // a part that does not fit as given but fits after a quarter turn about Z competes as a separate, turned candidate
+        if (plateMm is { } givenPlate && !FitsAsIs(mesh.Oriented(Quaternion.Identity).Size, givenPlate) && FitsAfterZTurn(mesh.Oriented(Quaternion.Identity).Size, givenPlate))
+            rotations.Add(Quaternion.Concatenate(Quaternion.Identity, zTurn));
+        for (var n = 1; n < normals.Count; n++)
+        {
+            var rotation = OrientationMath.Between(normals[n], -Vector3.UnitZ);
+            // an orientation that fits the plate only after a quarter turn about Z gets that turn composed after its rotation
+            if (plateMm is { } plate)
+            {
+                var size = mesh.Oriented(rotation).Size;
+                if (!FitsAsIs(size, plate) && FitsAfterZTurn(size, plate)) rotation = Quaternion.Concatenate(rotation, zTurn);
+            }
+            rotations.Add(rotation);
+        }
+
         var raw = new List<(Quaternion Rotation, double Support, double Time, double Base, double Height, bool Fits)>();
-        for (var i = 0; i < normals.Count; i++)
+        for (var i = 0; i < rotations.Count; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var rotation = OrientationMath.Between(normals[i], -Vector3.UnitZ);
+            var rotation = rotations[i];
             var placed = mesh.Oriented(rotation);
-            // a part that fits the plate only after a quarter turn about Z gets that turn in its rotation, so the rotation returned fits as drawn
-            if (plateMm is { } plate && !FitsAsIs(placed.Size, plate) && FitsAsIs(new Vector3(placed.Size.Y, placed.Size.X, placed.Size.Z), plate))
-            {
-                rotation = Quaternion.Concatenate(rotation, Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI / 2));
-                placed = mesh.Oriented(rotation);
-            }
             try
             {
                 var estimate = PrintEstimator.Estimate(placed, measuring, machine, cancellationToken);
@@ -66,7 +78,7 @@ public static class AutoOrient
             {
                 // a position the estimator refuses (far too many layers) is simply not a candidate
             }
-            progress?.Report((i + 1.0) / normals.Count);
+            progress?.Report((i + 1.0) / rotations.Count);
         }
 
         var maxSupport = Math.Max(1, raw.Max(r => r.Support));
@@ -90,8 +102,13 @@ public static class AutoOrient
         return new OrientationProposal(best, current, candidates, limited);
     }
 
-    /// <summary>The part fits the plate as it stands (no turn about Z; the candidate's rotation already holds any turn).</summary>
+    /// <summary>
+    /// The part, placed with the given size, fits the plate as it stands: no turn about Z is assumed, so the current position is never judged
+    /// with the quarter-turn rule (candidates that need a turn carry it in their rotation).
+    /// </summary>
     private static bool Fits(Vector3 size, Vector3? plate) => plate is not { } p || FitsAsIs(size, p);
+
+    private static bool FitsAfterZTurn(Vector3 size, Vector3 plate) => FitsAsIs(new Vector3(size.Y, size.X, size.Z), plate);
 
     private static bool FitsAsIs(Vector3 size, Vector3 p) =>
         size.X <= p.X + 0.01f && size.Y <= p.Y + 0.01f && size.Z <= p.Z + 0.01f;

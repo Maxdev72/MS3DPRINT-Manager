@@ -98,6 +98,31 @@ public sealed class AutoOrientTests
     }
 
     [Fact]
+    public void The_current_position_is_never_turned_and_a_turned_position_competes_as_a_candidate()
+    {
+        var block = Block(80, 40, 10);
+
+        var proposal = AutoOrient.Propose(block, Settings(), null, AutoOrientGoal.FewestSupports, new Vector3(50, 100, 100), null, default);
+        var placed = block.Oriented(proposal.Best.Rotation);
+
+        Assert.Equal(Quaternion.Identity, proposal.Current.Rotation);
+        Assert.False(proposal.Current.FitsPlate);
+        Assert.True(proposal.IsImprovement);
+        Assert.True(proposal.Best.FitsPlate);
+        Assert.True(placed.Size.X <= 50.01f, $"width {placed.Size.X}");
+        Assert.True(placed.Size.Y <= 100.01f, $"depth {placed.Size.Y}");
+    }
+
+    [Fact]
+    public void The_current_position_keeps_the_identity_rotation_when_the_part_fits_as_given()
+    {
+        var proposal = AutoOrient.Propose(Block(20, 20, 20), Settings(), null, AutoOrientGoal.FewestSupports, new Vector3(100, 100, 100), null, default);
+
+        Assert.Equal(Quaternion.Identity, proposal.Current.Rotation);
+        Assert.True(proposal.Current.FitsPlate);
+    }
+
+    [Fact]
     public void A_pillar_that_is_too_tall_for_the_plate_is_laid_down_to_fit()
     {
         var pillar = Block(20, 20, 60);
