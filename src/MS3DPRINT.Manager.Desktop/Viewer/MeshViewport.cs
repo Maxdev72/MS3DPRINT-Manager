@@ -41,6 +41,10 @@ public sealed class MeshViewport : Control, IMeshViewport
     /// <summary>Not drawn by the CPU view; kept so both views share one interface.</summary>
     public bool ShowGrid { get; set; }
     public float GridSpacing { get; set; }
+    /// <summary>Not drawn by the CPU view; kept so both views share one interface.</summary>
+    public float PlateHalfWidth { get; set; }
+    public float PlateHalfDepth { get; set; }
+    public bool PlateOverflow { get; set; }
     public MeshModel? SecondMesh { get; set; }
     public Color SecondColor { get; set; }
     public bool ShowFirst { get; set; } = true;

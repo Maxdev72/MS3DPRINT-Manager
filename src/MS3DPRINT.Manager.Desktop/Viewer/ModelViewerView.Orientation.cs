@@ -122,6 +122,7 @@ public sealed partial class ModelViewerView
         ClearAssessment();
         ScheduleAssessment();
         RefreshVolume();
+        PushPlate(_viewport);
         _viewport.RequestRender(false);
     }
 }

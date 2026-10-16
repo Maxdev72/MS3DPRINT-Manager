@@ -47,6 +47,11 @@ public interface IMeshViewport
     bool ShowGrid { get; set; }
     /// <summary>Size of a grid cell in model units; 0 lets the view choose.</summary>
     float GridSpacing { get; set; }
+    /// <summary>Build plate centred on the origin of the floor: half its width (X) and depth (Y) in model units; 0 draws none (GPU view only).</summary>
+    float PlateHalfWidth { get; set; }
+    float PlateHalfDepth { get; set; }
+    /// <summary>The part sticks out of the plate: the outline of the plate is drawn in red.</summary>
+    bool PlateOverflow { get; set; }
     /// <summary>The view as it is drawn now (null when nothing could be captured).</summary>
     Task<CapturedImage?> CaptureAsync();
     void SetMesh(MeshModel? mesh);
@@ -102,6 +107,9 @@ public sealed class GpuMeshViewport : OpenGlControlBase
         get => _gridSpacing;
         set { _gridSpacing = value; }
     }
+    public float PlateHalfWidth { get; set; }
+    public float PlateHalfDepth { get; set; }
+    public bool PlateOverflow { get; set; }
 
     private TaskCompletionSource<CapturedImage?>? _capture;
 
@@ -282,6 +290,10 @@ public sealed class GpuMeshViewport : OpenGlControlBase
             _gl.Uniform3(_gl.GetUniformLocation(_gridProgram, "uBackground"), BackgroundR, BackgroundG, BackgroundB);
             _gl.Uniform3(_gl.GetUniformLocation(_gridProgram, "uMinor"), GroundGrid.Minor.X, GroundGrid.Minor.Y, GroundGrid.Minor.Z);
             _gl.Uniform3(_gl.GetUniformLocation(_gridProgram, "uMajor"), GroundGrid.Major.X, GroundGrid.Major.Y, GroundGrid.Major.Z);
+            _gl.Uniform3(_gl.GetUniformLocation(_gridProgram, "uPlate"), PlateHalfWidth, PlateHalfDepth, PlateOverflow ? 1f : 0f);
+            _gl.Uniform3(_gl.GetUniformLocation(_gridProgram, "uPlateFill"), 0.10f, 0.15f, 0.21f);
+            _gl.Uniform3(_gl.GetUniformLocation(_gridProgram, "uPlateEdge"), 0.45f, 0.62f, 0.85f);
+            _gl.Uniform3(_gl.GetUniformLocation(_gridProgram, "uPlateOver"), 0.96f, 0.50f, 0.50f);
             _gl.BindVertexArray(_gridVao);
             _gl.DrawArrays(GlApi.Triangles, 0, 3);
             _gl.Enable(GlApi.DepthTest);
@@ -540,6 +552,10 @@ uniform float uSpacing;
 uniform vec3 uBackground;
 uniform vec3 uMinor;
 uniform vec3 uMajor;
+uniform vec3 uPlate;       // half width, half depth, 1 when the part sticks out; a half width of 0 means no plate
+uniform vec3 uPlateFill;
+uniform vec3 uPlateEdge;
+uniform vec3 uPlateOver;
 out vec4 outColor;
 
 // Lines of one cell size, one pixel wide whatever the distance. When they come closer than a few pixels they would blur into
@@ -562,6 +578,18 @@ void main() {
     if (t <= 0.0) discard;
     vec2 p = (origin + direction * t).xy;
 
+    // the plate: a lighter rectangle with an outline, the grid goes on around it a little dimmer
+    float onPlate = 0.0;
+    float edge = 0.0;
+    if (uPlate.x > 0.0) {
+        vec2 q = abs(p) - uPlate.xy;
+        float d = max(q.x, q.y);
+        float w = max(fwidth(d), 1e-7);
+        onPlate = 1.0 - smoothstep(-w, w, d);
+        edge = 1.0 - smoothstep(0.0, 1.5 * w, abs(d));
+    }
+    float strength = uPlate.x > 0.0 ? mix(0.55, 1.0, onPlate) : 1.0;
+
     float minor = level(p, uSpacing);
     float major = 0.0;
     float cell = uSpacing * 5.0;
@@ -569,8 +597,10 @@ void main() {
         major = max(major, level(p, cell));
         cell *= 5.0;
     }
-    vec3 color = mix(uBackground, uMinor, minor);
-    color = mix(color, uMajor, major);
+    vec3 color = mix(uBackground, uPlateFill, onPlate);
+    color = mix(color, uMinor, minor * strength);
+    color = mix(color, uMajor, major * strength);
+    color = mix(color, uPlate.z > 0.5 ? uPlateOver : uPlateEdge, edge);
     // towards the horizon the floor dissolves into the background
     float elevation = abs(direction.z) / length(direction);
     outColor = vec4(mix(uBackground, color, smoothstep(0.0, 0.06, elevation)), 1.0);

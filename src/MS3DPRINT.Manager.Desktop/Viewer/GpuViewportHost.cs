@@ -40,6 +40,9 @@ public sealed class GpuViewportHost : Panel, IMeshViewport
     public Vector3 SecondOffset { get => _gpu.SecondOffset; set => _gpu.SecondOffset = value; }
     public bool ShowGrid { get => _gpu.ShowGrid; set => _gpu.ShowGrid = value; }
     public float GridSpacing { get => _gpu.GridSpacing; set => _gpu.GridSpacing = value; }
+    public float PlateHalfWidth { get => _gpu.PlateHalfWidth; set => _gpu.PlateHalfWidth = value; }
+    public float PlateHalfDepth { get => _gpu.PlateHalfDepth; set => _gpu.PlateHalfDepth = value; }
+    public bool PlateOverflow { get => _gpu.PlateOverflow; set => _gpu.PlateOverflow = value; }
     public bool IsReady => _gpu.IsReady;
     public event Action<string>? Failed;
     public event Action? CameraChanged;

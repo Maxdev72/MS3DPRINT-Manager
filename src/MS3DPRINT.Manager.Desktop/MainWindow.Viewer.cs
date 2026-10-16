@@ -53,6 +53,11 @@ public partial class MainWindow
             {
                 var root = WorkspaceRoot;
                 return new WorkspaceInventoryReader().LoadPrinters(root).Where(printer => printer.IsActive).Select(printer => printer.DisplayName).ToList();
+            }, () =>
+            {
+                var root = WorkspaceRoot;
+                return new WorkspaceInventoryReader().LoadPrinters(root).Where(printer => printer.IsActive)
+                    .Select(printer => new ViewerPrinter(printer.DisplayName, printer.BuildVolume)).ToList();
             });
             _modelViewer.ModelLoaded += name => PageSubtitle.Text = name;
             _modelViewer.EstimateRequested += StartEstimateFromModel;

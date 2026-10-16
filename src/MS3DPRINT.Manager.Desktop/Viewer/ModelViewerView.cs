@@ -111,10 +111,11 @@ public sealed partial class ModelViewerView : UserControl
     private MeshModel? _mesh;
     private int _loadVersion;
 
-    public ModelViewerView(Action close, Func<IReadOnlyList<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>>? loadFilaments = null, Func<IReadOnlyList<string>>? loadPrinterNames = null)
+    public ModelViewerView(Action close, Func<IReadOnlyList<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>>? loadFilaments = null, Func<IReadOnlyList<string>>? loadPrinterNames = null, Func<IReadOnlyList<ViewerPrinter>>? loadPrinters = null)
     {
         _loadFilaments = loadFilaments;
         _loadPrinterNames = loadPrinterNames;
+        _loadPrinters = loadPrinters;
         DragDrop.SetAllowDrop(this, true);
         AddHandler(DragDrop.DragOverEvent, View_DragOver);
         AddHandler(DragDrop.DropEvent, View_Drop);
@@ -205,7 +206,7 @@ public sealed partial class ModelViewerView : UserControl
         _units.ItemsSource = ModelUnits.All.Select(unit => unit.Label).Append("Personnalisé…").ToList();
         _units.SelectedIndex = 0;
         _units.SelectionChanged += (_, _) => UnitChosen();
-        _scale.TextChanged += (_, _) => { RefreshMeasures(); RefreshDimensions(); RebuildComparison(); };
+        _scale.TextChanged += (_, _) => { RefreshMeasures(); RefreshDimensions(); RebuildComparison(); ApplyPlate(); };
         _slicerPanel.Children.Add(_slicerNote);
         _slicerPanel.Children.Add(Muted("Imprimante"));
         _slicerPanel.Children.Add(_slicerMachine);
@@ -234,6 +235,7 @@ public sealed partial class ModelViewerView : UserControl
         _speedClass.SelectedIndex = 0;
         InitializeAssessment();
         InitializeOrientation();
+        InitializePlate();
         RefreshVolume();
         _hex.LostFocus += (_, _) => ApplyColor();
         _hex.KeyDown += (_, e) => { if (e.Key == Key.Enter) { ApplyColor(); e.Handled = true; } };
@@ -275,7 +277,8 @@ public sealed partial class ModelViewerView : UserControl
                 Muted("Unités du modèle"), _units, _scale, _unitsNote,
                 FormKit.SectionLabel("Résultats"), _volumeResult, _volumeRows, Muted("Matière"), _material,
                 new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,*,Auto"), ColumnSpacing = 8, Children = { _infill, Place(Unit("% remplissage"), 1), Place(_walls, 2), Place(Unit("mm parois"), 3) } },
-                _supports, Muted("Vitesse de la machine"), _speedClass, _volumeNote,
+                _supports, Muted("Vitesse de la machine"), _speedClass,
+                Muted("Plateau d’impression"), _plateChoice, _plateText, _plateStatus, _volumeNote,
                 FormKit.SectionLabel("Durée d’impression"), _slicerPanel
             }
         };
@@ -572,6 +575,7 @@ public sealed partial class ModelViewerView : UserControl
             ToolTip.SetTip(_location, path);
             _location.IsVisible = _dimensions.IsVisible = true;
             ApplyRememberedUnit(path, mesh);
+            PushPlate(_viewport);
             // development hook, like the other MS3DPRINT_START_* variables: open with a second version already loaded
             if (Environment.GetEnvironmentVariable("MS3DPRINT_START_COMPARE") is { Length: > 0 } startCompare) _ = LoadSecondAsync(startCompare);
             _message.Text = $"{mesh.TriangleCount:N0} triangles · chargé en {stopwatch.Elapsed.TotalSeconds:N1} s.";
@@ -583,6 +587,12 @@ public sealed partial class ModelViewerView : UserControl
             }
             // development hook, like the other MS3DPRINT_START_* variables: open with the ground grid shown
             if (Environment.GetEnvironmentVariable("MS3DPRINT_START_GRID") == "1") _grid.IsChecked = true;
+            // development hook, like the other MS3DPRINT_START_* variables: open with a plate of these dimensions, e.g. "50x50x50"
+            if (Environment.GetEnvironmentVariable("MS3DPRINT_START_PLATE") is { Length: > 0 } startPlate && _plateChoice.ItemsSource is IEnumerable<PlateChoice> plateChoices)
+            {
+                _plateChoice.SelectedItem = plateChoices.Last();
+                _plateText.Text = startPlate;
+            }
             // development hook, like the other MS3DPRINT_START_* variables: open with this zoom (1 frames the whole model)
             if (double.TryParse(Environment.GetEnvironmentVariable("MS3DPRINT_START_ZOOM"), NumberStyles.Float, CultureInfo.InvariantCulture, out var startZoom) && startZoom > 0)
             {
@@ -608,6 +618,7 @@ public sealed partial class ModelViewerView : UserControl
     /// <summary>Loads the catalogue filaments as material choices (their density comes from the material name).</summary>
     public async Task ReloadFilamentsAsync()
     {
+        ReloadPlates();
         await EnsureSlicerAsync();
         if (_loadFilaments is null) return;
         IReadOnlyList<MS3DPRINT.Manager.Core.Filaments.FilamentProfile> filaments;
@@ -1056,6 +1067,7 @@ public sealed partial class ModelViewerView : UserControl
                 : "Disponible avec le rendu par carte graphique.";
         }
         else _gridNote.Text = supported ? "La grille se pose sous le modèle." : "Disponible avec le rendu par carte graphique.";
+        PushPlate(viewport);
         viewport.RequestRender(false);
     }
 

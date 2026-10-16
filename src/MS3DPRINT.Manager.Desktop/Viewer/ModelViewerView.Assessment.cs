@@ -71,6 +71,7 @@ public sealed partial class ModelViewerView
                 MaterialMaxFlowMm3S = material.MaxFlowMm3S ?? MeshVolume.MaxFlowFor(material.MaterialName)
             };
         var machine = new MachineProfile { HeadSpeedFactor = ModelAssessment.SpeedClasses[Math.Max(0, _speedClass.SelectedIndex)].Factor };
+        var plate = _plate.ToVector3();
         var token = cancellation.Token;
         try
         {
@@ -78,7 +79,7 @@ public sealed partial class ModelViewerView
             {
                 var print = ModelAssessment.ToPrintMesh(mesh, scale);
                 var estimate = settings is null ? null : PrintEstimator.Estimate(print, settings, machine, token);
-                return (estimate, FeasibilityAnalyzer.Analyze(print, new FeasibilitySettings { LayerHeightMm = layer }, null, token));
+                return (estimate, FeasibilityAnalyzer.Analyze(print, new FeasibilitySettings { LayerHeightMm = layer, BuildVolumeMm = plate }, null, token));
             }, token);
             if (version != _loadVersion || token.IsCancellationRequested) return;
             _quick = quick;
