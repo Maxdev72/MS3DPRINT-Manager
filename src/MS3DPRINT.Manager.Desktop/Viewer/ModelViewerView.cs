@@ -697,14 +697,19 @@ public sealed partial class ModelViewerView : UserControl
         var material = _material.SelectedItem as MaterialChoice;
         int? infill = double.TryParse(_infill.Text?.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var infillValue) && infillValue is >= 0 and <= 100 ? (int)Math.Round(infillValue) : null;
         int? loops = double.TryParse(_walls.Text?.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var wallMm) && wallMm > 0 ? Math.Max(1, (int)Math.Round(wallMm / 0.4)) : null;
-        var request = new SliceRequest(_modelPath, machine, quality, _slicerProfiles.FilamentFor(machine, material?.MaterialName), infill, loops, MeasureScale, _supports.IsChecked == true);
+        var filament = _slicerProfiles.FilamentFor(machine, material?.MaterialName);
         var path = _modelPath;
+        string? orientedCopy = null;
         _sliceButton.IsEnabled = false;
         _slice = null;
         RefreshVolume();
         _sliceStatus.Text = "Découpe en cours avec " + _slicer.Name + "…";
         try
         {
+            // a turned model is sliced from a temporary copy in millimetres; an untouched one from its own file
+            if (!_orientation.IsIdentity && _mesh is { } shown) orientedCopy = await WriteOrientedCopyAsync(shown);
+            var request = new SliceRequest(orientedCopy ?? path, machine, quality, filament, infill, loops,
+                orientedCopy is null ? MeasureScale : 1, _supports.IsChecked == true);
             var result = await new SliceRunner(_slicer).RunAsync(_slicerProfiles, request, cancellation.Token);
             if (cancellation.IsCancellationRequested || path != _modelPath) return;
             _slice = result;
@@ -712,7 +717,7 @@ public sealed partial class ModelViewerView : UserControl
             _sliceStatus.Text = $"{machine.Name} · {quality} · couche {result.LayerHeight:0.##} mm · {result.Layers} couches · {result.InfillPercent:0.#} % de remplissage";
         }
         catch (OperationCanceledException) { return; }
-        catch (Exception exception) when (exception is InvalidOperationException or IOException or System.ComponentModel.Win32Exception or System.Text.Json.JsonException or FileNotFoundException)
+        catch (Exception exception) when (exception is InvalidOperationException or IOException or System.ComponentModel.Win32Exception or System.Text.Json.JsonException or FileNotFoundException or UnauthorizedAccessException)
         {
             if (!cancellation.IsCancellationRequested)
                 _sliceStatus.Text = exception.Message.Contains("multi-extruder", StringComparison.OrdinalIgnoreCase)
@@ -721,6 +726,8 @@ public sealed partial class ModelViewerView : UserControl
         }
         finally
         {
+            if (orientedCopy is not null)
+                try { File.Delete(orientedCopy); } catch (IOException) { } catch (UnauthorizedAccessException) { }
             if (ReferenceEquals(_sliceCancel, cancellation)) _sliceButton.IsEnabled = true;
         }
         RefreshVolume();

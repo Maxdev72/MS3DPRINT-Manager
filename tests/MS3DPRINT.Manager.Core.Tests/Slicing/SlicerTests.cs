@@ -118,6 +118,19 @@ public sealed class SlicerTests : IDisposable
     }
 
     [Fact]
+    public void BuildArguments_DoesNotScaleAnOrientedCopyAlreadyInMillimetres()
+    {
+        var install = new SlicerInstall("Bambu Studio", "bambu-studio.exe", _root);
+        var profiles = new SlicerProfiles(install);
+        var machine = profiles.Machines()[0];
+
+        var arguments = SliceRunner.BuildArguments(install, profiles, new SliceRequest(@"C:\temp\oriented.stl", machine, "0.20mm Standard @BBL A1", null, MillimetresPerUnit: 1), "out");
+
+        Assert.DoesNotContain("--scale", arguments);
+        Assert.Equal(@"C:\temp\oriented.stl", arguments[^1]);
+    }
+
+    [Fact]
     public void BuildArguments_SwitchesSupportsWithAnEqualsSignAndLeavesThemAloneWhenUnasked()
     {
         var install = new SlicerInstall("Bambu Studio", "bambu-studio.exe", _root);

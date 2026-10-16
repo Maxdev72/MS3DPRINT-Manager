@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
+using Avalonia.Platform.Storage;
 using MS3DPRINT.Estimator;
 
 namespace MS3DPRINT.Manager.Desktop.Viewer;
@@ -22,6 +23,7 @@ public sealed partial class ModelViewerView
     private readonly TextBlock _orientStatus = new() { Classes = { "caption" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
     private readonly Button _autoOrient = new() { Content = "Orientation automatique", HorizontalAlignment = HorizontalAlignment.Stretch };
     private readonly ComboBox _autoGoal = new() { HorizontalAlignment = HorizontalAlignment.Stretch, ItemsSource = new[] { "Moins de supports", "Plus rapide", "Plus stable" }, SelectedIndex = 0 };
+    private readonly Button _saveOriented = new() { Content = "Enregistrer le modèle orienté…", HorizontalAlignment = HorizontalAlignment.Stretch };
     private CancellationTokenSource? _autoOrientCancel;
     private bool _syncingAngles;
 
@@ -66,6 +68,8 @@ public sealed partial class ModelViewerView
         _orientGroup.Children.Add(Muted("Orientation automatique : objectif"));
         _orientGroup.Children.Add(_autoGoal);
         _orientGroup.Children.Add(_autoOrient);
+        _saveOriented.Click += async (_, _) => await SaveOrientedAsync();
+        _orientGroup.Children.Add(_saveOriented);
         _orientGroup.Children.Add(_resetOrientation);
         _orientGroup.Children.Add(_orientStatus);
     }
@@ -222,5 +226,56 @@ public sealed partial class ModelViewerView
         _faceToggle.IsChecked = false;
         OrientationChanged();
         _orientStatus.Text = "Face posée sur le plateau.";
+    }
+
+    /// <summary>Writes the part as shown to a temporary STL in millimetres, for the slicer. A partial file is removed when writing fails.</summary>
+    private async Task<string> WriteOrientedCopyAsync(MeshModel mesh)
+    {
+        var path = Path.Combine(Path.GetTempPath(), "ms3d-oriented-" + Guid.NewGuid().ToString("N") + ".stl");
+        var scale = MeasureScale;
+        try
+        {
+            await Task.Run(() => StlWriter.Write(path, mesh, scale));
+        }
+        catch
+        {
+            try { File.Delete(path); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            throw;
+        }
+        return path;
+    }
+
+    /// <summary>Saves the part as shown to an STL in millimetres, next to the model by default. The original file is not touched.</summary>
+    private async Task SaveOrientedAsync()
+    {
+        if (_mesh is not { } mesh || _modelPath is null) return;
+        var storage = TopLevel.GetTopLevel(this)?.StorageProvider;
+        if (storage is null) return;
+        var folder = Path.GetDirectoryName(_modelPath);
+        var file = await storage.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Enregistrer le modèle orienté",
+            SuggestedFileName = Path.GetFileNameWithoutExtension(_modelPath) + "__orienté",
+            DefaultExtension = "stl",
+            FileTypeChoices = [new FilePickerFileType("STL (millimètres)") { Patterns = ["*.stl"] }],
+            SuggestedStartLocation = folder is null ? null : await storage.TryGetFolderFromPathAsync(folder)
+        });
+        var local = file?.TryGetLocalPath();
+        if (string.IsNullOrWhiteSpace(local)) return;
+        try
+        {
+            if (string.Equals(Path.GetFullPath(local), Path.GetFullPath(_modelPath), StringComparison.OrdinalIgnoreCase))
+            {
+                _orientStatus.Text = "Choisissez un autre nom : le fichier d’origine n’est jamais remplacé.";
+                return;
+            }
+            var scale = MeasureScale;
+            await Task.Run(() => StlWriter.Write(local, mesh, scale));
+            _orientStatus.Text = "Modèle orienté enregistré : " + Path.GetFileName(local) + ".";
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            _orientStatus.Text = "Enregistrement impossible : " + exception.Message;
+        }
     }
 }
