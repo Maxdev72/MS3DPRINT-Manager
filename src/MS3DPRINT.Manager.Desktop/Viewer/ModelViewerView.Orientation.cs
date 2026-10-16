@@ -1,4 +1,5 @@
 using System.Globalization;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
@@ -124,5 +125,43 @@ public sealed partial class ModelViewerView
         RefreshVolume();
         PushPlate(_viewport);
         _viewport.RequestRender(false);
+    }
+
+    private void UpdateFaceMode()
+    {
+        var on = _faceToggle.IsChecked == true;
+        _viewport.Visual.Cursor = on || _measureToggle.IsChecked == true ? new Cursor(StandardCursorType.Cross) : null;
+        if (on) _message.Text = "Cliquez la face à poser sur le plateau. Échap annule.";
+        else UpdateModeMessage();
+    }
+
+    /// <summary>Lays the face under the click on the plate.</summary>
+    private async Task FaceClickAsync(Point click)
+    {
+        if (_faceToggle.IsChecked != true || _mesh is not { } mesh) return;
+        var bounds = _viewport.Visual.Bounds;
+        var camera = new ViewCamera { Yaw = _viewport.Camera.Yaw, Pitch = _viewport.Camera.Pitch, Zoom = _viewport.Camera.Zoom, PanX = _viewport.Camera.PanX, PanY = _viewport.Camera.PanY };
+        var inverted = _measures?.Inverted == true;
+        var picked = await Task.Run(() =>
+        {
+            var (origin, direction) = ViewMath.Ray(mesh, camera, bounds.Width, bounds.Height, click.X, click.Y);
+            if (!MeshPicker.TryPick(mesh, origin, direction, out _, out var triangle)) return (System.Numerics.Vector3?)null;
+            var normal = mesh.Normals[triangle];
+            if (normal.Length() < 1e-6f) return null; // degenerate triangle: no usable face
+            if (inverted) normal = -normal;
+            // the face that looks at the camera is the outer one, whichever way the triangle is wound
+            if (System.Numerics.Vector3.Dot(normal, direction) > 0) normal = -normal;
+            return normal;
+        });
+        if (_faceToggle.IsChecked != true || !ReferenceEquals(_mesh, mesh)) return;
+        if (picked is not { } face)
+        {
+            _message.Text = "Aucune face à cet endroit.";
+            return;
+        }
+        _orientation.FaceDown(face);
+        _faceToggle.IsChecked = false;
+        OrientationChanged();
+        _orientStatus.Text = "Face posée sur le plateau.";
     }
 }

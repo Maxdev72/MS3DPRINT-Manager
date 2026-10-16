@@ -44,6 +44,7 @@ public sealed partial class ModelViewerView : UserControl
     private MeshMeasures? _secondMeasures;
     private string? _secondName;
     private readonly ToggleButton _cutToggle = new() { IsEnabled = false };
+    private readonly ToggleButton _faceToggle = new() { IsEnabled = false };
     private readonly ComboBox _cutAxis = new() { ItemsSource = new[] { "Horizontale (hauteur, axe Z)", "Verticale, axe X", "Verticale, axe Y" }, SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch };
     private readonly Slider _cutSlider = new() { Minimum = 0, Maximum = 100, Value = 50, IsEnabled = false };
     private readonly CheckBox _cutFlip = new() { Content = "Voir l’autre côté" };
@@ -151,6 +152,7 @@ public sealed partial class ModelViewerView : UserControl
         Tool(_wireToggle, "IconWireframe", "Affichage filaire (W)");
         Tool(_measureToggle, "IconMeasure", "Mesurer des distances (M)");
         Tool(_cutToggle, "IconCut", "Plan de coupe (C)");
+        Tool(_faceToggle, "IconFace", "Poser sur une face (F)");
         Tool(_captureTool, "IconCamera", "Enregistrer une image de la vue (P)");
         var compareTool = new Button { IsEnabled = false };
         Tool(compareTool, "IconCompare", "Comparer avec une autre version");
@@ -163,7 +165,7 @@ public sealed partial class ModelViewerView : UserControl
         _stage.Children.Add(new Border
         {
             Classes = { "toolbar" }, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(12),
-            Child = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2, Children = { _reset, _wireToggle, divider, _measureToggle, _cutToggle, compareTool, _captureTool } }
+            Child = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2, Children = { _reset, _wireToggle, divider, _measureToggle, _cutToggle, _faceToggle, compareTool, _captureTool } }
         });
 
         // side panel: back and open on top, four tabs, the estimate action always in reach
@@ -200,7 +202,8 @@ public sealed partial class ModelViewerView : UserControl
         _cutAxis.SelectionChanged += (_, _) => UpdateCut();
         _cutSlider.PropertyChanged += (_, e) => { if (e.Property == Slider.ValueProperty) UpdateCut(); };
         _cutFlip.IsCheckedChanged += (_, _) => UpdateCut();
-        _measureToggle.IsCheckedChanged += (_, _) => { if (_measureToggle.IsChecked == true) ShowTab(2); UpdateMeasureMode(); };
+        _measureToggle.IsCheckedChanged += (_, _) => { if (_measureToggle.IsChecked == true) { _faceToggle.IsChecked = false; ShowTab(2); } UpdateMeasureMode(); };
+        _faceToggle.IsCheckedChanged += (_, _) => { if (_faceToggle.IsChecked == true) { _measureToggle.IsChecked = false; ShowTab(2); } UpdateFaceMode(); };
         _clearMeasures.Click += (_, _) => ClearMeasures();
         _scale.IsVisible = false;
         _units.ItemsSource = ModelUnits.All.Select(unit => unit.Label).Append("Personnalisé…").ToList();
@@ -435,8 +438,8 @@ public sealed partial class ModelViewerView : UserControl
         _overlay.Mesh = _mesh;
         _stage.Children.Insert(1, _overlay);
         next.CameraChanged += () => _overlay.InvalidateVisual();
-        next.Clicked += point => _ = MeasureClickAsync(point);
-        next.Visual.Cursor = _measureToggle.IsChecked == true ? new Cursor(StandardCursorType.Cross) : null;
+        next.Clicked += point => { if (_faceToggle.IsChecked == true) _ = FaceClickAsync(point); else _ = MeasureClickAsync(point); };
+        next.Visual.Cursor = _measureToggle.IsChecked == true || _faceToggle.IsChecked == true ? new Cursor(StandardCursorType.Cross) : null;
         next.Visual.KeyDown += Viewport_KeyDown;
         // The frame marks keyboard focus only (Tab, arrows): a click or the automatic focus after loading must not draw it.
         next.Visual.GotFocus += (_, e) => SetStageFocus(e.NavigationMethod is NavigationMethod.Tab or NavigationMethod.Directional);
@@ -482,6 +485,8 @@ public sealed partial class ModelViewerView : UserControl
         else if (e.Key == Key.C && _cutToggle.IsEnabled) { _cutToggle.IsChecked = _cutToggle.IsChecked != true; e.Handled = true; }
         else if (e.Key == Key.Escape && _pendingPoint is not null) { _pendingPoint = null; RefreshMeasures(); e.Handled = true; }
         else if (e.Key == Key.G && _grid.IsEnabled) { _grid.IsChecked = _grid.IsChecked != true; e.Handled = true; }
+        else if (e.Key == Key.F && _faceToggle.IsEnabled) { _faceToggle.IsChecked = _faceToggle.IsChecked != true; e.Handled = true; }
+        else if (e.Key == Key.Escape && _faceToggle.IsChecked == true) { _faceToggle.IsChecked = false; e.Handled = true; }
         else if (e.Key == Key.W) { _mode.SelectedIndex = _mode.SelectedIndex == 1 ? 0 : 1; e.Handled = true; }
     }
 
@@ -548,6 +553,7 @@ public sealed partial class ModelViewerView : UserControl
             _measureToggle.IsEnabled = true;
             _cutToggle.IsEnabled = true;
             _orientGroup.IsEnabled = true;
+            _faceToggle.IsEnabled = true;
             _captureTool.IsEnabled = true;
             _compareButton.IsEnabled = true;
             ClearComparison();
