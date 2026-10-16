@@ -77,7 +77,7 @@ public sealed partial class ModelViewerView
     }
 
     private static bool TryAngle(string? text, out double value) =>
-        double.TryParse(text?.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out value) && double.IsFinite(value);
+        double.TryParse(text?.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out value) && double.IsFinite(value) && Math.Abs(value) <= 3600;
 
     private void SyncAngles()
     {
@@ -117,6 +117,7 @@ public sealed partial class ModelViewerView
         UpdateCut();
         RefreshDimensions();
         _slice = null;
+        _sliceCancel?.Cancel();
         ScheduleSlice();
         ClearAssessment();
         ScheduleAssessment();

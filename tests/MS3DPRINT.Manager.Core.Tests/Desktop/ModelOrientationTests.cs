@@ -149,4 +149,44 @@ public sealed class ModelOrientationTests
     [Fact]
     public void An_unknown_axis_is_refused() =>
         Assert.Throws<ArgumentOutOfRangeException>(() => new ModelOrientation().RotateAxis(3, 90));
+
+    private static void AssertSame(MeshModel expected, MeshModel actual)
+    {
+        Assert.Equal(expected.Positions.Length, actual.Positions.Length);
+        for (var i = 0; i < expected.Positions.Length; i++) Assert.True((expected.Positions[i] - actual.Positions[i]).Length() < 1e-3f);
+    }
+
+    [Fact]
+    public void A_second_identical_mesh_lands_on_the_placed_first_one_without_turning()
+    {
+        var orientation = new ModelOrientation();
+        var first = new MeshModel(Cube(20).Positions.Select(p => p + new Vector3(50, -30, 7)).ToArray(), Cube(20).Indices);
+
+        AssertSame(orientation.Apply(first), orientation.ApplyLike(first, first));
+    }
+
+    [Fact]
+    public void A_second_identical_mesh_lands_on_the_placed_first_one_when_turned()
+    {
+        var orientation = new ModelOrientation();
+        orientation.RotateAxis(0, 90);
+        orientation.RotateAxis(2, 33);
+        var first = new MeshModel(Cube(20).Positions.Select(p => p * new Vector3(1, 2, 3) + new Vector3(50, -30, 7)).ToArray(), Cube(20).Indices);
+
+        AssertSame(orientation.Apply(first), orientation.ApplyLike(first, first));
+    }
+
+    [Fact]
+    public void A_second_mesh_shifted_in_the_file_stays_shifted_by_the_same_amount()
+    {
+        var orientation = new ModelOrientation();
+        var first = Cube(20);
+        var second = new MeshModel(first.Positions.Select(p => p + new Vector3(5, 0, 0)).ToArray(), first.Indices);
+
+        var placedFirst = orientation.Apply(first);
+        var placedSecond = orientation.ApplyLike(first, second);
+
+        for (var i = 0; i < first.Positions.Length; i++)
+            Assert.True((placedSecond.Positions[i] - placedFirst.Positions[i] - new Vector3(5, 0, 0)).Length() < 1e-3f);
+    }
 }

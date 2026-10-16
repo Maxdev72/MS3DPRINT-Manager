@@ -854,6 +854,7 @@ public sealed partial class ModelViewerView : UserControl
     {
         if (_mesh is null) return;
         var first = _mesh;
+        var reference = _original;
         _compareButton.IsEnabled = false;
         _message.Text = "Chargement de l’autre version…";
         try
@@ -864,7 +865,9 @@ public sealed partial class ModelViewerView : UserControl
                 var loaded = MeshLoader.Load(path);
                 return (loaded, MeshVolume.Compute(loaded));
             });
-            if (!ReferenceEquals(first, _mesh)) return;
+            if (!ReferenceEquals(first, _mesh) || reference is null) return;
+            // the other version goes where the first one was put on the plate, not to a position of its own
+            mesh = _orientation.ApplyLike(reference, mesh);
             _second = mesh;
             _secondMeasures = measures;
             _secondName = Path.GetFileName(path);

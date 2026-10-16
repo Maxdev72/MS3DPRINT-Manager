@@ -84,4 +84,18 @@ public sealed class ModelOrientation
         var placed = new PrintMesh(original.Positions, original.Indices).Oriented(Rotation);
         return new MeshModel(placed.Positions, placed.Indices);
     }
+
+    /// <summary>
+    /// Places <paramref name="other"/> exactly as <see cref="Apply"/> placed <paramref name="reference"/>: the same turn about the centre of
+    /// the reference, then the same shift, so two versions saved in one frame of reference stay in it when compared.
+    /// </summary>
+    public MeshModel ApplyLike(MeshModel reference, MeshModel other)
+    {
+        var placedReference = Apply(reference);
+        var centre = reference.Center;
+        var shift = placedReference.Positions[0] - Vector3.Transform(reference.Positions[0] - centre, Rotation);
+        var moved = new Vector3[other.Positions.Length];
+        for (var i = 0; i < moved.Length; i++) moved[i] = Vector3.Transform(other.Positions[i] - centre, Rotation) + shift;
+        return new MeshModel(moved, other.Indices);
+    }
 }
