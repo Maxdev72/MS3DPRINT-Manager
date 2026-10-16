@@ -34,6 +34,29 @@ public sealed class PrintMesh
     public int TriangleCount => Indices.Length / 3;
     public Vector3 Size => Max - Min;
 
+    /// <summary>
+    /// The mesh turned about the centre of its bounding box, then stood on the bed: centred on the origin in X and Y and its lowest
+    /// point at Z = 0. The triangles are unchanged and the mesh itself is not modified.
+    /// </summary>
+    public PrintMesh Oriented(Quaternion rotation)
+    {
+        if (Positions.Length == 0) return this;
+        var centre = (Min + Max) / 2;
+        var turned = new Vector3[Positions.Length];
+        var low = new Vector3(float.PositiveInfinity);
+        var high = new Vector3(float.NegativeInfinity);
+        for (var i = 0; i < turned.Length; i++)
+        {
+            var point = Vector3.Transform(Positions[i] - centre, rotation);
+            turned[i] = point;
+            low = Vector3.Min(low, point);
+            high = Vector3.Max(high, point);
+        }
+        var shift = new Vector3(-(low.X + high.X) / 2, -(low.Y + high.Y) / 2, -low.Z);
+        for (var i = 0; i < turned.Length; i++) turned[i] += shift;
+        return new PrintMesh(turned, Indices);
+    }
+
     /// <summary>The same mesh with every coordinate multiplied, to bring a model drawn in inches or metres to millimetres.</summary>
     public PrintMesh Scaled(float factor)
     {
