@@ -40,7 +40,8 @@ modifier le modèle chargé (irréversible).
 
 État : une rotation `Quaternion`. Opérations, toutes sans interface graphique :
 - `RotateAxis(axe, degrés)` : compose une rotation autour d'un axe du plateau (X, Y ou Z).
-- `FaceDown(normale)` : tourne la pièce pour que la normale (en coordonnées du modèle d'origine) pointe vers −Z.
+- `FaceDown(normale)` : tourne la pièce pour que la normale (en coordonnées de la pièce **telle qu'affichée**) pointe vers −Z ; une normale de longueur nulle ou non finie est ignorée.
+- `ApplyLike(référence, autre)` : place un second modèle exactement comme le premier (utilisé par la comparaison de versions).
 - `Reset()`, `EulerDegrees` (lecture, pour les champs d'angles), `SetEuler(x, y, z)`.
 - `Apply(MeshModel original) -> MeshModel` : positions tournées autour du centre de la boîte englobante, centrées sur l'origine en X et Y,
   base à Z = 0. Les triangles sont inchangés (une rotation propre conserve l'orientation des faces).
@@ -50,7 +51,7 @@ modifier le modèle chargé (irréversible).
 
 `record PlateSize(double WidthMm, double DepthMm, double HeightMm)` ; `PlateSize.Parse(string?)` lit « 256 × 256 × 256 mm »,
 « 256x256x256 », « 256*256*256 », virgule ou point décimal, ordre largeur × profondeur × hauteur ; renvoie `null` si illisible
-(plateau rond, texte libre) ; `PlateSize.Default` = 256 × 256 × 256. `Fits(Vector3 sizeMm)` et `Overflow(...)` pour l'alerte.
+(plateau rond, texte libre) ; `PlateSize.Default` = 256 × 256 × 256. `Fits(Vector3 sizeMm)` et `Overflow(...)` pour l'alerte, avec une tolérance de 0,01 mm utilisée comme seuil : un écart jusqu'à 0,01 mm compte comme « tient », un écart plus grand est rapporté en entier.
 
 ### 4.3 `AutoOrient` (bibliothèque `MS3DPRINT.Estimator`)
 
@@ -63,6 +64,7 @@ OrientationProposal AutoOrient.Propose(PrintMesh mesh, EstimateSettings settings
 - **Note** de chaque candidat, avec le moteur : matière de supports, durée, surface de contact de la base (stabilité), hauteur,
   dépassement du plateau. Un candidat qui déborde est écarté ; une base de moins de 20 mm² est pénalisée.
 - `AutoOrientGoal` : `FewestSupports` (défaut), `Fastest`, `MostStable`.
+- Égalité : un meilleur candidat à moins de 0,02 de la note normalisée de l'orientation actuelle laisse la pièce telle quelle. Le drapeau `Limited` de la proposition indique seulement que, au-delà d'un million de triangles, seuls les six axes ont été essayés.
 - Résultat : la rotation (`Quaternion`), les chiffres du meilleur candidat et de l'orientation actuelle, pour afficher le gain
   (« −2,9 cm³ de supports, −12 min »). Asynchrone côté interface, annulable, avec progression.
 - Pure et sans dépendance graphique : réutilisable par l'API.
@@ -70,16 +72,16 @@ OrientationProposal AutoOrient.Propose(PrintMesh mesh, EstimateSettings settings
 ### 4.4 Outil « Poser sur une face » (ModelViewerView)
 
 Une entrée de la barre d'outils, comme la règle. Un clic lance `ViewMath.Ray` + `MeshPicker.TryPick` (existants) ; la normale du
-triangle touché (dans les coordonnées du modèle d'origine) alimente `ModelOrientation.FaceDown`. La face survolée est surlignée.
+triangle touché alimente `ModelOrientation.FaceDown`. Pas de surlignage au survol : le résultat est visible tout de suite.
 Échap quitte l'outil.
 
 ### 4.5 Plateau à l'écran
 
 Dans `GpuMeshViewport` : nouveaux paramètres `PlateHalfWidth`, `PlateHalfDepth`, `PlateOverflow`. Le shader de la grille dessine le
-rectangle (fond un peu plus clair, contour d'un pixel et demi calculé avec `fwidth`, rouge si `PlateOverflow`) ; la grille infinie reste
+rectangle, dessiné seulement quand la grille est affichée (fond un peu plus clair, contour d'un pixel et demi calculé avec `fwidth`, rouge si `PlateOverflow`) ; la grille infinie reste
 autour, plus discrète. Le mode « Logiciel (processeur) » ne dessine pas de grille, donc pas de plateau (comme aujourd'hui).
 
-La liste des imprimantes : `ModelViewerView` reçoit, en plus des noms, leur `BuildVolume` (fonction de chargement étendue). Le choix
+La liste des imprimantes : `ModelViewerView` reçoit, en plus des noms, leur `BuildVolume` (un nouveau paramètre de constructeur `loadPrinters` qui renvoie des `ViewerPrinter(Name, BuildVolume)`). Le choix
 « Plateau » liste les imprimantes dont le volume est lisible, plus « Saisir… » et « Générique 256 ».
 
 ### 4.6 Sortie et découpe

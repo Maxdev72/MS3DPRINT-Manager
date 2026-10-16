@@ -137,7 +137,7 @@ Les prix sont à définir avec vous. Une **clé = un domaine** ; le comptage se 
 
 - **MVP** : STL, 3MF, OBJ (déjà lus), plus ZIP.
 - **Phase suivante** : STEP et IGES (conversion en maillage avec OpenCascade, sous licence LGPL, compatible avec une offre payante), images vers STL.
-- **Orientation automatique** : à étudier après le MVP ; elle change le poids de supports, donc le prix.
+- **Orientation automatique** : faite dans le moteur (`AutoOrient`, objectifs moins de supports, plus rapide, plus stable) ; à exposer dans l'API après le MVP, car elle change le poids de supports donc le prix.
 
 ## 12. Phases proposées
 

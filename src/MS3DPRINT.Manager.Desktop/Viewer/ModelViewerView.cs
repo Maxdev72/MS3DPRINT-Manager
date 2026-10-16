@@ -103,7 +103,7 @@ public sealed partial class ModelViewerView : UserControl
     private readonly Button _cancelAnalysis = new() { Content = "Annuler", IsEnabled = false };
     private readonly Button _reset = new() { IsEnabled = false };
     private readonly ToggleButton _wireToggle = new();
-    private readonly CheckBox _grid = new() { Content = "Grille au sol (G)" };
+    private readonly CheckBox _grid = new() { Content = "Grille au sol (G)", IsChecked = true };
     private readonly TextBlock _gridNote = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
     private readonly Button _captureTool = new() { IsEnabled = false };
     private readonly StackPanel _emptyState = new() { Spacing = 10, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };

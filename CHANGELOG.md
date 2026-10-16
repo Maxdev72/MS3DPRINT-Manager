@@ -2,6 +2,13 @@
 
 ## 16 octobre 2026
 
+### Visualiseur 3D type découpeur : plateau et réorientation
+- La pièce est **posée sur un plateau d'impression** : un rectangle plus clair avec contour dans la grille infinie, aux dimensions d'une imprimante de l'atelier (champ « volume d'impression » de la page Imprimantes), d'un plateau générique de 256 × 256 × 256 mm ou saisies à la main. Le contour passe en rouge et l'onglet Infos dit de combien la pièce dépasse ; la faisabilité signale « dépasse le volume d'impression ». La grille et le plateau sont affichés par défaut.
+- **Réorientation** (onglet Outils) : rotations de ±90° autour de X, Y et Z, champs d'angles en degrés, retour à l'orientation d'origine, et **« Poser sur une face »** (touche F) : on clique la face qui doit devenir le dessous.
+- **Orientation automatique** (touche O) : le logiciel essaie les six axes et les plus grandes faces planes, les évalue avec le moteur d'estimation et applique celle qui demande le moins de supports (ou la plus rapide, ou la plus stable) ; il indique le gain en supports et en durée. Sur le modèle de test du crâne (207 000 triangles), la recherche prend environ 1,6 seconde.
+- Le poids, la durée, les supports, la faisabilité et la **découpe Bambu Studio** suivent l'orientation choisie. Le fichier d'origine n'est jamais modifié ; « Enregistrer le modèle orienté » écrit une copie STL en millimètres.
+- Tourner la pièce efface les mesures, le plan de coupe et la comparaison, qui appartenaient à l'ancienne position.
+
 ### Visualiseur 3D : estimation instantanée et contrôle de faisabilité
 - **Poids, durée et filament estimés tout de suite**, sans attendre le découpeur et même sans Bambu Studio installé : un moteur d'estimation maison découpe le modèle en couches et calcule les parois, le remplissage, les dessus et dessous. Il n'est calé sur aucune imprimante en particulier mais sur la **moyenne de cinq imprimantes** Bambu Lab (450 découpes de comparaison). Le poids est juste à 3 % près. Quand le découpeur a répondu, ses valeurs exactes remplacent l'estimation.
 - La **durée** dépend de la rapidité réelle de la machine : la moyenne peut s'écarter d'environ 25 %. Le réglage **« Vitesse de la machine »** (moyenne, rapide, lente) ramène l'écart à environ 6 %. Le **débit maximal du matériau** (PLA, PETG, ABS, ASA, TPU, PA, PC, PVA) est pris en compte : le PETG et surtout le TPU sont plus lents que le PLA.
