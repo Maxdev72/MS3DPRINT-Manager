@@ -395,6 +395,7 @@ public sealed partial class ModelViewerView : UserControl
         _activeAnalysis?.Cancel();
         _assessDelay.Stop();
         _assessCancel?.Cancel();
+        _autoOrientCancel?.Cancel();
     }
 
     private static Control Place(Control control, int column) { Grid.SetColumn(control, column); return control; }
@@ -487,6 +488,7 @@ public sealed partial class ModelViewerView : UserControl
         else if (e.Key == Key.G && _grid.IsEnabled) { _grid.IsChecked = _grid.IsChecked != true; e.Handled = true; }
         else if (e.Key == Key.F && _faceToggle.IsEnabled) { _faceToggle.IsChecked = _faceToggle.IsChecked != true; e.Handled = true; }
         else if (e.Key == Key.Escape && _faceToggle.IsChecked == true) { _faceToggle.IsChecked = false; e.Handled = true; }
+        else if (e.Key == Key.O && _original is not null) { _ = AutoOrientAsync(); e.Handled = true; }
         else if (e.Key == Key.W) { _mode.SelectedIndex = _mode.SelectedIndex == 1 ? 0 : 1; e.Handled = true; }
     }
 

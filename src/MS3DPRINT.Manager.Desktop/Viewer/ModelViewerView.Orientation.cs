@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
+using MS3DPRINT.Estimator;
 
 namespace MS3DPRINT.Manager.Desktop.Viewer;
 
@@ -19,6 +20,9 @@ public sealed partial class ModelViewerView
     private readonly TextBox _angleZ = new() { Text = "0" };
     private readonly Button _resetOrientation = new() { Content = "Réinitialiser l’orientation", HorizontalAlignment = HorizontalAlignment.Stretch };
     private readonly TextBlock _orientStatus = new() { Classes = { "caption" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
+    private readonly Button _autoOrient = new() { Content = "Orientation automatique", HorizontalAlignment = HorizontalAlignment.Stretch };
+    private readonly ComboBox _autoGoal = new() { HorizontalAlignment = HorizontalAlignment.Stretch, ItemsSource = new[] { "Moins de supports", "Plus rapide", "Plus stable" }, SelectedIndex = 0 };
+    private CancellationTokenSource? _autoOrientCancel;
     private bool _syncingAngles;
 
     private void InitializeOrientation()
@@ -58,8 +62,63 @@ public sealed partial class ModelViewerView
         _orientGroup.Children.Add(turns);
         _orientGroup.Children.Add(Muted("Angles en degrés (X, puis Y, puis Z)"));
         _orientGroup.Children.Add(angles);
+        _autoOrient.Click += async (_, _) => await AutoOrientAsync();
+        _orientGroup.Children.Add(Muted("Orientation automatique : objectif"));
+        _orientGroup.Children.Add(_autoGoal);
+        _orientGroup.Children.Add(_autoOrient);
         _orientGroup.Children.Add(_resetOrientation);
         _orientGroup.Children.Add(_orientStatus);
+    }
+
+    /// <summary>
+    /// Asks the engine for the best way to stand the part and applies it. A second click while it works cancels. The candidates are measured
+    /// with supports, whatever the supports box says: that is what tells two positions apart.
+    /// </summary>
+    private async Task AutoOrientAsync()
+    {
+        if (_autoOrientCancel is not null) { _autoOrientCancel.Cancel(); return; }
+        if (_mesh is not { } mesh) return;
+        var (settings, machine) = CurrentEstimateInputs();
+        if (settings is null)
+        {
+            _orientStatus.Text = "Saisissez un remplissage et une épaisseur de parois valides pour évaluer les orientations.";
+            return;
+        }
+        var scale = TryNumber(_scale.Text, out var s) ? s : 1;
+        var goal = (AutoOrientGoal)Math.Max(0, _autoGoal.SelectedIndex);
+        var plate = _plate.ToVector3();
+        var version = _loadVersion;
+        using var cancellation = new CancellationTokenSource();
+        _autoOrientCancel = cancellation;
+        _autoOrient.Content = "Annuler";
+        _orientStatus.Text = "Évaluation des orientations…";
+        var progress = new Progress<double>(value => { if (_autoOrientCancel == cancellation) _orientStatus.Text = $"Évaluation des orientations… {value:P0}"; });
+        try
+        {
+            var proposal = await Task.Run(() => AutoOrient.Propose(ModelAssessment.ToPrintMesh(mesh, scale), settings, machine, goal, plate, progress, cancellation.Token), cancellation.Token);
+            if (version != _loadVersion || !ReferenceEquals(_mesh, mesh)) { _orientStatus.Text = string.Empty; return; }
+            if (!proposal.IsImprovement)
+            {
+                _orientStatus.Text = proposal.Current.FitsPlate
+                    ? "L’orientation actuelle est déjà la meilleure parmi celles essayées."
+                    : "Aucune orientation essayée ne tient sur le plateau : la pièce est trop grande.";
+                return;
+            }
+            _orientation.Compose(proposal.Best.Rotation);
+            OrientationChanged();
+            var supports = (proposal.Best.SupportVolumeMm3 - proposal.Current.SupportVolumeMm3) / 1000;
+            var minutes = (proposal.Best.TimeSeconds - proposal.Current.TimeSeconds) / 60;
+            _orientStatus.Text = $"Orientation appliquée : supports {supports:+0.##;−0.##;0} cm³, durée {minutes:+0;−0;0} min"
+                + (proposal.Best.FitsPlate ? "." : ", mais la pièce dépasse encore du plateau.")
+                + (proposal.Limited ? " Modèle très volumineux : seuls les six axes ont été essayés." : string.Empty);
+        }
+        catch (OperationCanceledException) { _orientStatus.Text = "Évaluation annulée."; }
+        catch (ArgumentException exception) { _orientStatus.Text = "Évaluation impossible : " + exception.Message; }
+        finally
+        {
+            _autoOrientCancel = null;
+            _autoOrient.Content = "Orientation automatique";
+        }
     }
 
     /// <summary>Reads the three angle fields; when one is not a number they go back to the current orientation.</summary>

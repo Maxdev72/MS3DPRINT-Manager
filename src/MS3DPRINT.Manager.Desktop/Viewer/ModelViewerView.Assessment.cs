@@ -51,15 +51,9 @@ public sealed partial class ModelViewerView
         _assessDelay.Start();
     }
 
-    private async Task RunAssessmentAsync()
+    /// <summary>The estimate settings and machine for what the panel shows now; no settings when a field is not valid.</summary>
+    private (EstimateSettings? Settings, MachineProfile Machine) CurrentEstimateInputs()
     {
-        _assessDelay.Stop();
-        var mesh = _mesh;
-        if (mesh is null) return;
-        var version = _loadVersion;
-        _assessCancel?.Cancel();
-        var cancellation = _assessCancel = new CancellationTokenSource();
-        var scale = TryNumber(_scale.Text, out var s) ? s : 1;
         var layer = ModelAssessment.LayerHeightFrom(_slicerQuality.SelectedItem as string);
         var material = _material.SelectedItem as MaterialChoice;
         EstimateSettings? settings = null;
@@ -71,6 +65,21 @@ public sealed partial class ModelViewerView
                 MaterialMaxFlowMm3S = material.MaxFlowMm3S ?? MeshVolume.MaxFlowFor(material.MaterialName)
             };
         var machine = new MachineProfile { HeadSpeedFactor = ModelAssessment.SpeedClasses[Math.Max(0, _speedClass.SelectedIndex)].Factor };
+        return (settings, machine);
+    }
+
+    private async Task RunAssessmentAsync()
+    {
+        _assessDelay.Stop();
+        var mesh = _mesh;
+        if (mesh is null) return;
+        var version = _loadVersion;
+        _assessCancel?.Cancel();
+        var cancellation = _assessCancel = new CancellationTokenSource();
+        var scale = TryNumber(_scale.Text, out var s) ? s : 1;
+        var layer = ModelAssessment.LayerHeightFrom(_slicerQuality.SelectedItem as string);
+        var material = _material.SelectedItem as MaterialChoice;
+        var (settings, machine) = CurrentEstimateInputs();
         var plate = _plate.ToVector3();
         var token = cancellation.Token;
         try
