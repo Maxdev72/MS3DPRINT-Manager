@@ -24,7 +24,10 @@ public static class AutoOrient
     /// <summary>Above this many triangles only the six axes are tried: every candidate costs a full estimate.</summary>
     public const int LargeMeshTriangles = 1_000_000;
     private const double SmallBaseMm2 = 20;
-    /// <summary>Scores closer than this are a tie: estimates of equivalent positions differ by a percent or so (seam and travel).</summary>
+    /// <summary>
+    /// Scores closer than this are a tie: estimates of equivalent positions of a symmetric part differ by a percent or so, most likely
+    /// from the layer-count rounding in LayerSlicer (a float-noisy height can add a nearly empty layer).
+    /// </summary>
     private const double TieMargin = 0.02;
 
     public static OrientationProposal Propose(
@@ -48,6 +51,12 @@ public static class AutoOrient
             cancellationToken.ThrowIfCancellationRequested();
             var rotation = OrientationMath.Between(normals[i], -Vector3.UnitZ);
             var placed = mesh.Oriented(rotation);
+            // a part that fits the plate only after a quarter turn about Z gets that turn in its rotation, so the rotation returned fits as drawn
+            if (plateMm is { } plate && !FitsAsIs(placed.Size, plate) && FitsAsIs(new Vector3(placed.Size.Y, placed.Size.X, placed.Size.Z), plate))
+            {
+                rotation = Quaternion.Concatenate(rotation, Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI / 2));
+                placed = mesh.Oriented(rotation);
+            }
             try
             {
                 var estimate = PrintEstimator.Estimate(placed, measuring, machine, cancellationToken);
@@ -81,10 +90,11 @@ public static class AutoOrient
         return new OrientationProposal(best, current, candidates, limited);
     }
 
-    /// <summary>The part fits the plate, turned a quarter turn about Z if that helps.</summary>
-    private static bool Fits(Vector3 size, Vector3? plate) =>
-        plate is not { } p
-        || (size.Z <= p.Z + 0.01f && ((size.X <= p.X + 0.01f && size.Y <= p.Y + 0.01f) || (size.X <= p.Y + 0.01f && size.Y <= p.X + 0.01f)));
+    /// <summary>The part fits the plate as it stands (no turn about Z; the candidate's rotation already holds any turn).</summary>
+    private static bool Fits(Vector3 size, Vector3? plate) => plate is not { } p || FitsAsIs(size, p);
+
+    private static bool FitsAsIs(Vector3 size, Vector3 p) =>
+        size.X <= p.X + 0.01f && size.Y <= p.Y + 0.01f && size.Z <= p.Z + 0.01f;
 
     /// <summary>Outward normals of the largest flat regions of the mesh, largest first.</summary>
     private static List<Vector3> FaceFamilies(PrintMesh mesh, CancellationToken cancellationToken)

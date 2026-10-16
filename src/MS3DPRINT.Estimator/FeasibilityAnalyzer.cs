@@ -112,7 +112,8 @@ public static class FeasibilityAnalyzer
     private static void CheckSize(List<FeasibilityIssue> issues, Vector3 size, FeasibilitySettings settings)
     {
         if (settings.BuildVolumeMm is not { } volume) return;
-        if (size.X > volume.X || size.Y > volume.Y || size.Z > volume.Z)
+        const float tolerance = 0.01f; // same as the plate outline: rounding noise fits
+        if (size.X > volume.X + tolerance || size.Y > volume.Y + tolerance || size.Z > volume.Z + tolerance)
             issues.Add(new(FeasibilityCode.TooLarge, FeasibilitySeverity.Error,
                 $"Le modèle ({Mm(size.X)} × {Mm(size.Y)} × {Mm(size.Z)}) dépasse le volume d'impression ({Mm(volume.X)} × {Mm(volume.Y)} × {Mm(volume.Z)})."));
     }

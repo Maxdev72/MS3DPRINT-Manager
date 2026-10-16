@@ -214,6 +214,15 @@ public sealed class FeasibilityAnalyzerTests
     }
 
     [Fact]
+    public void APlateOverflowWithinTheToleranceIsNotFlagged()
+    {
+        var settings = new FeasibilitySettings { BuildVolumeMm = new Vector3(100, 100, 100) };
+
+        Assert.Null(Issue(FeasibilityAnalyzer.Analyze(Block(100.005f, 50, 50), settings), FeasibilityCode.TooLarge));
+        Assert.NotNull(Issue(FeasibilityAnalyzer.Analyze(Block(100.5f, 50, 50), settings), FeasibilityCode.TooLarge));
+    }
+
+    [Fact]
     public void ATinyModelSuggestsWrongUnits()
     {
         var report = FeasibilityAnalyzer.Analyze(Block(1, 1, 1));

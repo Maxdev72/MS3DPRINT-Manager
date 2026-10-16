@@ -85,6 +85,19 @@ public sealed class AutoOrientTests
     }
 
     [Fact]
+    public void A_part_that_fits_only_after_a_quarter_turn_about_Z_gets_that_turn_in_its_rotation()
+    {
+        var block = Block(80, 40, 10);
+
+        var proposal = AutoOrient.Propose(block, Settings(), null, AutoOrientGoal.FewestSupports, new Vector3(50, 100, 100), null, default);
+        var placed = block.Oriented(proposal.Best.Rotation);
+
+        Assert.True(proposal.Best.FitsPlate);
+        Assert.True(placed.Size.X <= 50.01f, $"width {placed.Size.X}");
+        Assert.True(placed.Size.Y <= 100.01f, $"depth {placed.Size.Y}");
+    }
+
+    [Fact]
     public void A_pillar_that_is_too_tall_for_the_plate_is_laid_down_to_fit()
     {
         var pillar = Block(20, 20, 60);
