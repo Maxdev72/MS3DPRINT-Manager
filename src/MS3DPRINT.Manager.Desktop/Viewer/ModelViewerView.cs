@@ -233,6 +233,7 @@ public sealed partial class ModelViewerView : UserControl
         _speedClass.ItemsSource = ModelAssessment.SpeedClasses.Select(speed => speed.Label).ToList();
         _speedClass.SelectedIndex = 0;
         InitializeAssessment();
+        InitializeOrientation();
         RefreshVolume();
         _hex.LostFocus += (_, _) => ApplyColor();
         _hex.KeyDown += (_, e) => { if (e.Key == Key.Enter) { ApplyColor(); e.Handled = true; } };
@@ -279,7 +280,7 @@ public sealed partial class ModelViewerView : UserControl
             }
         };
         var displayTab = new StackPanel { Spacing = 10, Children = { Muted("Mode d’affichage"), _mode, Muted("Couleur du modèle"), _swatches, hexRow, Muted("Repère"), _grid, _gridNote, Muted("Rendu"), _renderer, _rendererNote } };
-        var toolsTab = new StackPanel { Spacing = 14, Children = { _toolsHint, _measureGroup, _cutGroup, compareGroup } };
+        var toolsTab = new StackPanel { Spacing = 14, Children = { _orientGroup, _toolsHint, _measureGroup, _cutGroup, compareGroup } };
         var analysisTab = new StackPanel
         {
             Spacing = 10,
@@ -532,12 +533,18 @@ public sealed partial class ModelViewerView : UserControl
         var stopwatch = Stopwatch.StartNew();
         try
         {
-            var mesh = await Task.Run(() => MeshLoader.Load(path, load.Token), load.Token);
+            var loaded = await Task.Run(() => MeshLoader.Load(path, load.Token), load.Token);
             if (version != _loadVersion) return;
+            // the model is stood on the build plate in the orientation it was saved in: centred, lowest point at Z = 0
+            _original = loaded;
+            _orientation.Reset();
+            SyncAngles();
+            var mesh = _orientation.Apply(loaded);
             _mesh = mesh;
             _overlay.Mesh = mesh;
             _measureToggle.IsEnabled = true;
             _cutToggle.IsEnabled = true;
+            _orientGroup.IsEnabled = true;
             _captureTool.IsEnabled = true;
             _compareButton.IsEnabled = true;
             ClearComparison();
@@ -568,6 +575,12 @@ public sealed partial class ModelViewerView : UserControl
             // development hook, like the other MS3DPRINT_START_* variables: open with a second version already loaded
             if (Environment.GetEnvironmentVariable("MS3DPRINT_START_COMPARE") is { Length: > 0 } startCompare) _ = LoadSecondAsync(startCompare);
             _message.Text = $"{mesh.TriangleCount:N0} triangles · chargé en {stopwatch.Elapsed.TotalSeconds:N1} s.";
+            // development hook, like the other MS3DPRINT_START_* variables: open turned a quarter turn about X by this many degrees
+            if (double.TryParse(Environment.GetEnvironmentVariable("MS3DPRINT_START_ROTATE_X"), NumberStyles.Float, CultureInfo.InvariantCulture, out var startRotateX))
+            {
+                _orientation.RotateAxis(0, startRotateX);
+                OrientationChanged();
+            }
             // development hook, like the other MS3DPRINT_START_* variables: open with the ground grid shown
             if (Environment.GetEnvironmentVariable("MS3DPRINT_START_GRID") == "1") _grid.IsChecked = true;
             // development hook, like the other MS3DPRINT_START_* variables: open with this zoom (1 frames the whole model)
