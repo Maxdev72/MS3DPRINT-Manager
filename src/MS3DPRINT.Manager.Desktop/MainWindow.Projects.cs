@@ -122,6 +122,7 @@ public partial class MainWindow
     {
         "" => true,
         "TODO" => project.Profile is null,
+        "ARCHIVES" => project.IsArchived,
         var status => project.StatusLabel == status
     };
 
