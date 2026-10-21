@@ -118,11 +118,13 @@ public partial class MainWindow
         }
     }
 
+    /// <summary>An archived project only shows under « Archivés »; every other filter, « Tous » included, lists the active ones.</summary>
     private static bool MatchesProjectStatus(ProjectSummary project, string filter) => filter switch
     {
+        "ARCHIVES" => project.IsArchived,
+        _ when project.IsArchived => false,
         "" => true,
         "TODO" => project.Profile is null,
-        "ARCHIVES" => project.IsArchived,
         var status => project.StatusLabel == status
     };
 
@@ -136,9 +138,12 @@ public partial class MainWindow
             .Where(project => text.Length == 0 ||
                               $"{project.Reference} {project.ProjectName} {project.ClientFolderName}".Contains(text, StringComparison.CurrentCultureIgnoreCase))
             .ToArray();
-        ProjectsPanelSubtitle.Text = projects.Length == _allProjects.Count
-            ? (_allProjects.Count switch { 0 => "Aucun projet", 1 => "1 projet", var count => $"{count} projets" })
-            : $"{projects.Length} sur {_allProjects.Count} projets";
+        var archivedCount = _allProjects.Count(project => project.IsArchived);
+        var scopeCount = _projectStatusFilter == "ARCHIVES" ? archivedCount : _allProjects.Count - archivedCount;
+        ProjectsPanelSubtitle.Text = (projects.Length == scopeCount
+            ? (scopeCount switch { 0 => "Aucun projet", 1 => "1 projet", var count => $"{count} projets" })
+            : $"{projects.Length} sur {scopeCount} projets")
+            + (_projectStatusFilter != "ARCHIVES" && archivedCount > 0 ? $" · {archivedCount} archivé{(archivedCount > 1 ? "s" : "")}" : string.Empty);
 
         if (_allProjects.Count == 0)
         {
