@@ -90,6 +90,11 @@ public partial class MainWindow
         return stack;
     }
 
+    // one look for every list header, sortable or not: the size of the sort buttons (Button.sort-head), the faint colour, the same padding
+    private const double HeaderFontSize = 11;
+
+    private static readonly Avalonia.Thickness HeaderPadding = new(14, 6);
+
     /// <summary>Header whose labels are buttons: click to sort, click again to reverse. The last heading (actions) is not sortable.</summary>
     private static Border CreateSortableHeader(string columns, string[] headings, int active, bool ascending, Action<int> onSort)
     {
@@ -99,7 +104,7 @@ public partial class MainWindow
             Control cell;
             if (index == headings.Length - 1)
                 // centred like the actions button below it
-                cell = new TextBlock { Text = headings[index], FontSize = 12, FontWeight = FontWeight.SemiBold, Classes = { "faint" }, HorizontalAlignment = HorizontalAlignment.Center };
+                cell = new TextBlock { Text = headings[index], FontSize = HeaderFontSize, FontWeight = FontWeight.SemiBold, Classes = { "faint" }, HorizontalAlignment = HorizontalAlignment.Center };
             else
             {
                 var column = index;
@@ -115,7 +120,7 @@ public partial class MainWindow
             Grid.SetColumn(cell, index);
             grid.Children.Add(cell);
         }
-        return new Border { Background = Avalonia.Media.Brushes.Transparent, Padding = new Avalonia.Thickness(14, 4), Child = grid };
+        return new Border { Background = Avalonia.Media.Brushes.Transparent, Padding = HeaderPadding, Child = grid };
     }
 
     private static Border CreateCompactTableHeader(string columns, params string[] headings)
@@ -123,13 +128,13 @@ public partial class MainWindow
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions(columns), ColumnSpacing = 16 };
         for (var index = 0; index < headings.Length; index++)
         {
-            var heading = new TextBlock { Text = headings[index], FontSize = 12, FontWeight = FontWeight.SemiBold, Classes = { "muted" } };
+            var heading = new TextBlock { Text = headings[index], FontSize = HeaderFontSize, FontWeight = FontWeight.SemiBold, Classes = { "faint" } };
             // the actions button is centred in its column, so is its heading
             if (headings[index] == "ACTIONS") heading.HorizontalAlignment = HorizontalAlignment.Center;
             Grid.SetColumn(heading, index);
             grid.Children.Add(heading);
         }
-        return new Border { Background = Avalonia.Media.Brushes.Transparent, Padding = new Avalonia.Thickness(14, 6), Child = grid };
+        return new Border { Background = Avalonia.Media.Brushes.Transparent, Padding = HeaderPadding, Child = grid };
     }
 
     /// <summary>Name with a leading icon, for file and folder rows.</summary>
