@@ -24,15 +24,26 @@ public sealed class ProjectCatalog
                 var path = profile.RelativePath is null
                     ? WorkspaceEntityPaths.Resolve(workspaceRoot, Path.GetRelativePath(workspaceRoot, Path.Combine(client.ClientPath, profile.FolderName)), "01_CLIENTS")
                     : WorkspaceEntityPaths.Resolve(workspaceRoot, profile.RelativePath, "01_CLIENTS");
-                if (string.Equals(Path.GetDirectoryName(path), client.ClientPath, StringComparison.OrdinalIgnoreCase) && IsSafe(path))
+                var parent = Path.GetDirectoryName(path);
+                if ((string.Equals(parent, client.ClientPath, StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(parent, Path.Combine(client.ClientPath, ProjectSummary.ArchiveFolderName), StringComparison.OrdinalIgnoreCase)) && IsSafe(path))
                     profilesByPath[path] = profile;
             }
             catch (ArgumentException) { }
         }
-        return clients.SelectMany(client => Directory.EnumerateDirectories(client.ClientPath, "*", SearchOption.TopDirectoryOnly)
+        return clients.SelectMany(client => ProjectFolders(client)
                 .Where(IsSafe).Select(path => CreateSummary(client, path, profilesByPath)))
             .Where(project => project is not null).Cast<ProjectSummary>()
             .OrderByDescending(project => project.Reference, StringComparer.OrdinalIgnoreCase).ToArray();
+    }
+
+    /// <summary>The project folders of a client: the active ones, then those archived in its 99_ARCHIVES (only the ones carrying a sheet or a reference).</summary>
+    private static IEnumerable<string> ProjectFolders(ClientSummary client)
+    {
+        foreach (var path in Directory.EnumerateDirectories(client.ClientPath, "*", SearchOption.TopDirectoryOnly)) yield return path;
+        var archive = Path.Combine(client.ClientPath, ProjectSummary.ArchiveFolderName);
+        if (!Directory.Exists(archive) || !IsSafe(archive)) yield break;
+        foreach (var path in Directory.EnumerateDirectories(archive, "*", SearchOption.TopDirectoryOnly)) yield return path;
     }
 
     private static ProjectSummary? CreateSummary(ClientSummary client, string path, IReadOnlyDictionary<string, ProjectProfile> profiles)

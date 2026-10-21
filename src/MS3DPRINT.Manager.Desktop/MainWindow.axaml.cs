@@ -238,6 +238,8 @@ public partial class MainWindow : Window
     /// <summary>Short feedback bubble in the bottom-right corner; it fades away on its own.</summary>
     private void Notify(string message, bool error = false)
     {
+        // an identical toast already on screen is not stacked a second time
+        if (ToastHost.Children.OfType<Border>().Any(existing => existing.Tag as string == message)) return;
         var icon = new Avalonia.Controls.Shapes.Path { Classes = { "icon", error ? "icon-danger" : "icon-success" }, Width = 18, Height = 18, VerticalAlignment = VerticalAlignment.Top, Margin = new Avalonia.Thickness(0, 1, 0, 0) };
         if (Avalonia.Application.Current?.TryFindResource(error ? "IconAlert" : "IconCheck", out var geometry) == true && geometry is Geometry data) icon.Data = data;
         var text = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap, MaxWidth = 340 };
@@ -247,7 +249,7 @@ public partial class MainWindow : Window
         var layout = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 10 };
         Grid.SetColumn(text, 1); Grid.SetColumn(close, 2);
         layout.Children.Add(icon); layout.Children.Add(text); layout.Children.Add(close);
-        var toast = new Border { Classes = { "toast", error ? "error" : "success" }, Child = layout };
+        var toast = new Border { Classes = { "toast", error ? "error" : "success" }, Child = layout, Tag = message };
         void Dismiss() => ToastHost.Children.Remove(toast);
         close.Click += (_, _) => Dismiss();
         ToastHost.Children.Add(toast);

@@ -335,7 +335,7 @@ public sealed class ManagedFileService
     private bool IsProfile(string full)
     {
         var parts = Path.GetRelativePath(_metadata, full).Split(Path.DirectorySeparatorChar);
-        return parts.Length == 2 && new[] { "clients", "projects", "collections", "filaments" }.Contains(parts[0], StringComparer.OrdinalIgnoreCase)
+        return parts.Length == 2 && new[] { "clients", "projects", "collections", "filaments", "printers", "estimates" }.Contains(parts[0], StringComparer.OrdinalIgnoreCase)
             && string.Equals(Path.GetExtension(full), ".json", StringComparison.OrdinalIgnoreCase) && File.Exists(full);
     }
 

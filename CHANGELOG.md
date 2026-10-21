@@ -1,5 +1,14 @@
 # Journal des modifications
 
+## 21 octobre 2026
+
+### Projets terminés archivés, fiches historiques et finitions
+- **Un projet passé à « Terminé » part à l'archivage** : son dossier est déplacé dans le `99_ARCHIVES` de son client, avec sa fiche. Le repasser à « À faire » ou « En cours » le ramène. Il reste visible dans la liste, et si le déplacement échoue le statut est quand même enregistré, avec un message.
+- **Fiche client historique** : modifier la fiche ou changer le statut d'un projet dont le client n'a pas de fiche ouvre maintenant la complétion de la fiche client, au lieu d'un message sans issue.
+- Un même message d'erreur n'est plus affiché deux fois dans les notifications.
+- **Autocomplétion de la fiche client** : les listes d'entreprises et d'adresses ne s'ouvrent plus d'elles-mêmes à l'ouverture de la fiche ni après le choix d'une suggestion.
+- **Liste des projets** : les références occupent une colonne fixe, les titres sont parfaitement alignés.
+
 ## 16 octobre 2026
 
 ### Visualiseur 3D type découpeur : plateau et réorientation

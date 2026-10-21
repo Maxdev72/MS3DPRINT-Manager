@@ -29,15 +29,24 @@ public partial class MainWindow
                 var inventory = new WorkspaceInventoryReader();
                 return (inventory.LoadFilaments(root), inventory.LoadPrinters(root), new WorkspaceProjectReader().Load(root));
             });
+            // The lists are reloaded on every visit: what is selected for the estimate in progress must survive it.
+            var keptProject = (EstimateProject.SelectedItem as ProjectSummary)?.ProjectPath;
+            var keptFilament = (EstimateFilament.SelectedItem as MS3DPRINT.Manager.Core.Filaments.FilamentProfile)?.Id;
+            var keptPrinter = (EstimatePrinter.SelectedItem as PrinterProfile)?.Id;
+            var editing = _loadedEstimate is not null;
             EstimateProject.ItemsSource = projects;
             EstimateProject.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<ProjectSummary>((project, _) => new TextBlock { Text = project is null ? string.Empty : $"{project.Reference} · {project.ClientTitle()}" });
-            EstimateProject.SelectedIndex = -1;
+            EstimateProject.SelectedItem = keptProject is null ? null : projects.FirstOrDefault(project => string.Equals(project.ProjectPath, keptProject, StringComparison.OrdinalIgnoreCase));
             EstimateFilament.ItemsSource = filaments;
             EstimateFilament.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>((f, _) => new TextBlock { Text = f is null ? string.Empty : $"{f?.Brand} · {f?.Name} ({f?.PricePerKg:0.00} €/kg)" });
-            EstimateFilament.SelectedIndex = filaments.Count > 0 ? 0 : -1;
-            EstimatePrinter.ItemsSource = printers.Where(printer => printer.IsActive).ToArray();
+            var keptFilamentItem = keptFilament is null ? null : filaments.FirstOrDefault(filament => filament.Id == keptFilament);
+            // an estimate being edited never falls back to the first filament: its own choice stays, or none
+            EstimateFilament.SelectedItem = keptFilamentItem ?? (editing ? null : filaments.FirstOrDefault());
+            var activePrinters = printers.Where(printer => printer.IsActive).ToArray();
+            EstimatePrinter.ItemsSource = activePrinters;
             EstimatePrinter.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<PrinterProfile>((printer, _) => new TextBlock { Text = printer is null ? string.Empty : $"{printer.DisplayName} · {PrinterCostCalculator.HourlyRate(printer):0.00} €/h" });
-            EstimatePrinter.SelectedIndex = printers.Any(printer => printer.IsActive) ? 0 : -1;
+            var keptPrinterItem = keptPrinter is null ? null : activePrinters.FirstOrDefault(printer => printer.Id == keptPrinter);
+            EstimatePrinter.SelectedItem = keptPrinterItem ?? (editing ? null : activePrinters.FirstOrDefault());
             EstimateDetail.Text = filaments.Count == 0 ? "Aucun filament : ajoutez-en un à l’étape Impression." : "Renseignez vos paramètres puis calculez.";
             await LoadSavedEstimatesAsync(root);
         }
@@ -171,7 +180,7 @@ public partial class MainWindow
         var inputs = estimate.Inputs;
         _loadedEstimate = estimate;
         EstimateName.Text = estimate.Name;
-        EstimateScopeIndex = string.Equals(estimate.FilamentName, "Modélisation seule", StringComparison.Ordinal) ? 1 : 0;
+        EstimateScopeIndex = EstimateScopeRules.IsModellingOnly(estimate) ? 1 : 0;
         EstimateProject.SelectedItem = (EstimateProject.ItemsSource as IEnumerable<ProjectSummary>)?.FirstOrDefault(project => project.Reference == estimate.ProjectReference && project.ClientFolderName == estimate.ClientName);
         EstimateFilament.SelectedItem = (EstimateFilament.ItemsSource as IEnumerable<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>)?.FirstOrDefault(filament => $"{filament.Brand} {filament.Name}" == estimate.FilamentName);
         EstimatePrinter.SelectedItem = (EstimatePrinter.ItemsSource as IEnumerable<PrinterProfile>)?.FirstOrDefault(printer => printer.Name == estimate.PrinterName || printer.DisplayName == estimate.PrinterName);
@@ -232,7 +241,10 @@ public partial class MainWindow
             TryEstimateValue(EstimateMachineRate.Text, out var savedRate);
             var project = EstimateProject.SelectedItem as ProjectSummary;
             var filament = EstimateFilament.SelectedItem as MS3DPRINT.Manager.Core.Filaments.FilamentProfile;
-            var profile = new EstimateProfile(_loadedEstimate?.Id ?? Guid.NewGuid(), string.IsNullOrWhiteSpace(EstimateName.Text) ? "Nouvelle estimation" : EstimateName.Text.Trim(), filament is null ? "Modélisation seule" : $"{filament.Brand} {filament.Name}", printer?.DisplayName ?? "Sans impression", _latestEstimateInputs, _latestEstimateResult, _loadedEstimate?.CreatedAt ?? DateTimeOffset.UtcNow, savedWeight, savedHours, savedRate, project?.Reference, project?.ClientFolderName);
+            var stored = EstimateScopeRules.ForSave(EstimateScopeIndex == 1, filament is null ? null : $"{filament.Brand} {filament.Name}", printer?.DisplayName,
+                savedWeight, savedHours, savedRate, _loadedEstimate);
+            var profile = new EstimateProfile(_loadedEstimate?.Id ?? Guid.NewGuid(), string.IsNullOrWhiteSpace(EstimateName.Text) ? "Nouvelle estimation" : EstimateName.Text.Trim(), stored.Filament, stored.Printer, _latestEstimateInputs, _latestEstimateResult, _loadedEstimate?.CreatedAt ?? DateTimeOffset.UtcNow, stored.Grams, stored.Hours, stored.Rate,
+                project?.Reference ?? _loadedEstimate?.ProjectReference, project?.ClientFolderName ?? _loadedEstimate?.ClientName);
             var store = new EstimateStore(root);
             if (_loadedEstimate is null) store.Create(profile);
             else store.Update(profile);

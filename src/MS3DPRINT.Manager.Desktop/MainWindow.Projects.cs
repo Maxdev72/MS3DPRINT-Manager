@@ -193,6 +193,23 @@ public partial class MainWindow
         return picker;
     }
 
+    /// <summary>A finished project goes to the 99_ARCHIVES of its client, any other status brings it back. A failed move keeps the saved status and says so.</summary>
+    private async Task<(string Path, string Note)> SyncProjectArchiveAsync(string root, ProjectSummary project, ProjectStatus status)
+    {
+        var archive = status == ProjectStatus.Completed;
+        if (archive == project.IsArchived) return (project.ProjectPath, string.Empty);
+        try
+        {
+            var service = new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root);
+            var path = await Task.Run(() => archive ? service.ArchiveProject(project) : service.RestoreProject(project));
+            return (path, archive ? " Dossier archivé." : " Dossier sorti des archives.");
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        {
+            return (project.ProjectPath, $" Le statut est enregistré, mais le dossier n’a pas été {(archive ? "archivé" : "restauré")} : {exception.Message}");
+        }
+    }
+
     private async Task SetProjectStatusAsync(ProjectSummary project, ProjectStatus status)
     {
         try
@@ -204,15 +221,22 @@ public partial class MainWindow
                 // a project from before the sheets: its sheet is created now, named after its folder, then the status is set
                 var client = (await Task.Run(() => new WorkspaceClientReader().Load(root)))
                     .FirstOrDefault(candidate => string.Equals(candidate.ClientPath, project.ClientPath, StringComparison.OrdinalIgnoreCase));
-                if (client?.Profile is null) { Notify("Complétez d’abord la fiche de ce client historique.", error: true); return; }
+                if (client is null) { Notify("Client introuvable pour ce projet.", error: true); return; }
+                var clientProfile = client.Profile ?? await CompleteClientProfileAsync(client);
+                if (clientProfile is null) return;
                 var name = DisplayNames.Format(project.ProjectName);
-                profile = await Task.Run(() => new WorkspaceProjectCreator().CompleteExisting(root, project, client.Profile, name));
+                profile = await Task.Run(() => new WorkspaceProjectCreator().CompleteExisting(root, project, clientProfile, name));
             }
-            else if (profile.Status == status) return;
+            else if (profile.Status == status && project.IsArchived == (status == ProjectStatus.Completed)) return;
             var updated = await Task.Run(() => new WorkspaceProfileEditor().UpdateProject(root, profile, status, profile.DueDate, profile.Description, profile.Notes));
-            _allProjects = _allProjects.Select(candidate => candidate.ProjectPath == project.ProjectPath ? project with { Profile = updated } : candidate).ToList();
-            RenderProjects();
-            Notify(status switch { ProjectStatus.Completed => "Projet terminé.", ProjectStatus.InProgress => "Projet en cours.", _ => "Projet à faire." });
+            var (path, archiveNote) = await SyncProjectArchiveAsync(root, project with { Profile = updated }, status);
+            if (path != project.ProjectPath) await LoadProjectsAsync(); // the fiche now holds the new folder: read it back
+            else
+            {
+                _allProjects = _allProjects.Select(candidate => candidate.ProjectPath == project.ProjectPath ? project with { Profile = updated } : candidate).ToList();
+                RenderProjects();
+            }
+            Notify((status switch { ProjectStatus.Completed => "Projet terminé.", ProjectStatus.InProgress => "Projet en cours.", _ => "Projet à faire." }) + archiveNote);
             await PreloadAsync(force: true);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
@@ -224,10 +248,14 @@ public partial class MainWindow
     /// <summary>The reference small and quiet, then the name that identifies the project at a glance.</summary>
     private static Control CreateProjectNameCell(ProjectSummary project)
     {
-        var reference = new TextBlock { Text = project.Reference, Classes = { "caption" }, VerticalAlignment = VerticalAlignment.Center };
+        var reference = new TextBlock { Text = project.Reference, Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
         var title = new TextBlock { Text = project.Title(), FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
         ToolTip.SetTip(title, project.Reference + " · " + project.Title());
-        return new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Children = { reference, title } };
+        // a fixed reference column keeps every title starting at the same x, whatever the length of the client code
+        var cell = new Grid { ColumnDefinitions = new ColumnDefinitions("112,*"), ColumnSpacing = 10 };
+        Grid.SetColumn(title, 1);
+        cell.Children.Add(reference); cell.Children.Add(title);
+        return cell;
     }
 
     /// <summary>The due date; one that has passed on a project that is not finished is said so, in the warning colour.</summary>
@@ -340,13 +368,15 @@ public partial class MainWindow
             var root = WorkspaceRoot;
             var client = (await Task.Run(() => new WorkspaceClientReader().Load(root)))
                 .FirstOrDefault(candidate => string.Equals(candidate.ClientPath, project.ClientPath, StringComparison.OrdinalIgnoreCase));
-            if (client?.Profile is null) { Notify("Complétez d’abord la fiche de ce client historique.", error: true); return; }
+            if (client is null) { Notify("Client introuvable pour ce projet.", error: true); return; }
+            var clientProfile = client.Profile ?? await CompleteClientProfileAsync(client);
+            if (clientProfile is null) return;
             var completion = new TextPromptWindow("Compléter la fiche projet", "Le dossier et les fichiers existants seront conservés. Le nom proposé retrouve les accents que le nom de dossier a perdus : corrigez-le si besoin.", DisplayNames.Format(project.ProjectName));
             if (!await completion.ShowDialog<bool>(this)) return;
             try
             {
                 var completedName = completion.Value;
-                var completed = await Task.Run(() => new WorkspaceProjectCreator().CompleteExisting(root, project, client.Profile, completedName));
+                var completed = await Task.Run(() => new WorkspaceProjectCreator().CompleteExisting(root, project, clientProfile, completedName));
                 Notify("Fiche projet historique complétée.");
                 if (_projectListMode) await LoadProjectsAsync();
                 else await LoadProjectDirectoryAsync(project with { Profile = completed }, project.ProjectPath);
@@ -363,9 +393,10 @@ public partial class MainWindow
             var root = WorkspaceRoot;
             var (status, dueDate, description, notes, name) = (dialog.Status, dialog.DueDate, dialog.Description, dialog.Notes, dialog.ProjectName);
             var updated = await Task.Run(() => new WorkspaceProfileEditor().UpdateProject(root, profile, status, dueDate, description, notes, name));
-            Notify("Fiche projet enregistrée.");
+            var (path, archiveNote) = await SyncProjectArchiveAsync(root, project with { Profile = updated }, status);
+            Notify("Fiche projet enregistrée." + archiveNote);
             if (_projectListMode) await LoadProjectsAsync();
-            else await LoadProjectDirectoryAsync(project with { Profile = updated }, project.ProjectPath);
+            else await LoadProjectDirectoryAsync(project with { Profile = updated, ProjectPath = path }, path);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         {

@@ -33,6 +33,10 @@ public sealed class CreateClientWindow : DialogWindow
     private CancellationTokenSource? _addressSearch;
     private readonly string _existingCode;
     private bool _applyingSuggestion;
+    // Values put in the fields by the code (existing fiche, accepted suggestion). TextChanged may be raised after the flag above is back to false,
+    // so a field still holding such a value is not a typed query and must not open the suggestions.
+    private string? _knownName;
+    private string? _knownAddress;
 
     public string ClientName => _name.Text?.Trim() ?? string.Empty;
     public string FirstName => _firstName.Text?.Trim() ?? string.Empty;
@@ -52,7 +56,7 @@ public sealed class CreateClientWindow : DialogWindow
         _existingCode = existingClient?.ClientCode ?? string.Empty;
         Title = existingClient is null ? "Créer un client" : "Compléter la fiche client";
         Width = 500; Height = 800; MinWidth = 420; MinHeight = 480;
-        if (existingClient is not null) _name.Text = existingClient.Title();
+        if (existingClient is not null) { _name.Text = existingClient.Title(); _knownName = ClientName; }
 
         var create = new Button { Content = existingClient is null ? "Créer le client" : "Enregistrer la fiche" };
         create.Click += (_, _) => TryClose();
@@ -73,11 +77,16 @@ public sealed class CreateClientWindow : DialogWindow
         _name.TextChanged += async (_, _) =>
         {
             UpdateCodePreview();
-            if (!_applyingSuggestion && !IsIndividual) await SearchCompaniesAsync(ClientName);
+            if (_applyingSuggestion || IsIndividual) return;
+            if (ClientName == _knownName) { HideCompanyResults(); return; }
+            await SearchCompaniesAsync(ClientName);
         };
         _address.TextChanged += async (_, _) =>
         {
-            if (!_applyingSuggestion) await SearchAddressesAsync(_address.Text?.Trim() ?? string.Empty);
+            var query = _address.Text?.Trim() ?? string.Empty;
+            if (_applyingSuggestion) return;
+            if (query == _knownAddress) { HideAddressResults(); return; }
+            await SearchAddressesAsync(query);
         };
 
         _companyResults.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<CompanySuggestion>((item, _) => new TextBlock
@@ -98,6 +107,7 @@ public sealed class CreateClientWindow : DialogWindow
             if (_addressResults.SelectedItem is not AddressSuggestion suggestion) return;
             _applyingSuggestion = true;
             _address.Text = suggestion.Label;
+            _knownAddress = suggestion.Label.Trim();
             _applyingSuggestion = false;
             _addressResults.IsVisible = false;
             _addressResults.SelectedItem = null;
@@ -139,14 +149,19 @@ public sealed class CreateClientWindow : DialogWindow
         _addressResults.IsVisible = false;
     }
 
+    private void HideCompanyResults() { _companySearch?.Cancel(); _companyResults.IsVisible = false; }
+
+    private void HideAddressResults() { _addressSearch?.Cancel(); _addressResults.IsVisible = false; }
+
     private void ApplyCompany(CompanySuggestion suggestion)
     {
         _companySearch?.Cancel();
         _addressSearch?.Cancel();
         _applyingSuggestion = true;
         _name.Text = suggestion.Name;
+        _knownName = suggestion.Name.Trim();
         _siret.Text = suggestion.Siret ?? string.Empty;
-        if (!string.IsNullOrWhiteSpace(suggestion.Address)) _address.Text = suggestion.Address;
+        if (!string.IsNullOrWhiteSpace(suggestion.Address)) { _address.Text = suggestion.Address; _knownAddress = suggestion.Address.Trim(); }
         _applyingSuggestion = false;
         _companyResults.IsVisible = false;
         _addressResults.IsVisible = false;

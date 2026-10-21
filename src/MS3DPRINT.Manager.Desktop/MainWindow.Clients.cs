@@ -217,28 +217,37 @@ public partial class MainWindow
         }
     }
 
+    /// <summary>Asks for the missing fiche of a historic client and writes it; null when cancelled or failed.</summary>
+    private async Task<ClientProfile?> CompleteClientProfileAsync(ClientSummary client)
+    {
+        var completion = new CreateClientWindow(client);
+        if (!await completion.ShowDialog<bool>(this)) return null;
+        try
+        {
+            var root = WorkspaceRoot;
+            var (individual, lastName, clientName, code) = (completion.IsIndividual, completion.LastName, completion.ClientName, completion.Code);
+            var (firstName, siret, address) = (completion.FirstName, completion.Siret, completion.Address);
+            var (completionEmail, completionMobile) = (completion.Email, completion.Mobile);
+            var completedProfile = await Task.Run(() => new WorkspaceClientCreator().CompleteExisting(root, client.ClientPath,
+                individual ? ClientKind.Individual : ClientKind.Professional,
+                individual ? lastName : clientName, code, firstName, lastName, siret, address, completionEmail, completionMobile));
+            Notify("Fiche client historique complétée.");
+            return completedProfile;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { Notify(exception.Message, error: true); return null; }
+    }
+
     private async void EditClient_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: ClientSummary client }) return;
         if (client.Profile is null)
         {
-            var completion = new CreateClientWindow(client);
-            if (!await completion.ShowDialog<bool>(this)) return;
-            try
+            if (await CompleteClientProfileAsync(client) is { } completedProfile)
             {
-                var root = WorkspaceRoot;
-                var (individual, lastName, clientName, code) = (completion.IsIndividual, completion.LastName, completion.ClientName, completion.Code);
-                var (firstName, siret, address) = (completion.FirstName, completion.Siret, completion.Address);
-                var (completionEmail, completionMobile) = (completion.Email, completion.Mobile);
-                var completedProfile = await Task.Run(() => new WorkspaceClientCreator().CompleteExisting(root, client.ClientPath,
-                    individual ? ClientKind.Individual : ClientKind.Professional,
-                    individual ? lastName : clientName, code, firstName, lastName, siret, address, completionEmail, completionMobile));
-                Notify("Fiche client historique complétée.");
                 if (_clientListMode) await LoadClientsAsync();
                 else await LoadClientDetailAsync(client with { Profile = completedProfile });
             }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
-            { Notify(exception.Message, error: true); }
             return;
         }
         var profile = client.Profile;

@@ -29,6 +29,33 @@ public static class EstimateCalculator
 
 public sealed record EstimateProfile(Guid Id, string Name, string FilamentName, string PrinterName, EstimateInputs Inputs, EstimateResult Result, DateTimeOffset CreatedAt, decimal WeightGrams = 0, decimal MachineHours = 0, decimal MachineHourlyRate = 0, string? ProjectReference = null, string? ClientName = null);
 
+/// <summary>What an estimate says about its scope: a modelling-only estimate carries no filament, printer, weight or machine time.</summary>
+public static class EstimateScopeRules
+{
+    public const string ModellingOnlyLabel = "Modélisation seule";
+    public const string NoPrinterLabel = "Sans impression";
+
+    public static bool IsModellingOnly(EstimateProfile estimate)
+    {
+        ArgumentNullException.ThrowIfNull(estimate);
+        return string.Equals(estimate.FilamentName, ModellingOnlyLabel, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Filament, printer, weight, hours and hourly rate to store. The scope decides, never the leftover selection of a hidden form;
+    /// a printing estimate whose filament or printer is no longer in the lists keeps the names it already had.
+    /// </summary>
+    public static (string Filament, string Printer, decimal Grams, decimal Hours, decimal Rate) ForSave(
+        bool modellingOnly, string? filament, string? printer, decimal grams, decimal hours, decimal rate, EstimateProfile? previous)
+    {
+        if (modellingOnly) return (ModellingOnlyLabel, NoPrinterLabel, 0m, 0m, 0m);
+        var keep = previous is not null && !IsModellingOnly(previous) ? previous : null;
+        var filamentName = filament ?? keep?.FilamentName ?? ModellingOnlyLabel;
+        var printerName = printer ?? (keep is not null ? keep.PrinterName : NoPrinterLabel);
+        return (filamentName, printerName, grams, hours, rate);
+    }
+}
+
 public sealed class EstimateStore
 {
     private readonly string _root;

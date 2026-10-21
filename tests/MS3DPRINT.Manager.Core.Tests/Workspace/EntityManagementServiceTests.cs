@@ -66,6 +66,25 @@ public sealed class EntityManagementServiceTests : IDisposable
     }
 
     [Fact]
+    public void ArchivingAndRestoringProject_MovesItsFolderAndKeepsItsFicheDiscoverable()
+    {
+        var (client, project) = CreateFixture();
+        var service = new EntityManagementService(_root);
+        var archived = service.ArchiveProject(project);
+        Assert.Equal(Path.Combine(client.ClientPath, "99_ARCHIVES", project.FolderName), archived);
+        Assert.Equal("document", File.ReadAllText(Path.Combine(archived, "test.txt")));
+        var listed = Projects().Load(_root).Single();
+        Assert.True(listed.IsArchived);
+        Assert.Equal(project.Profile!.Id, listed.Profile!.Id);
+        Assert.Equal(archived, listed.ProjectPath);
+        Assert.Equal(client.ClientPath, listed.ClientPath);
+        Assert.Equal(archived, service.ArchiveProject(listed));
+        var restored = service.RestoreProject(listed);
+        Assert.Equal(project.ProjectPath, restored);
+        Assert.False(Projects().Load(_root).Single().IsArchived);
+    }
+
+    [Fact]
     public void MovingProjectToAnotherClient_KeepsItsReferenceAndChangesRelationship()
     {
         var (_, project) = CreateFixture();

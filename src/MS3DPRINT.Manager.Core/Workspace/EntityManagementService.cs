@@ -48,6 +48,27 @@ public sealed class EntityManagementService
         RequireCategory(destinationClient.ClientPath, "01_CLIENTS");
         return Relocate(project.ProjectPath, Path.Combine(destinationClient.ClientPath, project.FolderName), () => _files.Move(project.ProjectPath, destinationClient.ClientPath), destinationClient: destinationClient.Profile);
     }
+
+    /// <summary>Moves a project folder into the 99_ARCHIVES folder of its client; its fiche follows. Returns the new folder, unchanged when already archived.</summary>
+    public string ArchiveProject(ProjectSummary project)
+    {
+        if (project.Profile is null) throw new ArgumentException("Complétez la fiche projet avant de l’archiver.");
+        if (project.IsArchived) return project.ProjectPath;
+        var archive = Path.Combine(project.ClientPath, ProjectSummary.ArchiveFolderName);
+        RequireCategory(archive, "01_CLIENTS");
+        WorkspacePathSafety.EnsureNoLinks(archive);
+        Directory.CreateDirectory(archive);
+        return Relocate(project.ProjectPath, Path.Combine(archive, project.FolderName), () => _files.Move(project.ProjectPath, archive));
+    }
+
+    /// <summary>Brings an archived project folder back to its client folder.</summary>
+    public string RestoreProject(ProjectSummary project)
+    {
+        if (project.Profile is null) throw new ArgumentException("Complétez la fiche projet avant de la restaurer.");
+        if (!project.IsArchived) return project.ProjectPath;
+        return Relocate(project.ProjectPath, Path.Combine(project.ClientPath, project.FolderName), () => _files.Move(project.ProjectPath, project.ClientPath));
+    }
+
     public string RenameCollection(CollectionItemSummary item, string category, string newName)
     {
         RequireCategory(item.Path, category);
