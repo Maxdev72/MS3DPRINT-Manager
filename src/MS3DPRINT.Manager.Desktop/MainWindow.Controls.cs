@@ -98,7 +98,8 @@ public partial class MainWindow
         {
             Control cell;
             if (index == headings.Length - 1)
-                cell = new TextBlock { Text = headings[index], FontSize = 12, FontWeight = FontWeight.SemiBold, Classes = { "faint" } };
+                // centred like the actions button below it
+                cell = new TextBlock { Text = headings[index], FontSize = 12, FontWeight = FontWeight.SemiBold, Classes = { "faint" }, HorizontalAlignment = HorizontalAlignment.Center };
             else
             {
                 var column = index;

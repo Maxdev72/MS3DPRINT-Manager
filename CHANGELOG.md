@@ -8,6 +8,7 @@
 - Un même message d'erreur n'est plus affiché deux fois dans les notifications.
 - **Autocomplétion de la fiche client** : les listes d'entreprises et d'adresses ne s'ouvrent plus d'elles-mêmes à l'ouverture de la fiche ni après le choix d'une suggestion.
 - **Liste des projets** : les références occupent une colonne fixe, les titres sont parfaitement alignés.
+- Colonne STATUT alignée sur son en-tête et en-tête ACTIONS centré au-dessus des boutons (listes des projets et des clients).
 - **Filtre « Archivés »** dans la liste des projets : il n'affiche que les projets rangés dans `99_ARCHIVES`.
 
 ## 16 octobre 2026

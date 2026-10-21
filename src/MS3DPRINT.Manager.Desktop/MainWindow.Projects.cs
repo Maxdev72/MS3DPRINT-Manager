@@ -187,7 +187,8 @@ public partial class MainWindow
                 return button;
             }).ToArray();
         var menu = (Flyout)CreateOverflowActions(PlacementMode.BottomEdgeAlignedLeft, options).Tag!;
-        var picker = new Button { Content = CreateProjectStatusCell(project), Classes = { "ghost", "interactive-cell" }, Padding = new Avalonia.Thickness(6, 4), HorizontalAlignment = HorizontalAlignment.Left };
+        var picker = new Button { Content = CreateProjectStatusCell(project), Classes = { "ghost", "interactive-cell" }, Padding = new Avalonia.Thickness(6, 4), HorizontalAlignment = HorizontalAlignment.Left,
+            Margin = new Avalonia.Thickness(-7, 0, 0, 0) }; // padding 6 + border 1: the ring starts where the STATUT heading and the other cells start
         ToolTip.SetTip(picker, "Changer le statut");
         Avalonia.Automation.AutomationProperties.SetName(picker, "Changer le statut de " + project.Reference);
         picker.Click += (_, _) => menu.ShowAt(picker);
