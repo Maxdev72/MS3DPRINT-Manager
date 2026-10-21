@@ -29,7 +29,7 @@ public partial class MainWindow
         {
             var entries = await Task.Run(() => new WorkspaceTrashReader().Load(workspaceRoot));
             if (entries.Count == 0) { TrashList.Children.Add(CreateEmptyState("IconTrash", "La corbeille est vide", "Les éléments supprimés apparaissent ici et peuvent être restaurés.")); return; }
-            TrashList.Children.Add(CreateCompactTableHeader(TrashRowColumns, "ÉLÉMENT", "SUPPRIMÉ LE", "", ""));
+            TrashList.Children.Add(CreateCompactTableHeader(TrashRowColumns, "ÉLÉMENT", "SUPPRIMÉ LE", ""));
             foreach (var entry in entries)
             {
                 var restore = new Button { Content = "Restaurer", Tag = entry.Id };

@@ -124,6 +124,8 @@ public partial class MainWindow
         for (var index = 0; index < headings.Length; index++)
         {
             var heading = new TextBlock { Text = headings[index], FontSize = 12, FontWeight = FontWeight.SemiBold, Classes = { "muted" } };
+            // the actions button is centred in its column, so is its heading
+            if (headings[index] == "ACTIONS") heading.HorizontalAlignment = HorizontalAlignment.Center;
             Grid.SetColumn(heading, index);
             grid.Children.Add(heading);
         }
@@ -250,6 +252,8 @@ public partial class MainWindow
         {
             cells[index].IsHitTestVisible = open is null || cells[index].Classes.Contains("interactive-cell");
             cells[index].VerticalAlignment = VerticalAlignment.Center;
+            // a pill keeps its own width instead of filling the whole column
+            if (cells[index] is Border { Classes: var classes } && classes.Contains("badge")) cells[index].HorizontalAlignment = HorizontalAlignment.Left;
             Grid.SetColumn(cells[index], index);
             row.Children.Add(cells[index]);
         }
