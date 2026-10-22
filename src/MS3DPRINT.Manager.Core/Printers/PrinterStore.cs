@@ -25,13 +25,33 @@ public static class PrinterCostCalculator
         return Math.Round(HourlyRate(printer) * durationHours, 2, MidpointRounding.AwayFromZero);
     }
 
+    /// <summary>Workshop amortisation per machine hour: the hourly rates of every active printer added together.</summary>
+    public static decimal FleetHourlyRate(IEnumerable<PrinterProfile> printers)
+    {
+        ArgumentNullException.ThrowIfNull(printers);
+        return printers.Where(printer => printer.IsActive).Sum(HourlyRate);
+    }
+
+    /// <summary>Average power of the active printers that declare one; a print runs on a single printer. Null when none declares it.</summary>
+    public static int? FleetAveragePowerWatts(IEnumerable<PrinterProfile> printers)
+    {
+        ArgumentNullException.ThrowIfNull(printers);
+        var powers = printers.Where(printer => printer.IsActive && printer.PowerWatts is > 0).Select(printer => printer.PowerWatts!.Value).ToArray();
+        return powers.Length == 0 ? null : (int)Math.Round(powers.Average(), MidpointRounding.AwayFromZero);
+    }
+
     public static decimal ElectricityCost(PrinterProfile printer, decimal durationHours, decimal pricePerKwh)
     {
         ArgumentNullException.ThrowIfNull(printer);
+        return ElectricityCost(printer.PowerWatts, durationHours, pricePerKwh);
+    }
+
+    public static decimal ElectricityCost(int? powerWatts, decimal durationHours, decimal pricePerKwh)
+    {
         if (durationHours < 0) throw new ArgumentOutOfRangeException(nameof(durationHours));
         if (pricePerKwh < 0) throw new ArgumentOutOfRangeException(nameof(pricePerKwh));
-        return printer.PowerWatts is > 0
-            ? Math.Round(durationHours * printer.PowerWatts.Value / 1000m * pricePerKwh, 2, MidpointRounding.AwayFromZero)
+        return powerWatts is > 0
+            ? Math.Round(durationHours * powerWatts.Value / 1000m * pricePerKwh, 2, MidpointRounding.AwayFromZero)
             : 0m;
     }
 }

@@ -105,5 +105,6 @@ public partial class MainWindow
     {
         if (NavigationButtons().FirstOrDefault(button => button.Tag as string == "Estimations") is { } target)
             NavigationButton_Click(target, e);
+        ResetEstimate_Click(sender, e); // « Nouvelle estimation » always opens a blank calculator
     }
 }

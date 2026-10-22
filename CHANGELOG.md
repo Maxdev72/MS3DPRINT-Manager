@@ -1,5 +1,14 @@
 # Journal des modifications
 
+## 22 octobre 2026
+
+### Estimations : quantité, forfait par pièce et amortissement du parc
+- **Quantité de pièces** : le poids et la durée machine se saisissent pour une pièce (multipliés par la quantité) ou pour l'ensemble des pièces.
+- **Forfait par pièce** (5 € par défaut) : ajouté au prix après la marge, quantité × forfait, avant la remise. Il n'est soumis ni aux aléas ni à la marge. Le récapitulatif l'affiche sur sa propre ligne.
+- **Plus de choix d'imprimante** : le taux machine est l'amortissement horaire de toutes les imprimantes actives additionnées, et l'électricité utilise la puissance moyenne du parc.
+- **Calculateur réinitialisé** après l'enregistrement et à l'ouverture depuis « Nouvelle estimation » ; « Réinitialiser » remet aussi projet et filament à zéro.
+- L'électricité saisie à la main suit le même mode (par pièce ou ensemble) que le poids et la durée.
+
 ## 21 octobre 2026
 
 ### Projets terminés archivés, fiches historiques et finitions

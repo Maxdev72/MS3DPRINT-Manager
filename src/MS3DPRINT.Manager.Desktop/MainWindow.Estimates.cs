@@ -32,7 +32,6 @@ public partial class MainWindow
             // The lists are reloaded on every visit: what is selected for the estimate in progress must survive it.
             var keptProject = (EstimateProject.SelectedItem as ProjectSummary)?.ProjectPath;
             var keptFilament = (EstimateFilament.SelectedItem as MS3DPRINT.Manager.Core.Filaments.FilamentProfile)?.Id;
-            var keptPrinter = (EstimatePrinter.SelectedItem as PrinterProfile)?.Id;
             var editing = _loadedEstimate is not null;
             EstimateProject.ItemsSource = projects;
             EstimateProject.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<ProjectSummary>((project, _) => new TextBlock { Text = project is null ? string.Empty : $"{project.Reference} · {project.ClientTitle()}" });
@@ -42,11 +41,11 @@ public partial class MainWindow
             var keptFilamentItem = keptFilament is null ? null : filaments.FirstOrDefault(filament => filament.Id == keptFilament);
             // an estimate being edited never falls back to the first filament: its own choice stays, or none
             EstimateFilament.SelectedItem = keptFilamentItem ?? (editing ? null : filaments.FirstOrDefault());
-            var activePrinters = printers.Where(printer => printer.IsActive).ToArray();
-            EstimatePrinter.ItemsSource = activePrinters;
-            EstimatePrinter.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<PrinterProfile>((printer, _) => new TextBlock { Text = printer is null ? string.Empty : $"{printer.DisplayName} · {PrinterCostCalculator.HourlyRate(printer):0.00} €/h" });
-            var keptPrinterItem = keptPrinter is null ? null : activePrinters.FirstOrDefault(printer => printer.Id == keptPrinter);
-            EstimatePrinter.SelectedItem = keptPrinterItem ?? (editing ? null : activePrinters.FirstOrDefault());
+            // the machine cost is the amortisation of the whole fleet: every active printer is added, none is chosen
+            _fleetHourlyRate = PrinterCostCalculator.FleetHourlyRate(printers);
+            _fleetPowerWatts = PrinterCostCalculator.FleetAveragePowerWatts(printers);
+            if (!editing && _fleetHourlyRate > 0) EstimateMachineRate.Text = _fleetHourlyRate.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+            RecalculateElectricity();
             EstimateDetail.Text = filaments.Count == 0 ? "Aucun filament : ajoutez-en un à l’étape Impression." : "Renseignez vos paramètres puis calculez.";
             await LoadSavedEstimatesAsync(root);
         }
@@ -76,12 +75,8 @@ public partial class MainWindow
 
     private async void RefreshEstimates_Click(object? sender, RoutedEventArgs e) => await LoadEstimateFilamentsAsync();
 
-    private void EstimatePrinter_SelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        if (EstimatePrinter.SelectedItem is PrinterProfile printer)
-            EstimateMachineRate.Text = PrinterCostCalculator.HourlyRate(printer).ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
-        RecalculateElectricity();
-    }
+    private decimal _fleetHourlyRate;
+    private int? _fleetPowerWatts;
 
     private void EstimateElectricityInputs_Changed(object? sender, TextChangedEventArgs e) => RecalculateElectricity();
 
@@ -89,13 +84,12 @@ public partial class MainWindow
     private void RecalculateElectricity()
     {
         // Raised while the XAML is still loading, before the named controls exist.
-        if (EstimateElectricity is null || EstimateHours is null || EstimateKwhPrice is null || EstimatePrinter is null || EstimateElectricityLabel is null) return;
-        var printer = EstimatePrinter.SelectedItem as PrinterProfile;
-        var automatic = printer?.PowerWatts is > 0;
+        if (EstimateElectricity is null || EstimateHours is null || EstimateKwhPrice is null || EstimateElectricityLabel is null) return;
+        var automatic = _fleetPowerWatts is > 0;
         EstimateElectricity.IsReadOnly = automatic;
-        EstimateElectricityLabel.Text = automatic ? "Électricité estimée (calculée automatiquement)" : "Électricité estimée (saisie manuelle : puissance de l’imprimante non renseignée)";
+        EstimateElectricityLabel.Text = automatic ? "Électricité estimée (calculée automatiquement)" : "Électricité estimée (saisie manuelle : puissance des imprimantes non renseignée)";
         if (!automatic || !TryEstimateValue(EstimateHours.Text, out var hours) || !TryEstimateValue(EstimateKwhPrice.Text, out var pricePerKwh) || hours < 0 || pricePerKwh < 0) return;
-        EstimateElectricity.Text = PrinterCostCalculator.ElectricityCost(printer!, hours, pricePerKwh).ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        EstimateElectricity.Text = PrinterCostCalculator.ElectricityCost(_fleetPowerWatts, hours, pricePerKwh).ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
     }
 
     private int _estimateScopeIndex;
@@ -183,12 +177,14 @@ public partial class MainWindow
         EstimateScopeIndex = EstimateScopeRules.IsModellingOnly(estimate) ? 1 : 0;
         EstimateProject.SelectedItem = (EstimateProject.ItemsSource as IEnumerable<ProjectSummary>)?.FirstOrDefault(project => project.Reference == estimate.ProjectReference && project.ClientFolderName == estimate.ClientName);
         EstimateFilament.SelectedItem = (EstimateFilament.ItemsSource as IEnumerable<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>)?.FirstOrDefault(filament => $"{filament.Brand} {filament.Name}" == estimate.FilamentName);
-        EstimatePrinter.SelectedItem = (EstimatePrinter.ItemsSource as IEnumerable<PrinterProfile>)?.FirstOrDefault(printer => printer.Name == estimate.PrinterName || printer.DisplayName == estimate.PrinterName);
         EstimateWeight.Text = estimate.WeightGrams.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
         EstimateHours.Text = estimate.MachineHours.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
         EstimateMachineRate.Text = estimate.MachineHourlyRate.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
         EstimateKwhPrice.Text = "0,25";
-        EstimateElectricity.Text = inputs.ElectricityCost.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        EstimateQuantity.Text = inputs.Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        EstimateMinimum.Text = inputs.MinimumPerPiece.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        EstimatePrintDataMode.SelectedIndex = inputs.PrintDataForWholeOrder ? 1 : 0;
+        EstimateElectricity.Text = (inputs.PrintDataForWholeOrder ? inputs.ElectricityCost : inputs.ElectricityCost / Math.Max(1, inputs.Quantity)).ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
         EstimateDesign.Text = inputs.DesignCost.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
         EstimateLabor.Text = inputs.LaborCost.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
         EstimatePostProcessing.Text = inputs.PostProcessingCost.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
@@ -209,10 +205,15 @@ public partial class MainWindow
     {
         EstimateName.Text = "Nouvelle estimation";
         EstimateScopeIndex = 0;
+        EstimateProject.SelectedItem = null;
+        EstimateFilament.SelectedItem = (EstimateFilament.ItemsSource as IEnumerable<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>)?.FirstOrDefault();
         EstimateWeight.Text = "100";
         EstimateHours.Text = "2";
         EstimateMachineRate.Text = "2";
         EstimateKwhPrice.Text = "0,25";
+        EstimateQuantity.Text = "1";
+        EstimateMinimum.Text = "5";
+        EstimatePrintDataMode.SelectedIndex = 0;
         EstimateElectricity.Text = EstimateDesign.Text = EstimateLabor.Text = EstimatePostProcessing.Text = EstimateConsumables.Text = EstimatePackaging.Text = EstimateMisc.Text = EstimateDiscount.Text = "0";
         EstimateMargin.Text = "30";
         EstimateFailure.Text = "5";
@@ -221,9 +222,9 @@ public partial class MainWindow
         _loadedEstimate = null;
         EstimateFinal.Text = "—";
         EstimateDetail.Text = "Nouvelle estimation prête.";
-        // the printer chosen in the list drives the hourly rate and the electricity cost, not the generic defaults above
-        if (EstimatePrinter.SelectedItem is PrinterProfile printer)
-            EstimateMachineRate.Text = PrinterCostCalculator.HourlyRate(printer).ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        // the fleet amortisation drives the hourly rate and the electricity cost, not the generic defaults above
+        if (_fleetHourlyRate > 0)
+            EstimateMachineRate.Text = _fleetHourlyRate.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
         RecalculateElectricity();
         GoToEstimateStep(0);
     }
@@ -235,21 +236,21 @@ public partial class MainWindow
         try
         {
             var root = WorkspaceRoot;
-            var printer = EstimatePrinter.SelectedItem as PrinterProfile;
             TryEstimateValue(EstimateWeight.Text, out var savedWeight);
             TryEstimateValue(EstimateHours.Text, out var savedHours);
             TryEstimateValue(EstimateMachineRate.Text, out var savedRate);
             var project = EstimateProject.SelectedItem as ProjectSummary;
             var filament = EstimateFilament.SelectedItem as MS3DPRINT.Manager.Core.Filaments.FilamentProfile;
-            var stored = EstimateScopeRules.ForSave(EstimateScopeIndex == 1, filament is null ? null : $"{filament.Brand} {filament.Name}", printer?.DisplayName,
+            var stored = EstimateScopeRules.ForSave(EstimateScopeIndex == 1, filament is null ? null : $"{filament.Brand} {filament.Name}", EstimateScopeRules.FleetLabel,
                 savedWeight, savedHours, savedRate, _loadedEstimate);
             var profile = new EstimateProfile(_loadedEstimate?.Id ?? Guid.NewGuid(), string.IsNullOrWhiteSpace(EstimateName.Text) ? "Nouvelle estimation" : EstimateName.Text.Trim(), stored.Filament, stored.Printer, _latestEstimateInputs, _latestEstimateResult, _loadedEstimate?.CreatedAt ?? DateTimeOffset.UtcNow, stored.Grams, stored.Hours, stored.Rate,
                 project?.Reference ?? _loadedEstimate?.ProjectReference, project?.ClientFolderName ?? _loadedEstimate?.ClientName);
             var store = new EstimateStore(root);
             if (_loadedEstimate is null) store.Create(profile);
             else store.Update(profile);
-            _loadedEstimate = profile;
-            EstimateDetail.Text = "Estimation enregistrée.";
+            // the calculator starts over once saved: a saved estimate is reopened from the list, never edited by accident
+            ResetEstimate_Click(sender, e);
+            EstimateDetail.Text = "Estimation enregistrée. Nouvelle estimation prête.";
             await LoadSavedEstimatesAsync(root);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException)
@@ -347,6 +348,7 @@ public partial class MainWindow
         void Separator() => EstimateRecap.Children.Add(new Border { Height = 1, Margin = new Avalonia.Thickness(0, 6), Background = (IBrush?)Avalonia.Application.Current?.FindResource("BorderBrush") });
 
         EstimateRecap.Children.Add(new TextBlock { Text = EstimateName.Text, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
+        if (inputs.Quantity > 1) Row("Quantité", inputs.Quantity + " pièces");
         Cost("Matière", inputs.MaterialCost);
         Cost("Machine", inputs.MachineCost);
         Cost("Électricité", inputs.ElectricityCost);
@@ -359,7 +361,10 @@ public partial class MainWindow
         Separator();
         Row("Coût brut", result.RawCost.ToString("0.00") + " €");
         if (result.ExpectedCost != result.RawCost) Row($"Aléas d’impression ({inputs.FailureRatePercent:0.##} %)", "+ " + (result.ExpectedCost - result.RawCost).ToString("0.00") + " €");
-        if (result.SalePrice != result.ExpectedCost) Row($"Marge ({inputs.MarginPercent:0.##} %)", "+ " + (result.SalePrice - result.ExpectedCost).ToString("0.00") + " €");
+        var margin = result.SalePrice - result.FlatFee - result.ExpectedCost; // SalePrice already includes the flat fee
+        if (margin != 0) Row($"Marge ({inputs.MarginPercent:0.##} %)", "+ " + margin.ToString("0.00") + " €");
+        if (result.FlatFee > 0)
+            Row($"Forfait par pièce ({inputs.Quantity} × {inputs.MinimumPerPiece:0.##} €)", "+ " + result.FlatFee.ToString("0.00") + " €");
         if (result.FinalPrice != result.SalePrice) Row($"Remise ({inputs.DiscountPercent:0.##} %)", "− " + (result.SalePrice - result.FinalPrice).ToString("0.00") + " €");
         Separator();
         Row("Prix de vente", result.FinalPrice.ToString("0.00") + " €", strong: true);
@@ -377,6 +382,16 @@ public partial class MainWindow
             return false;
         }
 
+        if (!int.TryParse(EstimateQuantity.Text?.Trim(), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var quantity) || quantity < 1)
+        {
+            EstimateDetail.Text = "La quantité de pièces doit être un nombre entier d’au moins 1.";
+            return false;
+        }
+        if (!TryEstimateValue(EstimateMinimum.Text, out var minimumPerPiece) || minimumPerPiece < 0)
+        {
+            EstimateDetail.Text = "Le forfait minimum par pièce doit être un montant positif.";
+            return false;
+        }
         if (!TryEstimateValue(EstimateWeight.Text, out var grams) || !TryEstimateValue(EstimateHours.Text, out var hours) ||
             !TryEstimateValue(EstimateMachineRate.Text, out var rate) || !TryEstimateValue(EstimateKwhPrice.Text, out var pricePerKwh) || !TryEstimateValue(EstimateElectricity.Text, out var electricity) ||
             !TryEstimateValue(EstimateDesign.Text, out var design) || !TryEstimateValue(EstimateLabor.Text, out var labor) ||
@@ -391,14 +406,17 @@ public partial class MainWindow
 
         try
         {
-            var printer = EstimatePrinter.SelectedItem as PrinterProfile;
-            var machineCost = modellingOnly ? 0m : hours * rate;
-            var electricityCost = modellingOnly ? 0m : printer?.PowerWatts is > 0 ? PrinterCostCalculator.ElectricityCost(printer, hours, pricePerKwh) : electricity;
-            EstimateElectricity.Text = electricityCost.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+            var printFactor = EstimatePrintDataMode.SelectedIndex == 1 ? 1 : quantity; // weight and time already cover every piece when entered for the whole order
+            var machineCost = modellingOnly ? 0m : hours * rate * printFactor;
+            var automaticElectricity = _fleetPowerWatts is > 0;
+            // the field keeps what the user typed (per piece or for the whole order, like weight and time); the stored cost is always the total
+            var electricityCost = modellingOnly ? 0m : automaticElectricity ? PrinterCostCalculator.ElectricityCost(_fleetPowerWatts, hours * printFactor, pricePerKwh) : electricity * printFactor;
+            if (automaticElectricity) EstimateElectricity.Text = electricityCost.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
             var inputs = new EstimateInputs(
-                MaterialCost: modellingOnly ? 0m : filament!.PricePerKg * grams / 1000m, MachineCost: machineCost, ElectricityCost: electricityCost,
+                MaterialCost: modellingOnly ? 0m : filament!.PricePerKg * grams * printFactor / 1000m, MachineCost: machineCost, ElectricityCost: electricityCost,
                 DesignCost: design, LaborCost: labor, PostProcessingCost: postProcessing, ConsumablesCost: consumables,
-                PackagingShippingCost: packaging, MiscCost: misc, MarginPercent: margin, FailureRatePercent: failure, DiscountPercent: discount);
+                PackagingShippingCost: packaging, MiscCost: misc, MarginPercent: margin, FailureRatePercent: failure, DiscountPercent: discount,
+                Quantity: modellingOnly ? 1 : quantity, MinimumPerPiece: modellingOnly ? 0m : minimumPerPiece, PrintDataForWholeOrder: !modellingOnly && EstimatePrintDataMode.SelectedIndex == 1);
             var result = EstimateCalculator.Calculate(inputs);
             _latestEstimateInputs = inputs;
             _latestEstimateResult = result;
