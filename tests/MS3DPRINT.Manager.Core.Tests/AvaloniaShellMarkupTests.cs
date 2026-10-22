@@ -36,7 +36,6 @@ public sealed class AvaloniaShellMarkupTests
         Assert.Contains("store.Update", source, StringComparison.Ordinal);
         Assert.Contains("EstimateProject.SelectedItem", source, StringComparison.Ordinal);
         Assert.Contains("EstimateFilament.SelectedItem", source, StringComparison.Ordinal);
-        Assert.Contains("EstimatePrinter.SelectedItem", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -45,17 +44,16 @@ public sealed class AvaloniaShellMarkupTests
         var source = MainWindowSource();
 
         Assert.Contains("f?.Brand", source, StringComparison.Ordinal);
-        Assert.Contains("printer is null", source, StringComparison.Ordinal);
-        Assert.Contains("printer.DisplayName", source, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Estimate_workspace_can_select_a_registered_printer()
+    public void Estimate_workspace_prices_the_machine_with_the_whole_fleet_instead_of_one_printer()
     {
         var markup = File.ReadAllText(MainWindowPath());
+        var source = MainWindowSource();
 
-        Assert.Contains("EstimatePrinter", markup, StringComparison.Ordinal);
-        Assert.Contains("EstimatePrinter_SelectionChanged", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("EstimatePrinter", markup, StringComparison.Ordinal);
+        Assert.Contains("FleetHourlyRate", source, StringComparison.Ordinal);
     }
 
     [Fact]

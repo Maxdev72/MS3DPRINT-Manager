@@ -88,8 +88,6 @@ public partial class MainWindow
             EstimateWeight.Text = Math.Max(0.1, grams).ToString("0.#", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
         if (seed.FilamentKey is { } key && EstimateFilament.ItemsSource is IEnumerable<MS3DPRINT.Manager.Core.Filaments.FilamentProfile> filaments)
             EstimateFilament.SelectedItem = filaments.FirstOrDefault(filament => $"{filament.Brand} {filament.Name}" == key) ?? EstimateFilament.SelectedItem;
-        if (seed.PrinterModel is { } model && EstimatePrinter.ItemsSource is IEnumerable<PrinterProfile> printers)
-            EstimatePrinter.SelectedItem = printers.FirstOrDefault(printer => string.Equals(printer.DisplayName, model, StringComparison.OrdinalIgnoreCase)) ?? EstimatePrinter.SelectedItem;
         if (seed.DurationHours is { } hours)
         {
             EstimateHours.Text = Math.Round(hours, 2).ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));

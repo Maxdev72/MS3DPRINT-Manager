@@ -5,9 +5,10 @@ namespace MS3DPRINT.Manager.Core.Estimates;
 
 public sealed record EstimateInputs(decimal MaterialCost = 0, decimal MachineCost = 0, decimal ElectricityCost = 0,
     decimal DesignCost = 0, decimal LaborCost = 0, decimal PostProcessingCost = 0, decimal ConsumablesCost = 0,
-    decimal PackagingShippingCost = 0, decimal MiscCost = 0, decimal MarginPercent = 0, decimal FailureRatePercent = 0, decimal DiscountPercent = 0);
+    decimal PackagingShippingCost = 0, decimal MiscCost = 0, decimal MarginPercent = 0, decimal FailureRatePercent = 0, decimal DiscountPercent = 0,
+    int Quantity = 1, decimal MinimumPerPiece = 0, bool PrintDataForWholeOrder = false);
 
-public sealed record EstimateResult(decimal RawCost, decimal ExpectedCost, decimal SalePrice, decimal FinalPrice);
+public sealed record EstimateResult(decimal RawCost, decimal ExpectedCost, decimal SalePrice, decimal FinalPrice, decimal FlatFee = 0);
 
 public static class EstimateCalculator
 {
@@ -19,10 +20,14 @@ public static class EstimateCalculator
             throw new ArgumentOutOfRangeException(nameof(input), "Un coût ne peut pas être négatif.");
         if (input.FailureRatePercent is < 0 or >= 100) throw new ArgumentOutOfRangeException(nameof(input.FailureRatePercent));
         if (input.MarginPercent < 0 || input.DiscountPercent is < 0 or > 100) throw new ArgumentOutOfRangeException();
+        if (input.Quantity < 1 || input.MinimumPerPiece < 0) throw new ArgumentOutOfRangeException(nameof(input), "La quantité doit être d’au moins 1 et le forfait minimum positif.");
         var raw = input.MaterialCost + input.MachineCost + input.ElectricityCost + input.DesignCost + input.LaborCost + input.PostProcessingCost + input.ConsumablesCost + input.PackagingShippingCost + input.MiscCost;
         var expected = Math.Round(raw / (1 - input.FailureRatePercent / 100m), 2, MidpointRounding.AwayFromZero);
         var sale = Math.Round(expected * (1 + input.MarginPercent / 100m), 2, MidpointRounding.AwayFromZero);
-        return new(raw, expected, sale, Math.Round(sale * (1 - input.DiscountPercent / 100m), 2, MidpointRounding.AwayFromZero));
+        // flat fee: added per piece after the margin (it carries neither failure rate nor margin), before the discount
+        var flatFee = Math.Round(input.MinimumPerPiece * input.Quantity, 2, MidpointRounding.AwayFromZero);
+        var beforeDiscount = sale + flatFee;
+        return new(raw, expected, beforeDiscount, Math.Round(beforeDiscount * (1 - input.DiscountPercent / 100m), 2, MidpointRounding.AwayFromZero), flatFee);
     }
 }
 
@@ -34,6 +39,7 @@ public static class EstimateScopeRules
 {
     public const string ModellingOnlyLabel = "Modélisation seule";
     public const string NoPrinterLabel = "Sans impression";
+    public const string FleetLabel = "Parc d’imprimantes";
 
     public static bool IsModellingOnly(EstimateProfile estimate)
     {
