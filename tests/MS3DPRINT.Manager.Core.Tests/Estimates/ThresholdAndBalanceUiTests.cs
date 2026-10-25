@@ -50,6 +50,8 @@ public sealed partial class EstimateUiTests
             var texts = sheet.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).ToArray();
             Assert.Contains("Bilan du projet", texts); Assert.Contains("150,00 €", texts); Assert.Contains("60,00 €", texts);
             Assert.Contains("90,00 €", texts); Assert.Contains("12,50 €", texts); Assert.Contains("47,50 €", texts);
+            Assert.Contains("Encaissé − achats", texts);
+            Assert.DoesNotContain(sheet.GetVisualDescendants().OfType<Expander>(), e => e.IsExpanded);
         }
         finally { window.Close(); }
     });

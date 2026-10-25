@@ -76,10 +76,15 @@ public partial class MainWindow
     private Control BuildProjectBalanceSection(ProjectSummary project)
     {
         var root = WorkspaceRoot;
-        var heading = new TextBlock { Text = "Bilan du projet", FontSize = 18, FontWeight = FontWeight.SemiBold, Classes = { "brand-heading" } };
-        var rows = new StackPanel { Spacing = 0 };
-        var note = new TextBlock { Classes = { "muted" }, TextWrapping = TextWrapping.Wrap, FontSize = 13, LineHeight = 20 };
-        var section = new StackPanel { Spacing = 8, IsVisible = false, Children = { heading, rows, note } };
+        // One compact line of figures: the project's files stay the main content of the sheet.
+        var heading = new TextBlock { Text = "Bilan du projet", FontSize = 16, FontWeight = FontWeight.SemiBold, Classes = { "brand-heading" }, VerticalAlignment = VerticalAlignment.Center };
+        var section = new WrapPanel { Orientation = Orientation.Horizontal, ItemSpacing = 28, LineSpacing = 6, IsVisible = false, Children = { heading } };
+        ToolTip.SetTip(section, "Calcul d’après les recettes et achats rattachés à la référence du projet. Les cotisations, l’électricité et l’usure des machines ne sont pas déduites.");
+        static Control Stat(string label, string value) => new StackPanel { Spacing = 0, Children =
+        {
+            new TextBlock { Text = label, FontSize = 12, Classes = { "muted" } },
+            new TextBlock { Text = value, FontSize = 15, FontWeight = FontWeight.SemiBold }
+        } };
         section.AttachedToVisualTree += async (_, _) =>
         {
             try
@@ -91,13 +96,12 @@ public partial class MainWindow
                         revenues.Years().SelectMany(y => revenues.Load(y).Lines), purchases.Years().SelectMany(y => purchases.Load(y).Lines));
                 });
                 if (!string.Equals(root, WorkspaceRoot, StringComparison.OrdinalIgnoreCase) || !balance.HasData) return;
-                rows.Children.Clear();
-                rows.Children.Add(SettingsValueRow("Prix estimé (dernier devis)", balance.Quoted is { } q ? RevenueExporter.Money(q) : "Pas de devis"));
-                rows.Children.Add(SettingsValueRow($"Encaissé ({balance.RevenueLines} recette{(balance.RevenueLines > 1 ? "s" : "")})", RevenueExporter.Money(balance.Collected)));
-                if (balance.RemainingToCollect is { } left) rows.Children.Add(SettingsValueRow("Reste à encaisser", RevenueExporter.Money(left)));
-                rows.Children.Add(SettingsValueRow($"Achats liés ({balance.PurchaseLines})", RevenueExporter.Money(balance.Purchases)));
-                rows.Children.Add(SettingsValueRow("Encaissé moins achats liés", RevenueExporter.Money(balance.NetOfPurchases)));
-                note.Text = "Calcul d’après les recettes et achats rattachés à la référence du projet. Les cotisations, l’électricité et l’usure des machines ne sont pas déduites.";
+                while (section.Children.Count > 1) section.Children.RemoveAt(1);
+                section.Children.Add(Stat("Estimé (dernier devis)", balance.Quoted is { } q ? RevenueExporter.Money(q) : "Pas de devis"));
+                section.Children.Add(Stat($"Encaissé ({balance.RevenueLines})", RevenueExporter.Money(balance.Collected)));
+                if (balance.RemainingToCollect is { } left) section.Children.Add(Stat("Reste à encaisser", RevenueExporter.Money(left)));
+                if (balance.PurchaseLines > 0) section.Children.Add(Stat($"Achats liés ({balance.PurchaseLines})", RevenueExporter.Money(balance.Purchases)));
+                if (balance.RevenueLines > 0 || balance.PurchaseLines > 0) section.Children.Add(Stat("Encaissé − achats", RevenueExporter.Money(balance.NetOfPurchases)));
                 section.IsVisible = true;
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or System.Text.Json.JsonException)

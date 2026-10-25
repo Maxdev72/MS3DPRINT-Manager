@@ -75,7 +75,9 @@ public partial class MainWindow
                     };
                     history.Children.Add(open);
                 }
-                content.Children.Add(EstimateSection($"Estimations liées ({quotes.Length})", "Retrouver les prix enregistrés pour ce projet", history));
+                var linked = (Expander)EstimateSection($"Estimations liées ({quotes.Length})", "Retrouver les prix enregistrés pour ce projet", history);
+                linked.IsExpanded = false;
+                content.Children.Add(linked);
             }
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or System.Text.Json.JsonException)
