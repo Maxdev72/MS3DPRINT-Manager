@@ -20,7 +20,15 @@ dotnet build src/MS3DPRINT.Manager.Android -c Release -p:JavaSdkDirectory="C:/Pr
 
 Le fichier à installer est `src/MS3DPRINT.Manager.Android/bin/Release/net10.0-android/fr.ms3dprint.compagnon-Signed.apk` (signé avec la clé de débogage : suffisant pour une installation directe, pas pour une publication).
 
+## Vérifications faites
+Essayée dans un émulateur Android 16 (x86_64) : démarrage, choix du dossier d’échange (mémorisé après redémarrage), saisie, appareil photo, validation des champs, envoi d’un achat avec photo ; les deux fichiers produits sont lus correctement par le PC. La partie arm64 (téléphones réels) utilise la même configuration mais n’a pas pu être exécutée sur l’émulateur.
+
+## Pièges rencontrés
+- `AndroidLinkMode=None` fait avorter le moteur Mono au démarrage (« class-init … instance_size ») : ne pas le remettre.
+- L’activité d’Avalonia exige un thème AppCompat (`Theme.AppCompat.NoActionBar`).
+- Le dossier ne peut pas s’appeler `MS3DPRINT.Manager.Android` côté espace de noms : il masque les types `Android.*` ; l’espace de noms est `MS3DPRINT.Manager.Companion`.
+
 ## Limites connues
-- Non essayé sur un téléphone ni sur un émulateur lors de sa création : la mémorisation du dossier d’échange et l’appareil photo sont à valider à la première utilisation.
 - Seuls les achats sont gérés ; les recettes et la consultation des projets sont prévues ensuite.
-- Poids : environ 80 Mo (bibliothèques non allégées).
+- Le clavier numérique n’est pas forcé pour le montant.
+- Poids : environ 34 Mo.
