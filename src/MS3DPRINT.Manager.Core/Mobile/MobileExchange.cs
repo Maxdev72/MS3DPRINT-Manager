@@ -63,7 +63,14 @@ public static class MobileExchange
 
 public sealed record MobileInboxItem(string DataPath, MobilePurchase Purchase, string? PhotoPath);
 
-public sealed record MobileInboxScan(IReadOnlyList<MobileInboxItem> Items, IReadOnlyList<string> Errors);
+public sealed record MobileRevenueItem(string DataPath, MobileRevenue Revenue, string? PhotoPath);
+
+/// <param name="Items">Purchases waiting for confirmation.</param>
+/// <param name="Revenues">Collections waiting for confirmation.</param>
+public sealed record MobileInboxScan(IReadOnlyList<MobileInboxItem> Items, IReadOnlyList<string> Errors, IReadOnlyList<MobileRevenueItem>? RevenueItems = null)
+{
+    public IReadOnlyList<MobileRevenueItem> Revenues => RevenueItems ?? [];
+}
 
 /// <summary>The exchange folder as the computer sees it: files dropped by the phone, waiting for confirmation.</summary>
 public static class MobileInbox
@@ -94,18 +101,47 @@ public static class MobileInbox
             catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
             { errors.Add($"{Path.GetFileName(path)} : {exception.Message}"); }
         }
-        return new(items, errors);
+        var revenues = new List<MobileRevenueItem>();
+        foreach (var path in Directory.EnumerateFiles(folder, MobileRevenueExchange.Prefix + "*.json").Order(StringComparer.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var revenue = MobileRevenueExchange.Parse(File.ReadAllBytes(path));
+                string? photo = null;
+                if (revenue.PhotoFileName is { } name)
+                {
+                    var candidate = Path.Combine(folder, name);
+                    if (!File.Exists(candidate)) { errors.Add($"{Path.GetFileName(path)} : la photo « {name} » n’est pas encore arrivée (synchronisation en cours ?)."); continue; }
+                    photo = candidate;
+                }
+                revenues.Add(new(path, revenue, photo));
+            }
+            catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
+            { errors.Add($"{Path.GetFileName(path)} : {exception.Message}"); }
+        }
+        return new(items, errors, revenues);
     }
 
     /// <summary>Moves the data file and its photo to the processed folder; a name already taken there gets a numeric suffix.</summary>
     public static void MarkProcessed(string workspaceRoot, MobileInboxItem item)
     {
         ArgumentNullException.ThrowIfNull(item);
+        MarkProcessed(workspaceRoot, item.DataPath, item.PhotoPath);
+    }
+
+    public static void MarkProcessed(string workspaceRoot, MobileRevenueItem item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        MarkProcessed(workspaceRoot, item.DataPath, item.PhotoPath);
+    }
+
+    private static void MarkProcessed(string workspaceRoot, string dataPath, string? photoPath)
+    {
         var folder = FolderFor(workspaceRoot);
         var processed = Path.Combine(folder, MobileExchange.ProcessedFolderName);
         WorkspacePathSafety.EnsureNoLinks(processed);
         Directory.CreateDirectory(processed);
-        foreach (var path in new[] { item.DataPath, item.PhotoPath }.Where(p => p is not null).Cast<string>())
+        foreach (var path in new[] { dataPath, photoPath }.Where(p => p is not null).Cast<string>())
         {
             if (!File.Exists(path)) continue;
             var target = Path.Combine(processed, Path.GetFileName(path));

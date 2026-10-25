@@ -136,6 +136,7 @@ public partial class MainWindow
         if (!IsWorkspaceLoadCurrent(load)) return;
         AddSettingsCard("atelier", BuildCompanySettingsCard(workspaceRoot));
         AddSettingsCard("atelier", BuildThresholdsSettingsCard(workspaceRoot));
+        AddSettingsCard("atelier", BuildMobileSettingsCard(workspaceRoot));
         AddSettingsCard("atelier", BuildWorkshopSettingsCard(workspaceRoot));
 
         Border Card(string title, string description, Control? headerAction, params Control[] content)

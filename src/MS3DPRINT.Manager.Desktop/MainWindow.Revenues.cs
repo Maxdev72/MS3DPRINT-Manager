@@ -260,6 +260,7 @@ public partial class MainWindow
             var lines = result.Year.Lines;
             var summary = RevenueTotals.Compute(lines);
             ShowRevenueThresholds(result.Thresholds, summary, selectedYear);
+            RequestMobileSnapshot();
             var valid = lines.Count(l => !l.IsCancelled);
             _revenuePageSummary.Text = $"{valid} recette{(valid > 1 ? "s" : "")} en {selectedYear} · total encaissé {RevenueExporter.Money(summary.Total)} (marchandises {RevenueExporter.Money(summary.Goods)}, prestations {RevenueExporter.Money(summary.Services)})"
                 + (summary.CancelledCount > 0 ? $" · {summary.CancelledCount} annulée{(summary.CancelledCount > 1 ? "s" : "")}" : "")

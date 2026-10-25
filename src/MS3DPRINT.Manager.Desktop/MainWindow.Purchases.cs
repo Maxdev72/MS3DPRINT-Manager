@@ -141,6 +141,7 @@ public partial class MainWindow
         });
         if (chosen.Count > 0) _purchaseYear = chosen.Max(i => i.Purchase.PurchasedOn.Year);
         if (PurchasesWorkspacePanel.IsVisible) await LoadPurchasesAsync();
+        RequestMobileSnapshot(force: true);
         var message = $"{imported} achat{(imported > 1 ? "s" : "")} importé{(imported > 1 ? "s" : "")}" + (already > 0 ? $", {already} déjà présent{(already > 1 ? "s" : "")}" : "") + (failures.Count > 0 ? $", {failures.Count} en échec : {failures[0]}" : ".");
         Notify(message, error: failures.Count > 0);
     }
@@ -221,6 +222,7 @@ public partial class MainWindow
             finally { _populatingPurchaseYears = false; }
             var lines = result.Year.Lines;
             var summary = PurchaseTotals.Compute(lines);
+            RequestMobileSnapshot();
             var valid = lines.Count(l => !l.IsCancelled);
             _purchasePageSummary.Text = $"{valid} achat{(valid > 1 ? "s" : "")} en {selectedYear} · total payé {RevenueExporter.Money(summary.Total)}"
                 + (summary.CancelledCount > 0 ? $" · {summary.CancelledCount} annulé{(summary.CancelledCount > 1 ? "s" : "")}" : "")

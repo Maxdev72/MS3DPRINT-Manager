@@ -20,6 +20,7 @@ public partial class MainWindow
     {
         Classes.Add("workbench-ui");
         InitializeRevenueDrop();
+        StartMobilePublication();
         DecorateInventoryPage(PrintersWorkspacePanel, "Votre parc d’imprimantes", _printerPageSummary, "Nouvelle imprimante");
         DecorateInventoryPage(RevenuesWorkspacePanel, "Livre des recettes", _revenuePageSummary, "Enregistrer un encaissement");
         if (RevenuesWorkspacePanel.Child is Grid { Children: [Grid revenueToolbar, ..] } && revenueToolbar.Children[0] is StackPanel revenueHeading) revenueHeading.Children.Add(_revenueThresholdNote);
