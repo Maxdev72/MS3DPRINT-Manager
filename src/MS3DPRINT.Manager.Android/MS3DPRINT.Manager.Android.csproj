@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <SupportedOSPlatformVersion>26</SupportedOSPlatformVersion>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- The Android toolchain raises warnings of its own that the desktop projects do not have. -->
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <ApplicationId>fr.ms3dprint.compagnon</ApplicationId>
+    <ApplicationTitle>MS3DPRINT Compagnon</ApplicationTitle>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <AndroidSupportedAbis>arm64-v8a</AndroidSupportedAbis>
+    <AndroidLinkMode>None</AndroidLinkMode>
+    <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+    <RootNamespace>MS3DPRINT.Manager.Companion</RootNamespace>
+  </PropertyGroup>
+
+  <!-- Android adds its own global usings (Application, Button, DatePicker...) that clash with the Avalonia types. -->
+  <ItemGroup>
+    <Using Remove="Android.App" /><Using Remove="Android.Content" /><Using Remove="Android.OS" /><Using Remove="Android.Runtime" /><Using Remove="Android.Views" /><Using Remove="Android.Widget" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Android" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MS3DPRINT.Manager.Core\MS3DPRINT.Manager.Core.csproj" />
+  </ItemGroup>
+
+</Project>

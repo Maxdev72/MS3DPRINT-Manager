@@ -2,6 +2,10 @@
 
 ## 25 octobre 2026
 
+### Application compagnon Android (première version)
+- Nouveau projet `src/MS3DPRINT.Manager.Android` : une application Android pour noter un achat (date, fournisseur, libellé, montant, règlement, pièce, projet), photographier le ticket avec l’appareil photo (image redressée et réduite à 1600 px) et l’envoyer dans le dossier d’échange « Echanges mobile », que le PC importe ensuite. Le dossier est choisi une fois et mémorisé ; les derniers envois et les fournisseurs récents sont rappelés.
+- Hors de la solution principale (charge de travail Android et JDK requis). Mode d’emploi et limites : docs/application-compagnon-android.md.
+
 ### Correctif des notifications
 - Les notifications (« Estimation enregistrée… ») retrouvent leur fond opaque : le texte des lignes situées dessous ne se superpose plus. La règle de style avait été perdue lors de la synchronisation du 25 octobre ; un test en vérifie désormais l’opacité.
 
