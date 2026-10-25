@@ -52,6 +52,7 @@ public partial class MainWindow
         duplicate.Click += DuplicateProject_Click; actions.Children.Add(duplicate);
 
         content.Children.Add(BuildClassificationSection(project));
+        content.Children.Add(BuildProjectBalanceSection(project));
 
         var history = new StackPanel { Spacing = 4 };
         try

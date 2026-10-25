@@ -95,6 +95,48 @@ public partial class MainWindow
         await new ConfirmHistoryWindow($"Historique de « {line.Entry.Label} »", text).ShowDialog<bool>(this);
     }
 
+    /// <summary>Lists the invoices already filed in the workspace that have no revenue line, and records the ones the user confirms as paid.</summary>
+    private async void ImportInvoices_Click(object? sender, RoutedEventArgs e)
+    {
+        var root = WorkspaceRoot;
+        Notify("Recherche des factures de l’espace de travail…");
+        InvoiceScan scan; IReadOnlyList<RevenueLine> lines;
+        try
+        {
+            (scan, lines) = await Task.Run(() =>
+            {
+                var found = InvoiceCatalog.Scan(root);
+                var journal = new RevenueJournal(root);
+                return (found, (IReadOnlyList<RevenueLine>)journal.Years().SelectMany(y => journal.Load(y).Lines).ToArray());
+            });
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or System.Text.Json.JsonException)
+        { Notify("Recherche des factures impossible : " + exception.Message, error: true); return; }
+        if (!string.Equals(root, WorkspaceRoot, StringComparison.OrdinalIgnoreCase)) return;
+        var missing = InvoiceCatalog.Unrecorded(scan.Candidates, lines);
+        if (missing.Count == 0)
+        {
+            Notify(scan.Candidates.Count == 0 ? "Aucune facture lisible trouvée dans l’espace de travail." : $"Les {scan.Candidates.Count} factures lues ont toutes une recette.");
+            return;
+        }
+        var dialog = new RevenueBatchWindow(missing, scan.Unreadable.Count, DateOnly.FromDateTime(DateTime.Today));
+        if (!await dialog.ShowDialog<bool>(this)) return;
+        var saved = 0; var failures = new List<string>();
+        var entries = dialog.Result;
+        await Task.Run(() =>
+        {
+            var journal = new RevenueJournal(root);
+            foreach (var entry in entries)
+            {
+                try { journal.Append(entry); saved++; }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException) { failures.Add($"{entry.InvoiceNumber} : {exception.Message}"); }
+            }
+        });
+        if (entries.Count > 0) _revenueYear = entries.Max(x => x.ReceivedOn.Year);
+        if (RevenuesWorkspacePanel.IsVisible) await LoadRevenuesAsync();
+        Notify(failures.Count == 0 ? $"{saved} recette{(saved > 1 ? "s" : "")} enregistrée{(saved > 1 ? "s" : "")}." : $"{saved} enregistrée(s), {failures.Count} en échec : {failures[0]}", error: failures.Count > 0);
+    }
+
     private async void CancelRevenue_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: RevenueEntry entry }) return;
@@ -204,7 +246,10 @@ public partial class MainWindow
             var result = await Task.Run(() =>
             {
                 var journal = new RevenueJournal(root);
-                return (Years: journal.Years(), Year: journal.Load(selectedYear));
+                ActivityThresholds thresholds;
+                try { thresholds = new ActivityThresholdStore(root).Load(); }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Text.Json.JsonException) { thresholds = new(); }
+                return (Years: journal.Years(), Year: journal.Load(selectedYear), Thresholds: thresholds);
             });
             if (!IsWorkspaceLoadCurrent(load)) return;
             var years = result.Years.Append(DateTime.Today.Year).Append(selectedYear).Distinct().OrderByDescending(y => y).ToArray();
@@ -214,6 +259,7 @@ public partial class MainWindow
             _revenueLoaded = result.Year;
             var lines = result.Year.Lines;
             var summary = RevenueTotals.Compute(lines);
+            ShowRevenueThresholds(result.Thresholds, summary, selectedYear);
             var valid = lines.Count(l => !l.IsCancelled);
             _revenuePageSummary.Text = $"{valid} recette{(valid > 1 ? "s" : "")} en {selectedYear} · total encaissé {RevenueExporter.Money(summary.Total)} (marchandises {RevenueExporter.Money(summary.Goods)}, prestations {RevenueExporter.Money(summary.Services)})"
                 + (summary.CancelledCount > 0 ? $" · {summary.CancelledCount} annulée{(summary.CancelledCount > 1 ? "s" : "")}" : "")

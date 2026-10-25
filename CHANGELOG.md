@@ -2,6 +2,11 @@
 
 ## 25 octobre 2026
 
+### Rattrapage du livre, seuils d’activité et bilan par projet
+- Page Recettes > « Factures » : le logiciel parcourt l’espace de travail, lit les factures PDF (Indy, ancien modèle, modèle FAC-AAAA-NNN) et liste celles qui n’ont pas de recette. Rien n’est coché par défaut : on coche les factures payées, on vérifie la date d’encaissement, la nature et le règlement, puis on enregistre. La facture reste à sa place et devient le justificatif de la ligne. Une même facture classée à deux endroits n’apparaît qu’une fois ; les factures mixtes (vente et prestation) se saisissent avec « Ajouter » pour indiquer la part marchandises.
+- Paramètres > Atelier > « Seuils d’activité » : on saisit les plafonds de son régime (micro et franchise de TVA, total et prestations). La page Recettes affiche le niveau atteint pour l’année affichée, en alerte dès 80 % et à nouveau une fois le plafond atteint. Aucun montant légal n’est imposé par le logiciel.
+- Fiche d’un projet > « Bilan du projet » : prix du dernier devis, encaissé, reste à encaisser, achats liés et encaissé moins achats, d’après les recettes et achats rattachés à la référence du projet.
+
 ### Livre de recettes et registre des achats : corrections et totaux
 - Corriger une ligne : le menu « ⋯ » propose « Corriger » sur chaque recette et chaque achat. Le formulaire est pré-rempli et demande un motif. Rien n’est effacé : la correction est ajoutée au journal avec son motif, la ligne affiche les nouvelles valeurs (« corrigée »), compte dans les totaux avec le nouveau montant, et « Voir l’historique » détaille les valeurs d’origine et chaque changement. La date reste dans la même année ; pour changer d’année, annuler puis ressaisir. Une ligne annulée ne se corrige plus.
 - Les exports CSV et PDF indiquent le statut « Corrigée » avec le motif.

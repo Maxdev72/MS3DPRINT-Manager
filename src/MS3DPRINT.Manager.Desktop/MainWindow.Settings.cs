@@ -135,6 +135,7 @@ public partial class MainWindow
         var providers = await Task.Run(() => new WorkspaceStorageReader().Load(workspaceRoot));
         if (!IsWorkspaceLoadCurrent(load)) return;
         AddSettingsCard("atelier", BuildCompanySettingsCard(workspaceRoot));
+        AddSettingsCard("atelier", BuildThresholdsSettingsCard(workspaceRoot));
         AddSettingsCard("atelier", BuildWorkshopSettingsCard(workspaceRoot));
 
         Border Card(string title, string description, Control? headerAction, params Control[] content)
