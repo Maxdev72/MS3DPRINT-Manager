@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
+using MS3DPRINT.Manager.Core.Mobile;
 using MS3DPRINT.Manager.Core.Purchases;
 using MS3DPRINT.Manager.Core.Revenues;
 
@@ -103,6 +104,47 @@ public partial class MainWindow
         => await ExportPurchaseAsync("txt", "Totaux annuels", "*.txt", (year, header) =>
             new UTF8Encoding(true).GetPreamble().Concat(Encoding.UTF8.GetBytes(PurchaseExporter.AnnualSummary(year.Year, PurchaseTotals.Compute(year.Lines), header))).ToArray());
 
+    /// <summary>Imports the purchases noted on the phone, after confirmation. A file already imported (same id) is only filed away.</summary>
+    private async void ImportMobilePurchases_Click(object? sender, RoutedEventArgs e)
+    {
+        var root = WorkspaceRoot;
+        MobileInboxScan scan;
+        try { scan = await Task.Run(() => MobileInbox.Scan(root)); }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        { Notify("Lecture du dossier d’échange impossible : " + exception.Message, error: true); return; }
+        if (scan.Items.Count == 0)
+        {
+            Notify(scan.Errors.Count > 0 ? "Aucune saisie importable : " + scan.Errors[0] : $"Aucune saisie du téléphone en attente. Dossier d’échange : « {MobileExchange.FolderName} » dans l’espace de travail.");
+            return;
+        }
+        var dialog = new MobileInboxWindow(scan.Items, scan.Errors);
+        if (!await dialog.ShowDialog<bool>(this)) return;
+        var chosen = dialog.Selected;
+        var imported = 0; var already = 0; var failures = new List<string>();
+        await Task.Run(() =>
+        {
+            var journal = new PurchaseJournal(root);
+            var known = journal.Years().SelectMany(y => journal.Load(y).Lines).Select(l => l.Entry.Id).ToHashSet();
+            foreach (var item in chosen)
+            {
+                try
+                {
+                    if (known.Contains(item.Purchase.Id)) { already++; MobileInbox.MarkProcessed(root, item); continue; }
+                    var stored = item.PhotoPath is null ? null : RevenueInvoiceArchive.Store(root, item.PhotoPath, null, item.Purchase.PurchasedOn.Year, "purchases");
+                    journal.Append(MobileExchange.ToEntry(item.Purchase, stored));
+                    MobileInbox.MarkProcessed(root, item);
+                    imported++;
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or System.Text.Json.JsonException)
+                { failures.Add($"{item.Purchase.Supplier} : {exception.Message}"); }
+            }
+        });
+        if (chosen.Count > 0) _purchaseYear = chosen.Max(i => i.Purchase.PurchasedOn.Year);
+        if (PurchasesWorkspacePanel.IsVisible) await LoadPurchasesAsync();
+        var message = $"{imported} achat{(imported > 1 ? "s" : "")} importé{(imported > 1 ? "s" : "")}" + (already > 0 ? $", {already} déjà présent{(already > 1 ? "s" : "")}" : "") + (failures.Count > 0 ? $", {failures.Count} en échec : {failures[0]}" : ".");
+        Notify(message, error: failures.Count > 0);
+    }
+
     private async void CancelPurchase_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: PurchaseEntry entry }) return;
@@ -168,7 +210,9 @@ public partial class MainWindow
             var result = await Task.Run(() =>
             {
                 var journal = new PurchaseJournal(root);
-                return (Years: journal.Years(), Year: journal.Load(selectedYear));
+                int waiting;
+                try { waiting = MobileInbox.Scan(root).Items.Count; } catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException) { waiting = 0; }
+                return (Years: journal.Years(), Year: journal.Load(selectedYear), Waiting: waiting);
             });
             if (!IsWorkspaceLoadCurrent(load)) return;
             var years = result.Years.Append(DateTime.Today.Year).Append(selectedYear).Distinct().OrderByDescending(y => y).ToArray();
@@ -180,6 +224,7 @@ public partial class MainWindow
             var valid = lines.Count(l => !l.IsCancelled);
             _purchasePageSummary.Text = $"{valid} achat{(valid > 1 ? "s" : "")} en {selectedYear} · total payé {RevenueExporter.Money(summary.Total)}"
                 + (summary.CancelledCount > 0 ? $" · {summary.CancelledCount} annulé{(summary.CancelledCount > 1 ? "s" : "")}" : "")
+                + (result.Waiting > 0 ? $" · {result.Waiting} saisie{(result.Waiting > 1 ? "s" : "")} du téléphone à importer" : "")
                 + (result.Year.Errors.Count > 0 ? $" · {result.Year.Errors.Count} ligne{(result.Year.Errors.Count > 1 ? "s" : "")} illisible{(result.Year.Errors.Count > 1 ? "s" : "")}" : "");
             Control Warning() => CreateReadErrorState("Certaines lignes du registre sont illisibles", "Le fichier est conservé tel quel. Les autres lignes restent affichées. Après correction ou synchronisation, réessayez.", new IOException(string.Join(Environment.NewLine, result.Year.Errors)), LoadPurchasesAsync, compact: true);
             Control Header() => result.Year.Errors.Count == 0 ? CreateCompactTableHeader(PurchaseRowColumns, "DATE", "FOURNISSEUR", "LIBELLÉ", "MONTANT", "RÈGLEMENT", "PIÈCE", "ACTIONS")

@@ -2,6 +2,10 @@
 
 ## 25 octobre 2026
 
+### Échange avec l’application mobile : réception des achats
+- Préparation de l’application compagnon Android : le téléphone dépose ses saisies (un petit fichier et la photo du ticket) dans le dossier « Echanges mobile » de l’espace de travail, synchronisé par Nextcloud. Il n’écrit jamais dans les registres.
+- Page Achats > « Téléphone » : liste les saisies reçues, avec un récapitulatif dans l’en-tête de la page. Après confirmation, chaque achat entre dans le registre avec la photo comme justificatif ; une référence absente devient « Ticket du jj/mm/aaaa ». Un achat déjà importé n’est pas dupliqué, les fichiers traités passent dans le sous-dossier « Traites » et les fichiers incomplets (photo pas encore synchronisée) sont signalés.
+
 ### Rattrapage du livre, seuils d’activité et bilan par projet
 - Page Recettes > « Factures » : le logiciel parcourt l’espace de travail, lit les factures PDF (Indy, ancien modèle, modèle FAC-AAAA-NNN) et liste celles qui n’ont pas de recette. Rien n’est coché par défaut : on coche les factures payées, on vérifie la date d’encaissement, la nature et le règlement, puis on enregistre. La facture reste à sa place et devient le justificatif de la ligne. Une même facture classée à deux endroits n’apparaît qu’une fois ; les factures mixtes (vente et prestation) se saisissent avec « Ajouter » pour indiquer la part marchandises.
 - Paramètres > Atelier > « Seuils d’activité » : on saisit les plafonds de son régime (micro et franchise de TVA, total et prestations). La page Recettes affiche le niveau atteint pour l’année affichée, en alerte dès 80 % et à nouveau une fois le plafond atteint. Aucun montant légal n’est imposé par le logiciel.
