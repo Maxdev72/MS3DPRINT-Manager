@@ -2,6 +2,12 @@
 
 ## 25 octobre 2026
 
+### Livre de recettes (version 1)
+- Nouvelle page « Recettes » : registre chronologique des encaissements, avec date d’encaissement, client, libellé, nature (marchandises, prestations ou mixte), mode de règlement, numéro de facture et projet. Un sélecteur d’année et le total encaissé sont affichés en tête.
+- Le journal est en ajout seul (`.ms3dprint-manager/revenues/AAAA.jsonl`, inclus dans les sauvegardes) : aucune ligne n’est supprimée ni modifiée. Une recette erronée s’annule avec un motif obligatoire ; elle reste visible, barrée, et sort des totaux. Une ligne illisible est signalée sans masquer les autres.
+- Exports de l’année : PDF imprimable paginé, CSV/Excel (séparateur point-virgule, cellules protégées contre l’interprétation en formule) et synthèse des totaux de déclaration par mois et par nature. L’en-tête (entreprise, entrepreneur, SIRET) se règle depuis la page.
+- Un numéro de facture déjà présent est signalé sans bloquer. L’analyse automatique des PDF Indy est prévue pour la version 2. Conception : docs/superpowers/specs/2026-10-25-livre-de-recettes-design.md.
+
 ### Raccourcis de la liste des fichiers
 - Ctrl+A sélectionne tous les fichiers du résultat filtré, sur toutes les pages ; Échap désélectionne. F2 ouvre le renommage d’un seul fichier sélectionné et Suppr reprend la confirmation de corbeille groupée.
 - Ces raccourcis sont limités à la liste : les champs de saisie et menus conservent leur comportement. Les confirmations, imports, traitements et vues inactives bloquent les commandes de fichiers ; Maj+Suppr n’ajoute aucune suppression définitive.

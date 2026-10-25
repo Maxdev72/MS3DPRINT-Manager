@@ -45,6 +45,7 @@ public partial class MainWindow
         FilamentsWorkspacePanel.IsVisible = destination == "Filaments";
         EstimatesWorkspacePanel.IsVisible = destination == "Estimations";
         PrintersWorkspacePanel.IsVisible = destination == "Imprimantes";
+        RevenuesWorkspacePanel.IsVisible = destination == "Recettes";
         ModelSearchWorkspacePanel.IsVisible = destination == "Modèles 3D";
         TrashWorkspacePanel.IsVisible = destination == "Corbeille";
         SettingsWorkspacePanel.IsVisible = destination == "Paramètres";
@@ -55,7 +56,7 @@ public partial class MainWindow
         RevealWorkspace(destination switch
         {
             "Projets" => ProjectsWorkspacePanel, "Clients" => ClientsWorkspacePanel, "Collections" => CollectionsWorkspacePanel,
-            "Filaments" => FilamentsWorkspacePanel, "Estimations" => EstimatesWorkspacePanel, "Imprimantes" => PrintersWorkspacePanel,
+            "Filaments" => FilamentsWorkspacePanel, "Estimations" => EstimatesWorkspacePanel, "Imprimantes" => PrintersWorkspacePanel, "Recettes" => RevenuesWorkspacePanel,
             "Modèles 3D" => ModelSearchWorkspacePanel, "Corbeille" => TrashWorkspacePanel, "Paramètres" => SettingsWorkspacePanel, _ => DashboardContent
         });
         _selectedNavigationButton = NavigationButtons().FirstOrDefault(button => button.Tag as string == destination);
@@ -153,6 +154,8 @@ public partial class MainWindow
                 await LoadFilamentsAsync();
             else if (estimatesVisible)
                 await LoadEstimateFilamentsAsync();
+            else if (destination == "Recettes")
+                await LoadRevenuesAsync();
             else if (printersVisible)
                 await LoadPrintersAsync();
             else if (trashVisible)

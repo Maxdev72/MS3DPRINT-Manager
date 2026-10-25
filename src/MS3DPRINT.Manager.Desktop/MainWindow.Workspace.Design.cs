@@ -20,9 +20,10 @@ public partial class MainWindow
     {
         Classes.Add("workbench-ui");
         DecorateInventoryPage(PrintersWorkspacePanel, "Votre parc d’imprimantes", _printerPageSummary, "Nouvelle imprimante");
+        DecorateInventoryPage(RevenuesWorkspacePanel, "Livre des recettes", _revenuePageSummary, "Enregistrer un encaissement");
         DecorateInventoryPage(FilamentsWorkspacePanel, "Matières de l’atelier", _filamentPageSummary, "Nouveau filament");
         DecorateInventoryPage(TrashWorkspacePanel, "Éléments supprimés", _trashPageSummary, null);
-        foreach (var panel in new[] { ProjectsWorkspacePanel, ClientsWorkspacePanel, CollectionsWorkspacePanel, FilamentsWorkspacePanel, PrintersWorkspacePanel, TrashWorkspacePanel, FolderWorkspacePanel })
+        foreach (var panel in new[] { ProjectsWorkspacePanel, ClientsWorkspacePanel, CollectionsWorkspacePanel, FilamentsWorkspacePanel, PrintersWorkspacePanel, RevenuesWorkspacePanel, TrashWorkspacePanel, FolderWorkspacePanel })
             panel.Classes.Add("workspace-sheet");
     }
 

@@ -116,7 +116,7 @@ public partial class MainWindow
     private IEnumerable<Control> WorkspacePanels() =>
     [
         DashboardStats, DashboardContent, ProjectsWorkspacePanel, ClientsWorkspacePanel, CollectionsWorkspacePanel,
-        FilamentsWorkspacePanel, EstimatesWorkspacePanel, PrintersWorkspacePanel, ModelSearchWorkspacePanel, TrashWorkspacePanel, SettingsWorkspacePanel
+        FilamentsWorkspacePanel, EstimatesWorkspacePanel, PrintersWorkspacePanel, RevenuesWorkspacePanel, ModelSearchWorkspacePanel, TrashWorkspacePanel, SettingsWorkspacePanel
     ];
 
     private async Task LoadFolderWorkspaceAsync()

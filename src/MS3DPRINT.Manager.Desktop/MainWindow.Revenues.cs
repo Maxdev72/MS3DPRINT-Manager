@@ -1,0 +1,178 @@
+using System.Text;
+using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.Interactivity;
+using Avalonia.Media;
+using Avalonia.Platform.Storage;
+using MS3DPRINT.Manager.Core.Clients;
+using MS3DPRINT.Manager.Core.Revenues;
+
+namespace MS3DPRINT.Manager.Desktop;
+
+/// <summary>Revenue book page: chronological collections, traceable cancellation, exports.</summary>
+public partial class MainWindow
+{
+    private readonly TextBlock _revenuePageSummary = WorkspaceSummary();
+    private bool _populatingRevenueYears;
+    private int _revenueYear = DateTime.Today.Year;
+    private RevenueYear? _revenueLoaded;
+
+    private const string RevenueRowColumns = "90,1.2*,1.8*,120,110,120,64";
+
+    private async void RefreshRevenues_Click(object? sender, RoutedEventArgs e) => await LoadRevenuesAsync();
+
+    private async void RevenueYear_Changed(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_populatingRevenueYears || RevenueYearBox.SelectedItem is not int year || year == _revenueYear) return;
+        _revenueYear = year;
+        await LoadRevenuesAsync();
+    }
+
+    private async void CreateRevenue_Click(object? sender, RoutedEventArgs e)
+    {
+        var root = WorkspaceRoot;
+        string[] clients;
+        try { clients = await Task.Run(() => new ClientCatalog(new ClientProfileStore(new MS3DPRINT.Manager.Core.Workspace.WorkspaceMetadataPaths(root))).Load(root).Select(c => c.DisplayName).Where(n => !string.IsNullOrWhiteSpace(n)).Order().ToArray()); }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or System.Text.Json.JsonException) { clients = []; }
+        var dialog = new RevenueEntryWindow(clients, DateOnly.FromDateTime(DateTime.Today));
+        if (!await dialog.ShowDialog<bool>(this) || dialog.Result is not { } entry) return;
+        try
+        {
+            var journal = new RevenueJournal(root);
+            var duplicate = await Task.Run(() => journal.IsInvoiceKnown(entry.InvoiceNumber));
+            await Task.Run(() => journal.Append(entry));
+            _revenueYear = entry.ReceivedOn.Year;
+            await LoadRevenuesAsync();
+            Notify(duplicate ? $"Encaissement enregistré. Attention : la facture {entry.InvoiceNumber} figure déjà dans le livre." : "Encaissement enregistré.", error: duplicate);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { Notify(exception.Message, error: true); }
+    }
+
+    private async void CancelRevenue_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: RevenueEntry entry }) return;
+        var dialog = new RevenueCancelWindow(entry);
+        if (!await dialog.ShowDialog<bool>(this)) return;
+        try
+        {
+            var root = WorkspaceRoot;
+            var reason = dialog.Reason;
+            await Task.Run(() => new RevenueJournal(root).Cancel(entry, reason, DateTimeOffset.Now));
+            await LoadRevenuesAsync();
+            Notify("Recette annulée. Elle reste visible dans le livre.");
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { Notify(exception.Message, error: true); }
+    }
+
+    private async void EditRevenueHeader_Click(object? sender, RoutedEventArgs e)
+    {
+        var root = WorkspaceRoot;
+        try
+        {
+            var dialog = new RevenueHeaderWindow(new RevenueHeaderStore(root).Load());
+            if (!await dialog.ShowDialog<bool>(this)) return;
+            new RevenueHeaderStore(root).Save(dialog.Result);
+            Notify("En-tête enregistré.");
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or System.Text.Json.JsonException)
+        { Notify(exception.Message, error: true); }
+    }
+
+    private async void ExportRevenuePdfMenu_Click(object? sender, RoutedEventArgs e)
+        => await ExportRevenueAsync("pdf", "Livre PDF", "*.pdf", (year, header) => RevenueExporter.ToPdf(year, header));
+
+    private async void ExportRevenueCsvMenu_Click(object? sender, RoutedEventArgs e)
+        => await ExportRevenueAsync("csv", "Fichier CSV", "*.csv", (year, _) => new UTF8Encoding(true).GetPreamble().Concat(Encoding.UTF8.GetBytes(RevenueExporter.ToCsv(year))).ToArray());
+
+    private async void ExportRevenueDeclarationMenu_Click(object? sender, RoutedEventArgs e)
+        => await ExportRevenueAsync("txt", "Synthèse de déclaration", "*.txt", (year, header) =>
+            new UTF8Encoding(true).GetPreamble().Concat(Encoding.UTF8.GetBytes(RevenueExporter.DeclarationSummary(year.Year, RevenueTotals.Compute(year.Lines), header))).ToArray(),
+            "synthese-declaration");
+
+    private async Task ExportRevenueAsync(string extension, string typeName, string pattern, Func<RevenueYear, RevenueHeader, byte[]> build, string stem = "livre-des-recettes")
+    {
+        var root = WorkspaceRoot;
+        var year = _revenueYear;
+        try
+        {
+            var chosen = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = "Exporter le livre des recettes " + year, SuggestedFileName = $"{stem}-{year}.{extension}", DefaultExtension = extension,
+                FileTypeChoices = [new FilePickerFileType(typeName) { Patterns = [pattern] }]
+            });
+            if (chosen?.TryGetLocalPath() is not { } path) return;
+            var bytes = await Task.Run(() => build(new RevenueJournal(root).Load(year), new RevenueHeaderStore(root).Load()));
+            await File.WriteAllBytesAsync(path, bytes);
+            Notify("Export enregistré : " + Path.GetFileName(path));
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or System.Text.Json.JsonException)
+        { Notify("Export impossible : " + exception.Message, error: true); }
+    }
+
+    private async Task LoadRevenuesAsync()
+    {
+        var root = WorkspaceRoot;
+        var load = StartWorkspaceLoad("revenues", root);
+        RevenueList.Children.Clear();
+        _revenuePageSummary.Text = "Chargement du livre…";
+        try
+        {
+            var selectedYear = _revenueYear;
+            var result = await Task.Run(() =>
+            {
+                var journal = new RevenueJournal(root);
+                return (Years: journal.Years(), Year: journal.Load(selectedYear));
+            });
+            if (!IsWorkspaceLoadCurrent(load)) return;
+            var years = result.Years.Append(DateTime.Today.Year).Append(selectedYear).Distinct().OrderByDescending(y => y).ToArray();
+            _populatingRevenueYears = true;
+            try { RevenueYearBox.ItemsSource = years; RevenueYearBox.SelectedItem = selectedYear; }
+            finally { _populatingRevenueYears = false; }
+            _revenueLoaded = result.Year;
+            var lines = result.Year.Lines;
+            var summary = RevenueTotals.Compute(lines);
+            var valid = lines.Count(l => !l.IsCancelled);
+            _revenuePageSummary.Text = $"{valid} recette{(valid > 1 ? "s" : "")} en {selectedYear} · total encaissé {RevenueExporter.Money(summary.Total)} (marchandises {RevenueExporter.Money(summary.Goods)}, prestations {RevenueExporter.Money(summary.Services)})"
+                + (summary.CancelledCount > 0 ? $" · {summary.CancelledCount} annulée{(summary.CancelledCount > 1 ? "s" : "")}" : "")
+                + (result.Year.Errors.Count > 0 ? $" · {result.Year.Errors.Count} ligne{(result.Year.Errors.Count > 1 ? "s" : "")} illisible{(result.Year.Errors.Count > 1 ? "s" : "")}" : "");
+            Control Warning() => CreateReadErrorState("Certaines lignes du livre sont illisibles", "Le fichier est conservé tel quel. Les autres lignes restent affichées. Après correction ou synchronisation, réessayez.", new IOException(string.Join(Environment.NewLine, result.Year.Errors)), LoadRevenuesAsync, compact: true);
+            Control Header() => result.Year.Errors.Count == 0 ? CreateCompactTableHeader(RevenueRowColumns, "DATE", "CLIENT", "LIBELLÉ", "NATURE", "MONTANT", "PIÈCE", "ACTIONS")
+                : new StackPanel { Children = { Warning(), CreateCompactTableHeader(RevenueRowColumns, "DATE", "CLIENT", "LIBELLÉ", "NATURE", "MONTANT", "PIÈCE", "ACTIONS") } };
+            if (lines.Count == 0)
+            {
+                if (result.Year.Errors.Count > 0) RevenueList.Children.Add(Warning());
+                else RevenueList.Children.Add(CreateEmptyState("IconBook", $"Aucune recette en {selectedYear}", "Enregistrez chaque paiement reçu, avec sa date d’encaissement et le numéro de facture.", "Enregistrer un encaissement", CreateRevenue_Click));
+                return;
+            }
+            PagedRows.Render(RevenueList, lines.Reverse().ToArray(), line =>
+            {
+                var entry = line.Entry;
+                Button? actions = null;
+                if (!line.IsCancelled)
+                {
+                    var cancel = new Button { Content = Icons.Label("IconClose", "Annuler la recette"), Tag = entry, Classes = { "menu-destructive" } };
+                    cancel.Click += CancelRevenue_Click;
+                    actions = CreateOverflowActions(cancel);
+                }
+                var label = line.IsCancelled ? $"{entry.Label} — annulée : {line.Cancellation!.Reason}" : entry.Label;
+                var cells = new[]
+                {
+                    CreateCompactTableCell(entry.ReceivedOn.ToString("dd/MM/yyyy")), CreateCompactTableCell(entry.ClientName ?? "—"), CreateCompactTableCell(label, prominent: true),
+                    CreateCompactTableCell(RevenueExporter.NatureName(entry.Nature)), CreateCompactTableCell(RevenueExporter.Money(entry.Amount)), CreateCompactTableCell(entry.InvoiceNumber)
+                };
+                if (line.IsCancelled)
+                    foreach (var cell in cells) { cell.TextDecorations = TextDecorations.Strikethrough; cell.Opacity = 0.6; }
+                return CreateActionRow(RevenueRowColumns, null, actions, cells);
+            }, Header, root + "|" + selectedYear);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException)
+        {
+            if (!IsWorkspaceLoadCurrent(load)) return;
+            _revenuePageSummary.Text = "Lecture du livre indisponible";
+            RevenueList.Children.Clear();
+            RevenueList.Children.Add(CreateReadErrorState("Livre indisponible", "Vérifiez l’accès au dossier de l’atelier, puis réessayez.", exception, LoadRevenuesAsync));
+        }
+    }
+}
