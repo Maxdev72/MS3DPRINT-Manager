@@ -73,14 +73,14 @@ public static class RevenueExporter
     {
         ArgumentNullException.ThrowIfNull(year);
         var builder = new StringBuilder();
-        builder.AppendLine("Date d’encaissement;Client;Libellé;Nature;Marchandises;Prestations;Montant;Mode de règlement;Pièce justificative;Projet;Statut;Motif d’annulation");
+        builder.AppendLine("Date d’encaissement;Client;Libellé;Nature;Marchandises;Prestations;Montant;Mode de règlement;Pièce justificative;Projet;Statut;Motif (annulation ou correction)");
         foreach (var line in year.Lines)
         {
             var e = line.Entry;
             builder.AppendJoin(';',
                 e.ReceivedOn.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture), Text(e.ClientName), Text(e.Label), NatureName(e.Nature),
                 Number(e.GoodsAmount), Number(e.ServicesAmount), Number(e.Amount), Text(e.PaymentMethod), Text(e.InvoiceNumber), Text(e.ProjectRef),
-                line.IsCancelled ? "Annulée" : "Valide", Text(line.Cancellation?.Reason)).AppendLine();
+                line.IsCancelled ? "Annulée" : line.IsCorrected ? "Corrigée" : "Valide", Text(line.Cancellation?.Reason ?? line.Corrections?.LastOrDefault()?.Reason)).AppendLine();
         }
         return builder.ToString();
     }
@@ -119,7 +119,7 @@ public static class RevenueExporter
         {
             var e = line.Entry;
             rows.Add(new PdfLine([e.ReceivedOn.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture), e.ClientName ?? "", e.Label, NatureName(e.Nature), Money(e.GoodsAmount),
-                Money(e.ServicesAmount), Money(e.Amount), e.PaymentMethod, e.InvoiceNumber, line.IsCancelled ? "Annulée : " + line.Cancellation!.Reason : "Valide"], Struck: line.IsCancelled));
+                Money(e.ServicesAmount), Money(e.Amount), e.PaymentMethod, e.InvoiceNumber, line.IsCancelled ? "Annulée : " + line.Cancellation!.Reason : line.IsCorrected ? "Corrigée : " + line.Corrections![^1].Reason : "Valide"], Struck: line.IsCancelled));
         }
         rows.Add(new PdfLine([]));
         rows.Add(new PdfLine(["", "TOTAUX PAR MOIS", "", "", "Marchandises", "Prestations", "Total"], Bold: true));

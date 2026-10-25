@@ -49,6 +49,31 @@ public sealed class IndyInvoiceReaderTests : IDisposable
     }
 
     [Fact]
+    public void Parse_reads_the_spreadsheet_style_invoice_with_only_a_total_excluding_tax()
+    {
+        var data = IndyInvoiceReader.Parse("FACTURE\nFAC-2026-006\nDate : 30/07/2026\nÉchéance : 29/08/2026\nSous-total HT 59,12 €\nTOTAL HT 1 059,12 €\nTVA non applicable, art. 293 B du CGI.")!;
+        Assert.Equal("FAC-2026-006", data.InvoiceNumber);
+        Assert.Equal(new DateOnly(2026, 7, 30), data.IssuedOn);
+        Assert.Equal(1059.12m, data.TotalTtc);
+        Assert.Null(IndyInvoiceReader.Parse("Devis DEV-2026-001 Date : 30/07/2026 TOTAL HT 10,00 €")?.InvoiceNumber);
+    }
+
+    [Fact]
+    public void Read_finds_the_recipient_under_the_destinataire_heading()
+    {
+        var pdf = Path.Combine(_root, "plain.pdf");
+        var rows = new List<PdfLine>
+        {
+            new(["FACTURE"]), new(["FAC-2026-006"]), new(["Date : 30/07/2026"]),
+            new(["", "", "", "", "", "", "", "DESTINATAIRE"]), new(["", "", "", "", "", "", "", "Atelier Martin"]), new(["", "", "", "", "", "", "", "Averton"]),
+            new(["TOTAL HT 59,12 €"]),
+        };
+        File.WriteAllBytes(pdf, SimplePdfWriter.Write("Maxime", [], new PdfLine(["x"]), rows, [0, 52, 160, 285, 345, 410, 475, 540, 612, 690], [60, 10, 10, 10, 10, 10, 10, 30, 10, 10]));
+        var data = IndyInvoiceReader.Read(pdf)!;
+        Assert.Equal("FAC-2026-006", data.InvoiceNumber); Assert.Equal("Atelier Martin", data.ClientName); Assert.Equal(59.12m, data.TotalTtc);
+    }
+
+    [Fact]
     public void Parse_returns_null_when_nothing_looks_like_an_invoice_and_keeps_partial_data_otherwise()
     {
         Assert.Null(IndyInvoiceReader.Parse("Relevé de compte sans rapport"));

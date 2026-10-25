@@ -14,13 +14,29 @@ public static class PurchaseExporter
     {
         ArgumentNullException.ThrowIfNull(year);
         var builder = new StringBuilder();
-        builder.AppendLine("Date d’achat;Fournisseur;Libellé;Montant;Mode de règlement;Pièce justificative;Projet;Statut;Motif d’annulation");
+        builder.AppendLine("Date d’achat;Fournisseur;Libellé;Montant;Mode de règlement;Pièce justificative;Projet;Statut;Motif (annulation ou correction)");
         foreach (var line in year.Lines)
         {
             var e = line.Entry;
             builder.AppendJoin(';', e.PurchasedOn.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture), Text(e.Supplier), Text(e.Label), e.Amount.ToString("0.00", French),
-                Text(e.PaymentMethod), Text(e.Reference), Text(e.ProjectRef), line.IsCancelled ? "Annulé" : "Valide", Text(line.Cancellation?.Reason)).AppendLine();
+                Text(e.PaymentMethod), Text(e.Reference), Text(e.ProjectRef), line.IsCancelled ? "Annulé" : line.IsCorrected ? "Corrigé" : "Valide", Text(line.Cancellation?.Reason ?? line.Corrections?.LastOrDefault()?.Reason)).AppendLine();
         }
+        return builder.ToString();
+    }
+
+    /// <summary>Yearly purchase totals by month (cancelled purchases excluded), as a semicolon-separated text.</summary>
+    public static string AnnualSummary(int year, PurchaseSummary summary, RevenueHeader header)
+    {
+        ArgumentNullException.ThrowIfNull(summary);
+        ArgumentNullException.ThrowIfNull(header);
+        var builder = new StringBuilder();
+        builder.AppendLine($"Achats payés {year}");
+        if (!string.IsNullOrWhiteSpace(header.BusinessName)) builder.AppendLine(header.BusinessName + (string.IsNullOrWhiteSpace(header.Siret) ? "" : " — SIRET " + header.Siret));
+        builder.AppendLine();
+        builder.AppendLine("Mois;Total des achats");
+        for (var month = 0; month < 12; month++) builder.AppendLine($"{MonthNames[month]};{RevenueExporter.Money(summary.Months[month])}");
+        builder.AppendLine($"Total {year};{RevenueExporter.Money(summary.Total)}");
+        if (summary.CancelledCount > 0) builder.AppendLine($"{summary.CancelledCount} achat(s) annulé(s) exclu(s) des totaux.");
         return builder.ToString();
     }
 
@@ -40,7 +56,7 @@ public static class PurchaseExporter
         {
             var e = line.Entry;
             rows.Add(new PdfLine([e.PurchasedOn.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture), e.Supplier, e.Label, RevenueExporter.Money(e.Amount), e.PaymentMethod,
-                e.Reference, e.ProjectRef ?? "", line.IsCancelled ? "Annulé : " + line.Cancellation!.Reason : "Valide"], Struck: line.IsCancelled));
+                e.Reference, e.ProjectRef ?? "", line.IsCancelled ? "Annulé : " + line.Cancellation!.Reason : line.IsCorrected ? "Corrigé : " + line.Corrections![^1].Reason : "Valide"], Struck: line.IsCancelled));
         }
         rows.Add(new PdfLine([]));
         rows.Add(new PdfLine(["", "TOTAUX PAR MOIS", "", "Total"], Bold: true));

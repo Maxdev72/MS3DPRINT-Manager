@@ -2,6 +2,12 @@
 
 ## 25 octobre 2026
 
+### Livre de recettes et registre des achats : corrections et totaux
+- Corriger une ligne : le menu « ⋯ » propose « Corriger » sur chaque recette et chaque achat. Le formulaire est pré-rempli et demande un motif. Rien n’est effacé : la correction est ajoutée au journal avec son motif, la ligne affiche les nouvelles valeurs (« corrigée »), compte dans les totaux avec le nouveau montant, et « Voir l’historique » détaille les valeurs d’origine et chaque changement. La date reste dans la même année ; pour changer d’année, annuler puis ressaisir. Une ligne annulée ne se corrige plus.
+- Les exports CSV et PDF indiquent le statut « Corrigée » avec le motif.
+- Registre des achats : nouvel export « Totaux annuels » (total payé par mois et pour l’année, achats annulés exclus).
+- Lecture des factures : un troisième modèle de facture (« FAC-2026-006 », date, total HT sans TVA, destinataire) est reconnu. Les 65 factures de l’espace de travail de l’atelier sont désormais lues entièrement.
+
 ### Classement des fichiers enregistrés par les logiciels externes
 - La fiche d’un projet repère les fichiers `.3mf` enregistrés par Bambu Studio ou OrcaSlicer ailleurs que dans le dossier 3MF du projet (par exemple à côté du STL ouvert) et propose de les classer dans le dossier prévu par le modèle de projet, avec le nom `nom__RÉFÉRENCE.3mf`. L’origine est reconnue par le contenu du fichier ; le STL source est indiqué lorsqu’il est retrouvé dans le projet.
 - Rien ne bouge sans clic sur « Classer » ; « Ignorer » mémorise le choix. Un fichier modifié depuis moins de 15 secondes, ouvert par un autre programme ou d’une autre origine (export CAO) n’est jamais proposé. Aucun écrasement : un nom déjà pris reçoit un numéro.
@@ -17,7 +23,7 @@
 - Depuis la fiche d’un projet, « Enregistrer un encaissement » propose le client, la référence du projet et le prix de la dernière estimation.
 - Nouvelle page « Achats » : registre chronologique des achats de matières et fournitures (date, fournisseur, libellé, montant, mode de règlement, pièce justificative, projet), obligatoire pour la vente de marchandises. Même principe que le livre : journal en ajout seul (`.ms3dprint-manager/purchases/AAAA.jsonl`, inclus dans les sauvegardes), annulation avec motif, justificatif PDF ou image copié dans le dossier de pièces, exports PDF et CSV avec l’en-tête de l’atelier.
 - Paramètres > Atelier : nouvelle carte « Mon entreprise » (entreprise, entrepreneur, SIRET, adresse, e-mail, téléphone), reprise dans l’en-tête des PDF du livre des recettes et du registre des achats.
-- L’import des factures lit aussi les factures d’acompte et l’ancien modèle de facture (« FACTURE N° 25-10-31 », date en toutes lettres) : 61 des 65 factures de l’espace de travail de l’atelier sont lues entièrement, les autres se saisissent à la main.
+- L’import des factures lit aussi les factures d’acompte et l’ancien modèle de facture (« FACTURE N° 25-10-31 », date en toutes lettres) : les factures d’acompte et l’ancien modèle sont lus.
 - Conception : docs/superpowers/specs/2026-10-25-livre-de-recettes-design.md.
 
 ### Raccourcis de la liste des fichiers

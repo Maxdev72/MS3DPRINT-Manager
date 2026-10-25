@@ -29,28 +29,56 @@ public sealed class RevenueEntryWindow : DialogWindow
     private readonly TextBox _project = new() { PlaceholderText = "Référence du projet (facultatif)" };
     private readonly TextBlock _error = FormKit.ErrorText();
     private readonly TextBlock _invoiceNote = new() { TextWrapping = Avalonia.Media.TextWrapping.Wrap, Classes = { "muted" }, IsVisible = false };
+    private readonly TextBox _correctionReason = new() { PlaceholderText = "Ex. Montant erroné, mauvaise date" };
+    private readonly RevenueEntry? _existing;
 
     public RevenueEntry? Result { get; private set; }
+    /// <summary>Why the line was corrected; only set when the window edits an existing line.</summary>
+    public string CorrectionReason => _correctionReason.Text?.Trim() ?? string.Empty;
     /// <summary>The PDF the form was pre-filled from; the caller copies it into the workspace once the entry is saved.</summary>
     public string? SourcePdfPath { get; private set; }
 
-    public RevenueEntryWindow(IReadOnlyList<string> clientNames, DateOnly today, string? invoicePdf = null)
+    public RevenueEntryWindow(IReadOnlyList<string> clientNames, DateOnly today, string? invoicePdf = null, RevenueEntry? existing = null)
     {
-        Title = "Enregistrer un encaissement"; Width = 520; Height = 860; MinWidth = 440;
+        _existing = existing;
+        Title = existing is null ? "Enregistrer un encaissement" : "Corriger un encaissement"; Width = 520; Height = existing is null ? 860 : 960; MinWidth = 440;
         _date.Text = today.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
         _client.ItemsSource = clientNames;
         _goods.IsVisible = false;
         _nature.SelectionChanged += (_, _) => { _goods.IsVisible = SelectedNature == RevenueNature.Mixed; FormKit.ClearError(_error); };
-        var save = new Button { Content = "Enregistrer" };
+        var save = new Button { Content = existing is null ? "Enregistrer" : "Enregistrer la correction" };
         save.Click += Save_Click;
-        var import = new Button { Content = Icons.Label("IconUpload", "Importer une facture PDF…", 16) };
+        var import = new Button { Content = Icons.Label("IconUpload", existing is null ? "Importer une facture PDF…" : "Remplacer la facture PDF…", 16) };
         import.Click += async (_, _) => await PickInvoiceAsync();
-        Layout("Enregistrer un encaissement", "Notez le paiement à sa date de réception, pas à la date de la facture.",
-            [import, _invoiceNote, FormKit.Field("Date d’encaissement", _date), FormKit.Field("Client", _client), FormKit.Field("Libellé", _label),
-             FormKit.Field("Montant encaissé", _amount, "€"), FormKit.Field("Nature", _nature), FormKit.Field("Part marchandises", _goods, "€", "Le reste est compté en prestations."),
-             FormKit.Field("Mode de règlement", _payment), FormKit.Field("Pièce justificative (facture)", _invoice), FormKit.Field("Projet", _project), _error], save);
+        var body = new List<Control>
+        {
+            import, _invoiceNote, FormKit.Field("Date d’encaissement", _date), FormKit.Field("Client", _client), FormKit.Field("Libellé", _label),
+            FormKit.Field("Montant encaissé", _amount, "€"), FormKit.Field("Nature", _nature), FormKit.Field("Part marchandises", _goods, "€", "Le reste est compté en prestations."),
+            FormKit.Field("Mode de règlement", _payment), FormKit.Field("Pièce justificative (facture)", _invoice), FormKit.Field("Projet", _project), _error
+        };
+        if (existing is not null)
+        {
+            body.Insert(0, FormKit.Field("Motif de la correction", _correctionReason, hint: "Les valeurs d’origine et ce motif restent consultables dans l’historique de la ligne."));
+            _correctionReason.TextChanged += (_, _) => FormKit.ClearError(_error);
+            Fill(existing);
+        }
+        Layout(existing is null ? "Enregistrer un encaissement" : "Corriger un encaissement",
+            existing is null ? "Notez le paiement à sa date de réception, pas à la date de la facture." : "La ligne garde son historique : rien n’est effacé, la correction et son motif sont ajoutés au livre.",
+            body, save);
         foreach (var field in new[] { _date, _label, _amount, _goods, _invoice, _project }) field.TextChanged += (_, _) => FormKit.ClearError(_error);
         if (invoicePdf is not null) Opened += (_, _) => LoadInvoice(invoicePdf);
+    }
+
+    private void Fill(RevenueEntry entry)
+    {
+        _date.Text = entry.ReceivedOn.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
+        _client.Text = entry.ClientName; _label.Text = entry.Label; _amount.Text = entry.Amount.ToString("0.00", French);
+        _nature.SelectedIndex = Math.Max(0, Array.FindIndex(Natures, n => n.Nature == entry.Nature));
+        _goods.IsVisible = entry.Nature == RevenueNature.Mixed;
+        if (entry.Nature == RevenueNature.Mixed) _goods.Text = entry.GoodsAmount.ToString("0.00", French);
+        var methods = PaymentMethods.Contains(entry.PaymentMethod) ? PaymentMethods : PaymentMethods.Append(entry.PaymentMethod).ToArray();
+        _payment.ItemsSource = methods; _payment.SelectedItem = entry.PaymentMethod;
+        _invoice.Text = entry.InvoiceNumber; _project.Text = entry.ProjectRef;
     }
 
     public void Suggest(RevenueSuggestion suggestion)
@@ -92,10 +120,14 @@ public sealed class RevenueEntryWindow : DialogWindow
 
     private void Save_Click(object? sender, RoutedEventArgs e)
     {
+        if (_existing is not null && string.IsNullOrWhiteSpace(_correctionReason.Text))
+        { FormKit.ShowError(_error, _correctionReason, "Indiquez le motif de la correction."); return; }
         if (!DateOnly.TryParseExact(_date.Text?.Trim(), "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
         { FormKit.ShowError(_error, _date, "Saisissez la date au format jj/mm/aaaa."); return; }
         if (date > DateOnly.FromDateTime(DateTime.Today))
         { FormKit.ShowError(_error, _date, "La date d’encaissement ne peut pas être dans le futur."); return; }
+        if (_existing is not null && date.Year != _existing.ReceivedOn.Year)
+        { FormKit.ShowError(_error, _date, $"La date doit rester en {_existing.ReceivedOn.Year}. Pour changer d’année, annulez la recette puis saisissez-la à nouveau."); return; }
         if (string.IsNullOrWhiteSpace(_label.Text)) { FormKit.ShowError(_error, _label, "Renseignez un libellé."); return; }
         if (!FilamentPrice.TryParse(_amount.Text, out var amount) || amount <= 0)
         { FormKit.ShowError(_error, _amount, "Saisissez un montant strictement positif."); return; }
@@ -112,8 +144,9 @@ public sealed class RevenueEntryWindow : DialogWindow
         }
         if (string.IsNullOrWhiteSpace(_invoice.Text)) { FormKit.ShowError(_error, _invoice, "Renseignez le numéro de facture (ou une référence interne)."); return; }
         var client = _client.Text?.Trim();
-        Result = new RevenueEntry(Guid.NewGuid(), date, _label.Text.Trim(), amount, nature, goods, services, _payment.SelectedItem as string ?? "Autre", null,
-            string.IsNullOrWhiteSpace(client) ? null : client, string.IsNullOrWhiteSpace(_project.Text) ? null : _project.Text.Trim(), _invoice.Text.Trim(), SourcePdfPath, DateTimeOffset.UtcNow);
+        Result = new RevenueEntry(_existing?.Id ?? Guid.NewGuid(), date, _label.Text.Trim(), amount, nature, goods, services, _payment.SelectedItem as string ?? "Autre", _existing?.ClientId,
+            string.IsNullOrWhiteSpace(client) ? null : client, string.IsNullOrWhiteSpace(_project.Text) ? null : _project.Text.Trim(), _invoice.Text.Trim(),
+            SourcePdfPath ?? _existing?.InvoicePdfPath, _existing?.RecordedAt ?? DateTimeOffset.UtcNow);
         Close(true);
     }
 }

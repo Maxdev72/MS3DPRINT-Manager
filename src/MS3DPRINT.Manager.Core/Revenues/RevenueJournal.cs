@@ -47,12 +47,35 @@ public sealed class RevenueJournal
         WriteUnlocked(path, new Record("cancellation", null, new RevenueCancellation(Guid.NewGuid(), entry.Id, reason.Trim(), cancelledAt)));
     }
 
+    /// <summary>
+    /// Replaces the values of a recorded line while keeping the whole history. The collection stays in the same calendar year:
+    /// to move a line to another year, cancel it and record it again.
+    /// </summary>
+    public void Correct(RevenueEntry current, RevenueEntry corrected, string reason, DateTimeOffset correctedAt, DateOnly? today = null)
+    {
+        ArgumentNullException.ThrowIfNull(current);
+        ArgumentNullException.ThrowIfNull(corrected);
+        if (string.IsNullOrWhiteSpace(reason)) throw new ArgumentException("Le motif de la correction est obligatoire.", nameof(reason));
+        if (corrected.Id != current.Id) throw new ArgumentException("La correction doit porter sur la même recette.", nameof(corrected));
+        if (corrected.ReceivedOn.Year != current.ReceivedOn.Year)
+            throw new ArgumentException("La date doit rester dans la même année. Pour changer d’année, annulez la recette puis saisissez-la à nouveau.", nameof(corrected));
+        Validate(corrected, today ?? DateOnly.FromDateTime(DateTime.Today));
+        var year = current.ReceivedOn.Year;
+        var path = PathFor(year);
+        using var mutation = ProfileMutationLock.Acquire(path);
+        var line = Load(year).Lines.FirstOrDefault(l => l.Entry.Id == current.Id)
+            ?? throw new InvalidOperationException("Cette recette est introuvable dans le livre.");
+        if (line.IsCancelled) throw new InvalidOperationException("Une recette annulée ne peut plus être corrigée.");
+        WriteUnlocked(path, new Record("correction", null, null, new RevenueCorrection(Guid.NewGuid(), current.Id, reason.Trim(), correctedAt, corrected)));
+    }
+
     public RevenueYear Load(int year)
     {
         var path = PathFor(year);
         WorkspacePathSafety.EnsureNoLinks(path);
         var entries = new List<RevenueEntry>();
         var cancellations = new Dictionary<Guid, RevenueCancellation>();
+        var corrections = new Dictionary<Guid, List<RevenueCorrection>>();
         var errors = new List<string>();
         if (File.Exists(path))
         {
@@ -66,13 +89,23 @@ public sealed class RevenueJournal
                     var record = JsonSerializer.Deserialize<Record>(text, JsonOptions);
                     if (record?.Entry is { } entry && record.Type == "entry") entries.Add(entry);
                     else if (record?.Cancellation is { } cancellation && record.Type == "cancellation") cancellations.TryAdd(cancellation.EntryId, cancellation);
+                    else if (record?.Correction is { } correction && record.Type == "correction")
+                    {
+                        if (!corrections.TryGetValue(correction.EntryId, out var history)) corrections[correction.EntryId] = history = [];
+                        history.Add(correction);
+                    }
                     else errors.Add($"Ligne {number} : type inconnu.");
                 }
                 catch (JsonException exception) { errors.Add($"Ligne {number} : {exception.Message}"); }
             }
         }
-        var lines = entries.OrderBy(e => e.ReceivedOn).ThenBy(e => e.RecordedAt)
-            .Select(e => new RevenueLine(e, cancellations.GetValueOrDefault(e.Id))).ToArray();
+        var lines = entries.Select(original =>
+            {
+                var history = corrections.GetValueOrDefault(original.Id);
+                return history is { Count: > 0 }
+                    ? new RevenueLine(history[^1].Entry, cancellations.GetValueOrDefault(original.Id), history, original)
+                    : new RevenueLine(original, cancellations.GetValueOrDefault(original.Id));
+            }).OrderBy(l => l.Entry.ReceivedOn).ThenBy(l => l.Entry.RecordedAt).ToArray();
         return new(year, lines, errors);
     }
 
@@ -115,5 +148,5 @@ public sealed class RevenueJournal
         stream.Flush(flushToDisk: true);
     }
 
-    private sealed record Record(string Type, RevenueEntry? Entry, RevenueCancellation? Cancellation);
+    private sealed record Record(string Type, RevenueEntry? Entry, RevenueCancellation? Cancellation, RevenueCorrection? Correction = null);
 }

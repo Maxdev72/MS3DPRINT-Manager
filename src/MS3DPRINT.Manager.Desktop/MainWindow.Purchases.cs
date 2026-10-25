@@ -59,6 +59,50 @@ public partial class MainWindow
         { Notify(exception.Message, error: true); }
     }
 
+    private async void CorrectPurchase_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: PurchaseEntry entry }) return;
+        var root = WorkspaceRoot;
+        string[] suppliers;
+        try
+        {
+            suppliers = await Task.Run(() =>
+            {
+                var journal = new PurchaseJournal(root);
+                return journal.Years().SelectMany(y => journal.Load(y).Lines).Select(l => l.Entry.Supplier).Distinct(StringComparer.CurrentCultureIgnoreCase).Order().ToArray();
+            });
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or System.Text.Json.JsonException) { suppliers = []; }
+        var dialog = new PurchaseEntryWindow(suppliers, DateOnly.FromDateTime(DateTime.Today), entry);
+        if (!await dialog.ShowDialog<bool>(this) || dialog.Result is not { } corrected) return;
+        try
+        {
+            var reason = dialog.CorrectionReason;
+            if (dialog.SourceDocumentPath is { } source)
+            {
+                var stored = await Task.Run(() => RevenueInvoiceArchive.Store(root, source, null, corrected.PurchasedOn.Year, "purchases"));
+                corrected = corrected with { DocumentPath = stored };
+            }
+            await Task.Run(() => new PurchaseJournal(root).Correct(entry, corrected, reason, DateTimeOffset.Now));
+            await LoadPurchasesAsync();
+            Notify("Correction enregistrée. Les valeurs d’origine restent dans l’historique de la ligne.");
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { Notify(exception.Message, error: true); }
+    }
+
+    private async void PurchaseHistory_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: PurchaseLine line }) return;
+        var first = line.FirstRecorded;
+        var text = $"Valeurs d’origine : {first.PurchasedOn:dd/MM/yyyy} · {first.Supplier} · {first.Label} · {RevenueExporter.Money(first.Amount)} · pièce {first.Reference}\n\n" + string.Join("\n\n", PurchaseHistory.Describe(line));
+        await new ConfirmHistoryWindow($"Historique de « {line.Entry.Label} »", text).ShowDialog<bool>(this);
+    }
+
+    private async void ExportPurchaseSummaryMenu_Click(object? sender, RoutedEventArgs e)
+        => await ExportPurchaseAsync("txt", "Totaux annuels", "*.txt", (year, header) =>
+            new UTF8Encoding(true).GetPreamble().Concat(Encoding.UTF8.GetBytes(PurchaseExporter.AnnualSummary(year.Year, PurchaseTotals.Compute(year.Lines), header))).ToArray());
+
     private async void CancelPurchase_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: PurchaseEntry entry }) return;
@@ -157,14 +201,23 @@ public partial class MainWindow
                     open.Click += OpenPurchaseDocument_Click;
                     menu.Add(open);
                 }
+                if (line.IsCorrected)
+                {
+                    var history = new Button { Content = Icons.Label("IconHistory", "Voir l’historique"), Tag = line };
+                    history.Click += PurchaseHistory_Click;
+                    menu.Add(history);
+                }
                 if (!line.IsCancelled)
                 {
+                    var correct = new Button { Content = Icons.Label("IconEdit", "Corriger"), Tag = entry };
+                    correct.Click += CorrectPurchase_Click;
+                    menu.Add(correct);
                     var cancel = new Button { Content = Icons.Label("IconClose", "Annuler l’achat"), Tag = entry, Classes = { "menu-destructive" } };
                     cancel.Click += CancelPurchase_Click;
                     menu.Add(cancel);
                 }
                 if (menu.Count > 0) actions = CreateOverflowActions(menu.ToArray());
-                var label = line.IsCancelled ? $"{entry.Label} — annulé : {line.Cancellation!.Reason}" : entry.Label;
+                var label = line.IsCancelled ? $"{entry.Label} — annulé : {line.Cancellation!.Reason}" : line.IsCorrected ? $"{entry.Label} (corrigé)" : entry.Label;
                 var cells = new[]
                 {
                     CreateCompactTableCell(entry.PurchasedOn.ToString("dd/MM/yyyy")), CreateCompactTableCell(entry.Supplier), CreateCompactTableCell(label, prominent: true),

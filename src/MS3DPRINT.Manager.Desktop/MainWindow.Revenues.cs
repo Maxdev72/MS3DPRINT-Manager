@@ -61,6 +61,40 @@ public partial class MainWindow
         { Notify(exception.Message, error: true); }
     }
 
+    private async void CorrectRevenue_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: RevenueEntry entry }) return;
+        var root = WorkspaceRoot;
+        IReadOnlyList<ClientSummary> clientList;
+        try { clientList = await Task.Run(() => new ClientCatalog(new ClientProfileStore(new MS3DPRINT.Manager.Core.Workspace.WorkspaceMetadataPaths(root))).Load(root)); }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or System.Text.Json.JsonException) { clientList = []; }
+        var dialog = new RevenueEntryWindow(clientList.Select(c => c.DisplayName).Where(n => !string.IsNullOrWhiteSpace(n)).Order().ToArray(), DateOnly.FromDateTime(DateTime.Today), null, entry);
+        if (!await dialog.ShowDialog<bool>(this) || dialog.Result is not { } corrected) return;
+        try
+        {
+            var reason = dialog.CorrectionReason;
+            if (dialog.SourcePdfPath is { } sourcePdf)
+            {
+                var clientFolder = clientList.FirstOrDefault(c => string.Equals(c.DisplayName, corrected.ClientName, StringComparison.CurrentCultureIgnoreCase))?.ClientPath;
+                var stored = await Task.Run(() => RevenueInvoiceArchive.Store(root, sourcePdf, clientFolder, corrected.ReceivedOn.Year));
+                corrected = corrected with { InvoicePdfPath = stored };
+            }
+            await Task.Run(() => new RevenueJournal(root).Correct(entry, corrected, reason, DateTimeOffset.Now));
+            await LoadRevenuesAsync();
+            Notify("Correction enregistrée. Les valeurs d’origine restent dans l’historique de la ligne.");
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { Notify(exception.Message, error: true); }
+    }
+
+    private async void RevenueHistory_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: RevenueLine line }) return;
+        var first = line.FirstRecorded;
+        var text = $"Valeurs d’origine : {first.ReceivedOn:dd/MM/yyyy} · {first.Label} · {RevenueExporter.Money(first.Amount)} · pièce {first.InvoiceNumber}\n\n" + string.Join("\n\n", RevenueHistory.Describe(line));
+        await new ConfirmHistoryWindow($"Historique de « {line.Entry.Label} »", text).ShowDialog<bool>(this);
+    }
+
     private async void CancelRevenue_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: RevenueEntry entry }) return;
@@ -204,14 +238,23 @@ public partial class MainWindow
                     open.Click += OpenRevenueInvoice_Click;
                     menu.Add(open);
                 }
+                if (line.IsCorrected)
+                {
+                    var history = new Button { Content = Icons.Label("IconHistory", "Voir l’historique"), Tag = line };
+                    history.Click += RevenueHistory_Click;
+                    menu.Add(history);
+                }
                 if (!line.IsCancelled)
                 {
+                    var correct = new Button { Content = Icons.Label("IconEdit", "Corriger"), Tag = entry };
+                    correct.Click += CorrectRevenue_Click;
+                    menu.Add(correct);
                     var cancel = new Button { Content = Icons.Label("IconClose", "Annuler la recette"), Tag = entry, Classes = { "menu-destructive" } };
                     cancel.Click += CancelRevenue_Click;
                     menu.Add(cancel);
                 }
                 if (menu.Count > 0) actions = CreateOverflowActions(menu.ToArray());
-                var label = line.IsCancelled ? $"{entry.Label} — annulée : {line.Cancellation!.Reason}" : entry.Label;
+                var label = line.IsCancelled ? $"{entry.Label} — annulée : {line.Cancellation!.Reason}" : line.IsCorrected ? $"{entry.Label} (corrigée)" : entry.Label;
                 var cells = new[]
                 {
                     CreateCompactTableCell(entry.ReceivedOn.ToString("dd/MM/yyyy")), CreateCompactTableCell(entry.ClientName ?? "—"), CreateCompactTableCell(label, prominent: true),

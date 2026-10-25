@@ -42,9 +42,8 @@ public sealed partial class EstimateUiTests
             DialogAction(owner, "Annuler la recette");
             for (var i = 0; i < 800 && !journal.Load(DateTime.Today.Year).Lines.Single(l => l.Entry.Id == wrong.Id).IsCancelled; i++) await Task.Delay(10);
 
-            var toasts = string.Join(" | ", owner.FindControl<StackPanel>("ToastHost")!.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text));
             var line = journal.Load(DateTime.Today.Year).Lines.Single(l => l.Entry.Id == wrong.Id);
-            Assert.True(line.IsCancelled, toasts);
+            Assert.True(line.IsCancelled);
             Assert.True(line.IsCancelled); Assert.Equal("Doublon", line.Cancellation!.Reason);
             for (var i = 0; i < 800 && !list.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text?.Contains("annulée : Doublon") == true); i++) await Task.Delay(10);
             var struck = list.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Text?.Contains("annulée : Doublon") == true);

@@ -8,9 +8,43 @@ public sealed record RevenueEntry(Guid Id, DateOnly ReceivedOn, string Label, de
 
 public sealed record RevenueCancellation(Guid Id, Guid EntryId, string Reason, DateTimeOffset CancelledAt);
 
-public sealed record RevenueLine(RevenueEntry Entry, RevenueCancellation? Cancellation)
+/// <summary>A traceable correction: the line keeps its identity, <see cref="Entry"/> holds the corrected values and the reason explains why.</summary>
+public sealed record RevenueCorrection(Guid Id, Guid EntryId, string Reason, DateTimeOffset CorrectedAt, RevenueEntry Entry);
+
+/// <param name="Entry">The values in force: the last correction when there is one.</param>
+/// <param name="Original">The values first recorded; null when the line was never corrected.</param>
+public sealed record RevenueLine(RevenueEntry Entry, RevenueCancellation? Cancellation, IReadOnlyList<RevenueCorrection>? Corrections = null, RevenueEntry? Original = null)
 {
     public bool IsCancelled => Cancellation is not null;
+    public bool IsCorrected => Corrections is { Count: > 0 };
+    public RevenueEntry FirstRecorded => Original ?? Entry;
+}
+
+public static class RevenueHistory
+{
+    /// <summary>One readable sentence per correction: when, why and which fields changed.</summary>
+    public static IReadOnlyList<string> Describe(RevenueLine line)
+    {
+        ArgumentNullException.ThrowIfNull(line);
+        var result = new List<string>();
+        var previous = line.FirstRecorded;
+        foreach (var correction in line.Corrections ?? [])
+        {
+            var changes = new List<string>();
+            void Diff(string label, string? before, string? after) { if (!string.Equals(before ?? "", after ?? "", StringComparison.Ordinal)) changes.Add($"{label} : {(string.IsNullOrEmpty(before) ? "—" : before)} → {(string.IsNullOrEmpty(after) ? "—" : after)}"); }
+            var n = correction.Entry;
+            Diff("date d’encaissement", previous.ReceivedOn.ToString("dd/MM/yyyy"), n.ReceivedOn.ToString("dd/MM/yyyy"));
+            Diff("client", previous.ClientName, n.ClientName); Diff("libellé", previous.Label, n.Label);
+            Diff("montant", RevenueExporter.Money(previous.Amount), RevenueExporter.Money(n.Amount));
+            Diff("nature", RevenueExporter.NatureName(previous.Nature), RevenueExporter.NatureName(n.Nature));
+            Diff("part marchandises", RevenueExporter.Money(previous.GoodsAmount), RevenueExporter.Money(n.GoodsAmount));
+            Diff("règlement", previous.PaymentMethod, n.PaymentMethod); Diff("pièce", previous.InvoiceNumber, n.InvoiceNumber); Diff("projet", previous.ProjectRef, n.ProjectRef);
+            Diff("justificatif", previous.InvoicePdfPath is null ? null : Path.GetFileName(previous.InvoicePdfPath), n.InvoicePdfPath is null ? null : Path.GetFileName(n.InvoicePdfPath));
+            result.Add($"{correction.CorrectedAt:dd/MM/yyyy HH:mm} — {correction.Reason}" + (changes.Count > 0 ? " (" + string.Join(" ; ", changes) + ")" : ""));
+            previous = n;
+        }
+        return result;
+    }
 }
 
 public sealed record RevenueYear(int Year, IReadOnlyList<RevenueLine> Lines, IReadOnlyList<string> Errors);

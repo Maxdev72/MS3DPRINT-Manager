@@ -10,9 +10,41 @@ public sealed record PurchaseEntry(Guid Id, DateOnly PurchasedOn, string Supplie
 
 public sealed record PurchaseCancellation(Guid Id, Guid EntryId, string Reason, DateTimeOffset CancelledAt);
 
-public sealed record PurchaseLine(PurchaseEntry Entry, PurchaseCancellation? Cancellation)
+/// <summary>A traceable correction: the line keeps its identity, <see cref="Entry"/> holds the corrected values and the reason explains why.</summary>
+public sealed record PurchaseCorrection(Guid Id, Guid EntryId, string Reason, DateTimeOffset CorrectedAt, PurchaseEntry Entry);
+
+/// <param name="Entry">The values in force: the last correction when there is one.</param>
+/// <param name="Original">The values first recorded; null when the line was never corrected.</param>
+public sealed record PurchaseLine(PurchaseEntry Entry, PurchaseCancellation? Cancellation, IReadOnlyList<PurchaseCorrection>? Corrections = null, PurchaseEntry? Original = null)
 {
     public bool IsCancelled => Cancellation is not null;
+    public bool IsCorrected => Corrections is { Count: > 0 };
+    public PurchaseEntry FirstRecorded => Original ?? Entry;
+}
+
+public static class PurchaseHistory
+{
+    /// <summary>One readable sentence per correction: when, why and which fields changed.</summary>
+    public static IReadOnlyList<string> Describe(PurchaseLine line)
+    {
+        ArgumentNullException.ThrowIfNull(line);
+        var result = new List<string>();
+        var previous = line.FirstRecorded;
+        foreach (var correction in line.Corrections ?? [])
+        {
+            var changes = new List<string>();
+            void Diff(string label, string? before, string? after) { if (!string.Equals(before ?? "", after ?? "", StringComparison.Ordinal)) changes.Add($"{label} : {(string.IsNullOrEmpty(before) ? "—" : before)} → {(string.IsNullOrEmpty(after) ? "—" : after)}"); }
+            var n = correction.Entry;
+            Diff("date d’achat", previous.PurchasedOn.ToString("dd/MM/yyyy"), n.PurchasedOn.ToString("dd/MM/yyyy"));
+            Diff("fournisseur", previous.Supplier, n.Supplier); Diff("libellé", previous.Label, n.Label);
+            Diff("montant", MS3DPRINT.Manager.Core.Revenues.RevenueExporter.Money(previous.Amount), MS3DPRINT.Manager.Core.Revenues.RevenueExporter.Money(n.Amount));
+            Diff("règlement", previous.PaymentMethod, n.PaymentMethod); Diff("pièce", previous.Reference, n.Reference); Diff("projet", previous.ProjectRef, n.ProjectRef);
+            Diff("justificatif", previous.DocumentPath is null ? null : Path.GetFileName(previous.DocumentPath), n.DocumentPath is null ? null : Path.GetFileName(n.DocumentPath));
+            result.Add($"{correction.CorrectedAt:dd/MM/yyyy HH:mm} — {correction.Reason}" + (changes.Count > 0 ? " (" + string.Join(" ; ", changes) + ")" : ""));
+            previous = n;
+        }
+        return result;
+    }
 }
 
 public sealed record PurchaseYear(int Year, IReadOnlyList<PurchaseLine> Lines, IReadOnlyList<string> Errors);
@@ -76,12 +108,35 @@ public sealed class PurchaseJournal
         WriteUnlocked(path, new Record("cancellation", null, new PurchaseCancellation(Guid.NewGuid(), entry.Id, reason.Trim(), cancelledAt)));
     }
 
+    /// <summary>
+    /// Replaces the values of a recorded line while keeping the whole history. The purchase stays in the same calendar year:
+    /// to move a line to another year, cancel it and record it again.
+    /// </summary>
+    public void Correct(PurchaseEntry current, PurchaseEntry corrected, string reason, DateTimeOffset correctedAt, DateOnly? today = null)
+    {
+        ArgumentNullException.ThrowIfNull(current);
+        ArgumentNullException.ThrowIfNull(corrected);
+        if (string.IsNullOrWhiteSpace(reason)) throw new ArgumentException("Le motif de la correction est obligatoire.", nameof(reason));
+        if (corrected.Id != current.Id) throw new ArgumentException("La correction doit porter sur le même achat.", nameof(corrected));
+        if (corrected.PurchasedOn.Year != current.PurchasedOn.Year)
+            throw new ArgumentException("La date doit rester dans la même année. Pour changer d’année, annulez l’achat puis saisissez-le à nouveau.", nameof(corrected));
+        Validate(corrected, today ?? DateOnly.FromDateTime(DateTime.Today));
+        var year = current.PurchasedOn.Year;
+        var path = PathFor(year);
+        using var mutation = ProfileMutationLock.Acquire(path);
+        var line = Load(year).Lines.FirstOrDefault(l => l.Entry.Id == current.Id)
+            ?? throw new InvalidOperationException("Cet achat est introuvable dans le registre.");
+        if (line.IsCancelled) throw new InvalidOperationException("Un achat annulé ne peut plus être corrigé.");
+        WriteUnlocked(path, new Record("correction", null, null, new PurchaseCorrection(Guid.NewGuid(), current.Id, reason.Trim(), correctedAt, corrected)));
+    }
+
     public PurchaseYear Load(int year)
     {
         var path = PathFor(year);
         WorkspacePathSafety.EnsureNoLinks(path);
         var entries = new List<PurchaseEntry>();
         var cancellations = new Dictionary<Guid, PurchaseCancellation>();
+        var corrections = new Dictionary<Guid, List<PurchaseCorrection>>();
         var errors = new List<string>();
         if (File.Exists(path))
         {
@@ -95,13 +150,23 @@ public sealed class PurchaseJournal
                     var record = JsonSerializer.Deserialize<Record>(text);
                     if (record?.Entry is { } entry && record.Type == "entry") entries.Add(entry);
                     else if (record?.Cancellation is { } cancellation && record.Type == "cancellation") cancellations.TryAdd(cancellation.EntryId, cancellation);
+                    else if (record?.Correction is { } correction && record.Type == "correction")
+                    {
+                        if (!corrections.TryGetValue(correction.EntryId, out var history)) corrections[correction.EntryId] = history = [];
+                        history.Add(correction);
+                    }
                     else errors.Add($"Ligne {number} : type inconnu.");
                 }
                 catch (JsonException exception) { errors.Add($"Ligne {number} : {exception.Message}"); }
             }
         }
-        var lines = entries.OrderBy(e => e.PurchasedOn).ThenBy(e => e.RecordedAt)
-            .Select(e => new PurchaseLine(e, cancellations.GetValueOrDefault(e.Id))).ToArray();
+        var lines = entries.Select(original =>
+            {
+                var history = corrections.GetValueOrDefault(original.Id);
+                return history is { Count: > 0 }
+                    ? new PurchaseLine(history[^1].Entry, cancellations.GetValueOrDefault(original.Id), history, original)
+                    : new PurchaseLine(original, cancellations.GetValueOrDefault(original.Id));
+            }).OrderBy(l => l.Entry.PurchasedOn).ThenBy(l => l.Entry.RecordedAt).ToArray();
         return new(year, lines, errors);
     }
 
@@ -142,5 +207,5 @@ public sealed class PurchaseJournal
         stream.Flush(flushToDisk: true);
     }
 
-    private sealed record Record(string Type, PurchaseEntry? Entry, PurchaseCancellation? Cancellation);
+    private sealed record Record(string Type, PurchaseEntry? Entry, PurchaseCancellation? Cancellation, PurchaseCorrection? Correction = null);
 }
