@@ -249,7 +249,9 @@ public partial class MainWindow
                 ActivityThresholds thresholds;
                 try { thresholds = new ActivityThresholdStore(root).Load(); }
                 catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Text.Json.JsonException) { thresholds = new(); }
-                return (Years: journal.Years(), Year: journal.Load(selectedYear), Thresholds: thresholds);
+                int waiting;
+                try { waiting = MS3DPRINT.Manager.Core.Mobile.MobileInbox.Scan(root).Revenues.Count; } catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException) { waiting = 0; }
+                return (Years: journal.Years(), Year: journal.Load(selectedYear), Thresholds: thresholds, Waiting: waiting);
             });
             if (!IsWorkspaceLoadCurrent(load)) return;
             var years = result.Years.Append(DateTime.Today.Year).Append(selectedYear).Distinct().OrderByDescending(y => y).ToArray();
@@ -264,6 +266,7 @@ public partial class MainWindow
             var valid = lines.Count(l => !l.IsCancelled);
             _revenuePageSummary.Text = $"{valid} recette{(valid > 1 ? "s" : "")} en {selectedYear} · total encaissé {RevenueExporter.Money(summary.Total)} (marchandises {RevenueExporter.Money(summary.Goods)}, prestations {RevenueExporter.Money(summary.Services)})"
                 + (summary.CancelledCount > 0 ? $" · {summary.CancelledCount} annulée{(summary.CancelledCount > 1 ? "s" : "")}" : "")
+                + (result.Waiting > 0 ? $" · {result.Waiting} recette{(result.Waiting > 1 ? "s" : "")} du téléphone à importer" : "")
                 + (result.Year.Errors.Count > 0 ? $" · {result.Year.Errors.Count} ligne{(result.Year.Errors.Count > 1 ? "s" : "")} illisible{(result.Year.Errors.Count > 1 ? "s" : "")}" : "");
             Control Warning() => CreateReadErrorState("Certaines lignes du livre sont illisibles", "Le fichier est conservé tel quel. Les autres lignes restent affichées. Après correction ou synchronisation, réessayez.", new IOException(string.Join(Environment.NewLine, result.Year.Errors)), LoadRevenuesAsync, compact: true);
             Control Header() => result.Year.Errors.Count == 0 ? CreateCompactTableHeader(RevenueRowColumns, "DATE", "CLIENT", "LIBELLÉ", "NATURE", "MONTANT", "PIÈCE", "ACTIONS")

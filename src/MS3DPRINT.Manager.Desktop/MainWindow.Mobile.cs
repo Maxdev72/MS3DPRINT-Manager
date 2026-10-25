@@ -17,6 +17,7 @@ public partial class MainWindow
     private DateTimeOffset _mobilePublishedAt = DateTimeOffset.MinValue;
     private int _mobilePublishing;
     private string? _mobilePublishError;
+    private int _mobilePendingSeen;
 
     private void StartMobilePublication()
     {
@@ -38,8 +39,14 @@ public partial class MainWindow
             try
             {
                 if (!new MobileSettingsStore(root).Load().PublishEnabled) return;
-                MobileSnapshotPublisher.Publish(root);
+                var snapshot = MobileSnapshotPublisher.Publish(root);
                 _mobilePublishedAt = DateTimeOffset.Now; _mobilePublishError = null;
+                // Tell the user when the phone has sent something new (the count only grows when new files arrive).
+                var pending = snapshot.Activity.PendingFromPhone;
+                var previous = Interlocked.Exchange(ref _mobilePendingSeen, pending);
+                if (pending > previous)
+                    Dispatcher.UIThread.Post(() => Notify(pending == 1 ? "1 saisie du téléphone à importer (pages Achats et Recettes, bouton « Téléphone »)."
+                        : $"{pending} saisies du téléphone à importer (pages Achats et Recettes, bouton « Téléphone »)."));
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or System.Text.Json.JsonException)
             { _mobilePublishError = exception.Message; }

@@ -57,7 +57,12 @@ public static class MobileSnapshotPublisher
     }
 
     /// <summary>Writes the picture into the exchange folder of the workspace.</summary>
-    public static void Publish(string workspaceRoot) => PcSnapshotFile.Write(workspaceRoot, Build(workspaceRoot, DateTimeOffset.Now));
+    public static PcSnapshot Publish(string workspaceRoot)
+    {
+        var snapshot = Build(workspaceRoot, DateTimeOffset.Now);
+        PcSnapshotFile.Write(workspaceRoot, snapshot);
+        return snapshot;
+    }
 
     // A damaged file must never stop the publication: the phone then simply sees fewer details.
     private static IReadOnlyList<T> SafeList<T>(Func<IReadOnlyList<T>> read)

@@ -1,182 +1,175 @@
-using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform.Storage;
-using MS3DPRINT.Manager.Core.Filaments;
+using MS3DPRINT.Manager.Companion.Pages;
+using MS3DPRINT.Manager.Companion.Services;
+using MS3DPRINT.Manager.Companion.Ui;
 using MS3DPRINT.Manager.Core.Mobile;
 
 namespace MS3DPRINT.Manager.Companion;
 
-/// <summary>One screen: note a purchase, photograph the receipt, send it to the exchange folder. The computer imports it later.</summary>
+/// <summary>Frame of the app: title bar, the five screens, bottom navigation, and a confirmation sheet for anything that deletes.</summary>
 public sealed class MainView : UserControl
 {
-    private static readonly string[] PaymentMethods = ["Carte bancaire", "Espèces", "Virement", "Chèque", "PayPal", "Autre"];
-    private static readonly CultureInfo French = CultureInfo.GetCultureInfo("fr-FR");
-
-    private readonly LocalState _state = LocalState.Load();
-    private readonly DatePicker _date = new() { SelectedDate = DateTimeOffset.Now, HorizontalAlignment = HorizontalAlignment.Stretch };
-    private readonly AutoCompleteBox _supplier = new() { Watermark = "Nom du fournisseur", MinimumPrefixLength = 0, FilterMode = AutoCompleteFilterMode.Contains };
-    private readonly TextBox _label = new() { Watermark = "Ex. Visserie, bobines PLA" };
-    private readonly TextBox _amount = new() { Watermark = "Montant payé en €" };
-    private readonly ComboBox _payment = new() { ItemsSource = PaymentMethods, SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch };
-    private readonly TextBox _reference = new() { Watermark = "N° de facture ou de ticket (facultatif)" };
-    private readonly TextBox _project = new() { Watermark = "Référence du projet (facultatif)" };
-    private readonly Image _preview = new() { MaxHeight = 220, Stretch = Stretch.Uniform, IsVisible = false };
-    private readonly TextBlock _photoState = new() { Text = "Aucune photo.", Opacity = 0.7 };
-    private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap };
-    private readonly TextBlock _folderLabel = new() { TextWrapping = TextWrapping.Wrap, Opacity = 0.8 };
-    private readonly StackPanel _history = new() { Spacing = 6 };
-    private readonly Button _send = new() { Content = "Envoyer au PC", MinHeight = 56, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center, FontSize = 18 };
-    private IStorageFolder? _folder;
-    private byte[]? _photo;
+    private readonly AppServices _app = AppServices.Current;
+    private readonly string[] _titles = ["Saisir", "Projets", "Activité", "Envois", "Réglages"];
+    private readonly Control[] _pages;
+    private readonly EntryPage _entry = new();
+    private readonly ProjectsPage _projects;
+    private readonly OutboxPage _outbox;
+    private readonly List<Button> _tabs = [];
+    private readonly TextBlock _title = new() { FontSize = 20, FontWeight = FontWeight.SemiBold, Foreground = Pal.Text, VerticalAlignment = VerticalAlignment.Center };
+    private readonly TextBlock _sub = new() { FontSize = 12, Foreground = Pal.Faint };
+    private readonly Border _badge = new() { Background = Pal.Warning, CornerRadius = new CornerRadius(9), MinWidth = 18, Height = 18, Padding = new Thickness(5, 0), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, IsVisible = false };
+    private readonly TextBlock _badgeText = new() { FontSize = 11, FontWeight = FontWeight.Bold, Foreground = Pal.Canvas, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+    private readonly Grid _overlay = new() { IsVisible = false, Background = Brush.Parse("#CC060A12") };
+    private readonly Button _refresh;
+    private int _current;
 
     public MainView()
     {
-        _supplier.ItemsSource = _state.Suppliers;
-        _amount.Text = ""; Avalonia.Input.TextInput.TextInputOptions.SetContentType(_amount, Avalonia.Input.TextInput.TextInputContentType.Number);
-        var photo = new Button { Content = "Photographier le ticket", MinHeight = 52, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center };
-        photo.Click += async (_, _) => await TakePhotoAsync();
-        var removePhoto = new Button { Content = "Retirer la photo", HorizontalAlignment = HorizontalAlignment.Left, IsVisible = false };
-        removePhoto.Click += (_, _) => SetPhoto(null);
-        _removePhoto = removePhoto;
-        var folder = new Button { Content = "Choisir le dossier d’échange", MinHeight = 48, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center };
-        folder.Click += async (_, _) => await PickFolderAsync();
-        _send.Click += async (_, _) => await SendAsync();
+        Background = Pal.Canvas;
+        _projects = new ProjectsPage(OpenEntryFor);
+        _outbox = new OutboxPage(Confirm);
+        _pages = [_entry, _projects, new ActivityPage(), _outbox, new SettingsPage()];
 
-        Control Field(string label, Control input) => new StackPanel { Spacing = 4, Children = { new TextBlock { Text = label, FontWeight = FontWeight.SemiBold }, input } };
-        foreach (var box in new Control[] { _supplier, _label, _amount, _reference, _project }) box.MinHeight = 48;
-        _payment.MinHeight = 48; _date.MinHeight = 48;
+        _refresh = new Button { Content = Glyph.Icon(Glyph.Refresh, 22, Pal.Muted), Background = Brushes.Transparent, MinWidth = 48, MinHeight = 48, Padding = new Thickness(0) };
+        _refresh.Click += async (_, _) => await RefreshAsync();
+        var titleBlock = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { _title, _sub } };
+        var bar = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Margin = new Thickness(18, 10, 8, 8), Children = { titleBlock, _refresh } };
+        Grid.SetColumn(_refresh, 1);
 
-        Content = new ScrollViewer
+        var nav = new Grid { Background = Pal.Sidebar };
+        string[] icons = [Glyph.Plus, Glyph.Projects, Glyph.Activity, Glyph.Upload, Glyph.Settings];
+        for (var i = 0; i < _pages.Length; i++)
         {
-            Content = new StackPanel
-            {
-                Margin = new Thickness(18, 24, 18, 32), Spacing = 16,
-                Children =
-                {
-                    new TextBlock { Text = "Nouvel achat", FontSize = 28, FontWeight = FontWeight.SemiBold },
-                    new TextBlock { Text = "Notez l’achat et photographiez le ticket : le PC l’importera dans le registre des achats, après votre confirmation.", TextWrapping = TextWrapping.Wrap, Opacity = 0.75 },
-                    Field("Date d’achat", _date), Field("Fournisseur", _supplier), Field("Libellé", _label), Field("Montant payé (€)", _amount), Field("Mode de règlement", _payment),
-                    Field("Pièce justificative", _reference), Field("Projet", _project),
-                    new StackPanel { Spacing = 8, Children = { photo, _preview, _photoState, removePhoto } },
-                    _status, _send,
-                    new Border { Height = 1, Background = Brushes.Gray, Opacity = 0.3, Margin = new Thickness(0, 8) },
-                    new TextBlock { Text = "Dossier d’échange", FontSize = 18, FontWeight = FontWeight.SemiBold }, _folderLabel, folder,
-                    new TextBlock { Text = "Derniers envois", FontSize = 18, FontWeight = FontWeight.SemiBold, Margin = new Thickness(0, 12, 0, 0) }, _history
-                }
-            }
+            nav.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
+            var index = i;
+            var content = new StackPanel { Spacing = 2, HorizontalAlignment = HorizontalAlignment.Center, Children = { Glyph.Icon(icons[i], 24, Pal.Faint), new TextBlock { Text = _titles[i], FontSize = 11, Foreground = Pal.Faint, HorizontalAlignment = HorizontalAlignment.Center } } };
+            var tab = new Button { Content = content, Background = Brushes.Transparent, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center, MinHeight = 62, Padding = new Thickness(0, 6), CornerRadius = new CornerRadius(0) };
+            tab.Click += (_, _) => Go(index);
+            var holder = new Grid { Children = { tab } };
+            if (i == 3) { _badge.Child = _badgeText; _badge.Margin = new Thickness(0, 8, 14, 0); holder.Children.Add(_badge); }
+            Grid.SetColumn(holder, i); _tabs.Add(tab); nav.Children.Add(holder);
+        }
+
+        var host = new Grid();
+        foreach (var page in _pages) host.Children.Add(page);
+
+        var root = new Grid { RowDefinitions = new RowDefinitions("Auto,*,Auto") };
+        Grid.SetRow(host, 1); Grid.SetRow(nav, 2);
+        root.Children.Add(bar); root.Children.Add(host); root.Children.Add(nav);
+        var shell = new Grid { Children = { root, _overlay } };
+        Content = shell;
+        _app.Changed += UpdateChrome;
+        Go(0);
+        Loaded += async (_, _) =>
+        {
+            if (TopLevel.GetTopLevel(this)?.StorageProvider is { } storage) await _app.InitializeAsync(storage);
+            _entry.RestoreDraft();
+            if (CameraCapture.Recovered is not null) PhotoRecovered();
+            if (ShareInbox.Pending is not null || ShareInbox.Failure is not null) ReceiveShared();
+            else if (!_app.Exchange.IsConfigured) Go(4);
         };
-        RenderHistory();
-        Loaded += async (_, _) => await RestoreFolderAsync();
     }
 
-    private readonly Button _removePhoto;
-
-    private void Say(string message, bool error = false)
+    /// <summary>The Android back button: closes a sheet, then a project, then returns to the first screen; false lets the app go to the background.</summary>
+    public bool HandleBack()
     {
-        _status.Text = message;
-        _status.Foreground = error ? Brushes.IndianRed : Brushes.MediumSeaGreen;
+        if (_overlay.IsVisible) { _overlay.IsVisible = false; return true; }
+        if (_current == 1 && _projects.CanGoBack) { _projects.GoBack(); return true; }
+        if (_current != 0) { Go(0); return true; }
+        return false;
     }
 
-    private void SetPhoto(byte[]? bytes)
+    /// <summary>A file arrived through the Android Share menu: open the entry screen with it attached.</summary>
+    public void ReceiveShared()
     {
-        _photo = bytes;
-        _preview.Source = bytes is null ? null : new Bitmap(new MemoryStream(bytes));
-        _preview.IsVisible = bytes is not null; _removePhoto.IsVisible = bytes is not null;
-        _photoState.Text = bytes is null ? "Aucune photo." : $"Photo prête ({bytes.Length / 1024} Ko).";
-    }
-
-    private async Task TakePhotoAsync()
-    {
-        if (MainActivity.Instance is not { } activity) { Say("L’appareil photo n’est pas disponible.", error: true); return; }
-        try
+        var failure = ShareInbox.TakeFailure();
+        var shared = ShareInbox.Take();
+        if (failure is null && shared is null) return;
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
-            var bytes = await CameraCapture.TakePhotoAsync(activity);
-            if (bytes is null) { Say("Aucune photo prise."); return; }
-            SetPhoto(bytes); Say("");
-        }
-        catch (Exception exception) when (exception is InvalidOperationException or IOException or Java.Lang.Exception)
-        { Say("Photo impossible : " + exception.Message, error: true); }
+            Go(0);
+            if (failure is not null) _entry.ShowProblem(failure);
+            else if (shared is { } file) _entry.Receive(file.Bytes, file.Name);
+        });
     }
 
-    private async Task RestoreFolderAsync()
+    public void PhotoRecovered()
     {
-        _folderLabel.Text = "Aucun dossier choisi. Choisissez le dossier « Echanges mobile » de votre Nextcloud.";
-        if (_state.FolderBookmark is not { } bookmark || TopLevel.GetTopLevel(this)?.StorageProvider is not { } storage) return;
-        try
+        if (CameraCapture.TakeRecovered() is not { } photo) return;
+        Avalonia.Threading.Dispatcher.UIThread.Post(() => { Go(0); _entry.AttachRecovered(photo); });
+    }
+
+    public void Resumed()
+    {
+        _ = _app.SendPendingAsync();
+        _ = _app.RefreshSnapshotAsync();
+    }
+
+    private void Go(int index)
+    {
+        _current = index;
+        for (var i = 0; i < _pages.Length; i++)
         {
-            _folder = await storage.OpenFolderBookmarkAsync(bookmark);
-            _folderLabel.Text = _folder is null ? "Le dossier d’échange n’est plus accessible : choisissez-le à nouveau." : "Dossier : " + (_state.FolderName ?? _folder.Name);
+            _pages[i].IsVisible = i == index;
+            var on = i == index;
+            var content = (StackPanel)_tabs[i].Content!;
+            Glyph.Paint(content.Children[0], on ? Pal.Accent : Pal.Faint);
+            ((TextBlock)content.Children[1]).Foreground = on ? Pal.Accent : Pal.Faint;
+            ((TextBlock)content.Children[1]).FontWeight = on ? FontWeight.SemiBold : FontWeight.Normal;
         }
-        catch (Exception exception) when (exception is IOException or InvalidOperationException or UnauthorizedAccessException or Java.Lang.Exception)
-        { _folder = null; _folderLabel.Text = "Le dossier d’échange n’est plus accessible : choisissez-le à nouveau."; }
+        UpdateChrome();
     }
 
-    private async Task PickFolderAsync()
+    private void OpenEntryFor(bool revenue, SnapshotProject project)
     {
-        if (TopLevel.GetTopLevel(this)?.StorageProvider is not { } storage) return;
-        try
+        _entry.Prefill(revenue, project);
+        Go(0);
+    }
+
+    private async Task RefreshAsync()
+    {
+        _refresh.IsEnabled = false;
+        await _app.RefreshSnapshotAsync();
+        await _app.SendPendingAsync();
+        _refresh.IsEnabled = true;
+    }
+
+    private void UpdateChrome()
+    {
+        _title.Text = _titles[_current];
+        var snapshot = _app.Snapshot;
+        _sub.Text = !_app.Exchange.IsConfigured ? "Dossier d’échange non choisi"
+            : snapshot is null ? "En attente de l’état du PC"
+            : "État du PC : " + Ago(snapshot.GeneratedAt) + (_app.PendingCount > 0 ? $" · {_app.PendingCount} en attente d’envoi" : "");
+        _sub.Foreground = !_app.Exchange.IsConfigured || _app.PendingCount > 0 ? Pal.Warning : Pal.Faint;
+        _badge.IsVisible = _app.PendingCount > 0; _badgeText.Text = _app.PendingCount.ToString();
+    }
+
+    private static string Ago(DateTimeOffset when)
+    {
+        var span = DateTimeOffset.Now - when;
+        if (span < TimeSpan.FromMinutes(1)) return "à l’instant";
+        if (span < TimeSpan.FromHours(1)) return $"il y a {(int)span.TotalMinutes} min";
+        if (span < TimeSpan.FromDays(1)) return $"il y a {(int)span.TotalHours} h";
+        return $"il y a {(int)span.TotalDays} j";
+    }
+
+    /// <summary>A sheet asking before anything is deleted; Cancel is the first and default choice.</summary>
+    private void Confirm(string title, string message, Action onYes)
+    {
+        _overlay.Children.Clear();
+        var cancel = Ui.Ui.Secondary("Annuler"); cancel.Click += (_, _) => _overlay.IsVisible = false;
+        var yes = Ui.Ui.Danger("Confirmer", Glyph.Trash); yes.Click += (_, _) => { _overlay.IsVisible = false; onYes(); };
+        var sheet = new Border
         {
-            var picked = await storage.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = "Choisir le dossier « Echanges mobile »", AllowMultiple = false });
-            if (picked.FirstOrDefault() is not { } folder) return;
-            _folder = folder;
-            _state.FolderBookmark = await folder.SaveBookmarkAsync(); _state.FolderName = folder.Name; _state.Save();
-            _folderLabel.Text = "Dossier : " + folder.Name;
-            Say("Dossier d’échange enregistré.");
-        }
-        catch (Exception exception) when (exception is IOException or InvalidOperationException or UnauthorizedAccessException or Java.Lang.Exception)
-        { Say("Dossier inaccessible : " + exception.Message, error: true); }
-    }
-
-    private async Task SendAsync()
-    {
-        if (_folder is null) { Say("Choisissez d’abord le dossier d’échange (en bas de l’écran).", error: true); return; }
-        var supplier = _supplier.Text?.Trim() ?? "";
-        if (supplier.Length == 0) { Say("Renseignez le fournisseur.", error: true); return; }
-        if (string.IsNullOrWhiteSpace(_label.Text)) { Say("Renseignez le libellé.", error: true); return; }
-        if (!FilamentPrice.TryParse(_amount.Text, out var amount) || amount <= 0) { Say("Saisissez un montant strictement positif.", error: true); return; }
-        var date = DateOnly.FromDateTime((_date.SelectedDate ?? DateTimeOffset.Now).Date);
-        if (date > DateOnly.FromDateTime(DateTime.Today)) { Say("La date ne peut pas être dans le futur.", error: true); return; }
-
-        _send.IsEnabled = false;
-        try
-        {
-            var id = Guid.NewGuid();
-            var draft = new MobilePurchase(id, date, supplier, _label.Text.Trim(), Math.Round(amount, 2, MidpointRounding.AwayFromZero), _payment.SelectedItem as string ?? "Autre",
-                string.IsNullOrWhiteSpace(_reference.Text) ? null : _reference.Text.Trim(), string.IsNullOrWhiteSpace(_project.Text) ? null : _project.Text.Trim(), null, DateTimeOffset.Now);
-            var baseName = MobileExchange.BaseName(draft);
-            var purchase = _photo is null ? draft : draft with { PhotoFileName = baseName + ".jpg" };
-            var json = MobileExchange.Serialize(purchase);
-            // The photo goes first: the computer then never finds data whose photo has not arrived.
-            if (_photo is not null) await WriteAsync(baseName + ".jpg", _photo);
-            await WriteAsync(baseName + ".json", json);
-            _state.Remember(new SentPurchase(purchase.Supplier, purchase.Label, purchase.Amount, purchase.PurchasedOn, _photo is not null));
-            _supplier.ItemsSource = _state.Suppliers.ToList();
-            RenderHistory();
-            _supplier.Text = ""; _label.Text = ""; _amount.Text = ""; _reference.Text = ""; _project.Text = ""; SetPhoto(null);
-            Say($"Envoyé : {purchase.Supplier}, {purchase.Amount.ToString("0.00", French)} €. Il apparaîtra sur le PC après la synchronisation.");
-        }
-        catch (Exception exception) when (exception is IOException or InvalidOperationException or UnauthorizedAccessException or System.Text.Json.JsonException or Java.Lang.Exception)
-        { Say("Envoi impossible : " + exception.Message, error: true); }
-        finally { _send.IsEnabled = true; }
-    }
-
-    private async Task WriteAsync(string name, byte[] bytes)
-    {
-        var file = await _folder!.CreateFileAsync(name) ?? throw new IOException("Le dossier d’échange refuse la création du fichier.");
-        await using var stream = await file.OpenWriteAsync();
-        await stream.WriteAsync(bytes);
-        await stream.FlushAsync();
-    }
-
-    private void RenderHistory()
-    {
-        _history.Children.Clear();
-        if (_state.Sent.Count == 0) { _history.Children.Add(new TextBlock { Text = "Rien d’envoyé pour l’instant.", Opacity = 0.7 }); return; }
-        foreach (var sent in _state.Sent)
-            _history.Children.Add(new TextBlock { Text = $"{sent.PurchasedOn:dd/MM/yyyy} · {sent.Supplier} · {sent.Amount.ToString("0.00", French)} €{(sent.HasPhoto ? " · photo" : "")}\n{sent.Label}", TextWrapping = TextWrapping.Wrap });
+            Background = Pal.Surface, BorderBrush = Pal.Border, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(18, 18, 0, 0), Padding = new Thickness(20, 22, 20, 24), VerticalAlignment = VerticalAlignment.Bottom,
+            Child = new StackPanel { Spacing = 14, Children = { Ui.Ui.Text(title, 20, Pal.Text, bold: true), Ui.Ui.Muted(message, 15), cancel, yes } }
+        };
+        _overlay.Children.Add(sheet);
+        _overlay.IsVisible = true;
     }
 }

@@ -2,6 +2,13 @@
 
 ## 25 octobre 2026
 
+### Application compagnon Android, version 1.1
+- Application refaite en cinq écrans : Saisir (achat ou recette, appareil photo, galerie, PDF), Projets (recherche, filtres, bilan, saisie préremplie depuis un projet), Activité (chiffre d’affaires, mois par mois, seuils), Envois (état de chaque saisie, renvoi) et Réglages. Même palette que le logiciel PC, icône du cube MS3DPRINT.
+- Le PC publie l’état de l’atelier (projets, clients, activité, seuils, fournisseurs récents) dans le dossier « Echanges mobile » ; le téléphone le lit sans jamais écrire dans les registres. Paramètres > Atelier > « Application mobile » : publication automatique toutes les 3 minutes, publication immédiate, ouverture du dossier, désactivation.
+- Les recettes saisies sur le téléphone s’importent depuis le bouton « Téléphone » de la page Recettes, comme les achats depuis la page Achats ; le PC signale l’arrivée de nouvelles saisies et leur nombre dans l’en-tête des pages.
+- Une facture reçue par e-mail se partage vers l’application : le PDF est lu sur le téléphone et préremplit la recette. Saisie en cours et photo sont conservées si Android ferme l’application ; envoi hors ligne avec renvoi automatique ; messages d’erreur en clair.
+- Vérifiée sur émulateur Android 16 : script `tools/android/smoke.py` (12 vérifications) et parcours manuels détaillés dans docs/application-compagnon-android.md.
+
 ### Fiche projet plus compacte
 - Le bilan du projet tient sur une seule ligne de chiffres (estimé, encaissé, reste à encaisser, achats liés, encaissé moins achats ; les achats et le net n’apparaissent que lorsqu’ils existent), et la liste des estimations liées est repliée par défaut : les fichiers du projet remontent dans l’écran.
 

@@ -5,7 +5,7 @@ using Avalonia.Android;
 
 namespace MS3DPRINT.Manager.Companion;
 
-[Application]
+[Application(Icon = "@mipmap/ic_launcher", RoundIcon = "@mipmap/ic_launcher_round", Label = "MS3DPRINT Compagnon")]
 public class AndroidApp : AvaloniaAndroidApplication<App>
 {
     public AndroidApp(IntPtr handle, JniHandleOwnership transfer) : base(handle, transfer) { }

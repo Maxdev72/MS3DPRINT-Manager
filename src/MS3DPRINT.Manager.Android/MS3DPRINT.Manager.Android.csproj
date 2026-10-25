@@ -10,8 +10,8 @@
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <ApplicationId>fr.ms3dprint.compagnon</ApplicationId>
     <ApplicationTitle>MS3DPRINT Compagnon</ApplicationTitle>
-    <ApplicationVersion>1</ApplicationVersion>
-    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>2</ApplicationVersion>
+    <ApplicationDisplayVersion>1.1</ApplicationDisplayVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <RuntimeIdentifiers>android-arm64;android-x64</RuntimeIdentifiers>
     <AndroidSupportedAbis>arm64-v8a;x86_64</AndroidSupportedAbis>

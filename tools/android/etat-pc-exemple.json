@@ -1,0 +1,156 @@
+{
+  "GeneratedAt": "2026-10-25T20:03:38.1517044+01:00",
+  "WorkshopName": "MS3DPRINT",
+  "Clients": [
+    {
+      "Name": "Caserne de pompiers de Tuff\u00E9",
+      "Code": "CPT"
+    },
+    {
+      "Name": "Ch\u00E2teau de la Chesnaye",
+      "Code": "CHC"
+    },
+    {
+      "Name": "Atelier Martin",
+      "Code": "MAR"
+    },
+    {
+      "Name": "SDIS 72",
+      "Code": "SDI"
+    },
+    {
+      "Name": "Racing Club Simulator",
+      "Code": "RCS"
+    }
+  ],
+  "Projects": [
+    {
+      "Reference": "CPT-2026-003",
+      "Title": "Support de cam\u00E9ra r\u00E9glable",
+      "ClientName": "Caserne de pompiers de Tuff\u00E9",
+      "Status": "InProgress",
+      "DueDate": "2026-10-30",
+      "Priority": "High",
+      "Archived": false,
+      "Quoted": 66.17,
+      "Collected": 0,
+      "Purchases": 0
+    },
+    {
+      "Reference": "CHC-2026-002",
+      "Title": "Maquette du ch\u00E2teau \u2014 pi\u00E8ces d\u00E9coratives",
+      "ClientName": "Ch\u00E2teau de la Chesnaye",
+      "Status": "Quote",
+      "DueDate": "2026-10-22",
+      "Priority": "Medium",
+      "Archived": false,
+      "Quoted": 119.46,
+      "Collected": 0,
+      "Purchases": 0
+    },
+    {
+      "Reference": "MAR-2026-007",
+      "Title": "Plaque machine",
+      "ClientName": "Atelier Martin",
+      "Status": "Completed",
+      "DueDate": "2026-10-05",
+      "Priority": "None",
+      "Archived": false,
+      "Quoted": 85.31,
+      "Collected": 85.31,
+      "Purchases": 12.5
+    },
+    {
+      "Reference": "SDI-2026-001",
+      "Title": "Attache rapide SC3",
+      "ClientName": "SDIS 72",
+      "Status": "InProgress",
+      "DueDate": null,
+      "Priority": "Low",
+      "Archived": false,
+      "Quoted": 269.99,
+      "Collected": 100,
+      "Purchases": 40
+    },
+    {
+      "Reference": "RCS-2026-004",
+      "Title": "Bo\u00EEtier de commande",
+      "ClientName": "Racing Club Simulator",
+      "Status": "Quote",
+      "DueDate": "2026-11-24",
+      "Priority": "None",
+      "Archived": false,
+      "Quoted": null,
+      "Collected": 0,
+      "Purchases": 0
+    },
+    {
+      "Reference": "MAR-2025-012",
+      "Title": "Ancien support archiv\u00E9",
+      "ClientName": "Atelier Martin",
+      "Status": "Completed",
+      "DueDate": null,
+      "Priority": "None",
+      "Archived": true,
+      "Quoted": 45,
+      "Collected": 45,
+      "Purchases": 0
+    }
+  ],
+  "Activity": {
+    "Year": 2026,
+    "Total": 31250.4,
+    "Goods": 9100,
+    "Services": 22150.4,
+    "Months": [
+      1200,
+      800,
+      2300,
+      2900,
+      3100,
+      2800,
+      1900,
+      2200,
+      2750,
+      4100.4,
+      3500,
+      3700
+    ],
+    "PurchasesTotal": 3820.5,
+    "Thresholds": [
+      {
+        "Label": "Plafond du r\u00E9gime micro \u00B7 chiffre d\u2019affaires total",
+        "Amount": 31250.4,
+        "Limit": 203100,
+        "Level": "Ok"
+      },
+      {
+        "Label": "Plafond du r\u00E9gime micro \u00B7 prestations de services",
+        "Amount": 22150.4,
+        "Limit": 83600,
+        "Level": "Ok"
+      },
+      {
+        "Label": "Franchise de TVA \u00B7 chiffre d\u2019affaires total",
+        "Amount": 31250.4,
+        "Limit": 37500,
+        "Level": "Near"
+      },
+      {
+        "Label": "Franchise de TVA \u00B7 prestations de services",
+        "Amount": 22150.4,
+        "Limit": 20000,
+        "Level": "Exceeded"
+      }
+    ],
+    "PendingFromPhone": 3
+  },
+  "Suppliers": [
+    "Bambu Lab",
+    "Leroy Merlin",
+    "Amazon",
+    "W\u00FCrth",
+    "Distrelec"
+  ],
+  "Version": 1
+}
