@@ -120,7 +120,8 @@ public partial class MainWindow
             var dialog = new RevenueHeaderWindow(new RevenueHeaderStore(root).Load());
             if (!await dialog.ShowDialog<bool>(this)) return;
             new RevenueHeaderStore(root).Save(dialog.Result);
-            Notify("En-tête enregistré.");
+            Notify("Informations de l’entreprise enregistrées.");
+            if (SettingsWorkspacePanel.IsVisible) await LoadSettingsAsync();
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or System.Text.Json.JsonException)
         { Notify(exception.Message, error: true); }

@@ -79,4 +79,26 @@ public sealed class RevenueExporterTests : IDisposable
         store.Save(new RevenueHeader("MS3DPRINT", "123 456 789 00012", "M. Semaille"));
         Assert.Equal("123 456 789 00012", new RevenueHeaderStore(_root).Load().Siret);
     }
+
+    [Fact]
+    public void Company_contact_details_round_trip_and_are_printed_under_the_identity_line()
+    {
+        var store = new RevenueHeaderStore(_root);
+        store.Save(new RevenueHeader("MS3DPRINT", "123", "M. Semaille", "5 rue de la Crémaillère, 72370 Le Breil-sur-Mérize", "contact@exemple.fr", "06 00 00 00 00"));
+        var loaded = new RevenueHeaderStore(_root).Load();
+        Assert.Equal("contact@exemple.fr", loaded.Email);
+        Assert.Equal("5 rue de la Crémaillère, 72370 Le Breil-sur-Mérize — contact@exemple.fr — 06 00 00 00 00", loaded.ContactLine());
+        Assert.Null(new RevenueHeader("A").ContactLine());
+        var pdf = Encoding.Latin1.GetString(RevenueExporter.ToPdf(Year(), loaded));
+        Assert.Contains("contact@exemple.fr", pdf);
+    }
+
+    [Fact]
+    public void An_old_header_file_without_contact_fields_still_loads()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, ".ms3dprint-manager"));
+        File.WriteAllText(Path.Combine(_root, ".ms3dprint-manager", "revenue-header.json"), "{\"BusinessName\":\"Ancien\",\"Siret\":\"1\",\"OwnerName\":\"X\"}");
+        var loaded = new RevenueHeaderStore(_root).Load();
+        Assert.Equal("Ancien", loaded.BusinessName); Assert.Equal("", loaded.Address);
+    }
 }

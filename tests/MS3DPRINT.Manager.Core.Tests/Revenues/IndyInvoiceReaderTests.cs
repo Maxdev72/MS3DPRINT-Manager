@@ -36,6 +36,19 @@ public sealed class IndyInvoiceReaderTests : IDisposable
         => Assert.Equal(expected, IndyInvoiceReader.Parse(text)!.Nature);
 
     [Fact]
+    public void Parse_reads_down_payment_invoices_and_the_former_invoice_layout()
+    {
+        var deposit = IndyInvoiceReader.Parse("Facture d'acompte FACT202606-14 émise le 03/06/2026 Total TTC 300,00")!;
+        Assert.Equal("FACT202606-14", deposit.InvoiceNumber);
+        Assert.Equal(300m, deposit.TotalTtc);
+        var former = IndyInvoiceReader.Parse("FACTURE N° 25-10-31\n Le samedi 25 octobre 2025\n Total HT 120,00 TVA ( 20 % ) 24,00 Total TTC 144,00")!;
+        Assert.Equal("25-10-31", former.InvoiceNumber);
+        Assert.Equal(new DateOnly(2025, 10, 25), former.IssuedOn);
+        Assert.Equal(144m, former.TotalTtc);
+        Assert.Equal(new DateOnly(2026, 2, 1), IndyInvoiceReader.Parse("FACTURE N° 26-02-01 Le dimanche 1er février 2026 Total TTC 10,00")!.IssuedOn);
+    }
+
+    [Fact]
     public void Parse_returns_null_when_nothing_looks_like_an_invoice_and_keeps_partial_data_otherwise()
     {
         Assert.Null(IndyInvoiceReader.Parse("Relevé de compte sans rapport"));

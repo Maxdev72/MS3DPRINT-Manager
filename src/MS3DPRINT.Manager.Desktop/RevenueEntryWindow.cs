@@ -149,15 +149,21 @@ public sealed class RevenueHeaderWindow : DialogWindow
     private readonly TextBox _business = new() { PlaceholderText = "Nom de l’entreprise" };
     private readonly TextBox _owner = new() { PlaceholderText = "Nom de l’entrepreneur" };
     private readonly TextBox _siret = new() { PlaceholderText = "14 chiffres" };
-    public RevenueHeader Result => new(_business.Text?.Trim() ?? "", _siret.Text?.Trim() ?? "", _owner.Text?.Trim() ?? "");
+    private readonly TextBox _address = new() { PlaceholderText = "Adresse postale" };
+    private readonly TextBox _email = new() { PlaceholderText = "adresse@exemple.fr" };
+    private readonly TextBox _phone = new() { PlaceholderText = "Téléphone" };
+    public RevenueHeader Result => new(_business.Text?.Trim() ?? "", _siret.Text?.Trim() ?? "", _owner.Text?.Trim() ?? "",
+        _address.Text?.Trim() ?? "", _email.Text?.Trim() ?? "", _phone.Text?.Trim() ?? "");
 
     public RevenueHeaderWindow(RevenueHeader current)
     {
-        Title = "En-tête du livre de recettes"; Width = 500; Height = 520; MinWidth = 420;
+        Title = "Informations de mon entreprise"; Width = 500; Height = 700; MinWidth = 420;
         _business.Text = current.BusinessName; _owner.Text = current.OwnerName; _siret.Text = current.Siret;
+        _address.Text = current.Address; _email.Text = current.Email; _phone.Text = current.Phone;
         var save = new Button { Content = "Enregistrer" };
         save.Click += (_, _) => Close(true);
-        Layout("En-tête du livre", "Ces informations figurent en haut du PDF et de la synthèse de déclaration.",
-            [FormKit.Field("Entreprise", _business), FormKit.Field("Entrepreneur", _owner), FormKit.Field("SIRET", _siret)], save);
+        Layout("Mon entreprise", "Ces informations figurent en haut du livre des recettes, du registre des achats et de leurs exports.",
+            [FormKit.Field("Entreprise", _business), FormKit.Field("Entrepreneur", _owner), FormKit.Field("SIRET", _siret),
+             FormKit.Field("Adresse", _address), FormKit.Field("E-mail", _email), FormKit.Field("Téléphone", _phone)], save);
     }
 }

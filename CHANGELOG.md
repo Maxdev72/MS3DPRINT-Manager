@@ -10,6 +10,8 @@
 - Import d’une facture Indy : un PDF glissé sur la page, ou choisi depuis le formulaire, est lu localement (numéro, total TTC, client, nature vente/prestation, date d’émission) pour pré-remplir la saisie. Rien n’est enregistré sans confirmation et la date d’encaissement reste à indiquer. Le PDF est copié dans le dossier Documents du client (ou à défaut dans le dossier de pièces du livre), sans écraser ni déplacer l’original, et s’ouvre depuis le menu de la ligne.
 - Depuis la fiche d’un projet, « Enregistrer un encaissement » propose le client, la référence du projet et le prix de la dernière estimation.
 - Nouvelle page « Achats » : registre chronologique des achats de matières et fournitures (date, fournisseur, libellé, montant, mode de règlement, pièce justificative, projet), obligatoire pour la vente de marchandises. Même principe que le livre : journal en ajout seul (`.ms3dprint-manager/purchases/AAAA.jsonl`, inclus dans les sauvegardes), annulation avec motif, justificatif PDF ou image copié dans le dossier de pièces, exports PDF et CSV avec l’en-tête de l’atelier.
+- Paramètres > Atelier : nouvelle carte « Mon entreprise » (entreprise, entrepreneur, SIRET, adresse, e-mail, téléphone), reprise dans l’en-tête des PDF du livre des recettes et du registre des achats.
+- L’import des factures lit aussi les factures d’acompte et l’ancien modèle de facture (« FACTURE N° 25-10-31 », date en toutes lettres) : 61 des 65 factures de l’espace de travail de l’atelier sont lues entièrement, les autres se saisissent à la main.
 - Conception : docs/superpowers/specs/2026-10-25-livre-de-recettes-design.md.
 
 ### Raccourcis de la liste des fichiers

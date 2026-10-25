@@ -134,6 +134,7 @@ public partial class MainWindow
         StorageList.HorizontalAlignment = HorizontalAlignment.Stretch;
         var providers = await Task.Run(() => new WorkspaceStorageReader().Load(workspaceRoot));
         if (!IsWorkspaceLoadCurrent(load)) return;
+        AddSettingsCard("atelier", BuildCompanySettingsCard(workspaceRoot));
         AddSettingsCard("atelier", BuildWorkshopSettingsCard(workspaceRoot));
 
         Border Card(string title, string description, Control? headerAction, params Control[] content)

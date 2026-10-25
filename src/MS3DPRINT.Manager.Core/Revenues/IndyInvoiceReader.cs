@@ -11,7 +11,11 @@ public sealed record IndyInvoiceData(string? InvoiceNumber, DateOnly? IssuedOn, 
 public static class IndyInvoiceReader
 {
     private const long MaxPdfBytes = 20 * 1024 * 1024;
-    private static readonly Regex NumberPattern = new(@"\bFacture\s+([A-Z0-9][A-Z0-9_\-/]{3,})", RegexOptions.CultureInvariant);
+    private static readonly Regex NumberPattern = new(@"\bFacture(?:\s+d\W{1,2}acompte|\s+de\s+solde|\s+d\W{1,2}avoir)?\s+([A-Z0-9][A-Z0-9_\-/]{3,})", RegexOptions.CultureInvariant);
+    // Former invoices (Henrri): "FACTURE N° 25-10-31" and "Le samedi 25 octobre 2025".
+    private static readonly Regex LegacyNumberPattern = new(@"FACTURE\s+N\W{0,3}\s*([0-9]{2}-[0-9]{2}-[0-9]+)", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+    private static readonly Regex LongDatePattern = new(@"\b(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)?\s*(\d{1,2})(?:er)?\s+(janvier|f[ée]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[ée]cembre)\s+(\d{4})", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+    private static readonly string[] MonthStems = ["janv", "f", "mars", "avr", "mai", "juin", "juil", "ao", "sept", "oct", "nov", "d"];
     private static readonly Regex DatePattern = new(@"mise\s+le\s+(\d{2}/\d{2}/\d{4})", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
     private static readonly Regex TotalPattern = new(@"Total\s+TTC\s+([0-9][0-9\s  ]*[.,][0-9]{2})", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
@@ -41,8 +45,9 @@ public static class IndyInvoiceReader
     public static IndyInvoiceData? Parse(string text, string? clientName = null)
     {
         ArgumentNullException.ThrowIfNull(text);
-        var number = NumberPattern.Match(text) is { Success: true } n ? n.Groups[1].Value : null;
-        DateOnly? issued = DateOnly.TryParseExact(DatePattern.Match(text).Groups[1].Value, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date) ? date : null;
+        var number = NumberPattern.Match(text) is { Success: true } n ? n.Groups[1].Value
+            : LegacyNumberPattern.Match(text) is { Success: true } legacy ? legacy.Groups[1].Value : null;
+        DateOnly? issued = DateOnly.TryParseExact(DatePattern.Match(text).Groups[1].Value, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date) ? date : LongDate(text);
         decimal? total = null;
         var totals = TotalPattern.Matches(text);
         if (totals.Count > 0)
@@ -57,17 +62,35 @@ public static class IndyInvoiceReader
         return new IndyInvoiceData(number, issued, total, string.IsNullOrWhiteSpace(clientName) ? null : clientName.Trim(), nature);
     }
 
+    private static DateOnly? LongDate(string text)
+    {
+        var match = LongDatePattern.Match(text);
+        if (!match.Success) return null;
+        var name = match.Groups[2].Value.ToLowerInvariant();
+        var month = Array.FindIndex(MonthStems, stem => name.StartsWith(stem, StringComparison.Ordinal)) + 1;
+        if (month == 0 || !int.TryParse(match.Groups[1].Value, out var day) || !int.TryParse(match.Groups[3].Value, out var year)) return null;
+        return day >= 1 && day <= DateTime.DaysInMonth(year, month) ? new DateOnly(year, month, day) : null;
+    }
+
     /// <summary>The recipient block sits in the right half above the "Facture …" title: its first line is the client name.</summary>
     private static string? ClientNameOnFirstPage(UglyToad.PdfPig.Content.Page page)
     {
         var words = page.GetWords().ToArray();
-        var title = words.FirstOrDefault(w => w.Text == "Facture");
+        var title = words.FirstOrDefault(w => w.Text is "Facture" or "FACTURE");
         if (title is null) return null;
-        var right = words.Where(w => w.BoundingBox.Left > page.Width / 2 && w.BoundingBox.Bottom > title.BoundingBox.Top).ToArray();
+        var above = words.Where(w => w.BoundingBox.Bottom > title.BoundingBox.Top).ToArray();
+        var right = above.Where(w => w.BoundingBox.Left > page.Width / 2).ToArray();
         if (right.Length == 0) return null;
-        var top = right.Max(w => w.BoundingBox.Bottom);
-        var line = right.Where(w => Math.Abs(w.BoundingBox.Bottom - top) < 4).OrderBy(w => w.BoundingBox.Left).Select(w => w.Text);
-        var name = string.Join(' ', line);
-        return name.Length is > 0 and <= 120 ? name : null;
+        // The recipient's name shares its baseline with the issuer's name on the left; a lone banner above it (e.g. a title) is skipped.
+        string? first = null;
+        foreach (var bottom in right.Select(w => w.BoundingBox.Bottom).OrderByDescending(b => b).Distinct())
+        {
+            var rightLine = right.Where(w => Math.Abs(w.BoundingBox.Bottom - bottom) < 4).OrderBy(w => w.BoundingBox.Left).Select(w => w.Text);
+            var name = string.Join(' ', rightLine);
+            if (name.Length is 0 or > 120) continue;
+            first ??= name;
+            if (above.Any(w => w.BoundingBox.Left < page.Width / 2 && Math.Abs(w.BoundingBox.Bottom - bottom) < 4)) return name;
+        }
+        return first;
     }
 }

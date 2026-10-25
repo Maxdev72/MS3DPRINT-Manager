@@ -30,11 +30,9 @@ public static class PurchaseExporter
         ArgumentNullException.ThrowIfNull(header);
         var summary = PurchaseTotals.Compute(year.Lines);
         var identity = string.Join(" — ", new[] { header.BusinessName, header.OwnerName, string.IsNullOrWhiteSpace(header.Siret) ? "" : "SIRET " + header.Siret }.Where(v => !string.IsNullOrWhiteSpace(v)));
-        var subtitle = new List<string>
-        {
-            identity.Length > 0 ? identity : "Atelier non renseigné (Réglages)",
-            $"Édité le {DateTime.Today:dd/MM/yyyy}. Les achats annulés restent visibles, barrés, et sont exclus des totaux."
-        };
+        var subtitle = new List<string> { identity.Length > 0 ? identity : "Atelier non renseigné (Paramètres > Atelier)" };
+        if (header.ContactLine() is { } contact) subtitle.Add(contact);
+        subtitle.Add($"Édité le {DateTime.Today:dd/MM/yyyy}. Les achats annulés restent visibles, barrés, et sont exclus des totaux.");
         double[] x = [0, 52, 170, 330, 405, 480, 575, 690];
         int[] chars = [10, 25, 33, 13, 14, 20, 15, 17];
         var rows = new List<PdfLine>();

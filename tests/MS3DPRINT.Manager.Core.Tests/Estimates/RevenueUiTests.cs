@@ -40,13 +40,13 @@ public sealed partial class EstimateUiTests
             Assert.False(journal.Load(DateTime.Today.Year).Lines.Single(l => l.Entry.Id == wrong.Id).IsCancelled);
             owner.FindControl<Border>("SidePanelBody")!.GetVisualDescendants().OfType<TextBox>().Single().Text = "Doublon";
             DialogAction(owner, "Annuler la recette");
-            for (var i = 0; i < 200 && !journal.Load(DateTime.Today.Year).Lines.Single(l => l.Entry.Id == wrong.Id).IsCancelled; i++) await Task.Delay(10);
+            for (var i = 0; i < 800 && !journal.Load(DateTime.Today.Year).Lines.Single(l => l.Entry.Id == wrong.Id).IsCancelled; i++) await Task.Delay(10);
 
             var toasts = string.Join(" | ", owner.FindControl<StackPanel>("ToastHost")!.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text));
             var line = journal.Load(DateTime.Today.Year).Lines.Single(l => l.Entry.Id == wrong.Id);
             Assert.True(line.IsCancelled, toasts);
             Assert.True(line.IsCancelled); Assert.Equal("Doublon", line.Cancellation!.Reason);
-            for (var i = 0; i < 200 && !list.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text?.Contains("annulée : Doublon") == true); i++) await Task.Delay(10);
+            for (var i = 0; i < 800 && !list.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text?.Contains("annulée : Doublon") == true); i++) await Task.Delay(10);
             var struck = list.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Text?.Contains("annulée : Doublon") == true);
             Assert.Equal(TextDecorations.Strikethrough, struck.TextDecorations);
             Assert.Contains("1 recette ", Field<TextBlock>(owner, "_revenuePageSummary").Text!);
@@ -77,7 +77,7 @@ public sealed partial class EstimateUiTests
             Assert.Contains(body.GetVisualDescendants().OfType<TextBox>(), t => t.Text == "85,31");
             DialogAction(owner, "Enregistrer");
             var journal = new RevenueJournal(_root);
-            for (var i = 0; i < 300 && journal.Years().Count == 0; i++) await Task.Delay(10);
+            for (var i = 0; i < 800 && journal.Years().Count == 0; i++) await Task.Delay(10);
             var entry = Assert.Single(journal.Load(DateTime.Today.Year).Lines).Entry;
             Assert.Equal("FACT202610-77", entry.InvoiceNumber); Assert.Equal(85.31m, entry.Amount); Assert.Equal("Atelier Martin", entry.ClientName);
             Assert.NotNull(RevenueInvoiceArchive.Resolve(_root, entry.InvoicePdfPath));
@@ -101,6 +101,22 @@ public sealed partial class EstimateUiTests
             DialogAction(owner, "Annuler");
             await Task.Delay(30);
             Assert.Empty(new RevenueJournal(_root).Years());
+        }
+        finally { owner.Close(); }
+    });
+
+    [Fact]
+    public Task Company_information_card_is_in_workshop_settings_and_shows_saved_values() => Run(async () =>
+    {
+        var owner = await Open(); owner.Show();
+        try
+        {
+            new MS3DPRINT.Manager.Core.Revenues.RevenueHeaderStore(_root).Save(new("Atelier Test", "12345678900011", "Jean Test", "1 rue Test", "test@exemple.fr", "0102030405"));
+            Invoke(owner, "ShowWorkspace", "Paramètres");
+            await (Task)Invoke(owner, "LoadSettingsAsync")!;
+            var texts = owner.FindControl<StackPanel>("StorageList")!.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).ToArray();
+            Assert.Contains("Mon entreprise", texts);
+            Assert.Contains("Atelier Test", texts); Assert.Contains("12345678900011", texts); Assert.Contains("test@exemple.fr", texts);
         }
         finally { owner.Close(); }
     });

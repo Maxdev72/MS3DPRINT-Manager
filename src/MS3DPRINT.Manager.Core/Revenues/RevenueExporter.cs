@@ -6,7 +6,15 @@ using MS3DPRINT.Manager.Core.Workspace;
 namespace MS3DPRINT.Manager.Core.Revenues;
 
 /// <summary>Workshop identity printed at the top of the book.</summary>
-public sealed record RevenueHeader(string BusinessName = "", string Siret = "", string OwnerName = "");
+public sealed record RevenueHeader(string BusinessName = "", string Siret = "", string OwnerName = "", string Address = "", string Email = "", string Phone = "")
+{
+    /// <summary>Second printed line: postal address, e-mail and phone when they are filled in; null otherwise.</summary>
+    public string? ContactLine()
+    {
+        var line = string.Join(" — ", new[] { Address, Email, Phone }.Where(v => !string.IsNullOrWhiteSpace(v)).Select(v => v.Trim()));
+        return line.Length == 0 ? null : line;
+    }
+}
 
 public sealed class RevenueHeaderStore
 {
@@ -100,7 +108,8 @@ public static class RevenueExporter
         var summary = RevenueTotals.Compute(year.Lines);
         var subtitle = new List<string>();
         var identity = string.Join(" — ", new[] { header.BusinessName, header.OwnerName, string.IsNullOrWhiteSpace(header.Siret) ? "" : "SIRET " + header.Siret }.Where(v => !string.IsNullOrWhiteSpace(v)));
-        subtitle.Add(identity.Length > 0 ? identity : "Atelier non renseigné (Réglages)");
+        subtitle.Add(identity.Length > 0 ? identity : "Atelier non renseigné (Paramètres > Atelier)");
+        if (header.ContactLine() is { } contact) subtitle.Add(contact);
         subtitle.Add($"Édité le {DateTime.Today:dd/MM/yyyy}. Les recettes annulées restent visibles, barrées, et sont exclues des totaux.");
         double[] x = [0, 52, 160, 285, 345, 410, 475, 540, 612, 690];
         int[] chars = [10, 23, 27, 12, 13, 13, 13, 14, 14, 17];
