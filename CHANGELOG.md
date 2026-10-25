@@ -2,6 +2,9 @@
 
 ## 25 octobre 2026
 
+### Correctif des notifications
+- Les notifications (« Estimation enregistrée… ») retrouvent leur fond opaque : le texte des lignes situées dessous ne se superpose plus. La règle de style avait été perdue lors de la synchronisation du 25 octobre ; un test en vérifie désormais l’opacité.
+
 ### Échange avec l’application mobile : réception des achats
 - Préparation de l’application compagnon Android : le téléphone dépose ses saisies (un petit fichier et la photo du ticket) dans le dossier « Echanges mobile » de l’espace de travail, synchronisé par Nextcloud. Il n’écrit jamais dans les registres.
 - Page Achats > « Téléphone » : liste les saisies reçues, avec un récapitulatif dans l’en-tête de la page. Après confirmation, chaque achat entre dans le registre avec la photo comme justificatif ; une référence absente devient « Ticket du jj/mm/aaaa ». Un achat déjà importé n’est pas dupliqué, les fichiers traités passent dans le sous-dossier « Traites » et les fichiers incomplets (photo pas encore synchronisée) sont signalés.
