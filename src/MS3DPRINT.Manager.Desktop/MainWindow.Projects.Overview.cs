@@ -4,6 +4,7 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using MS3DPRINT.Manager.Core.Estimates;
+using MS3DPRINT.Manager.Core.Revenues;
 using MS3DPRINT.Manager.Core.Projects;
 using MS3DPRINT.Manager.Desktop.Dashboard;
 
@@ -44,7 +45,9 @@ public partial class MainWindow
         estimate.Click += async (_, _) => await StartProjectEstimateAsync(project);
         var folder = new Button { Content = Icons.Label("IconOpen", "Ouvrir le dossier"), Tag = project.ProjectPath };
         folder.Click += OpenFolder_Click;
-        actions.Children.Add(estimate); actions.Children.Add(folder); content.Children.Add(actions);
+        var collect = new Button { Content = Icons.Label("IconBook", "Enregistrer un encaissement") };
+        collect.Click += async (_, _) => await RecordProjectCollectionAsync(project);
+        actions.Children.Add(estimate); actions.Children.Add(collect); actions.Children.Add(folder); content.Children.Add(actions);
         var duplicate = new Button { Content = Icons.Label("IconCopy", "Dupliquer"), Tag = project };
         duplicate.Click += DuplicateProject_Click; actions.Children.Add(duplicate);
 
@@ -77,6 +80,20 @@ public partial class MainWindow
             content.Children.Add(new TextBlock { Text = "Les estimations liées sont indisponibles. Retrouvez-les dans Estimations après vérification de l’espace de travail.", TextWrapping = TextWrapping.Wrap, Classes = { "muted" } });
         }
         return new Border { Classes = { "project-overview" }, Child = content };
+    }
+
+    /// <summary>Opens the revenue entry with the project's client, reference and the price of its latest quote as proposals.</summary>
+    private async Task RecordProjectCollectionAsync(ProjectSummary project)
+    {
+        decimal? suggested = null;
+        try
+        {
+            var root = WorkspaceRoot;
+            suggested = await Task.Run(() => new EstimateStore(root).LoadReadable().Where(q => q.ProjectReference == project.Reference)
+                .OrderByDescending(q => q.CreatedAt).Select(q => (decimal?)q.Result.FinalPrice).FirstOrDefault());
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or System.Text.Json.JsonException) { }
+        await OpenRevenueEntryAsync(null, new RevenueSuggestion(project.ClientTitle(), project.ClientPath, project.Reference, project.Title(), suggested));
     }
 
     private async Task StartProjectEstimateAsync(ProjectSummary project)

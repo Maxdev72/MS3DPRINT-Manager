@@ -128,6 +128,7 @@
       <StreamGeometry x:Key="IconSave">M5 3h12l4 4v14H3V3Z M7 3v6h10V3 M7 21v-8h10v8</StreamGeometry>
       <StreamGeometry x:Key="IconHistory">M3 11a9 9 0 1 1 2.6 7 M3 4v7h7 M12 7v5l3 2</StreamGeometry>
       <StreamGeometry x:Key="IconBook">M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5v-15Z M5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3 M9 8h6 M9 12h6</StreamGeometry>
+      <StreamGeometry x:Key="IconCart">M3 4h2.2l2 11h10.3l2-8H6.3 M9 20h.01 M17 20h.01</StreamGeometry>
       <StreamGeometry x:Key="IconActivity">M3 12h4l3-7 4 14 3-7h4</StreamGeometry>
     </ResourceDictionary>
   </Styles.Resources>

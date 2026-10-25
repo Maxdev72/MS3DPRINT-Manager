@@ -9,4 +9,8 @@
   <ItemGroup>
     <EmbeddedResource Include="Estimates/charge-presets.json" LogicalName="MS3DPRINT.Manager.Core.Estimates.charge-presets.json" />
   </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PdfPig" Version="0.1.16" />
+  </ItemGroup>
 </Project>

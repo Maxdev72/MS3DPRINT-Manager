@@ -1,6 +1,7 @@
 using System.Text;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
@@ -28,21 +29,32 @@ public partial class MainWindow
         await LoadRevenuesAsync();
     }
 
-    private async void CreateRevenue_Click(object? sender, RoutedEventArgs e)
+    private async void CreateRevenue_Click(object? sender, RoutedEventArgs e) => await OpenRevenueEntryAsync(null);
+
+    private async Task OpenRevenueEntryAsync(string? invoicePdf, RevenueSuggestion? suggestion = null)
     {
         var root = WorkspaceRoot;
-        string[] clients;
-        try { clients = await Task.Run(() => new ClientCatalog(new ClientProfileStore(new MS3DPRINT.Manager.Core.Workspace.WorkspaceMetadataPaths(root))).Load(root).Select(c => c.DisplayName).Where(n => !string.IsNullOrWhiteSpace(n)).Order().ToArray()); }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or System.Text.Json.JsonException) { clients = []; }
-        var dialog = new RevenueEntryWindow(clients, DateOnly.FromDateTime(DateTime.Today));
+        IReadOnlyList<ClientSummary> clientList;
+        try { clientList = await Task.Run(() => new ClientCatalog(new ClientProfileStore(new MS3DPRINT.Manager.Core.Workspace.WorkspaceMetadataPaths(root))).Load(root)); }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or System.Text.Json.JsonException) { clientList = []; }
+        var clients = clientList.Select(c => c.DisplayName).Where(n => !string.IsNullOrWhiteSpace(n)).Order().ToArray();
+        var dialog = new RevenueEntryWindow(clients, DateOnly.FromDateTime(DateTime.Today), invoicePdf);
+        if (suggestion is not null) dialog.Suggest(suggestion);
         if (!await dialog.ShowDialog<bool>(this) || dialog.Result is not { } entry) return;
         try
         {
             var journal = new RevenueJournal(root);
+            if (dialog.SourcePdfPath is { } sourcePdf)
+            {
+                var clientFolder = clientList.FirstOrDefault(c => string.Equals(c.DisplayName, entry.ClientName, StringComparison.CurrentCultureIgnoreCase))?.ClientPath
+                    ?? (suggestion is not null && string.Equals(suggestion.ClientName, entry.ClientName, StringComparison.CurrentCultureIgnoreCase) ? suggestion.ClientFolder : null);
+                var stored = await Task.Run(() => RevenueInvoiceArchive.Store(root, sourcePdf, clientFolder, entry.ReceivedOn.Year));
+                entry = entry with { InvoicePdfPath = stored };
+            }
             var duplicate = await Task.Run(() => journal.IsInvoiceKnown(entry.InvoiceNumber));
             await Task.Run(() => journal.Append(entry));
             _revenueYear = entry.ReceivedOn.Year;
-            await LoadRevenuesAsync();
+            if (RevenuesWorkspacePanel.IsVisible) await LoadRevenuesAsync();
             Notify(duplicate ? $"Encaissement enregistré. Attention : la facture {entry.InvoiceNumber} figure déjà dans le livre." : "Encaissement enregistré.", error: duplicate);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
@@ -64,6 +76,40 @@ public partial class MainWindow
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         { Notify(exception.Message, error: true); }
+    }
+
+    private void OpenRevenueInvoice_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: RevenueEntry entry }) return;
+        var path = RevenueInvoiceArchive.Resolve(WorkspaceRoot, entry.InvoicePdfPath);
+        if (path is null) { Notify("La facture jointe est introuvable dans l’espace de travail.", error: true); return; }
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true }); }
+        catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or IOException or InvalidOperationException)
+        { Notify("Impossible d’ouvrir la facture : " + exception.Message, error: true); }
+    }
+
+    private void InitializeRevenueDrop()
+    {
+        DragDrop.SetAllowDrop(RevenuesWorkspacePanel, true);
+        static string? PdfOf(DragEventArgs e)
+        {
+            var files = e.DataTransfer.TryGetFiles()?.ToArray() ?? [];
+            return files.Length == 1 && files[0].TryGetLocalPath() is { } path && Path.IsPathFullyQualified(path)
+                && string.Equals(Path.GetExtension(path), ".pdf", StringComparison.OrdinalIgnoreCase) ? path : null;
+        }
+        void Over(object? sender, DragEventArgs e)
+        {
+            var accepts = _panel is null && PdfOf(e) is not null;
+            e.DragEffects = accepts ? DragDropEffects.Copy : DragDropEffects.None; e.Handled = true;
+            RevenuesWorkspacePanel.Classes.Set("drag-active", accepts);
+        }
+        RevenuesWorkspacePanel.AddHandler(DragDrop.DragEnterEvent, Over); RevenuesWorkspacePanel.AddHandler(DragDrop.DragOverEvent, Over);
+        RevenuesWorkspacePanel.AddHandler(DragDrop.DragLeaveEvent, (_, _) => RevenuesWorkspacePanel.Classes.Set("drag-active", false));
+        RevenuesWorkspacePanel.AddHandler(DragDrop.DropEvent, async (_, e) =>
+        {
+            e.Handled = true; RevenuesWorkspacePanel.Classes.Set("drag-active", false);
+            if (_panel is null && PdfOf(e) is { } pdf) await OpenRevenueEntryAsync(pdf);
+        });
     }
 
     private async void EditRevenueHeader_Click(object? sender, RoutedEventArgs e)
@@ -150,12 +196,20 @@ public partial class MainWindow
             {
                 var entry = line.Entry;
                 Button? actions = null;
+                var menu = new List<Button>();
+                if (!string.IsNullOrWhiteSpace(entry.InvoicePdfPath))
+                {
+                    var open = new Button { Content = Icons.Label("IconOpen", "Ouvrir la facture"), Tag = entry };
+                    open.Click += OpenRevenueInvoice_Click;
+                    menu.Add(open);
+                }
                 if (!line.IsCancelled)
                 {
                     var cancel = new Button { Content = Icons.Label("IconClose", "Annuler la recette"), Tag = entry, Classes = { "menu-destructive" } };
                     cancel.Click += CancelRevenue_Click;
-                    actions = CreateOverflowActions(cancel);
+                    menu.Add(cancel);
                 }
+                if (menu.Count > 0) actions = CreateOverflowActions(menu.ToArray());
                 var label = line.IsCancelled ? $"{entry.Label} — annulée : {line.Cancellation!.Reason}" : entry.Label;
                 var cells = new[]
                 {

@@ -9,7 +9,7 @@ public partial class MainWindow
     private void InitializeShellPresentation()
     {
         AddHandler(PointerPressedEvent, Workspace_PointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
-        foreach (var panel in new[] { ProjectsWorkspacePanel, ClientsWorkspacePanel, CollectionsWorkspacePanel, FilamentsWorkspacePanel, PrintersWorkspacePanel, RevenuesWorkspacePanel, TrashWorkspacePanel, FolderWorkspacePanel })
+        foreach (var panel in new[] { ProjectsWorkspacePanel, ClientsWorkspacePanel, CollectionsWorkspacePanel, FilamentsWorkspacePanel, PrintersWorkspacePanel, RevenuesWorkspacePanel, PurchasesWorkspacePanel, TrashWorkspacePanel, FolderWorkspacePanel })
             panel.Classes.Add("table-surface");
         foreach (var button in NavigationButtons())
             if (button.Tag is string destination) ToolTip.SetTip(button, destination);

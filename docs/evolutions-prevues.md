@@ -3,7 +3,7 @@
 ## Intégration d’un livre de recettes
 
 - Demande de l’utilisateur enregistrée le 25 octobre 2026.
-- Statut : version 1 développée le 25 octobre 2026 (voir le journal des modifications et la spécification `docs/superpowers/specs/2026-10-25-livre-de-recettes-design.md`). Reste à faire : analyse locale du PDF Indy (version 2) et saisie depuis la fiche projet.
+- Statut : développé le 25 octobre 2026 (voir le journal des modifications et la spécification `docs/superpowers/specs/2026-10-25-livre-de-recettes-design.md`) : saisie libre, import local des factures Indy, saisie depuis la fiche projet et registre des achats.
 - Objectif : intégrer un livre de recettes dans MS3DPRINT Manager.
 - Points à définir ensemble : saisie des encaissements, liens avec les clients et projets, consultation, exports et règles applicables.
 - Aucun changement fonctionnel effectué pour cette demande ; conserver le périmètre actuel concernant les devis et la facturation.

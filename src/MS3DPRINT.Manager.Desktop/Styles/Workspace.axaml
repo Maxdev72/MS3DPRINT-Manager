@@ -9,6 +9,10 @@
     <Setter Property="Background" Value="{DynamicResource CyanSoftBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" />
   </Style>
+  <Style Selector="Window.workbench-ui Border.workspace-sheet.drag-active">
+    <Setter Property="Background" Value="{DynamicResource CyanSoftBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" />
+  </Style>
   <Style Selector="Window.workbench-ui Border.file-drop-target.drop-refused">
     <Setter Property="Background" Value="{DynamicResource WarningSoftBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}" />

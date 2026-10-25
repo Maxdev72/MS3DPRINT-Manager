@@ -2,11 +2,15 @@
 
 ## 25 octobre 2026
 
-### Livre de recettes (version 1)
+### Livre de recettes et registre des achats
 - Nouvelle page « Recettes » : registre chronologique des encaissements, avec date d’encaissement, client, libellé, nature (marchandises, prestations ou mixte), mode de règlement, numéro de facture et projet. Un sélecteur d’année et le total encaissé sont affichés en tête.
 - Le journal est en ajout seul (`.ms3dprint-manager/revenues/AAAA.jsonl`, inclus dans les sauvegardes) : aucune ligne n’est supprimée ni modifiée. Une recette erronée s’annule avec un motif obligatoire ; elle reste visible, barrée, et sort des totaux. Une ligne illisible est signalée sans masquer les autres.
 - Exports de l’année : PDF imprimable paginé, CSV/Excel (séparateur point-virgule, cellules protégées contre l’interprétation en formule) et synthèse des totaux de déclaration par mois et par nature. L’en-tête (entreprise, entrepreneur, SIRET) se règle depuis la page.
-- Un numéro de facture déjà présent est signalé sans bloquer. L’analyse automatique des PDF Indy est prévue pour la version 2. Conception : docs/superpowers/specs/2026-10-25-livre-de-recettes-design.md.
+- Un numéro de facture déjà présent est signalé sans bloquer.
+- Import d’une facture Indy : un PDF glissé sur la page, ou choisi depuis le formulaire, est lu localement (numéro, total TTC, client, nature vente/prestation, date d’émission) pour pré-remplir la saisie. Rien n’est enregistré sans confirmation et la date d’encaissement reste à indiquer. Le PDF est copié dans le dossier Documents du client (ou à défaut dans le dossier de pièces du livre), sans écraser ni déplacer l’original, et s’ouvre depuis le menu de la ligne.
+- Depuis la fiche d’un projet, « Enregistrer un encaissement » propose le client, la référence du projet et le prix de la dernière estimation.
+- Nouvelle page « Achats » : registre chronologique des achats de matières et fournitures (date, fournisseur, libellé, montant, mode de règlement, pièce justificative, projet), obligatoire pour la vente de marchandises. Même principe que le livre : journal en ajout seul (`.ms3dprint-manager/purchases/AAAA.jsonl`, inclus dans les sauvegardes), annulation avec motif, justificatif PDF ou image copié dans le dossier de pièces, exports PDF et CSV avec l’en-tête de l’atelier.
+- Conception : docs/superpowers/specs/2026-10-25-livre-de-recettes-design.md.
 
 ### Raccourcis de la liste des fichiers
 - Ctrl+A sélectionne tous les fichiers du résultat filtré, sur toutes les pages ; Échap désélectionne. F2 ouvre le renommage d’un seul fichier sélectionné et Suppr reprend la confirmation de corbeille groupée.
