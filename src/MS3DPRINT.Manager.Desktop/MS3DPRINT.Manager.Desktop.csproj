@@ -13,13 +13,16 @@
 
   <ItemGroup>
     <AvaloniaResource Include="Assets/app-icon.png" />
+    <AvaloniaResource Include="Assets/ms3dprint-brand.webp" />
+    <AvaloniaResource Include="Assets/Fonts/*.ttf" />
+    <AvaloniaResource Include="Assets/Fonts/*.txt" />
     <AvaloniaResource Include="../../CHANGELOG.md" Link="Assets/CHANGELOG.md" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="12.1.3" />
-    <PackageReference Include="Avalonia.Desktop" Version="12.1.3" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.3" />
+    <PackageReference Include="Avalonia" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
     <PackageReference Include="Avalonia.Controls.WebView" Version="12.1.1" />
   </ItemGroup>
 

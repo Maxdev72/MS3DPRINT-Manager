@@ -7,6 +7,28 @@ public sealed class ProjectFileBrowserTests : IDisposable
     private readonly string _root = Path.Combine(Path.GetTempPath(), "MS3DPRINT-file-browser-tests-" + Guid.NewGuid().ToString("N"));
 
     [Fact]
+    public void Enumeration_yields_entries_before_the_read_finishes_and_honors_cancellation()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(Path.Combine(_root, "a.txt"), "abc");
+        File.WriteAllText(Path.Combine(_root, "b.txt"), "abcdef");
+        using var cancellation = new CancellationTokenSource();
+        using var entries = new ProjectFileBrowser().Enumerate(_root, _root, cancellation.Token).GetEnumerator();
+        Assert.True(entries.MoveNext());
+        Assert.Contains(entries.Current.Length, new long?[] { 3, 6 });
+        cancellation.Cancel();
+        Assert.Throws<OperationCanceledException>(() => entries.MoveNext());
+    }
+
+    [Fact]
+    public void Enumeration_rejects_paths_outside_root_and_pre_cancelled_reads()
+    {
+        Directory.CreateDirectory(_root);
+        Assert.Throws<UnauthorizedAccessException>(() => new ProjectFileBrowser().Enumerate(_root, Path.GetTempPath()).ToArray());
+        Assert.Throws<OperationCanceledException>(() => new ProjectFileBrowser().Enumerate(_root, _root, new CancellationToken(true)).ToArray());
+    }
+
+    [Fact]
     public void List_ReturnsImmediateEntriesWithDirectoriesFirst()
     {
         var project = Path.Combine(_root, "project");

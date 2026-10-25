@@ -23,6 +23,8 @@ public partial class MainWindow
 {
     private async Task LoadProjectDirectoryAsync(MS3DPRINT.Manager.Core.Projects.ProjectSummary project, string directory)
     {
+        CancelFileRead();
+        RememberProject(project, directory);
         ProjectList.Children.Clear();
         ProjectList.Spacing = 8;
         _projectListMode = false;
@@ -39,7 +41,7 @@ public partial class MainWindow
             if (directory == project.ProjectPath && origin is not null)
             {
                 _projectOriginClient = null;
-                ShowWorkspace("Clients");
+                ShowWorkspaceForDetail("Clients");
                 PageTitle.Text = "Clients";
                 PageSubtitle.Text = origin.Title();
                 await LoadClientDetailAsync(origin);
@@ -55,7 +57,7 @@ public partial class MainWindow
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right };
         var createFolder = new Button { Content = Icons.Label("IconPlus", "Nouveau dossier"), Tag = (Project: project, Directory: directory), Classes = { "primary-action" } };
         createFolder.Click += CreateProjectFolder_Click;
-        var import = new Button { Content = Icons.Label("IconUpload", "Importer un fichier"), Tag = (Project: project, Directory: directory), HorizontalAlignment = HorizontalAlignment.Left };
+        var import = new Button { Content = Icons.Label("IconUpload", "Importer des fichiers"), Tag = (Project: project, Directory: directory), HorizontalAlignment = HorizontalAlignment.Left };
         import.Click += ImportProjectFile_Click;
         actions.Children.Add(createFolder);
         actions.Children.Add(import);
@@ -65,13 +67,14 @@ public partial class MainWindow
         ProjectList.Children.Add(toolbar);
         if (directory == project.ProjectPath)
             AddProjectOverview(project);
+        ProjectList.Children.Add(new TextBlock { Text = "Fichiers du projet", FontSize = 18, FontWeight = FontWeight.SemiBold, Margin = new Avalonia.Thickness(0, 8, 0, 4) });
 
         var trail = new List<(string Label, Func<Task>? Go)>();
         if (origin is null) trail.Add(("Projets", GoToProjectsAsync));
         else
         {
             trail.Add(("Clients", GoToClientsAsync));
-            trail.Add((origin.Title(), async () => { ShowWorkspace("Clients"); PageTitle.Text = "Clients"; await LoadClientDetailAsync(origin); }));
+            trail.Add((origin.Title(), async () => { ShowWorkspaceForDetail("Clients"); PageTitle.Text = "Clients"; await LoadClientDetailAsync(origin); }));
         }
         trail.Add((project.Title(), () => LoadProjectDirectoryAsync(project, project.ProjectPath)));
         var relative = Path.GetRelativePath(project.ProjectPath, directory);
@@ -86,45 +89,9 @@ public partial class MainWindow
             }
         }
         SetBreadcrumb(trail.ToArray());
-        try
-        {
-            var entries = await Task.Run(() => new ProjectWorkspaceBrowser().List(project.ProjectPath, directory));
-            if (entries.Count == 0)
-            {
-                ProjectList.Children.Add(CreateEmptyState("IconFile", "Ce dossier est vide", "Importez un fichier ou créez un sous-dossier avec les boutons ci-dessus."));
-                return;
-            }
-            ProjectList.Children.Add(CreateCompactTableHeader(ActionRowColumns, "NOM", "TYPE", "TAILLE", "ACTIONS"));
-            foreach (var entry in entries)
-            {
-                if (entry.IsDirectory)
-                {
-                    var folder = new Button { HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch };
-                    folder.Click += async (_, _) => await LoadProjectDirectoryAsync(project, entry.FullPath);
-                    ProjectList.Children.Add(CreateActionRow(folder, CreateOverflowActions(EntryActions(new ProjectDirectoryContext(project, directory, entry.FullPath), isFile: false)),
-                        CreateNameCell("IconProjects", entry.Name, accentIcon: true),
-                        CreateCompactTableCell("Dossier"), CreateCompactTableCell("—")));
-                }
-                else
-                {
-                    var file = new Button { Tag = entry.FullPath, HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch };
-                    file.Click += FileEntry_Click;
-                    var openWith = new Button { Content = Icons.Label("IconOpen", "Ouvrir avec…"), Tag = entry.FullPath };
-                    openWith.Click += OpenWithFile_Click;
-                    var rename = new Button { Content = Icons.Label("IconRename", "Renommer"), Tag = new ProjectDirectoryContext(project, directory, entry.FullPath) };
-                    rename.Click += RenameProjectFile_Click;
-                    var move = new Button { Content = Icons.Label("IconMove", "Déplacer"), Tag = new ProjectDirectoryContext(project, directory, entry.FullPath) };
-                    move.Click += MoveProjectEntry_Click;
-                    var trash = new Button { Content = Icons.Label("IconTrash", "Corbeille"), Tag = new ProjectDirectoryContext(project, directory, entry.FullPath) };
-                    trash.Click += TrashProjectFile_Click;
-                    ProjectList.Children.Add(CreateActionRow(file, CreateOverflowActions(openWith, rename, move, trash),
-                        CreateNameCell("IconFile", entry.Name, accentIcon: false, modelPath: entry.FullPath),
-                        CreateCompactTableCell(entry.TypeLabel), CreateCompactTableCell(entry.SizeLabel)));
-                }
-            }
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
-        { ProjectList.Children.Add(new TextBlock { Text = "Impossible de lire les fichiers du projet.", Margin = new Avalonia.Thickness(8) }); }
+        var reading = LoadFileBrowserAsync(ProjectList, project.ProjectPath, directory, project, () => LoadProjectDirectoryAsync(project, directory));
+        // History is ready once the view is installed; its input lock must not cover disk I/O.
+        if (!_replayingNavigation) await reading;
     }
 
     private async void CreateProjectFolder_Click(object? sender, RoutedEventArgs e)
@@ -161,34 +128,57 @@ public partial class MainWindow
     private async void ImportProjectFile_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: ValueTuple<ProjectSummary, string> context }) return;
-        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions { Title = "Importer un fichier", AllowMultiple = false });
-        var source = files.FirstOrDefault()?.TryGetLocalPath();
-        if (string.IsNullOrWhiteSpace(source)) return;
-        var originalName = Path.GetFileName(source);
-        // From the project root the destination is a choice; inside a folder the file simply goes there.
-        var atRoot = string.Equals(Path.GetFullPath(context.Item2).TrimEnd(Path.DirectorySeparatorChar), Path.GetFullPath(context.Item1.ProjectPath).TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase);
-        IReadOnlyList<ImportDestination>? destinations = null;
-        string? suggestedFolder = null;
-        if (atRoot)
-        {
-            destinations = await Task.Run(() => ImportDestinations(context.Item1.ProjectPath));
-            try { suggestedFolder = Path.Combine(context.Item1.ProjectPath, ProjectFileClassifier.Suggest(originalName, context.Item1.FolderName, new ProjectTemplateStore(new WorkspaceMetadataPaths(WorkspaceRoot)).Load()).RelativeDirectory); }
-            catch (ArgumentException) { }
-        }
-        var naming = new ImportNameWindow(originalName, ProjectFileClassifier.SuggestImportName(originalName, context.Item1.Reference), context.Item1.Reference, destinations, suggestedFolder);
-        if (!await naming.ShowDialog<bool>(this)) return;
+        if (_importBatchActive) return;
+        var root = WorkspaceRoot;
+        var sources = await PickImportSourcesAsync();
+        await ImportProjectFilesAsync(root, context.Item1, context.Item2, sources);
+    }
+
+    private async Task ImportProjectFilesAsync(string root, ProjectSummary project, string directory, IReadOnlyList<string> sources)
+    {
+        if (_importBatchActive || sources.Count == 0) return;
+        StartImportBatch(sources.Count);
+        var navigationKey = CurrentNavigationStop?.Key;
+        var importedCount = 0; var failures = 0; var stopped = false;
         try
         {
-            var root = WorkspaceRoot;
-            var finalName = naming.FileName;
-            var targetDirectory = naming.DestinationDirectory ?? context.Item2;
-            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.ManagedFileService(root).Import(source, targetDirectory, finalName));
-            var where = naming.DestinationDirectory is null ? string.Empty : $" dans {Path.GetRelativePath(context.Item1.ProjectPath, targetDirectory)}";
-            Notify((string.Equals(finalName, originalName, StringComparison.Ordinal) ? "Fichier importé" : $"Fichier importé sous le nom {finalName}") + where + ".");
-            await LoadProjectDirectoryAsync(context.Item1, context.Item2);
+            var atRoot = string.Equals(Path.GetFullPath(directory).TrimEnd(Path.DirectorySeparatorChar), Path.GetFullPath(project.ProjectPath).TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase);
+            var destinations = atRoot ? await Task.Run(() => ImportDestinations(project.ProjectPath)) : null;
+            for (var index = 0; index < sources.Count; index++)
+            {
+                if (_importStopRequested || !MatchesNavigationContext(root, navigationKey)) { stopped = true; break; }
+                var source = sources[index];
+                UpdateImportProgress(index + 1, sources.Count, source, "Choix du nom et du dossier");
+                try
+                {
+                    var originalName = Path.GetFileName(source);
+                    string? suggestedFolder = null;
+                    if (atRoot)
+                    {
+                        try { suggestedFolder = Path.Combine(project.ProjectPath, ProjectFileClassifier.Suggest(originalName, project.FolderName, new ProjectTemplateStore(new WorkspaceMetadataPaths(root)).Load()).RelativeDirectory); }
+                        catch (ArgumentException) { }
+                    }
+                    var naming = new ImportNameWindow(originalName, ProjectFileClassifier.SuggestImportName(originalName, project.Reference), project.Reference, destinations, suggestedFolder, index + 1, sources.Count);
+                    if (!await naming.ShowDialog<bool>(this)) { stopped = true; break; }
+                    if (_importStopRequested || !MatchesNavigationContext(root, navigationKey)) { stopped = true; break; }
+                    var targetDirectory = naming.DestinationDirectory ?? directory;
+                    var finalName = naming.FileName;
+                    UpdateImportProgress(index + 1, sources.Count, source, "Copie en cours");
+                    var imported = await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.ManagedFileService(root).Import(source, targetDirectory, finalName));
+                    importedCount++;
+                    ImportBatchProgress.Value = importedCount + failures;
+                    if (!MatchesNavigationContext(root, navigationKey)) { stopped = true; break; }
+                    UpdateImportProgress(index + 1, sources.Count, source, "Copié · choix pour la source");
+                    await ConfirmImportedSourceRemovalAsync(root, source, imported);
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+                { failures++; ImportBatchProgress.Value = importedCount + failures; RecordImportError(Path.GetFileName(source) + " : " + exception.Message); }
+            }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
-        { Notify(exception.Message, error: true); }
+        { stopped = true; RecordImportError(exception.Message); }
+        finally { stopped |= _importStopRequested; CompleteImportBatch(importedCount, failures, sources.Count, stopped); }
+        if (MatchesNavigationContext(root, navigationKey)) await LoadProjectDirectoryAsync(project, directory);
     }
 
     private async void FileEntry_Click(object? sender, RoutedEventArgs e)
@@ -197,7 +187,7 @@ public partial class MainWindow
         await OpenFileAsync(path);
     }
 
-    private void OpenWithFile_Click(object? sender, RoutedEventArgs e)
+    private async void OpenWithFile_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: string path } || !File.Exists(path)) return;
         if (ExecutableFileGuard.IsExecutable(path))
@@ -207,8 +197,9 @@ public partial class MainWindow
         }
         try
         {
-            if (DesktopPreviewLauncher.OpenWith is { } openWith) openWith(path);
-            else _ = OpenFileAsync(path);
+            var root = WorkspaceRoot;
+            if (DesktopPreviewLauncher.OpenWith is { } openWith) { openWith(path); await RememberOpenedFileAsync(root, path); }
+            else await OpenFileAsync(path);
         }
         catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException or IOException)
         { Notify("Impossible d’ouvrir ce fichier avec une autre application : " + exception.Message, error: true); }
@@ -217,6 +208,11 @@ public partial class MainWindow
     private async void RenameProjectFile_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: ProjectDirectoryContext context }) return;
+        await RenameProjectEntryAsync(context);
+    }
+
+    private async Task RenameProjectEntryAsync(ProjectDirectoryContext context)
+    {
         var isDirectory = Directory.Exists(context.Path);
         var dialog = new TextPromptWindow(isDirectory ? "Renommer le dossier" : "Renommer le fichier", isDirectory ? "Le dossier conservera son emplacement dans le projet." : "Le fichier conservera son emplacement dans le projet.", Path.GetFileName(context.Path));
         if (!await dialog.ShowDialog<bool>(this)) return;
@@ -270,6 +266,7 @@ public partial class MainWindow
 
     private async Task OpenFileAsync(string path)
     {
+        var root = WorkspaceRoot;
         if (!File.Exists(path))
         {
             Notify("Ce fichier n’est plus disponible.", error: true);
@@ -279,7 +276,9 @@ public partial class MainWindow
         {
             if (IsImage(path))
             {
-                await new ImagePreviewWindow(path).ShowDialog(this);
+                var preview = new ImagePreviewWindow(path);
+                await RememberOpenedFileAsync(root, path);
+                await preview.ShowDialog(this);
                 return;
             }
 
@@ -290,7 +289,7 @@ public partial class MainWindow
             }
 
             if (DesktopPreviewLauncher.TryOpenDocument(path))
-                return;
+            { await RememberOpenedFileAsync(root, path); return; }
 
             if (ExecutableFileGuard.IsExecutable(path))
             {
@@ -302,11 +301,11 @@ public partial class MainWindow
             var opened = false;
             try { opened = launcher is not null && await launcher.LaunchUriAsync(new Uri(path)); }
             catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException) { }
-            if (opened) return;
+            if (opened) { await RememberOpenedFileAsync(root, path); return; }
 
             // Windows has no application for this type of file: a slicer for a 3D model, else the "Open with" window
-            if (SlicerLauncher.TryOpen(path) is { } slicer) { Notify($"Ouvert dans {slicer}."); return; }
-            if (DesktopPreviewLauncher.OpenWith is { } openWith) openWith(path);
+            if (SlicerLauncher.TryOpen(path) is { } slicer) { await RememberOpenedFileAsync(root, path); Notify($"Ouvert dans {slicer}."); return; }
+            if (DesktopPreviewLauncher.OpenWith is { } openWith) { openWith(path); await RememberOpenedFileAsync(root, path); }
             else Notify("Aucune application n’est associée à ce type de fichier.", error: true);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or UriFormatException or InvalidOperationException)

@@ -66,6 +66,75 @@ public sealed class ManagedFileServiceTests : IDisposable
     }
 
     [Fact]
+    public void Imported_source_is_deleted_only_when_the_renamed_copy_is_identical()
+    {
+        var source = _root + "-external.txt";
+        File.WriteAllText(source, "document importé");
+        try
+        {
+            var destination = Directory.CreateDirectory(Path.Combine(_root, "destination")).FullName;
+            var service = new ManagedFileService(_root);
+            var imported = service.Import(source, destination, "nom-projet.txt");
+            Assert.True(File.Exists(source));
+            service.DeleteImportedSource(source, imported);
+            Assert.False(File.Exists(source));
+            Assert.Equal("document importé", File.ReadAllText(imported));
+        }
+        finally { if (File.Exists(source)) File.Delete(source); }
+    }
+
+    [Fact]
+    public void Verified_source_handle_blocks_replacement_and_writes_without_deleting_on_failure()
+    {
+        var source = FileAt("source/original.txt", "original");
+        var type = typeof(ManagedFileService).Assembly.GetType("MS3DPRINT.Manager.Core.Workspace.VerifiedSourceDeletion")!;
+        using (var locked = (FileStream)type.GetMethod("Open")!.Invoke(null, [source])!)
+        {
+            Assert.Throws<IOException>(() => File.Move(source, source + ".replaced"));
+            Assert.Throws<IOException>(() => File.WriteAllText(source, "modifié"));
+        }
+        Assert.Equal("original", File.ReadAllText(source));
+    }
+
+    [Fact]
+    public void Locked_imported_copy_keeps_the_original_source()
+    {
+        var source = FileAt("source/original.txt");
+        var destination = Directory.CreateDirectory(Path.Combine(_root, "destination")).FullName;
+        var service = new ManagedFileService(_root);
+        var imported = service.Import(source, destination);
+        using var locked = new FileStream(imported, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        Assert.Throws<IOException>(() => service.DeleteImportedSource(source, imported));
+        Assert.True(File.Exists(source));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Changed_source_or_imported_copy_prevents_source_deletion(bool changeSource)
+    {
+        var source = FileAt("source/original.txt", "AAAA");
+        var destination = Directory.CreateDirectory(Path.Combine(_root, "destination")).FullName;
+        var service = new ManagedFileService(_root);
+        var imported = service.Import(source, destination);
+        File.WriteAllText(changeSource ? source : imported, "BBBB");
+        Assert.Throws<IOException>(() => service.DeleteImportedSource(source, imported));
+        Assert.True(File.Exists(source));
+        Assert.True(File.Exists(imported));
+    }
+
+    [Fact]
+    public void Source_deletion_rejects_same_path_missing_copy_and_unmanaged_destination()
+    {
+        var source = FileAt("source/original.txt");
+        var service = new ManagedFileService(_root);
+        Assert.Throws<IOException>(() => service.DeleteImportedSource(source, source));
+        Assert.ThrowsAny<IOException>(() => service.DeleteImportedSource(source, Path.Combine(_root, "missing.txt")));
+        Assert.Throws<IOException>(() => service.DeleteImportedSource(source, Path.Combine(Path.GetTempPath(), "outside-workspace.txt")));
+        Assert.True(File.Exists(source));
+    }
+
+    [Fact]
     public void TrashAndRestore_PersistTogetherAndPreflightAllConflicts()
     {
         var service = new ManagedFileService(_root);

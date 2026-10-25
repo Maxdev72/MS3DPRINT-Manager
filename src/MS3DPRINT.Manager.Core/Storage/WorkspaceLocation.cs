@@ -61,8 +61,9 @@ public sealed class WorkspaceLocation
         {
             using var stream = new FileStream(_path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
             var root = JsonSerializer.Deserialize<Stored>(stream)?.Root;
-            return !string.IsNullOrWhiteSpace(root) && Directory.Exists(root) ? root : null;
+            // A temporary disconnection is not a new installation or a choice of another workspace.
+            return !string.IsNullOrWhiteSpace(root) && Path.IsPathFullyQualified(root) ? Path.GetFullPath(root) : null;
         }
-        catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException) { return null; }
+        catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { return null; }
     }
 }

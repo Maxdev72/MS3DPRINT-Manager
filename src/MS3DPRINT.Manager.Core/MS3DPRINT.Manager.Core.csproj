@@ -6,4 +6,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Estimates/charge-presets.json" LogicalName="MS3DPRINT.Manager.Core.Estimates.charge-presets.json" />
+  </ItemGroup>
 </Project>

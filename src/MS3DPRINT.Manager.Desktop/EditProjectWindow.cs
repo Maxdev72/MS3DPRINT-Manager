@@ -9,6 +9,8 @@ public sealed class EditProjectWindow : DialogWindow
     private readonly TextBox _name;
     private readonly string _suggestedName;
     private readonly ComboBox _status;
+    private readonly ProjectPriorityPicker _priority;
+    public ProjectPriority Priority => _priority.Value;
     private readonly TextBox _dueDate;
     private readonly TextBox _description;
     private readonly TextBox _notes;
@@ -29,6 +31,7 @@ public sealed class EditProjectWindow : DialogWindow
         MinWidth = 440;
         // names made from folder names come back in capitals with underscores and no accents: propose them readable
         _suggestedName = DisplayNames.Format(profile.ProjectName);
+        _priority = new ProjectPriorityPicker(profile.Priority);
         _name = new TextBox { Text = _suggestedName };
         _status = new ComboBox { ItemsSource = Enum.GetValues<ProjectStatus>(), SelectedItem = profile.Status, ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<ProjectStatus>((value, _) => new TextBlock { Text = StatusText(value) }) };
         _dueDate = new TextBox { Text = profile.DueDate?.ToString("yyyy-MM-dd") ?? string.Empty, PlaceholderText = "ex. 2026-11-30" };
@@ -38,7 +41,7 @@ public sealed class EditProjectWindow : DialogWindow
         save.Click += Save_Click;
         Layout(profile.Reference, _suggestedName,
             [FormKit.Field("Nom du projet", _name, hint: "Nom affiché, avec ses accents. Le dossier sur le disque garde son nom."), FormKit.Field("Statut", _status), FormKit.Field("Échéance", _dueDate, hint: "Format AAAA-MM-JJ, ou vide pour aucune échéance."),
-             FormKit.Field("Description", _description), FormKit.Field("Notes internes", _notes), _error], save);
+             FormKit.Field("Priorité", _priority), FormKit.Field("Description", _description), FormKit.Field("Notes internes", _notes), _error], save);
     }
 
     private void Save_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -49,8 +52,7 @@ public sealed class EditProjectWindow : DialogWindow
         {
             if (!DateOnly.TryParse(rawDate, out var parsedDate))
             {
-                _error.Text = "Saisissez une date au format AAAA-MM-JJ, ou laissez le champ vide.";
-                _error.IsVisible = true;
+                FormKit.ShowError(_error, _dueDate, "Saisissez une date au format AAAA-MM-JJ, ou laissez le champ vide.");
                 return;
             }
             date = parsedDate;

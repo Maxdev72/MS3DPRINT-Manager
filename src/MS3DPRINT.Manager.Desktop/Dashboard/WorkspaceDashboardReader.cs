@@ -13,7 +13,10 @@ public sealed record WorkspaceDashboard(
     IReadOnlyList<ProjectSummary> RecentProjects,
     IReadOnlyList<ProjectSummary> Deadlines,
     int IncompleteProjects,
-    int IncompleteClients);
+    int IncompleteClients)
+{
+    public IReadOnlyList<ProjectSummary> WorkQueue { get; init; } = [];
+}
 
 /// <summary>Reads the existing workspace without changing its files or metadata.</summary>
 public sealed class WorkspaceDashboardReader
@@ -29,10 +32,22 @@ public sealed class WorkspaceDashboardReader
             .OrderByDescending(project => project.Profile?.UpdatedAt ?? DateTimeOffset.MinValue)
             .Take(5)
             .ToArray();
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var workQueue = projects
+            .Where(project => !project.IsArchived && project.Status != ProjectStatus.Completed)
+            .OrderBy(project => project.Profile?.DueDate is { } due && due <= today.AddDays(7)
+                ? due < today ? 0 : due == today ? 1 : 2
+                : project.Priority == ProjectPriority.High ? 3 : project.Status == ProjectStatus.InProgress ? 4 : 5)
+            .ThenBy(project => project.Profile?.DueDate ?? DateOnly.MaxValue)
+            .ThenByDescending(project => project.Priority)
+            .ThenBy(project => project.Status == ProjectStatus.InProgress ? 0 : 1)
+            .ThenByDescending(project => project.Profile?.UpdatedAt ?? DateTimeOffset.MinValue)
+            .Take(5).ToArray();
 
         var deadlines = projects
-            .Where(project => project.Profile is { DueDate: not null } profile && profile.Status != ProjectStatus.Completed)
+            .Where(project => !project.IsArchived && project.Profile is { DueDate: not null } profile && profile.Status != ProjectStatus.Completed)
             .OrderBy(project => project.Profile!.DueDate)
+            .ThenByDescending(project => project.Priority)
             .Take(4)
             .ToArray();
 
@@ -45,6 +60,6 @@ public sealed class WorkspaceDashboardReader
             recent,
             deadlines,
             projects.Count(project => project.Profile is null),
-            clients.Count(client => client.Profile is null));
+            clients.Count(client => client.Profile is null)) { WorkQueue = workQueue };
     }
 }

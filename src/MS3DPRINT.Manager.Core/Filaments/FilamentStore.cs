@@ -5,6 +5,7 @@ namespace MS3DPRINT.Manager.Core.Filaments;
 
 public sealed class FilamentStore
 {
+    public IReadOnlyList<string> ReadErrors { get; private set; } = [];
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     private readonly string _root;
     private readonly string _directory;
@@ -28,14 +29,18 @@ public sealed class FilamentStore
     /// <summary>The readable filaments; a corrupt file is left out instead of hiding all the others.</summary>
     public IReadOnlyList<FilamentProfile> LoadReadable()
     {
+        ReadErrors = [];
         CheckLinks(_directory);
         if (!Directory.Exists(_directory)) return [];
         var readable = new List<FilamentProfile>();
+        var errors = new List<string>();
         foreach (var path in Directory.EnumerateFiles(_directory, "*.json"))
         {
             try { readable.Add(Read(path)); }
-            catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException or ArgumentException) { }
+            catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException or ArgumentException)
+            { errors.Add(Path.GetFileName(path) + " : " + exception.Message); }
         }
+        ReadErrors = errors.AsReadOnly();
         return readable.OrderBy(p => p.Brand, StringComparer.CurrentCultureIgnoreCase)
             .ThenBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase).ToArray();
     }

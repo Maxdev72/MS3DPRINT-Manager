@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using MS3DPRINT.Manager.Core.Workspace;
 
 namespace MS3DPRINT.Manager.Core.ModelSearch;
 
@@ -25,6 +26,8 @@ public sealed class DownloadBuffer : IDisposable
     private static readonly TimeSpan GiveUpAfter = TimeSpan.FromMinutes(2);
 
     private readonly HashSet<string> _announced = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _processing = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _offered = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _gate = new();
     private FileSystemWatcher? _watcher;
 
@@ -44,6 +47,13 @@ public sealed class DownloadBuffer : IDisposable
 
     /// <summary>Raised, on a background thread, once a downloaded ZIP has been opened (its 3D files are in a folder of the buffer).</summary>
     public event Action<BufferedBatch>? BatchReady;
+
+    /// <summary>The offer window closed: these remaining files become ordinary temporary buffer entries again.</summary>
+    public void ReleaseOffered(IEnumerable<string> paths)
+    {
+        var released = paths.Select(Path.GetFullPath).ToArray();
+        lock (_gate) foreach (var path in released) _offered.Remove(path);
+    }
 
     private static bool IsArchive(string path) => string.Equals(Path.GetExtension(path), ".zip", StringComparison.OrdinalIgnoreCase);
 
@@ -92,37 +102,24 @@ public sealed class DownloadBuffer : IDisposable
     }
 
     /// <summary>Deletes buffered files not touched for <paramref name="age"/>; the buffer is a stopover, not storage.</summary>
-    public int PurgeOlderThan(TimeSpan age)
+    public int PurgeOlderThan(TimeSpan age, IEnumerable<string>? keep = null)
     {
-        if (!Directory.Exists(Folder)) return 0;
-        var removed = 0;
-        foreach (var file in Directory.EnumerateFiles(Folder))
+        if (age < TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(age));
+        lock (_gate)
         {
-            try
-            {
-                if (DateTime.UtcNow - File.GetLastWriteTimeUtc(file) < age) continue;
-                File.Delete(file);
-                removed++;
-            }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { }
+            var kept = (keep ?? []).Select(Path.GetFullPath).ToArray();
+            return CleanupEntries(kept).Count(entry => DateTime.UtcNow - entry.Written >= age && RemoveCleanupEntry(entry, kept));
         }
-        // the folders where ZIPs were opened
-        foreach (var directory in Directory.EnumerateDirectories(Folder))
-        {
-            try
-            {
-                if (DateTime.UtcNow - Directory.GetLastWriteTimeUtc(directory) < age) continue;
-                Directory.Delete(directory, true);
-                removed++;
-            }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { }
-        }
-        return removed;
     }
 
     /// <summary>Removes what is older than <paramref name="age"/>, then the oldest entries until the buffer weighs at most <paramref name="maxBytes"/>.</summary>
     public int Maintain(TimeSpan age, long maxBytes, IEnumerable<string>? keep = null)
-        => PurgeOlderThan(age) + TrimToSize(maxBytes, keep);
+    {
+        if (age < TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(age));
+        if (maxBytes < 0) throw new ArgumentOutOfRangeException(nameof(maxBytes));
+        var kept = (keep ?? []).ToArray();
+        lock (_gate) return PurgeOlderThan(age, kept) + TrimToSize(maxBytes, kept);
+    }
 
     /// <summary>
     /// Deletes the oldest files and opened-ZIP folders until the buffer weighs at most <paramref name="maxBytes"/>. What is still being
@@ -130,44 +127,85 @@ public sealed class DownloadBuffer : IDisposable
     /// </summary>
     public int TrimToSize(long maxBytes, IEnumerable<string>? keep = null)
     {
-        if (!Directory.Exists(Folder)) return 0;
-        var kept = (keep ?? []).Select(Path.GetFullPath).ToList();
-        bool IsKept(string entry) => kept.Any(path => string.Equals(path, entry, StringComparison.OrdinalIgnoreCase)
-                                                     || path.StartsWith(entry + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase));
+        if (maxBytes < 0) throw new ArgumentOutOfRangeException(nameof(maxBytes));
+        lock (_gate)
+        {
+            var kept = (keep ?? []).Select(Path.GetFullPath).ToArray();
+            var entries = CleanupEntries(kept);
+            var total = entries.Sum(entry => entry.Size);
+            var removed = 0;
+            foreach (var entry in entries.OrderBy(entry => entry.Written))
+            {
+                if (total <= maxBytes) break;
+                if (!RemoveCleanupEntry(entry, kept)) continue;
+                total -= entry.Size; removed++;
+            }
+            return removed;
+        }
+    }
 
-        var entries = new List<(string Path, bool IsDirectory, long Size, DateTime Written)>();
+    private sealed record CleanupEntry(string Path, bool IsDirectory, long Size, DateTime Written, bool Protected);
+
+    private List<CleanupEntry> CleanupEntries(string[] kept)
+    {
+        _offered.RemoveWhere(path => !File.Exists(path)); // Files moved out of the buffer no longer retain an archive folder.
+        kept = [.. kept, .. _processing, .. _offered];
+        var entries = new List<CleanupEntry>();
         try
         {
-            foreach (var file in Directory.EnumerateFiles(Folder))
-            {
-                var info = new FileInfo(file);
-                entries.Add((file, false, info.Length, info.LastWriteTimeUtc));
-            }
-            foreach (var directory in Directory.EnumerateDirectories(Folder))
-            {
-                long size = 0;
-                foreach (var inside in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories)) size += new FileInfo(inside).Length;
-                entries.Add((directory, true, size, Directory.GetLastWriteTimeUtc(directory)));
-            }
+            WorkspacePathSafety.EnsureNoLinks(Folder);
+            if (!Directory.Exists(Folder)) return entries;
+            foreach (var path in Directory.EnumerateFileSystemEntries(Folder)) entries.Add(InspectCleanupEntry(path, kept));
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { return 0; }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
+        return entries;
+    }
 
-        var total = entries.Sum(entry => entry.Size);
-        var removed = 0;
-        foreach (var entry in entries.OrderBy(entry => entry.Written))
+    private static bool Below(string path, string parent) => path.StartsWith(Path.TrimEndingDirectorySeparator(parent) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+
+    private static CleanupEntry InspectCleanupEntry(string path, string[] kept)
+    {
+        var protectedEntry = kept.Any(item => string.Equals(item, path, StringComparison.OrdinalIgnoreCase) || Below(item, path) || Below(path, item));
+        var directory = false; long size = 0; var written = DateTime.MaxValue;
+        try
         {
-            if (total <= maxBytes) break;
-            var name = System.IO.Path.GetFileName(entry.Path);
-            if (name.EndsWith(".crdownload", StringComparison.OrdinalIgnoreCase) || name.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase) || IsKept(entry.Path)) continue;
-            try
+            var attributes = File.GetAttributes(path);
+            directory = attributes.HasFlag(FileAttributes.Directory);
+            if (attributes.HasFlag(FileAttributes.ReparsePoint)) return new(path, directory, 0, written, true);
+            written = File.GetLastWriteTimeUtc(path);
+            var pending = new Stack<string>(); pending.Push(path);
+            while (pending.TryPop(out var current))
             {
-                if (entry.IsDirectory) Directory.Delete(entry.Path, true); else File.Delete(entry.Path);
-                total -= entry.Size;
-                removed++;
+                var flags = File.GetAttributes(current);
+                if (flags.HasFlag(FileAttributes.ReparsePoint)) { protectedEntry = true; continue; } // Never follow a link, even for size counting.
+                if (current.EndsWith(".crdownload", StringComparison.OrdinalIgnoreCase) || current.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase)) protectedEntry = true;
+                if (flags.HasFlag(FileAttributes.Directory))
+                    foreach (var child in Directory.EnumerateFileSystemEntries(current)) pending.Push(child);
+                else
+                {
+                    size = checked(size + new FileInfo(current).Length);
+                    // A model can retain its final extension while another process is still writing it.
+                    using var probe = new FileStream(current, FileMode.Open, FileAccess.Read, FileShare.None);
+                }
             }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { }
         }
-        return removed;
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or OverflowException) { protectedEntry = true; }
+        return new(path, directory, size, written, protectedEntry);
+    }
+
+    private bool RemoveCleanupEntry(CleanupEntry entry, string[] kept)
+    {
+        if (entry.Protected) return false;
+        try
+        {
+            var absolute = Path.GetFullPath(entry.Path);
+            if (!Below(absolute, Folder)) return false;
+            WorkspacePathSafety.EnsureNoLinks(absolute);
+            if (InspectCleanupEntry(absolute, kept).Protected) return false;
+            if (entry.IsDirectory) Directory.Delete(absolute, true); else File.Delete(absolute);
+            return true;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { return false; }
     }
 
     /// <summary>
@@ -191,7 +229,12 @@ public sealed class DownloadBuffer : IDisposable
     private void Consider(string path)
     {
         if (!IsModelFile(path) && !IsArchive(path)) return;
-        _ = Task.Run(() => AnnounceWhenStable(path));
+        lock (_gate) { if (!_processing.Add(path)) return; }
+        _ = Task.Run(async () =>
+        {
+            try { await AnnounceWhenStable(path); }
+            finally { lock (_gate) _processing.Remove(path); }
+        });
     }
 
     private async Task AnnounceWhenStable(string path)
@@ -208,7 +251,11 @@ public sealed class DownloadBuffer : IDisposable
                 {
                     // a browser still writing keeps the file open: opening it exclusively proves it is finished
                     using (new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None)) { }
-                    lock (_gate) { if (!_announced.Add(path + "|" + length + "|" + File.GetLastWriteTimeUtc(path).Ticks)) return; }
+                    lock (_gate)
+                    {
+                        if (!_announced.Add(path + "|" + length + "|" + File.GetLastWriteTimeUtc(path).Ticks)) return;
+                        if (!IsArchive(path)) _offered.Add(path);
+                    }
                     if (IsArchive(path)) OpenArchive(path);
                     else FileReady?.Invoke(new BufferedFile(path, length));
                     return;
@@ -224,15 +271,21 @@ public sealed class DownloadBuffer : IDisposable
     private void OpenArchive(string zipPath)
     {
         var folder = Path.Combine(Folder, Path.GetFileNameWithoutExtension(zipPath) + "-" + Guid.NewGuid().ToString("N")[..6]);
-        var content = DownloadArchive.ExtractModels(zipPath, folder);
-        if (content.Files.Count == 0)
+        lock (_gate) _processing.Add(folder);
+        try
         {
-            try { Directory.Delete(folder, true); }
+            var content = DownloadArchive.ExtractModels(zipPath, folder);
+            lock (_gate) foreach (var file in content.Files) _offered.Add(file.Path);
+            if (content.Files.Count == 0)
+            {
+                try { Directory.Delete(folder, true); }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { }
+            }
+            try { File.Delete(zipPath); }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { }
+            BatchReady?.Invoke(new BufferedBatch(Path.GetFileName(zipPath), content.Files, content.Problem));
         }
-        try { File.Delete(zipPath); }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { }
-        BatchReady?.Invoke(new BufferedBatch(Path.GetFileName(zipPath), content.Files, content.Problem));
+        finally { lock (_gate) _processing.Remove(folder); }
     }
 
     public void Dispose()

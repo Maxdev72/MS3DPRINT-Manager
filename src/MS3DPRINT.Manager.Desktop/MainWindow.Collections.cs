@@ -41,16 +41,22 @@ public partial class MainWindow
     private async Task LoadCollectionsAsync()
     {
         var workspaceRoot = WorkspaceRoot;
+        var load = StartWorkspaceLoad("collections", workspaceRoot);
         CollectionList.Children.Clear();
         try
         {
             var collections = await Task.Run(() => new WorkspaceInventoryReader().LoadAllCollections(workspaceRoot));
+            if (!IsWorkspaceLoadCurrent(load)) return;
             if (collections.Count == 0) { CollectionList.Children.Add(CreateEmptyState("IconCollections", "Aucune collection", "Regroupez vos modèles 3D, vos produits et vos fournisseurs.", "Nouvelle collection", CreateCollection_Click)); return; }
             if (_collectionCategoryFilter.Length > 0)
                 collections = collections.Where(item => CollectionCategory(workspaceRoot, item) == _collectionCategoryFilter).ToArray();
-            if (collections.Count == 0) { CollectionList.Children.Add(CreateEmptyState("IconCollections", "Rien dans cette catégorie", "Choisissez « Tout » ou créez un nouvel élément.")); return; }
-            CollectionList.Children.Add(CreateCompactTableHeader(ActionRowColumns, "COLLECTION", "TYPE", "MODIFIÉE LE", "ACTIONS"));
-            foreach (var item in collections)
+            if (collections.Count == 0) { CollectionList.Children.Add(CreateEmptyState("IconCollections", "Rien dans cette catégorie", "Vos autres collections restent disponibles dans les autres catégories.", "Voir toutes les collections", async (_, _) =>
+            {
+                _collectionCategoryFilter = "";
+                SelectChip(CollectionFilters, "");
+                await LoadCollectionsAsync();
+            })); return; }
+            PagedRows.Render(CollectionList, collections, item =>
             {
                 var category = CollectionCategory(workspaceRoot, item);
                 var open = new Button { Tag = item.Path, HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch };
@@ -59,18 +65,22 @@ public partial class MainWindow
                 var edit = new Button { Content = Icons.Label("IconEdit", "Modifier"), Tag = item }; edit.Click += EditCollection_Click;
                 var rename = new Button { Content = Icons.Label("IconRename", "Renommer"), Tag = item }; rename.Click += RenameCollection_Click;
                 var move = new Button { Content = Icons.Label("IconMove", "Déplacer"), Tag = item }; move.Click += MoveCollection_Click;
-                var trash = new Button { Content = Icons.Label("IconTrash", "Corbeille"), Tag = item }; trash.Click += TrashCollection_Click;
+                var trash = new Button { Content = Icons.Label("IconTrash", "Corbeille"), Tag = item, Classes = { "menu-destructive" } }; trash.Click += TrashCollection_Click;
                 var title = new StackPanel { Spacing = 1 };
                 title.Children.Add(CreateCompactTableCell(item.Name, prominent: true));
                 if (!string.IsNullOrWhiteSpace(item.Profile?.Description))
                     title.Children.Add(new TextBlock { Text = item.Profile.Description, Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis });
                 var type = new Border { Classes = { "badge", category == "06_FOURNISSEURS" ? "warning" : category == "03_PRODUITS_MS3DPRINT" ? "success" : "info" }, Child = new TextBlock { Text = CollectionCategoryLabel(category) } };
-                CollectionList.Children.Add(CreateActionRow(open, CreateOverflowActions(openMenu, edit, rename, move, trash), title, type,
-                    CreateCompactTableCell($"{item.LastWriteTime:dd/MM/yyyy}")));
-            }
+                return CreateActionRow(open, CreateOverflowActions(openMenu, edit, rename, move, trash), title, type,
+                    CreateCompactTableCell($"{item.LastWriteTime:dd/MM/yyyy}"));
+            }, () => CreateCompactTableHeader(ActionRowColumns, "COLLECTION", "TYPE", "MODIFIÉE LE", "ACTIONS"), (workspaceRoot, _collectionCategoryFilter));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
-        { CollectionList.Children.Add(new TextBlock { Text = "Impossible de lire les collections.", Margin = new Avalonia.Thickness(8) }); }
+        {
+            if (!IsWorkspaceLoadCurrent(load)) return;
+            CollectionList.Children.Clear();
+            CollectionList.Children.Add(CreateReadErrorState("Collections indisponibles", "Vérifiez l’accès au dossier de l’atelier, puis réessayez.", exception, LoadCollectionsAsync));
+        }
     }
 
     private async void EditCollection_Click(object? sender, RoutedEventArgs e)

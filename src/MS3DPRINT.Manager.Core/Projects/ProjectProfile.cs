@@ -13,4 +13,5 @@ public sealed record ProjectProfile(
     string? Description,
     string? Notes,
     DateTimeOffset UpdatedAt,
-    string? RelativePath = null);
+    string? RelativePath = null,
+    ProjectPriority Priority = ProjectPriority.None);

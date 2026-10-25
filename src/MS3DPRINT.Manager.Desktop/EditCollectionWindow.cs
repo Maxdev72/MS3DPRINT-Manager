@@ -37,7 +37,7 @@ public sealed class EditCollectionWindow : DialogWindow
         var save = new Button { Content = "Enregistrer" };
         save.Click += (_, _) =>
         {
-            if (string.IsNullOrWhiteSpace(NameValue)) { _error.Text = "Le nom de la collection est obligatoire."; _error.IsVisible = true; return; }
+            if (string.IsNullOrWhiteSpace(NameValue)) { FormKit.ShowError(_error, _name, "Le nom de la collection est obligatoire."); return; }
             Close(true);
         };
         Layout("Fiche collection", item.Name,

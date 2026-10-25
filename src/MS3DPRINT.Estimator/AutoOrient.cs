@@ -66,6 +66,7 @@ public static class AutoOrient
         // the candidates are independent: they are measured side by side, within the thread budget of the software
         var measured = new (Quaternion Rotation, double Support, double Time, double Base, double Height, bool Fits)?[rotations.Count];
         var done = 0;
+        var progressGate = new object();
         try
         {
             Parallel.For(0, rotations.Count, Parallelism.Options(cancellationToken), i =>
@@ -81,7 +82,9 @@ public static class AutoOrient
                 {
                     // a position the estimator refuses (far too many layers) is simply not a candidate
                 }
-                progress?.Report(Interlocked.Increment(ref done) / (double)rotations.Count);
+                // Keep increment and notification together: callbacks must never arrive after a newer percentage.
+                if (progress is not null)
+                    lock (progressGate) progress.Report(++done / (double)rotations.Count);
             });
         }
         catch (AggregateException failure) when (failure.InnerExceptions.Count > 0)

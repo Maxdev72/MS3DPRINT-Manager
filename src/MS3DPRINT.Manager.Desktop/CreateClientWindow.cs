@@ -22,8 +22,8 @@ public sealed class CreateClientWindow : DialogWindow
     private readonly TextBox _email = new() { PlaceholderText = "contact@exemple.fr" };
     private readonly TextBox _mobile = new() { PlaceholderText = "06 12 34 56 78" };
     private readonly TextBox _address = new() { PlaceholderText = "Tapez pour rechercher l’adresse" };
-    private readonly ListBox _companyResults = new() { IsVisible = false, MaxHeight = 150 };
-    private readonly ListBox _addressResults = new() { IsVisible = false, MaxHeight = 150 };
+    private readonly ListBox _companyResults = new() { IsVisible = false, MaxHeight = 240, Classes = { "lookup-suggestions" } };
+    private readonly ListBox _addressResults = new() { IsVisible = false, MaxHeight = 200, Classes = { "lookup-suggestions" } };
     private readonly TextBlock _codePreview = new() { FontWeight = Avalonia.Media.FontWeight.SemiBold };
     private readonly IReadOnlyList<string> _usedCodes;
     private readonly TextBlock _status = new() { FontSize = 12, IsVisible = false, TextWrapping = TextWrapping.Wrap };
@@ -63,6 +63,7 @@ public sealed class CreateClientWindow : DialogWindow
 
         _individual.IsCheckedChanged += (_, _) =>
         {
+            FormKit.ClearError(_error);
             _name.IsVisible = !IsIndividual;
             _siret.IsVisible = !IsIndividual;
             _firstName.IsVisible = IsIndividual;
@@ -89,10 +90,14 @@ public sealed class CreateClientWindow : DialogWindow
             await SearchAddressesAsync(query);
         };
 
-        _companyResults.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<CompanySuggestion>((item, _) => new TextBlock
-        {
-            Text = item is null ? string.Empty : item.Label, TextWrapping = TextWrapping.Wrap, FontSize = 12
-        });
+        Avalonia.Automation.AutomationProperties.SetName(_companyResults, "Entreprises trouvées");
+        Avalonia.Automation.AutomationProperties.SetName(_addressResults, "Adresses trouvées");
+        _companyResults.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<CompanySuggestion>((item, _) =>
+            new StackPanel { Spacing = 4, Children =
+            {
+                new TextBlock { Text = item?.Name ?? string.Empty, FontSize = 14, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap },
+                new TextBlock { Text = string.Join(" · ", new[] { item?.Siret, item?.Address }.Where(value => !string.IsNullOrWhiteSpace(value))), FontSize = 13, Classes = { "muted" }, TextWrapping = TextWrapping.Wrap }
+            } });
         _companyResults.SelectionChanged += (_, _) =>
         {
             if (_companyResults.SelectedItem is not CompanySuggestion suggestion) return;
@@ -100,7 +105,7 @@ public sealed class CreateClientWindow : DialogWindow
         };
         _addressResults.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<AddressSuggestion>((item, _) => new TextBlock
         {
-            Text = item is null ? string.Empty : item.Label, TextWrapping = TextWrapping.Wrap, FontSize = 12
+            Text = item is null ? string.Empty : item.Label, TextWrapping = TextWrapping.Wrap, FontSize = 14
         });
         _addressResults.SelectionChanged += (_, _) =>
         {
@@ -132,10 +137,10 @@ public sealed class CreateClientWindow : DialogWindow
             : NameNormalizer.Normalize(ClientName).Length > 0;
         if (!identityOk)
         {
-            _error.Text = IsIndividual
+            var message = IsIndividual
                 ? "Renseignez le prénom et le nom du client."
                 : "Renseignez le nom de l’entreprise.";
-            _error.IsVisible = true;
+            FormKit.ShowError(_error, IsIndividual ? (NameNormalizer.Normalize(FirstName).Length == 0 ? _firstName : _lastName) : _name, message);
             return;
         }
         Close(true);

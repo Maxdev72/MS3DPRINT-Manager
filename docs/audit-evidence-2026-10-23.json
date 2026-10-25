@@ -1,0 +1,139 @@
+{
+  "Date": "2026-10-24",
+  "Scope": "Audit sans modification du code fonctionnel",
+  "CoreProbes": {
+    "sandbox": "C:\\MS3DPRINT\\Nextcloud\\MS3DPRINT\\98_DEVELOPPEMENT\\MS3DPRINT_MANAGER\\sources\\outputs\\audit-probes\\bin\\Debug\\net10.0\\sandbox-2b5c1909a0474eb7b2b7f3a45abf1757",
+    "results": [
+      {
+        "caseId": "A02",
+        "status": "reproduced",
+        "readableCount": 1,
+        "trashError": "JsonException",
+        "healthyQuoteStillPresent": true
+      },
+      {
+        "caseId": "A06",
+        "status": "reproduced",
+        "conflictRaised": false,
+        "lastName": "Modification B obsolète"
+      },
+      {
+        "caseId": "buffer-keep-age",
+        "status": "reproduced",
+        "removed": 2,
+        "protectedFileRemoved": true,
+        "unfinishedFileRemoved": true
+      },
+      {
+        "caseId": "restore-no-overwrite",
+        "status": "passed",
+        "originalPreserved": true,
+        "trashStillRecoverable": true
+      },
+      {
+        "caseId": "V2-pricing",
+        "status": "passed",
+        "expected": 155.26,
+        "recommended": 236.48,
+        "discounted": 23.65,
+        "lossDetected": true
+      },
+      {
+        "caseId": "structural-quote-validation",
+        "status": "observed",
+        "count": 1,
+        "hasNullInputs": true,
+        "hasNullResult": true
+      },
+      {
+        "caseId": "missing-workspace-fallback",
+        "status": "reproduced",
+        "configured": "C:\\MS3DPRINT\\Nextcloud\\MS3DPRINT\\98_DEVELOPPEMENT\\MS3DPRINT_MANAGER\\sources\\outputs\\audit-probes\\bin\\Debug\\net10.0\\sandbox-2b5c1909a0474eb7b2b7f3a45abf1757\\workspace-unavailable",
+        "resolved": "C:\\MS3DPRINT\\Nextcloud\\MS3DPRINT"
+      }
+    ]
+  },
+  "UiProbes": {
+    "sandbox": "C:\\MS3DPRINT\\Nextcloud\\MS3DPRINT\\98_DEVELOPPEMENT\\MS3DPRINT_MANAGER\\sources\\outputs\\audit-ui-probes\\bin\\Debug\\net10.0\\sandbox-893030669e10467c85acfa5fd0d976e5",
+    "results": [
+      {
+        "caseId": "history-limit",
+        "stored": 7,
+        "displayed": 5,
+        "status": "reproduced"
+      },
+      {
+        "caseId": "incomplete-quote-ui",
+        "error": "NullReferenceException",
+        "status": "reproduced"
+      },
+      {
+        "caseId": "project-control-construction",
+        "count": 10,
+        "elapsedMs": 74.2912,
+        "logicalControls": 255,
+        "caveat": "Single headless Debug sample; excludes disk, layout and rendering, not end-to-end latency."
+      },
+      {
+        "caseId": "project-control-construction",
+        "count": 100,
+        "elapsedMs": 489.6644,
+        "logicalControls": 2415,
+        "caveat": "Single headless Debug sample; excludes disk, layout and rendering, not end-to-end latency."
+      },
+      {
+        "caseId": "project-control-construction",
+        "count": 1000,
+        "elapsedMs": 2583.1662,
+        "logicalControls": 24015,
+        "caveat": "Single headless Debug sample; excludes disk, layout and rendering, not end-to-end latency."
+      },
+      {
+        "caseId": "A01",
+        "status": "reproduced",
+        "aPendingAfterB": true,
+        "activeRoot": "C:\\MS3DPRINT\\Nextcloud\\MS3DPRINT\\98_DEVELOPPEMENT\\MS3DPRINT_MANAGER\\sources\\outputs\\audit-ui-probes\\bin\\Debug\\net10.0\\sandbox-893030669e10467c85acfa5fd0d976e5\\root-b",
+        "displayedFromA": 500
+      },
+      {
+        "caseId": "side-panel-keyboard",
+        "status": "reproduced",
+        "focusOutsidePanelDuringTabs": 21,
+        "focusRestoredToOpener": false
+      }
+    ]
+  },
+  "Contrast": [
+    {
+      "Foreground": "TextBrush",
+      "Background": "SurfaceBrush",
+      "Ratio": 16.55
+    },
+    {
+      "Foreground": "MutedTextBrush",
+      "Background": "RaisedSurfaceBrush",
+      "Ratio": 8.65
+    },
+    {
+      "Foreground": "FaintTextBrush",
+      "Background": "HoverBrush",
+      "Ratio": 5.22
+    },
+    {
+      "Foreground": "CyanBrush",
+      "Background": "SurfaceBrush",
+      "Ratio": 8.16
+    },
+    {
+      "Foreground": "AccentForegroundBrush",
+      "Background": "BrandBlueBrush",
+      "Ratio": 5.19
+    },
+    {
+      "Foreground": "TextBrush",
+      "Background": "SelectionTextBrush",
+      "Ratio": 5.88
+    }
+  ],
+  "DeliveredSha256": "A89A532E321B23B6D25F0293ABBFCDC9EF69024E5EAD71E393A6C1178826596F"
+}

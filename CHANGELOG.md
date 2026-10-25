@@ -1,6 +1,308 @@
 # Journal des modifications
 
+## 25 octobre 2026
+
+### Raccourcis de la liste des fichiers
+- Ctrl+A sélectionne tous les fichiers du résultat filtré, sur toutes les pages ; Échap désélectionne. F2 ouvre le renommage d’un seul fichier sélectionné et Suppr reprend la confirmation de corbeille groupée.
+- Ces raccourcis sont limités à la liste : les champs de saisie et menus conservent leur comportement. Les confirmations, imports, traitements et vues inactives bloquent les commandes de fichiers ; Maj+Suppr n’ajoute aucune suppression définitive.
+- Après annulation de la corbeille, le focus revient à l’élément de la liste qui a ouvert la confirmation, après réactivation des contrôles.
+
+### Import par glisser-déposer
+- Les dossiers projet et génériques acceptent un ou plusieurs fichiers locaux déposés depuis l’extérieur. Une zone indique la destination et se colore pendant un dépôt accepté ; le nom du dossier reste visible même si le chemin complet est tronqué.
+- Le dépôt reste une copie et reprend les imports existants : choix du nom/classement dans les projets, noms d’origine dans les dossiers génériques, progression et confirmation séparée avant toute suppression des originaux.
+- Les dossiers, textes/liens, contenus non locaux et effets de déplacement seuls sont refusés. Un autre import, une action groupée, une confirmation ou une ancienne vue ne peuvent pas recevoir un nouveau lot.
+
+### Sélection et actions groupées sur les fichiers
+- Les dossiers projet et génériques permettent de cocher plusieurs fichiers, ou de les sélectionner avec Ctrl/Maj + clic. Le clic habituel conserve l’ouverture du fichier. Une barre contextuelle indique le nombre sélectionné et propose Déplacer, Corbeille et Désélectionner.
+- La sélection suit la pagination ; changer le texte de recherche, le format ou le dossier efface la sélection. Les dossiers ne sont pas inclus et la sélection est désactivée pendant la lecture partielle.
+- Le déplacement groupé choisit un seul dossier de destination, sans écrasement. La corbeille groupée exige une confirmation avec nombre, noms et dossier des fichiers ; Annuler reçoit le focus.
+- Les traitements se font en arrière-plan, fichier par fichier, avec les services métier et journaux existants. Un échec n’arrête pas les suivants ; un bilan explique les fichiers non traités et les conflits.
+
+### Chargement progressif des dossiers
+- Les premiers fichiers apparaissent pendant la lecture du dossier, avec un statut indiquant les résultats partiels. La lecture s’arrête au changement de page, de dossier ou à la fermeture ; les résultats d’une ancienne lecture ne remplacent pas la vue active.
+- Le retour dans un dossier retrouve la recherche, le format, la page et le défilement pendant la session. Une actualisation relit le disque en conservant ce contexte et ajuste les pages devenues inexistantes.
+- Les métadonnées sont réutilisées depuis l’énumération du dossier. Les contrôles des chemins et des liens restent actifs, les espaces réservés Cloud Files restent admis. Une lecture impossible propose Réessayer.
+
+### Correctifs Avalonia et navigation fichiers
+- Le framework Avalonia, Desktop, Fluent et l’environnement de test Headless passent à 12.1.4. Les parcours de saisie, focus, menus, navigation et visualiseur conservent leur couverture de non-régression.
+- Les dossiers de projet et les collections partagent une recherche par mots et un filtre de format : modèles 3D, CAO, PDF, images et autres. Les filtres utilisent l’inventaire en mémoire ; les dossiers restent accessibles et les résultats sont paginés par 50 lignes.
+- Les noms sont contraints à leur colonne ; les miniatures 3D sont plus lisibles et leur grand aperçu répond depuis la ligne du fichier. Les actions d’import, classement, ouverture et corbeille confirmée sont conservées.
+- L’accueil permet de retrouver jusqu’à 20 fichiers récents propres à l’espace de travail, de les rouvrir et d’atteindre leur dossier. Les fichiers disparus restent signalés sans suppression de données.
+- Mesures headless Release : sur 1 000 entrées synthétiques, médiane chargement/mise en page 2 345,9 → 720,1 ms ; allocations gérées 557,3 → 29,1 Mio. Limites et protocole : docs/navigation-fichiers-et-fluidite-2026-10-25.md.
+
+## 24 octobre 2026
+
+### Sauvegarde et restauration
+- Une carte dans Espace et stockage permet de créer une archive ZIP des données métier et réglages atelier, avec documents et corbeille au choix. Le registre historique des codes clients est inclus ; les préférences propres au poste restent locales.
+- La restauration vérifie l’intégrité des fichiers et présente un aperçu avant confirmation. Elle produit une copie dans un nouveau dossier, sans remplacer l’espace actuel ni changer automatiquement l’espace actif.
+- La dernière sauvegarde réussie est affichée. Les opérations se font en arrière-plan avec protection contre les doubles lancements. Détails et limites dans docs/sauvegardes.md.
+
+### Recherche et choix des filaments
+- L’Atelier permet de rechercher par marque, nom, matière et couleur, puis de combiner cette recherche avec une famille. Les mots se combinent et les accents/casse n’empêchent pas la recherche ; un état sans résultat permet d’effacer les filtres.
+- Les variantes CF, GF et ESD sont repérées dans les lignes, à côté du caractère abrasif enregistré et du prix au kilo. Les formulations anciennes et personnalisées restent accessibles.
+- L’estimateur propose un sélecteur avec la même recherche et les mêmes familles, sans ajouter de champs permanents au formulaire. Le devis garde sa bobine et son prix tant que le nouveau choix n’est pas confirmé. La sélection affiche aussi matière, couleur et prix.
+
+### Matières alignées sur le guide du site
+- Les suggestions des fiches filament reprennent les 26 matières de la bibliothèque technique actuelle de ms3dprint.fr, dont les variantes CF, GF, ESD et les TPU 90A/95A. Source et liste détaillées dans docs/catalogue-matieres.md.
+- Les matières historiques hors liste et les saisies personnalisées sont conservées à l’édition. Le texte saisi est pris en compte ; une matière vide est signalée dans le formulaire. Aucune modification des bobines, marques ou prix déjà enregistrés.
+
+### Actions longues et parcours complet
+- La duplication de projet et la restauration affichent l’opération en cours dans un bandeau discret. Le bouton concerné indique l’attente ; la navigation reste utilisable.
+- Une restauration ne peut plus être lancée deux fois pour le même élément. Un conflit conserve les fichiers et libère l’action pour réessayer. La fin d’une restauration ne recharge plus la corbeille si l’utilisateur a quitté ce contexte.
+- La lecture du client préalable à une duplication est déportée hors du fil UI. Les protections existantes des imports et de l’enregistrement des devis sont conservées.
+- Un test de parcours relie création du client et du projet, import avec conservation de source, estimation liée, double clic d’enregistrement et rechargement du devis sans doublon ni changement de prix.
+
+### Catalogues après une erreur de lecture
+- Dans Projets et Clients, les filtres attendent une lecture réussie. Une erreur reste visible avec son action de reprise ; une modification différée du filtre ne réaffiche plus un ancien catalogue.
+- Les filtres saisis sont conservés et redeviennent disponibles après une reprise réussie. Le sous-titre distingue le chargement d’une lecture indisponible.
+
+### Lecture des catalogues de l’atelier
+- Les fiches matières et imprimantes illisibles sont signalées avec leurs détails, sans masquer les références saines ni effacer les fichiers. L’avertissement reste présent lors du changement de page et distingue un catalogue illisible d’un catalogue vide.
+- « Réessayer » relit le catalogue après correction ou synchronisation. Les erreurs globales des pages Projets, Clients, Matières et Imprimantes reprennent la même présentation avec détail technique masqué au départ.
+
+### États vides et reprise après erreur
+- Une catégorie vide propose « Voir toutes les collections » et réinitialise aussi la puce de filtre. Un dossier vide propose directement d’importer des fichiers.
+- Les erreurs de lecture des collections, dossiers et de la corbeille présentent un message simple, une action « Réessayer » et un détail technique sélectionnable, masqué au départ.
+- Les entrées illisibles de la corbeille sont signalées sans annoncer à tort une corbeille vide. Leurs fichiers sont conservés et les autres éléments restent restaurables.
+
+### Progression et bilan des imports multiples
+- Un bandeau fixe affiche le fichier en cours, son numéro dans le lot, l’étape et le nombre de fichiers traités. L’arrêt attend la copie en cours et conserve les imports terminés.
+- La confirmation de suppression de source reste individuelle, avec conservation par défaut. « Conserver et arrêter l’import » arrête les fichiers suivants sans supprimer l’original.
+- Le bilan reste consultable jusqu’à sa fermeture : fichiers importés, échecs et fichiers non traités. Les détails des erreurs peuvent être dépliés et copiés. Une collision conserve le fichier existant et la source, puis le lot continue.
+
+### Priorités sur l’accueil
+- Les drapeaux de priorité des projets sont visibles dans « À reprendre » et « À surveiller », avec les mêmes couleurs que dans la liste des projets. Les infobulles et noms accessibles précisent priorité, référence et échéance.
+- La file conserve d’abord les retards et échéances à sept jours, puis fait remonter les priorités hautes avant les fabrications sans urgence proche. À date égale, la priorité départage les projets. Les projets terminés et archivés restent exclus.
+
+### Lisibilité de l’accueil, formulaires et aperçu des documents
+- Les échéances affichent le nom du projet sur deux lignes, sa référence séparément et le badge en dessous, pour distinguer les projets proches sans survol.
+- Les champs des formulaires exposent leurs unités et aides aux outils d’accessibilité. Une validation refusée ramène au champ concerné et affiche son erreur à proximité ; la correction efface ce message. Les résumés d’erreur utilisent une annonce non interruptive.
+- La barre d’outils des documents passe sur plusieurs lignes en fenêtre étroite. Les commandes de zoom et de navigation ont un nom accessible explicite. Les images remplacées ou reçues après fermeture sont libérées.
+
+### Vignettes, rendu 3D logiciel et téléchargements temporaires
+- Lecture et décodage des vignettes en cache effectués en arrière-plan, avec le même plafond de concurrence que les nouveaux rendus. Une vignette corrompue est reconstruite ; une demande annulée ne réutilise pas le cache pour réafficher une ancienne image.
+- Les cellules libèrent leurs images et annulent leurs demandes lorsqu’elles sont masquées ou détachées. Un résultat tardif est libéré au lieu d’être appliqué à une ancienne page.
+- Le rendu 3D logiciel libère ses anciennes images au changement de résolution et à la sortie. Les rendus dépassés sont ignorés ; le retour au visualiseur conserve le modèle et la caméra.
+- Les deux phases de nettoyage du tampon respectent les fichiers à conserver, les téléchargements actifs et les liens de dossiers. Les extractions et fichiers déjà annoncés restent protégés pendant l’attente de la fenêtre de téléchargement. Leur protection temporaire est levée à la fermeture de cette fenêtre.
+
+### Fluidité des listes et des brouillons
+- Projets, clients, collections, filaments et imprimantes affichent au maximum 50 lignes à la fois. Les boutons Précédent/Suivant et le compteur apparaissent uniquement sur les grands catalogues. Recherche et tri s’appliquent avant pagination ; une édition conserve la page tant que le filtre et le tri ne changent pas.
+- La sauvegarde automatique capture les saisies puis écrit en arrière-plan. Les révisions déjà sauvegardées ne sont plus réécrites lors de chaque transition. Les écritures et retraits sont coordonnés pour empêcher un ancien travail de remplacer une saisie récente ou de recréer un brouillon consommé.
+- La fermeture et les changements explicites de formulaire attendent toujours la dernière sauvegarde nécessaire. En cas d’échec, le formulaire reste protégé ; l’atelier indisponible n’est pas recréé.
+
+### Suggestions clients et historique des devis
+- Suggestions d’entreprises et d’adresses aux couleurs bleu nuit : survol cohérent, nom plus lisible et SIRET/adresse séparés. La sélection continue de compléter la fiche.
+- Historique complet avec recherche par nom, client ou référence projet, insensible aux accents et à la casse. Affichage progressif par groupes de 20 ; les devis plus anciens restent accessibles.
+- Création des devis par fichier temporaire, écriture vidée sur disque puis publication atomique sans écrasement. Une erreur de sérialisation ne laisse plus de devis partiel visible.
+- Révision des devis vérifiée sous verrou avant modification : un ancien formulaire ne peut plus écraser une sauvegarde récente. En cas de conflit, les saisies restent dans le formulaire et le brouillon, et l’historique est actualisé pour recharger la version récente. La corbeille utilise le même verrou. Les anciens devis conservent leur moteur et leurs montants.
+
+### Audit — premier lot de corrections de fiabilité
+- Un atelier temporairement indisponible conserve son chemin. L’application propose de réessayer, de choisir explicitement un autre dossier ou de fermer ; elle ne bascule plus silencieusement sur le dossier historique. Un brouillon non sauvegardé reste protégé et son dossier absent n’est pas recréé par la sauvegarde automatique.
+- Les réponses de chargement périmées sont ignorées pour les listes, les détails clients, les paramètres, l’accueil, l’inventaire de l’estimateur et son historique. Les contrôles vérifient le dossier actif, le dernier chargement demandé et, selon la page, la navigation.
+- Les devis incomplets ou à l’identifiant incohérent sont écartés sans supprimer leur fichier. L’historique signale les fichiers illisibles et conserve les montants historiques. La mise à la corbeille d’un devis sain ne dépend plus de la lecture des autres devis.
+- Les panneaux latéraux gardent le focus avec Tab et Maj+Tab, protègent les raccourcis de l’arrière-plan et rendent le focus à leur déclencheur. Les confirmations destructives conservent Annuler comme choix initial.
+- Tests de régression : atelier déconnecté et reconnexion, réponses d’anciens ateliers dans les listes et détails, devis JSON incomplets, suppression en présence d’un autre JSON corrompu, navigation clavier et retour du focus.
+
+## 23 octobre 2026
+
+### Paramètres plus lisibles
+- La recherche fait défiler directement jusqu’au libellé trouvé et repère les correspondances en cyan. Le résultat courant est souligné ; Entrée et Maj+Entrée parcourent les résultats sans quitter le champ de recherche. Effacer retire les repères et rétablit le haut de la rubrique ; une ancienne requête ne déclenche pas de défilement tardif.
+- Recherche dans toutes les rubriques, insensible aux accents et à la casse, avec état sans résultat et effacement par bouton ou Échap. Effacer la recherche retrouve la rubrique précédente sans recharger ses contrôles.
+- En-têtes de sections avec icônes, descriptions et actions mieux alignées ; adaptation des boutons à la largeur disponible, navigation latérale ou onglets selon la taille de fenêtre.
+- Atelier regroupé en prix et rentabilité, production, cotisations et frais commerciaux, puis machines et matières. Les taux configurés et les postes désactivés sont explicitement visibles ; aucun changement des paramètres enregistrés.
+- Le raccourci depuis l’estimateur ouvre directement l’atelier, même après une recherche dans une autre rubrique. Vérifications clavier, filtrage, retour à la rubrique et rendu normal / compact.
+
+### Brouillons automatiques et duplication
+- Sauvegarde des estimations en cours après 600 ms de pause et avant fermeture, avec indication d’état et reprise automatique du dernier brouillon de l’atelier. Les saisies incomplètes ou invalides, les fournisseurs, les affectations machine et les réglages sont conservés.
+- Plusieurs brouillons distincts des devis enregistrés, accessibles dans l’historique. Chaque espace possède ses brouillons ; enregistrer un devis consomme uniquement son brouillon. Abandon et suppression demandent confirmation.
+- Une erreur d’écriture conserve le formulaire et bloque son remplacement ou la fermeture. Les fichiers de brouillon sont remplacés atomiquement ; une erreur n’écrase pas la dernière sauvegarde complète.
+- Icône « Dupliquer » dans l’historique : conserve les paramètres et les montants, prépare une copie indépendante, puis crée une nouvelle identité lors de l’enregistrement. Les snapshots des matières retirées et le moteur historique sont conservés.
+- « Dupliquer le projet » dans les actions de liste et la fiche : nouveau nom, référence, statut À faire, échéance vide, description / notes / priorité reprises. Copie facultative des fichiers et sous-dossiers, sans écrasement ni suppression des originaux ; devis enregistrés non copiés.
+- Contrôles des chemins et liens avant copie ; une création interrompue est conservée dans la corbeille de récupération. Tests des reprises, changements d’atelier, écritures verrouillées, confirmations, copies et erreurs de copie.
+
+### Estimateur sur une seule page
+- Suppression des onglets Saisie / Vérification et du code de navigation associé. Nom et projet côte à côte, données du slicer et capacité du plateau visibles dans la saisie principale.
+- Prix actualisé pendant la saisie, prix commercial et remise directement dans la synthèse. Coûts, prix plancher et tableau de rentabilité restent repliables.
+- « Enregistrer le devis » disponible en permanence dans le pied de la synthèse, avec raccourci Ctrl+Entrée. Validation et recalcul immédiats avant enregistrement ; les résultats historiques restent conservés sans modification.
+- Protection contre le double-clic et la répétition du raccourci : après enregistrement, une nouvelle saisie, l’ouverture d’un devis ou la réinitialisation réarme la sauvegarde.
+- Frais complémentaires accessibles via « Ajouter des frais » ; libellés poids / durée adaptés au périmètre et résumé de la production en pièces, plateaux, grammes et heures.
+- Vérifications du calcul automatique, de l’enregistrement direct, des plateaux, des saisies invalides et du rendu en fenêtre large et compacte.
+
+### Finitions visuelles et mouvement
+- Survol continu et focus clavier des lignes métier, y compris les actions rapides ; même palette dans les recherches, champs, menus et accordéons.
+- Ouverture des menus sur 160 ms et de leur opacité sur 120 ms ; la recherche apparaît une seule fois à l’ouverture, sans rejouer son animation à chaque saisie.
+- Assombrissement progressif du fond à l’ouverture d’un formulaire sur 180 ms. Champs et commandes immédiatement disponibles, sans attente liée aux animations.
+- Réduction des animations respectée également dans les menus détachés et le panneau latéral, avec vérifications automatisées de l’ouverture, fermeture et réouverture.
+
+### Priorités des projets
+- Quatre niveaux enregistrés : haute (rouge), moyenne (ambre), basse (bleu) et aucune (drapeau vide). Choix dès la création, dans la fiche et par clic sur le drapeau dans la liste.
+- Filtre de priorité combinable avec le statut et le texte ; tri haute ou basse d’abord, projets sans priorité toujours à la fin. Effacement des filtres réinitialisant également la priorité.
+- Anciennes fiches sans ce champ lues sans migration destructive ; modifications de statut, description, déplacement et autres informations conservant la priorité. Contrôle de version pour éviter d’écraser une modification concurrente.
+- Tests de sauvegarde, ancien JSON, priorité invalide, création, édition annulée, retrait de priorité, filtres combinés et deux sens de tri ; captures en fenêtres normale et compacte.
+
+### Import de plusieurs fichiers
+- Sélection multiple depuis un projet ou un autre dossier. Parcours actuel conservé pour chaque fichier : nom et classement dans le projet, copie sans écrasement, puis confirmation distincte pour conserver ou supprimer sa source.
+- Progression « fichier X sur Y » et commande « Arrêter l’import » dans le formulaire de nommage ; les imports déjà terminés restent conservés. Résumé du nombre importé et des échecs en fin de lot.
+- Un conflit ou un fichier illisible conserve sa source et permet de traiter les suivants ; un seul lot à la fois, arrêt si la page ou l’espace de travail change. Aucun rafraîchissement tardif ne remplace le nouveau dossier affiché.
+- Tests de deux imports successifs, nom d’origine / nom proposé, conservation / suppression confirmée des sources, arrêt partiel et conflit suivi d’un import réussi.
+
+### Choix du fichier source après import
+- Après chaque import réussi dans un projet ou un autre dossier, choix explicite entre conserver la source et la supprimer définitivement. Les chemins de l’original et de la copie importée sont affichés, y compris en cas de renommage.
+- Conservation sélectionnée par défaut ; fermeture, Échap et absence de confirmation conservent l’original. Un import refusé ou échoué ne déclenche aucune suppression.
+- Avant suppression : contrôle du fichier de destination, protection des métadonnées et des liens, comparaison des longueurs et empreintes SHA256. Sous Windows, la source est verrouillée contre les modifications et remplacements, puis supprimée par le même handle vérifié.
+- En cas de verrouillage ou de changement de contenu, conservation des fichiers et message explicite. Tests du choix utilisateur, de la copie renommée, des fichiers différents, copie manquante/verrouillée et remplacement externe bloqué.
+
+### Recherche et navigation plus fluides
+- Recherche globale sur saisie ou collage, temporisée et annulable. États explicites de chargement, aucun résultat et lecture indisponible ; résultats plus larges, noms sur deux lignes et références / clients séparés.
+- Ouverture directe des fiches clients depuis les résultats ; retour arrière vers la page de départ, sans passage par une liste jamais visitée.
+- Premier résultat sélectionné, flèches pour parcourir, Entrée pour ouvrir, Échap et clic extérieur pour fermer. Bouton d’effacement et Ctrl+K pour remplacer rapidement la recherche.
+- Annulation des résultats en cours lors de la navigation, de l’ouverture du visualiseur ou d’un dossier et de la fermeture de la fenêtre.
+- Historique de devis limité à 112, 168 ou 220 px selon la hauteur disponible, avec marges compactes alignées ; davantage d’espace pour saisir dans les petites fenêtres.
+- Vérifications des cas vides, texte collé, annulation, accès client, retour arrière et rendu en fenêtres normale et compacte.
+
+### Menus d’actions harmonisés
+- Menus « ⋯ » plus lisibles : fond bleu nuit, largeur minimale de 216 px, lignes de 42 px minimum, marges et icônes alignées.
+- Survol et focus cohérents avec la palette ; suppression du survol gris natif. Actions de corbeille séparées, avec texte et icône rouges et fond de survol dédié.
+- Même composant sur les clients, projets, fichiers, dossiers, collections, imprimantes et filaments. Fermeture à la sélection et confirmation des suppressions conservées.
+- Tests des couleurs de survol, séparation de la corbeille, rendu normal et compact et ouverture du formulaire après sélection.
+
+### Confirmation obligatoire des suppressions
+- Audit des envois à la corbeille : clients, projets, collections, fichiers, dossiers, imprimantes, filaments et devis demandent une confirmation avant modification.
+- Confirmation ajoutée aux retraits de postes de coûts, affectations de machines, dossiers du modèle de projet, comparaison 3D et rétablissement de l’arborescence standard.
+- Annuler reçoit le focus dans les confirmations destructives. Échap annule ; une simple pression sur Entrée en dehors du bouton de confirmation ne valide plus la suppression.
+- Tests de confirmation explicite et d’annulation, avec conservation des postes et affectations tant que le retrait n’est pas accepté.
+
+### Menus déroulants et choix du projet
+- Suppression de la limite de 620 px qui centrait les projets dans les grandes listes. Textes alignés à gauche, retours à la ligne des noms longs et largeur du menu limitée au champ.
+- Palette des menus natifs harmonisée avec l’application : fond bleu nuit, survol et sélection bleus, états pressés et textes contrastés.
+- Contrôle du menu réellement ouvert avec plusieurs projets en fenêtres de 960, 1 440 et 1 800 px, et test de la couleur et de l’alignement des éléments affichés.
+
+### Historique sous l’estimateur
+- Intégration à plat : mêmes bords et même fond que les panneaux de saisie, suppression du cadre interne, titre renforcé. Chaque ligne aligne le nom, la date d’enregistrement, le montant et « Reprendre » ; suppression toujours accessible séparément.
+- Historique des estimations déplacé sous le formulaire et le panneau de prix, sur toute la largeur. Section repliable et liste défilante pour garder de la place à la saisie.
+- Réouverture et mise à la corbeille conservées ; colonne de droite réservée au prix et à la rentabilité. Contrôle des fenêtres de 1 400 et 960 px et de la reprise d’un devis enregistré.
+
+### Identifier le devis dès le début
+- Largeur initiale de fenêtre et plafond de contenu portés à 1 400 px ; adaptation aux petites fenêtres et dimensions personnalisées conservées.
+- Nom du devis et projet associé toujours visibles au début de la saisie, avant la prestation ; remise et cotisations regroupées séparément dans « Prix et remise ».
+- Choix de projet sur deux lignes : nom du projet, puis référence et client. Même présentation conservée après sélection et infobulle complète.
+- Vérification du placement, du lien au projet et de l’affichage en fenêtres normale et compacte.
+
+### Présentation commune à l’atelier
+- Style de l’estimateur étendu à l’accueil, aux listes, aux fiches et aux paramètres : surfaces plus sobres, titres hiérarchisés, filtres soulignés et lignes plus lisibles.
+- Noms longs sur deux lignes, actions de fiche client adaptables à la largeur, notes repliables et coordonnées séparées pour une lecture rapide.
+- Résumés du parc, des matières et de la corbeille fondés sur les données chargées ; rubriques des paramètres avec icônes et commande de modification alignée au titre de l’atelier.
+- Formulaires communs agrandis, barres d’outils du navigateur et du visualiseur harmonisées ; contrôles visuels en fenêtres normale et compacte et 819 tests réussis.
+
+### Fabrication sous-traitée
+- Option « Fabrication confiée à un fournisseur » : quantité, coût d’achat total, transport fournisseur et nom facultatif. Les frais de préparation, finitions et livraison au client restent dans les compléments.
+- L’achat externe remplace matière, machine et énergie internes. Les aléas d’impression internes ne sont pas appliqués à une commande fournisseur de pièces conformes. Protection du moteur contre le double comptage.
+- Coût fournisseur distinct dans le détail, prix plancher et conseillé après charges et marge configurées, remise et alerte de déficit ; fournisseur et hypothèses sauvegardés avec le devis.
+- Tests des quantités, frais par pièce, validation, absence de filament, conservation du prix enregistré au chargement et retour à une fabrication interne.
+
+### Refonte visuelle de l’estimateur
+- Éditeur sans contour, onglets avec repère mobile, champs agrandis et panneau de prix renforcé : prix final, prix unitaire, résultat et marge hiérarchisés.
+- Décomposition du coût corrigé en matière, machine, énergie, travail, autres frais et échecs ; barre proportionnelle et correspondance au survol avec les montants de la légende.
+- Vérification présentée comme une synthèse de devis, avec remise et total de commande ; détails de production et rentabilité repliables.
+- Prix conservé pendant le bref recalcul avec un état explicite d’actualisation ; résultats effacés en cas d’erreur. Transitions natives interrompables, chiffres immédiats et réduction des animations respectée.
+- Calculs, frais totaux, devis historiques et sauvegardes conservés ; contrôles des états zéro, remise sur prix manuel, validation et fenêtres compacte et normale.
+
+### Frais complémentaires simplifiés
+- Une seule règle de saisie : montants totaux pour la commande, sans multiplication supplémentaire par quantité ou plateau. Libellés courts : conception, main-d’œuvre, finitions, consommables, emballage / livraison, autres frais.
+- Les choix « par commande / pièce / passage » sont remplacés dans l’atelier et les prestations supplémentaires par « à refaire si l’impression échoue ». La provision pour échecs reste distincte ; le forfait par pièce conserve son fonctionnement.
+- Conversion à l’affichage des anciens montants unitaires V2 en totaux équivalents, sans modifier le prix enregistré. Format de sauvegarde explicitant les totaux, avec lecture compatible des anciens devis.
+
+### Saisie numérique
+- Alignement à gauche des champs numériques de l’estimateur et de l’atelier pour garder les chiffres et le point d’insertion au même endroit pendant la saisie.
+
+### Navigation arrière / avant
+- Boutons latéraux de souris et Alt + flèche gauche / droite pour retrouver les pages précédentes et suivantes, les fiches clients, projets, dossiers et le visualiseur.
+- Historique limité à la session et à l’espace de travail courant ; une nouvelle destination remplace la branche d’avance, comme dans un navigateur.
+- Retour aux fiches avec relecture des données actuelles, conservation du brouillon d’estimation et blocage de la navigation tant qu’un formulaire est ouvert ou qu’un retour est en cours.
+
+### Nettoyage des champs de l’estimateur V2
+- Fermeture des menus d’actions après sélection pour éviter leur superposition aux formulaires ; taux manuel affiché sur six décimales maximum sans arrondir le taux enregistré tant qu’il n’est pas modifié.
+- Fiche imprimante : suppression de la durée de vie historique et du volume non utilisé. Un seul calcul automatique par années et heures productives annuelles ; taux manuel affiché uniquement lorsqu’il est activé.
+- Correction de l’enregistrement des imprimantes avec amortissement annuel sans durée historique. Validation limitée aux paramètres actifs et coût horaire affiché en français.
+- Anciens profils proposés en taux manuel à coût horaire conservé, sans inventer leur production annuelle ni modifier la pondération du parc ; anciennes données et devis préservés. Suppression du contrôle interne de sélection du moteur, V2 par défaut et conversion des anciens devis toujours explicite.
+
+### Estimateur : saisie rapide et composition structurée
+- Deux écrans : saisie, puis vérification et enregistrement. Accès direct aux données utiles, prix et rentabilité visibles pendant la saisie.
+- Trois zones alignées avec icônes : prestation, données d’impression, compléments. Frais, options de fabrication et informations du devis regroupés dans trois accordéons.
+- Durée saisie en heures et minutes, conversion décimale sans arrondi intermédiaire et restauration exacte des durées enregistrées ; validation des minutes inférieures à 60.
+- V2 d’office sur les nouvelles estimations, suppression du menu de choix. Conversion explicite uniquement pour les devis historiques, sans modification de leur prix enregistré avant sauvegarde.
+- Nom automatique facultatif, accès compact à l’ajout de filament, devis enregistrés repliables et raccourci Ctrl+Entrée pour vérifier puis enregistrer.
+- Erreurs dans le formulaire et retours de focus ; correction du blocage sur une quantité d’impression masquée en modélisation seule.
+- Transitions natives courtes des sections et du parcours ; préférence de réduction des animations respectée.
+
+### Lisibilité et ergonomie des réglages
+- Navigation des paramètres en colonne sur grand écran, en onglets sous 1250 px ; descriptions de rubriques et retour en haut lors d’un changement.
+- Atelier présenté en lignes libellé / valeur, avec unités explicites, distinction marge / majoration et coût réel / supplément commercial.
+- Bouton principal de modification, liens expliqués vers les imprimantes et filaments ; texte des paramètres agrandi et interligne augmenté.
+- Aides de l’estimateur en 14 px ; noms de projets et de clients sur deux lignes, lignes de projets plus hautes pour limiter les troncatures.
+- Captures des quatre rubriques en fenêtres normale et compacte ; vérification du changement de rubrique et de la position de défilement.
+
+### Accueil et listes de travail
+- File « À reprendre » limitée aux projets actifs : retards, échéances du jour, échéances à sept jours, puis fabrications en cours. Les projets terminés et archivés restent dans les listes de consultation.
+- Chaque ligne indique la prochaine action, le statut et l’échéance ; noms complets disponibles au survol et libellés accessibles pour l’ouverture.
+- Raccourci de modification dans les lignes de projets, visible au survol, au focus clavier et en fenêtre compacte, à côté du menu d’actions.
+- Action « Effacer les filtres » dans les recherches sans résultat des projets et clients.
+- Défilement de la colonne d’attention en petite fenêtre ; captures des quatre rubriques de paramètres.
+- Tests du tri des priorités, de l’exclusion des archives et de la remise à zéro des filtres.
+
 ## 22 octobre 2026
+
+### Parcours d’estimation et fiche projet
+- Interventions et frais facultatifs regroupés dans une section repliable ; rappel du nombre de postes renseignés. Le repli ne change aucun montant du calcul.
+- Accès direct aux coûts de conception pour les prestations de modélisation ; détail machine et énergie séparé des données essentielles du slicer.
+- Synthèse de production en passages, grammes et heures machine ; confirmation après enregistrement d’une estimation.
+- Fiche projet structurée autour du suivi, de l’échéance modifiable, des notes internes, des estimations liées et des fichiers.
+- Préparation d’une estimation directement depuis un projet, avec liaison et nom préremplis ; consultation des devis valides même lorsqu’un autre fichier de devis est illisible.
+- Tests de parcours et captures de la fiche projet en fenêtres normale et compacte.
+
+### Identité MS3DPRINT et animations natives
+- Palette du site ms3dprint.fr : bleu nuit, bleu électrique et cyan ; logo officiel et titres Bricolage Grotesque embarqués, sans chargement réseau.
+- Accueil recomposé autour de « De l’idée à la pièce. », des actions de création et des étapes cliquables de production.
+- Identité commune aux pages, listes, formulaires, paramètres et estimateur : icônes de rubrique, titres expressifs, surfaces plus nettes et accents contrastés.
+- Repère de navigation animé, entrées de pages directionnelles, panneaux coulissants, réactions des boutons et confirmation discrète du prix recalculé.
+- Animations courtes et interrompables ; option de réduction des animations respectée dans la fenêtre principale et les dialogues. Les montants restent immédiatement lisibles.
+- Licence de la police et provenance des ressources accessibles dans Paramètres → Application → Identité visuelle et licences.
+- Captures réelles des écrans en formats normal et compact, aperçu animé et test de navigation rapide sans instance native supplémentaire.
+
+### Lisibilité et finition de l’interface
+- Modernisation commune à toutes les pages : palette bleu nuit plus lisible, titres 30 px, navigation organisée en Activité / Atelier / Outils et nom réel de l’espace de travail.
+- Projets, clients, filaments, imprimantes, collections et corbeille présentés sur une surface de travail cohérente ; en-têtes contrastés et lignes de 60 px. Projet présenté par son titre puis sa référence.
+- Filtres des projets et clients placés sur une rangée dédiée ; actions de création explicites et recherche adaptée aux fenêtres compactes.
+- Paramètres organisés en Atelier, Organisation, Espace et stockage, Application. Le raccourci de l’estimateur ouvre directement Atelier.
+- Tous les formulaires DialogWindow bénéficient d’un en-tête et de boutons fixes, d’une fermeture explicite et de champs mieux espacés ; labels accessibles ajoutés par FormKit.
+- Formulaire d’estimation et synthèse séparés : prix plancher, conseillé, final, résultat et marge visibles sur des lignes distinctes ; alerte dédiée sous le seuil de rentabilité.
+- Champs numériques agrandis et alignés à droite, libellés plus contrastés, aides aérées et récapitulatif structuré en production, coûts et rentabilité.
+- Réglages d’atelier décrits sous chaque section, intitulés longs des listes sur plusieurs lignes et compatibilité historique rangée dans une section dédiée.
+- Thème sombre appliqué aux composants natifs et textes de recherche / espaces réservés plus contrastés. Petits libellés partagés agrandis.
+
+### Paramètres de l’atelier, barèmes 2026 et aide
+- Paramètres réutilisables regroupés dans **Paramètres → Atelier** : cotisations, CFP, commissions, kWh, marge, échec, forfait, frais généraux et natures des postes.
+- Profils France 2026 sans ACRE, hors Cipav ou BNC Cipav, issus du catalogue annuel JSON et modifiables. Aucun régime n’est imposé aux autres utilisateurs.
+- Préférences dans les métadonnées de l’espace de travail ; isolation entre ateliers, sans recalcul des anciens devis.
+- Devis allégé : catégories de recettes par sélection simple et pourcentages uniquement en mode mixte. Les coûts rappellent leur nature dans leur libellé ; les montants historiques sont indiqués comme totaux de commande.
+- Guide intégré « Comprendre chaque champ », aides au survol et aide accessible pour les champs principaux.
+
+### Estimateur : thème et parcours de saisie
+- Sections repliables harmonisées avec les surfaces bleu nuit, les bordures et les couleurs de survol / focus MS3DPRINT ; suppression des fonds noirs Fluent et des aplats derrière les titres ouverts.
+- Titres accompagnés d’un descriptif court, chevrons explicites, ouverture au clavier et libellés accessibles.
+- Champs essentiels présentés avant les options avancées ; marge, échec et remise regroupés avant les sections de configuration.
+- Saisie désactivée pour les paramètres sans effet : capacité en mode une pièce, supports déjà compris dans le poids, charges désactivées et taux de référence remplacé par des affectations machine. Les valeurs restent conservées.
+- Correction d’une course détectée par les tests dans la progression de l’orientation 3D : les notifications parallèles sont ordonnées jusqu’à 100 %.
+
+### Estimateur V2 : production, charges et rentabilité
+- Nouveaux devis calculés en V2 ; les devis déjà enregistrés conservent explicitement le moteur historique et leur résultat. Conversion uniquement en choisissant V2 dans l’assistant.
+- Amortissement par imprimante : prix / (années × heures productives annuelles), taux manuel et maintenance séparée. Sans machine précise, moyenne pondérée du parc actif, jamais somme des taux.
+- Pièces, ensembles et plateaux successifs ; affectations sur plusieurs machines avec leurs heures, taux et puissances propres. Supports et purges ajoutés uniquement si absents du poids slicer.
+- Coûts classables par commande, pièce conforme ou tentative. Les échecs ne répètent que les postes par tentative ; la conception, l’expédition et les finitions conformes ne sont plus automatiquement majorées pour les échecs.
+- Marge cible après charges sur le chiffre d’affaires, avec maintien du mode majoration. Forfait réel intégré au coût ou supplément commercial intégré au prix et à la rentabilité.
+- Cotisations vente / services BIC / services BNC, répartition du CA, contributions et commissions paramétrables et désactivables ; aucun taux réglementaire prérempli.
+- Prix plancher, conseillé et commercial ; remise et prix manuel recalculent charges, résultat estimé, marge réelle et résultats unitaires. Avertissement sous le seuil de rentabilité.
+- Hypothèses sauvegardées dans le devis, calculs monétaires en decimal sans arrondis intermédiaires ; tests unitaires, de compatibilité et d’interface sans ouverture d’une application réelle.
 
 ### Estimations : quantité, forfait par pièce et amortissement du parc
 - **Quantité de pièces** : le poids et la durée machine se saisissent pour une pièce (multipliés par la quantité) ou pour l'ensemble des pièces.

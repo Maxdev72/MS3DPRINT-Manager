@@ -8,6 +8,7 @@ public sealed record ProjectSummary(string ClientFolderName, string ClientPath, 
     public bool IsArchived => string.Equals(Path.GetFileName(Path.GetDirectoryName(ProjectPath)), ArchiveFolderName, StringComparison.OrdinalIgnoreCase);
     public bool IsProfileMissing => Profile is null;
     public ProjectStatus? Status => Profile?.Status;
+    public ProjectPriority Priority => Profile is { } profile && Enum.IsDefined(profile.Priority) ? profile.Priority : ProjectPriority.None;
 
     /// <summary>Three states only: A_FAIRE (also a project whose sheet is still missing), EN_COURS and TERMINE.</summary>
     public string StatusLabel => Status switch

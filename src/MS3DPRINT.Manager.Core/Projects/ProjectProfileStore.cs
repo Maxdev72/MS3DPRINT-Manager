@@ -115,6 +115,7 @@ public sealed class ProjectProfileStore
 
     private static void Validate(ProjectProfile profile)
     {
+        if (!Enum.IsDefined(profile.Priority)) throw new ArgumentException("La priorité du projet est invalide.", nameof(profile));
         if (profile.Id == Guid.Empty || profile.ClientId == Guid.Empty) throw new ArgumentException("Les identifiants du projet et du client sont requis.", nameof(profile));
         if (string.IsNullOrWhiteSpace(profile.Reference) || string.IsNullOrWhiteSpace(profile.FolderName) || string.IsNullOrWhiteSpace(profile.ProjectName)) throw new ArgumentException("Les informations projet sont incomplètes.", nameof(profile));
     }

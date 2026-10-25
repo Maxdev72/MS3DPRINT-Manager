@@ -38,12 +38,13 @@ public static class ModelThumbnails
     public static void PruneOnce()
     {
         if (Interlocked.Exchange(ref _pruned, 1) == 1) return;
+        var directory = CacheDirectory;
         _ = Task.Run(() =>
         {
             try
             {
-                if (!Directory.Exists(CacheDirectory)) return;
-                foreach (var file in Directory.EnumerateFiles(CacheDirectory, "*.png"))
+                if (!Directory.Exists(directory)) return;
+                foreach (var file in Directory.EnumerateFiles(directory, "*.png"))
                     if (DateTime.UtcNow - File.GetLastAccessTimeUtc(file) > MaxAge && DateTime.UtcNow - File.GetLastWriteTimeUtc(file) > MaxAge) File.Delete(file);
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { /* a cache that cannot be tidied is harmless */ }
@@ -58,15 +59,29 @@ public static class ModelThumbnails
     {
         try
         {
-            if (!IsEligible(path)) return null;
-            PruneOnce();
-            var info = new FileInfo(path);
-            var cached = CachePath(path, info.Length, info.LastWriteTimeUtc, size);
-            if (File.Exists(cached)) return new Bitmap(cached);
             // the queue is replaced when the performance mode changes: each request releases the one it entered
             var gate = Volatile.Read(ref _gate);
-            await gate.WaitAsync(cancellationToken);
-            try { return await Task.Run(() => Render(path, cached, size, cancellationToken), cancellationToken); }
+            await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                return await Task.Run(() =>
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (!IsEligible(path)) return null;
+                    PruneOnce();
+                    var info = new FileInfo(path);
+                    var cached = CachePath(path, info.Length, info.LastWriteTimeUtc, size);
+                    Bitmap? result = null;
+                    if (File.Exists(cached))
+                    {
+                        try { result = new Bitmap(cached); }
+                        catch (Exception error) when (error is IOException or ArgumentException or InvalidDataException or NotSupportedException or FormatException) { } // Rebuild a damaged cache entry from the model.
+                    }
+                    result ??= Render(path, cached, size, cancellationToken);
+                    if (!cancellationToken.IsCancellationRequested) return result;
+                    result.Dispose(); return null;
+                }, cancellationToken).ConfigureAwait(false);
+            }
             finally { gate.Release(); }
         }
         catch (Exception exception) when (exception is IOException or InvalidDataException or NotSupportedException or FormatException

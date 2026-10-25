@@ -16,7 +16,7 @@ public sealed class CreateCollectionWindow : DialogWindow
         var create = new Button { Content = "Créer" };
         create.Click += (_, _) =>
         {
-            if (string.IsNullOrWhiteSpace(NameValue)) { _error.Text = "Donnez un nom à la collection."; _error.IsVisible = true; return; }
+            if (string.IsNullOrWhiteSpace(NameValue)) { FormKit.ShowError(_error, _name, "Donnez un nom à la collection."); return; }
             Close(true);
         };
         Layout("Nouvelle collection", "Un dossier est créé dans la catégorie choisie.",

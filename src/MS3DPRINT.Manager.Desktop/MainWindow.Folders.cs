@@ -50,19 +50,11 @@ public partial class MainWindow
     private async void ImportWorkspaceFile_Click(object? sender, RoutedEventArgs e)
     {
         if (string.IsNullOrWhiteSpace(_folderWorkspaceDirectory)) return;
+        if (_importBatchActive) return;
         var directory = _folderWorkspaceDirectory;
-        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions { Title = "Importer un fichier", AllowMultiple = false });
-        var source = files.FirstOrDefault()?.TryGetLocalPath();
-        if (string.IsNullOrWhiteSpace(source)) return;
-        try
-        {
-            var root = WorkspaceRoot;
-            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.ManagedFileService(root).Import(source, directory));
-            Notify("Fichier importé.");
-            await LoadFolderWorkspaceAsync();
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
-        { Notify(exception.Message, error: true); }
+        var root = WorkspaceRoot;
+        var sources = await PickImportSourcesAsync();
+        await ImportWorkspaceFilesAsync(root, directory, sources);
     }
 
     private Button[] EntryActions(ProjectDirectoryContext context, bool isFile)
@@ -71,7 +63,7 @@ public partial class MainWindow
         rename.Click += RenameProjectFile_Click;
         var move = new Button { Content = Icons.Label("IconMove", "Déplacer"), Tag = context };
         move.Click += MoveProjectEntry_Click;
-        var trash = new Button { Content = Icons.Label("IconTrash", "Corbeille"), Tag = context };
+        var trash = new Button { Content = Icons.Label("IconTrash", "Corbeille"), Tag = context, Classes = { "menu-destructive" } };
         trash.Click += TrashProjectFile_Click;
         if (!isFile) return [rename, move, trash];
         var openWith = new Button { Content = Icons.Label("IconOpen", "Ouvrir avec…"), Tag = context.Path };
@@ -82,6 +74,7 @@ public partial class MainWindow
     private async void OpenFolder_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: string path } || !Directory.Exists(path)) return;
+        DismissSearchResults();
         try
         {
             var root = WorkspaceRoot;
@@ -93,6 +86,7 @@ public partial class MainWindow
                 return;
             }
 
+            if (!FolderWorkspacePanel.IsVisible) _folderHistoryParent = CurrentNavigationStop;
             _folderWorkspaceRoot = Path.GetFullPath(path);
             _folderWorkspaceDirectory = _folderWorkspaceRoot;
             _folderWorkspaceReturnTitle = PageTitle.Text;
@@ -128,6 +122,8 @@ public partial class MainWindow
     private async Task LoadFolderWorkspaceAsync()
     {
         if (string.IsNullOrWhiteSpace(_folderWorkspaceRoot) || string.IsNullOrWhiteSpace(_folderWorkspaceDirectory)) return;
+        CancelFileRead();
+        RememberFolder();
         var root = _folderWorkspaceRoot;
         var directory = _folderWorkspaceDirectory;
         FolderWorkspaceTitle.Text = string.Equals(root, directory, StringComparison.OrdinalIgnoreCase) ? "Contenu du dossier" : Path.GetFileName(directory);
@@ -144,11 +140,13 @@ public partial class MainWindow
         {
             if (string.Equals(root, directory, StringComparison.OrdinalIgnoreCase))
             {
+                CancelFileRead();
                 FolderWorkspacePanel.IsVisible = false;
                 foreach (var panel in _hiddenByFolderWorkspace) panel.IsVisible = true;
                 _hiddenByFolderWorkspace = [];
                 PageTitle.Text = _folderWorkspaceReturnTitle ?? "Vue d’ensemble";
                 PageSubtitle.Text = _folderWorkspaceReturnSubtitle ?? string.Empty;
+                if (_folderHistoryParent is { } parent) RememberNavigation(parent);
                 return;
             }
 
@@ -157,36 +155,14 @@ public partial class MainWindow
         };
         var newFolder = new Button { Content = Icons.Label("IconProjects", "Nouveau dossier") };
         newFolder.Click += CreateWorkspaceFolder_Click;
-        var importFile = new Button { Content = Icons.Label("IconUpload", "Importer un fichier") };
+        var importFile = new Button { Content = Icons.Label("IconUpload", "Importer des fichiers") };
         importFile.Click += ImportWorkspaceFile_Click;
         var toolbar = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 8, Margin = new Avalonia.Thickness(0, 0, 0, 8) };
         Grid.SetColumn(newFolder, 1); Grid.SetColumn(importFile, 2);
         toolbar.Children.Add(back); toolbar.Children.Add(newFolder); toolbar.Children.Add(importFile);
         FolderWorkspaceList.Children.Add(toolbar);
-        try
-        {
-            var entries = await Task.Run(() => new ProjectWorkspaceBrowser().List(root, directory));
-            if (entries.Count == 0)
-            {
-                FolderWorkspaceList.Children.Add(CreateEmptyState("IconFile", "Ce dossier est vide", "Aucun fichier ni sous-dossier à afficher."));
-                return;
-            }
-
-            FolderWorkspaceList.Spacing = 0;
-            FolderWorkspaceList.Children.Add(CreateCompactTableHeader(ActionRowColumns, "NOM", "TYPE", "TAILLE", "ACTIONS"));
-            foreach (var entry in entries)
-            {
-                var open = new Button { HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch };
-                if (entry.IsDirectory)
-                    open.Click += async (_, _) => { _folderWorkspaceDirectory = entry.FullPath; await LoadFolderWorkspaceAsync(); };
-                else
-                    open.Click += async (_, _) => await OpenFileAsync(entry.FullPath);
-                FolderWorkspaceList.Children.Add(CreateActionRow(open, CreateOverflowActions(EntryActions(FolderContext(entry.FullPath), isFile: !entry.IsDirectory)),
-                    CreateNameCell(entry.IsDirectory ? "IconProjects" : "IconFile", entry.Name, accentIcon: entry.IsDirectory, modelPath: entry.IsDirectory ? null : entry.FullPath),
-                    CreateCompactTableCell(entry.TypeLabel), CreateCompactTableCell(entry.IsDirectory ? "—" : entry.SizeLabel)));
-            }
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
-        { FolderWorkspaceList.Children.Add(new TextBlock { Text = "Impossible de lire ce dossier : " + exception.Message, Classes = { "muted" }, TextWrapping = TextWrapping.Wrap, Margin = new Avalonia.Thickness(8) }); }
+        FolderWorkspaceList.Spacing = 12;
+        var reading = LoadFileBrowserAsync(FolderWorkspaceList, root, directory, null, LoadFolderWorkspaceAsync);
+        if (!_replayingNavigation) await reading;
     }
 }

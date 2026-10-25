@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
+using System.Security.Cryptography;
 using MS3DPRINT.Manager.Core.Templates;
 
 namespace MS3DPRINT.Manager.Core.Workspace;
@@ -189,6 +190,27 @@ public sealed class ManagedFileService
             }
             finally { if (File.Exists(temporary)) File.Delete(temporary); }
             return destination;
+        }
+    }
+
+    /// <summary>Removes an explicitly confirmed import source while holding an identical workspace copy open.</summary>
+    public void DeleteImportedSource(string sourceFile, string importedFile)
+    {
+        lock (_gate)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(sourceFile);
+            var source = Path.GetFullPath(sourceFile);
+            var imported = Managed(importedFile);
+            ProtectMetadata(source);
+            ProtectMetadata(imported);
+            if (Same(source, imported)) throw new IOException("La source et la copie importée désignent le même fichier.");
+            CheckLinks(source);
+            // Keep the destination present and both contents protected against writes throughout verification/deletion.
+            using var copy = new FileStream(imported, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var original = VerifiedSourceDeletion.Open(source);
+            if (original.Length != copy.Length || !SHA256.HashData(original).AsSpan().SequenceEqual(SHA256.HashData(copy)))
+                throw new IOException("Les fichiers diffèrent ou ont changé depuis l’import. La source est conservée.");
+            VerifiedSourceDeletion.MarkForDeletion(original.SafeFileHandle);
         }
     }
 

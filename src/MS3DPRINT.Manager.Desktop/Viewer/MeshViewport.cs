@@ -19,6 +19,8 @@ public sealed class MeshViewport : Control, IMeshViewport
     private MeshModel? _mesh;
     private WriteableBitmap? _bitmap;
     private CancellationTokenSource? _render;
+    private Task _renderTask = Task.CompletedTask;
+    private bool _suspended;
     private int _version;
     private Point _last;
     private bool _rotating;
@@ -58,6 +60,7 @@ public sealed class MeshViewport : Control, IMeshViewport
     public void SetMesh(MeshModel? mesh)
     {
         _mesh = mesh;
+        if (mesh is null) StopRendering();
         Markers = null;
         Camera.Reset();
         RequestRender(interactive: false);
@@ -91,34 +94,64 @@ public sealed class MeshViewport : Control, IMeshViewport
 
     public void RequestRender(bool interactive)
     {
+        if (_suspended) return;
         CameraChanged?.Invoke();
         if (interactive) { _settle.Stop(); _settle.Start(); }
+        _render?.Cancel();
+        _render?.Dispose();
+        _render = null;
+        var version = ++_version;
         var mesh = _mesh;
         if (mesh is null || Bounds.Width < 2 || Bounds.Height < 2) { InvalidateVisual(); return; }
-        _render?.Cancel();
         var cancellation = _render = new CancellationTokenSource();
-        var version = ++_version;
         var scale = (TopLevel.GetTopLevel(this)?.RenderScaling ?? 1) * (interactive ? 0.5 : 1);
         var width = Math.Max(2, (int)(Bounds.Width * scale));
         var height = Math.Max(2, (int)(Bounds.Height * scale));
         var options = new RenderOptions(width, height, Wireframe, 0xFF000000u | ((uint)ModelColor.R << 16) | ((uint)ModelColor.G << 8) | ModelColor.B, BackgroundColor, CutPlane);
         var camera = new ViewCamera { Yaw = Camera.Yaw, Pitch = Camera.Pitch, Zoom = Camera.Zoom, PanX = Camera.PanX, PanY = Camera.PanY };
         var markers = Markers;
-        _ = Task.Run(() =>
-        {
-            try { return SoftwareRenderer.Render(mesh, camera, options, markers, cancellation.Token); }
-            catch (OperationCanceledException) { return null; }
-        }).ContinueWith(task =>
-        {
-            if (task.Result is not { } pixels || version != _version) return;
-            Dispatcher.UIThread.Post(() => ShowFrame(pixels, width, height));
-        }, TaskScheduler.Default);
+        _renderTask = RenderFrameAsync(mesh, camera, options, markers, cancellation, version);
     }
+
+    private async Task RenderFrameAsync(MeshModel mesh, ViewCamera camera, RenderOptions options, IReadOnlyList<Vector3>? markers, CancellationTokenSource cancellation, int version)
+    {
+        var token = cancellation.Token;
+        try
+        {
+            var pixels = await Task.Run(() => SoftwareRenderer.Render(mesh, camera, options, markers, token), token);
+            if (!token.IsCancellationRequested && version == _version && !_suspended) ShowFrame(pixels, options.Width, options.Height);
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        finally
+        {
+            if (ReferenceEquals(_render, cancellation)) _render = null;
+            cancellation.Dispose();
+        }
+    }
+
+    private void StopRendering()
+    {
+        _settle.Stop(); ++_version;
+        _render?.Cancel(); _render?.Dispose(); _render = null;
+        var previous = _bitmap; _bitmap = null; previous?.Dispose();
+        _rotating = _panning = false;
+        InvalidateVisual();
+    }
+
+    public void Release() { _suspended = true; StopRendering(); }
+    public void Resume() { _suspended = false; RequestRender(false); }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e) { Release(); base.OnDetachedFromVisualTree(e); }
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e) { base.OnAttachedToVisualTree(e); Resume(); }
 
     private void ShowFrame(uint[] pixels, int width, int height)
     {
         if (_bitmap is null || _bitmap.PixelSize.Width != width || _bitmap.PixelSize.Height != height)
+        {
+            var previous = _bitmap;
             _bitmap = new WriteableBitmap(new PixelSize(width, height), new Avalonia.Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Opaque);
+            previous?.Dispose();
+        }
         using (var buffer = _bitmap.Lock())
         {
             var ints = (int[])(object)pixels;

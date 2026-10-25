@@ -25,7 +25,7 @@ public partial class MainWindow
     {
         if (sender is not Button { Tag: ProjectSummary project }) return;
         _projectOriginClient = null;
-        ShowWorkspace("Projets");
+        ShowWorkspaceForDetail("Projets");
         PageTitle.Text = project.Title();
         PageSubtitle.Text = $"{project.Reference} · {project.ClientTitle()}";
         await LoadProjectDirectoryAsync(project, project.ProjectPath);
@@ -50,8 +50,11 @@ public partial class MainWindow
             try
             {
                 var projectName = dialog.ProjectName;
+                var priority = dialog.Priority;
+                var trackedClient = await EnsurePriorityClientAsync(client, priority);
+                if (trackedClient is null) return;
                 BeginBusy();
-                try { await Task.Run(() => new WorkspaceProjectCreator().CreateTracked(root, client, DateTime.Today.Year, projectName)); }
+                try { await Task.Run(() => new WorkspaceProjectCreator().CreateTracked(root, trackedClient, DateTime.Today.Year, projectName, priority)); }
                 finally { EndBusy(); }
                 PageTitle.Text = "Projets";
                 Notify("Projet créé.");
@@ -73,10 +76,13 @@ public partial class MainWindow
         try
         {
             var projectName = dialog.ProjectName;
+            var priority = dialog.Priority;
+            var trackedClient = await EnsurePriorityClientAsync(selected, priority);
+            if (trackedClient is null) return;
             var root = WorkspaceRoot;
-            await Task.Run(() => new WorkspaceProjectCreator().CreateTracked(root, selected, DateTime.Today.Year, projectName));
+            await Task.Run(() => new WorkspaceProjectCreator().CreateTracked(root, trackedClient, DateTime.Today.Year, projectName, priority));
             Notify("Projet créé.");
-            await LoadClientDetailAsync(client with { ProjectCount = client.ProjectCount + 1 });
+            await LoadClientDetailAsync(trackedClient with { ProjectCount = trackedClient.ProjectCount + 1 });
         }
         catch (Exception exception) when (exception is ArgumentException or IOException or InvalidOperationException)
         {
@@ -85,6 +91,7 @@ public partial class MainWindow
     }
 
     private IReadOnlyList<ProjectSummary> _allProjects = [];
+    private bool _projectCatalogUnavailable;
 
     private int _projectSortColumn = -1;
 
@@ -98,7 +105,10 @@ public partial class MainWindow
 
     private async Task LoadProjectsAsync()
     {
+        RememberWorkspace("Projets");
         var workspaceRoot = WorkspaceRoot;
+        var load = StartWorkspaceLoad("projects", workspaceRoot);
+        _projectCatalogUnavailable = true;
         ProjectList.Children.Clear();
         ProjectList.Spacing = 0;
         _projectListMode = true;
@@ -106,15 +116,25 @@ public partial class MainWindow
         ProjectsPanelActions.IsVisible = true;
         ProjectsPanelHeader.IsVisible = true;
         ProjectFilterBar.IsVisible = true;
+        ProjectFilterBar.IsEnabled = false;
+        ProjectsPanelSubtitle.Text = "Chargement des projets…";
 
         try
         {
-            _allProjects = await Task.Run(() => new WorkspaceProjectReader().Load(workspaceRoot));
+            var projects = await Task.Run(() => new WorkspaceProjectReader().Load(workspaceRoot));
+            if (!IsWorkspaceLoadCurrent(load)) return;
+            _allProjects = projects;
+            _projectCatalogUnavailable = false;
+            ProjectFilterBar.IsEnabled = true;
             RenderProjects();
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
-            ProjectList.Children.Add(CreateEmptyState("IconAlert", "Impossible de lire les projets", exception.Message));
+            if (!IsWorkspaceLoadCurrent(load)) return;
+            _allProjects = [];
+            ProjectList.Children.Clear();
+            ProjectsPanelSubtitle.Text = "Lecture des projets indisponible";
+            ProjectList.Children.Add(CreateReadErrorState("Projets indisponibles", "Vérifiez l’accès au dossier de l’atelier, puis réessayez.", exception, LoadProjectsAsync));
         }
     }
 
@@ -130,11 +150,13 @@ public partial class MainWindow
 
     private void RenderProjects()
     {
-        if (!_projectListMode) return;
+        if (!_projectListMode || _projectCatalogUnavailable) return;
+        UpdatePrioritySortButton();
         ProjectList.Children.Clear();
         var text = ProjectFilterBox.Text?.Trim() ?? string.Empty;
         var projects = _allProjects
             .Where(project => MatchesProjectStatus(project, _projectStatusFilter))
+            .Where(project => _projectPriorityFilter is null || project.Priority == _projectPriorityFilter)
             .Where(project => text.Length == 0 ||
                               $"{project.Reference} {project.ProjectName} {project.ClientFolderName}".Contains(text, StringComparison.CurrentCultureIgnoreCase))
             .ToArray();
@@ -153,18 +175,20 @@ public partial class MainWindow
         }
         if (projects.Length == 0)
         {
-            ProjectList.Children.Add(CreateEmptyState("IconSearch", "Aucun résultat", "Aucun projet ne correspond à ce filtre."));
+            ProjectList.Children.Add(CreateEmptyState("IconSearch", "Aucun résultat", "Essayez un autre nom ou réaffichez tous les projets actifs.", "Effacer les filtres", ClearProjectFilters_Click));
             return;
         }
 
         projects = SortProjects(projects);
-        ProjectList.Children.Add(CreateSortableHeader(ProjectRowColumns, ["PROJET", "CLIENT", "STATUT", "ÉCHÉANCE", "ACTIONS"], _projectSortColumn, _projectSortAscending, column =>
+        PagedRows.Render(ProjectList, projects, CreateProjectRow, () => CreateSortableHeader(ProjectRowColumns, ["PROJET", "CLIENT", "STATUT", "ÉCHÉANCE", "ACTIONS"], _projectSortColumn, _projectSortAscending, column =>
         {
             _projectSortAscending = _projectSortColumn != column || !_projectSortAscending;
             _projectSortColumn = column;
             RenderProjects();
-        }));
-        foreach (var project in projects)
+        }), (WorkspaceRoot, text, _projectStatusFilter, _projectPriorityFilter, _projectSortColumn, _projectSortAscending));
+    }
+
+    private Control CreateProjectRow(ProjectSummary project)
         {
             var open = new Button { Tag = project, HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch };
             open.Click += ProjectEntry_Click;
@@ -172,13 +196,22 @@ public partial class MainWindow
             var edit = new Button { Content = Icons.Label("IconEdit", "Modifier la fiche"), Tag = project }; edit.Click += EditProject_Click;
             var rename = new Button { Content = Icons.Label("IconRename", "Renommer"), Tag = project }; rename.Click += RenameProject_Click;
             var move = new Button { Content = Icons.Label("IconMove", "Déplacer"), Tag = project }; move.Click += MoveProject_Click;
-            var trash = new Button { Content = Icons.Label("IconTrash", "Corbeille"), Tag = project }; trash.Click += TrashProject_Click;
-            ProjectList.Children.Add(CreateActionRow(ProjectRowColumns, open, CreateOverflowActions(folder, edit, rename, move, trash),
+            var duplicate = new Button { Content = Icons.Label("IconCopy", "Dupliquer le projet"), Tag = project }; duplicate.Click += DuplicateProject_Click;
+            var trash = new Button { Content = Icons.Label("IconTrash", "Corbeille"), Tag = project, Classes = { "menu-destructive" } }; trash.Click += TrashProject_Click;
+            var row = (Grid)CreateActionRow(ProjectRowColumns, open, CreateOverflowActions(folder, edit, duplicate, rename, move, trash),
                 CreateProjectNameCell(project),
-                CreateCompactTableCell(project.ClientTitle()),
+                CreateProjectClientCell(project.ClientTitle()),
                 CreateStatusPicker(project),
-                CreateDueDateCell(project)));
-        }
+                CreateDueDateCell(project));
+            AddProjectQuickEdit(row, project);
+            return row;
+    }
+
+    private static Control CreateProjectClientCell(string name)
+    {
+        var label = new TextBlock { Text = name, FontSize = 14, LineHeight = 19, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis };
+        ToolTip.SetTip(label, name);
+        return label;
     }
 
     /// <summary>The status of a project in the list; clicking it offers the three statuses, without opening the sheet.</summary>
@@ -253,16 +286,20 @@ public partial class MainWindow
     }
 
     /// <summary>The reference small and quiet, then the name that identifies the project at a glance.</summary>
-    private static Control CreateProjectNameCell(ProjectSummary project)
+    private Control CreateProjectNameCell(ProjectSummary project)
     {
         var reference = new TextBlock { Text = project.Reference, Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
-        var title = new TextBlock { Text = project.Title(), FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
+        var title = new TextBlock { Text = project.Title(), FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.Wrap, MaxLines = 2, LineHeight = 20, VerticalAlignment = VerticalAlignment.Center };
         ToolTip.SetTip(title, project.Reference + " · " + project.Title());
-        // a fixed reference column keeps every title starting at the same x, whatever the length of the client code
-        var cell = new Grid { ColumnDefinitions = new ColumnDefinitions("112,*"), ColumnSpacing = 10 };
-        Grid.SetColumn(title, 1);
-        cell.Children.Add(reference); cell.Children.Add(title);
-        return cell;
+        title.FontSize = 15;
+        var cell = new StackPanel { Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
+        cell.Children.Add(title); cell.Children.Add(reference);
+        ToolTip.SetTip(cell, project.Title() + "\n" + project.Reference);
+        cell.IsHitTestVisible = false;
+        var priority = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 8, Classes = { "interactive-cell" } };
+        priority.Children.Add(CreateProjectPriorityButton(project));
+        Grid.SetColumn(cell, 1); priority.Children.Add(cell);
+        return priority;
     }
 
     /// <summary>The due date; one that has passed on a project that is not finished is said so, in the warning colour.</summary>
@@ -283,6 +320,9 @@ public partial class MainWindow
 
     private ProjectSummary[] SortProjects(ProjectSummary[] projects)
     {
+        if (_projectSortColumn == 4)
+            return projects.OrderBy(project => project.Priority == ProjectPriority.None ? 3 : _projectSortAscending ? 3 - (int)project.Priority : (int)project.Priority - 1)
+                .ThenBy(project => project.Reference, StringComparer.OrdinalIgnoreCase).ToArray();
         if (_projectSortColumn < 0) return projects;
         IOrderedEnumerable<ProjectSummary> ordered = _projectSortColumn switch
         {
@@ -312,6 +352,30 @@ public partial class MainWindow
         if (ProjectList is not null) RenderProjects();
     }
 
+    private void ClearProjectFilters_Click(object? sender, RoutedEventArgs e)
+    {
+        _projectPriorityFilterBox.SelectedIndex = 0;
+        _projectPriorityFilter = null;
+        _projectStatusFilter = string.Empty;
+        SelectChip(ProjectStatusFilters, string.Empty);
+        ProjectFilterBox.Text = string.Empty;
+        RenderProjects();
+    }
+
+    private void AddProjectQuickEdit(Grid row, ProjectSummary project)
+    {
+        row.Classes.Add("project-row");
+        row.MinHeight = 76;
+        var overflow = row.Children.OfType<Button>().Last();
+        overflow.HorizontalAlignment = HorizontalAlignment.Right;
+        var edit = new Button { Content = Icons.Glyph("IconEdit", 18), Tag = project, Classes = { "icon-action", "quick-row-action" }, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center };
+        Avalonia.Automation.AutomationProperties.SetName(edit, "Modifier " + project.Title());
+        ToolTip.SetTip(edit, "Modifier la fiche du projet");
+        edit.Click += EditProject_Click;
+        Grid.SetColumn(edit, row.ColumnDefinitions.Count - 1);
+        row.Children.Add(edit);
+    }
+
     private void ProjectFilter_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: string status }) return;
@@ -333,7 +397,7 @@ public partial class MainWindow
         if (sender is not Button { Tag: MS3DPRINT.Manager.Core.Projects.ProjectSummary project }) return;
         // A project opened from a client sheet remembers that client, so "Retour" goes back to it.
         _projectOriginClient = ClientsWorkspacePanel.IsVisible ? _currentClientDetail : null;
-        ShowWorkspace("Projets");
+        ShowWorkspaceForDetail("Projets");
         PageTitle.Text = project.Title();
         PageSubtitle.Text = $"{project.Reference} · {project.ClientTitle()}";
         await LoadProjectDirectoryAsync(project, project.ProjectPath);
@@ -341,30 +405,7 @@ public partial class MainWindow
 
     private void AddProjectOverview(ProjectSummary project)
     {
-        var edit = new Button { Content = Icons.Label("IconEdit", "Modifier la fiche"), Tag = project, VerticalAlignment = VerticalAlignment.Center };
-        edit.Click += EditProject_Click;
-        var badge = CreateProjectStatusCell(project);
-
-        var summary = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, VerticalAlignment = VerticalAlignment.Center };
-        summary.Children.Add(badge);
-        summary.Children.Add(new TextBlock
-        {
-            Text = project.Profile?.DueDate is { } due ? $"Échéance le {due:dd/MM/yyyy}" : "Aucune échéance",
-            Classes = { "muted" }, VerticalAlignment = VerticalAlignment.Center
-        });
-
-        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
-        Grid.SetColumn(edit, 1);
-        header.Children.Add(summary);
-        header.Children.Add(edit);
-
-        var content = new StackPanel { Spacing = 10 };
-        content.Children.Add(header);
-        if (!string.IsNullOrWhiteSpace(project.Profile?.Description))
-            content.Children.Add(new TextBlock { Text = project.Profile.Description, TextWrapping = TextWrapping.Wrap });
-        else if (project.Profile is null)
-            content.Children.Add(new TextBlock { Text = "La fiche de ce projet est à compléter.", Classes = { "muted" } });
-        ProjectList.Children.Add(new Border { Classes = { "card-raised" }, Margin = new Avalonia.Thickness(0, 0, 0, 10), Child = content });
+        ProjectList.Children.Add(BuildProjectOverview(project));
     }
 
     private async void EditProject_Click(object? sender, RoutedEventArgs e)
@@ -398,8 +439,8 @@ public partial class MainWindow
         try
         {
             var root = WorkspaceRoot;
-            var (status, dueDate, description, notes, name) = (dialog.Status, dialog.DueDate, dialog.Description, dialog.Notes, dialog.ProjectName);
-            var updated = await Task.Run(() => new WorkspaceProfileEditor().UpdateProject(root, profile, status, dueDate, description, notes, name));
+            var (status, dueDate, description, notes, name, priority) = (dialog.Status, dialog.DueDate, dialog.Description, dialog.Notes, dialog.ProjectName, dialog.Priority);
+            var updated = await Task.Run(() => new WorkspaceProfileEditor().UpdateProject(root, profile, status, dueDate, description, notes, name, priority));
             var (path, archiveNote) = await SyncProjectArchiveAsync(root, project with { Profile = updated }, status);
             Notify("Fiche projet enregistrée." + archiveNote);
             if (_projectListMode) await LoadProjectsAsync();

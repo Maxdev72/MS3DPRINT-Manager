@@ -29,13 +29,26 @@ public sealed class PrinterCostCalculatorTests
         new(Guid.NewGuid(), "Marque", "Modèle", "Imprimante", 0m, "250 mm", active, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, price, hours, watts);
 
     [Fact]
-    public void Fleet_hourly_rate_adds_the_amortization_of_every_active_printer()
+    public void Fleet_hourly_rate_averages_active_printers_without_adding_their_rates()
     {
         var fleet = new[] { Printer(800m, 8000, true, 250), Printer(1600m, 8000, true, 350), Printer(5000m, 1000, false, 500) };
 
-        Assert.Equal(0.30m, PrinterCostCalculator.FleetHourlyRate(fleet));
+        Assert.Equal(0.15m, PrinterCostCalculator.FleetHourlyRate(fleet));
         Assert.Equal(300, PrinterCostCalculator.FleetAveragePowerWatts(fleet));
         Assert.Equal(0m, PrinterCostCalculator.FleetHourlyRate([]));
         Assert.Null(PrinterCostCalculator.FleetAveragePowerWatts([Printer(800m, 8000, true, null)]));
+    }
+
+    [Fact]
+    public void Annual_capacity_weights_fleet_cost_and_power_without_rounding_rates()
+    {
+        var a = Printer(1000, 8000, true, 100) with { AmortizationYears = 5, ProductiveHoursPerYear = 1000 };
+        var b = Printer(3000, 8000, true, 300) with { AmortizationYears = 5, ProductiveHoursPerYear = 3000 };
+        Assert.Equal(.2m, PrinterCostCalculator.HourlyRate(a));
+        Assert.Equal(.2m, PrinterCostCalculator.FleetHourlyRate([a, b]));
+        Assert.Equal(250, PrinterCostCalculator.FleetAveragePowerWatts([a, b]));
+        Assert.Equal(.123456m, PrinterCostCalculator.HourlyRate(a with { UseManualHourlyRate = true, HourlyRate = .123456m }));
+        Assert.Equal(1m / 3m, PrinterCostCalculator.HourlyRate(a with { PurchasePrice = 1, AmortizationYears = 1, ProductiveHoursPerYear = 3 }));
+        Assert.Null(PrinterCostCalculator.FleetAveragePowerWatts([a, b with { PowerWatts = null }]));
     }
 }

@@ -1,0 +1,27 @@
+{
+  "Presets": [
+    {
+      "Id": "fr-micro-2026",
+      "Name": "Micro-entreprise France 2026 — sans ACRE, hors Cipav",
+      "Year": 2026,
+      "SalesRate": 12.3,
+      "ServicesBicRate": 21.2,
+      "ServicesBncRate": 25.6,
+      "SourceUrl": "https://entreprendre.service-public.gouv.fr/vosdroits/F37353"
+    },
+    {
+      "Id": "fr-micro-cipav-2026",
+      "Name": "Micro-entreprise France 2026 — sans ACRE, BNC Cipav",
+      "Year": 2026,
+      "SalesRate": 12.3,
+      "ServicesBicRate": 21.2,
+      "ServicesBncRate": 23.2,
+      "SourceUrl": "https://entreprendre.service-public.gouv.fr/vosdroits/F37353"
+    }
+  ],
+  "Training": [
+    { "Id": "commercial", "Name": "Activité commerciale — CFP 0,1 %", "RatePercent": 0.1 },
+    { "Id": "artisan", "Name": "Activité artisanale — CFP 0,3 %", "RatePercent": 0.3 },
+    { "Id": "liberal", "Name": "Activité libérale — CFP 0,2 %", "RatePercent": 0.2 }
+  ]
+}

@@ -250,7 +250,12 @@ public sealed class ModelBrowserView : UserControl
         if (_downloadDialog is null)
         {
             var dialog = new DownloadDialog(PickWorkspaceFolder);
-            dialog.Closed += (_, _) => { if (ReferenceEquals(_downloadDialog, dialog)) _downloadDialog = null; };
+            dialog.Closed += (_, _) =>
+            {
+                var paths = dialog.Paths;
+                _ = Task.Run(() => _buffer.ReleaseOffered(paths));
+                if (ReferenceEquals(_downloadDialog, dialog)) _downloadDialog = null;
+            };
             _downloadDialog = dialog;
             if (TopLevel.GetTopLevel(this) is Window owner) dialog.Show(owner); else dialog.Show();
         }

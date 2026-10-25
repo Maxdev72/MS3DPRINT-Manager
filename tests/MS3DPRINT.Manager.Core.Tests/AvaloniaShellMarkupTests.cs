@@ -39,20 +39,12 @@ public sealed class AvaloniaShellMarkupTests
     }
 
     [Fact]
-    public void Estimate_workspace_templates_tolerate_empty_items()
-    {
-        var source = MainWindowSource();
-
-        Assert.Contains("f?.Brand", source, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void Estimate_workspace_prices_the_machine_with_the_whole_fleet_instead_of_one_printer()
+    public void Estimate_workspace_exposes_versioned_production_without_removing_the_existing_wizard()
     {
         var markup = File.ReadAllText(MainWindowPath());
         var source = MainWindowSource();
 
-        Assert.DoesNotContain("EstimatePrinter", markup, StringComparison.Ordinal);
+        Assert.Contains("EstimateV2ProductionHost", markup, StringComparison.Ordinal);
         Assert.Contains("FleetHourlyRate", source, StringComparison.Ordinal);
     }
 
@@ -137,7 +129,7 @@ public sealed class AvaloniaShellMarkupTests
     {
         var markup = File.ReadAllText(MainWindowPath());
 
-        Assert.Contains("Vue d’ensemble", markup, StringComparison.Ordinal);
+        Assert.Contains("Votre atelier", markup, StringComparison.Ordinal);
         Assert.Contains("Ctrl+K", markup, StringComparison.Ordinal);
     }
 
@@ -150,12 +142,12 @@ public sealed class AvaloniaShellMarkupTests
     }
 
     [Fact]
-    public void Main_window_keeps_only_the_central_workspace_within_a_1200_pixel_reading_width()
+    public void Main_window_keeps_only_the_central_workspace_within_a_1400_pixel_reading_width()
     {
         var markup = File.ReadAllText(MainWindowPath());
         var source = MainWindowSource();
 
-        Assert.Contains("<Grid x:Name=\"CentralWorkspace\" Grid.Column=\"1\" Margin=\"34,28\" Width=\"1200\"", markup, StringComparison.Ordinal);
+        Assert.Contains("<Grid x:Name=\"CentralWorkspace\" Grid.Column=\"1\" Margin=\"34,28\" Width=\"1400\"", markup, StringComparison.Ordinal);
         Assert.Contains("Window_SizeChanged", markup, StringComparison.Ordinal);
         Assert.Contains("UpdateCentralWorkspaceWidth", source, StringComparison.Ordinal);
         Assert.DoesNotContain("<Grid ColumnDefinitions=\"232,*\" MaxWidth=\"1200\"", markup, StringComparison.Ordinal);
@@ -169,7 +161,7 @@ public sealed class AvaloniaShellMarkupTests
         Assert.Contains("NavigationButton_Click", markup, StringComparison.Ordinal);
         Assert.Contains("Window_KeyDown", markup, StringComparison.Ordinal);
         Assert.Contains("SearchBox", markup, StringComparison.Ordinal);
-        Assert.Contains("SearchBox_KeyUp", markup, StringComparison.Ordinal);
+        Assert.Contains("SearchBox_TextChanged", markup, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -22,6 +22,16 @@ Préférence explicite de l’utilisateur, enregistrée le 7 octobre 2026 :
   Si un fichier est verrouillé, demander la fermeture normale du logiciel ;
   ne pas forcer l’arrêt au risque de perdre des modifications.
 
+## Confirmation des suppressions
+
+Préférence explicite de l’utilisateur : toute action utilisateur de suppression,
+d’envoi à la corbeille ou de retrait d’un élément doit demander une confirmation.
+Utiliser `ConfirmTrashWindow` pour la corbeille et `ConfirmRemovalWindow` pour
+les retraits de lignes ou de vues. Identifier l’élément et les conséquences.
+Annuler doit recevoir le focus ; Entrée ne doit pas valider une action destructive
+par défaut. Les nettoyages automatiques de caches et fichiers temporaires ne sont
+pas des actions de suppression de données demandées par l’utilisateur.
+
 ## Organisation du code de la fenêtre principale
 
 Le code de `MainWindow` est réparti en fichiers partiels par page dans

@@ -32,8 +32,10 @@ public partial class MainWindow
     /// <summary>Shows the 3D viewer inside the main window, over the current page, and loads a model when a path is given.</summary>
     private async void ShowModelViewer(string? path)
     {
+        DismissSearchResults();
         if (!ViewerWorkspacePanel.IsVisible)
         {
+            _viewerHistoryParent = CurrentNavigationStop;
             _hiddenByViewer = WorkspacePanels().Append(FolderWorkspacePanel).Where(panel => panel.IsVisible).ToList();
             foreach (var panel in _hiddenByViewer) panel.IsVisible = false;
             _viewerReturnTitle = PageTitle.Text;
@@ -43,6 +45,13 @@ public partial class MainWindow
             ViewerNavButton.Classes.Add("selected");
             RefreshCentralWidth();
         }
+        var parent = _viewerHistoryParent;
+        RememberNavigation(new("viewer:" + path, async () =>
+        {
+            if (parent is not null) await parent.Restore();
+            ShowModelViewer(path);
+            _viewerHistoryParent = parent;
+        }));
         if (_modelViewer is null)
         {
             _modelViewer = new ModelViewerView(CloseModelViewer, () =>
@@ -60,12 +69,15 @@ public partial class MainWindow
                     .Select(printer => new ViewerPrinter(printer.DisplayName, printer.BuildVolume)).ToList();
             });
             _modelViewer.ModelLoaded += name => PageSubtitle.Text = name;
+            _modelViewer.FileOpened += path => _ = RememberOpenedFileAsync(WorkspaceRoot, path);
             _modelViewer.EstimateRequested += StartEstimateFromModel;
             _modelViewer.ImageCaptured += SaveViewerCapture;
             ViewerWorkspacePanel.Child = _modelViewer;
         }
+        _modelViewer.Resume();
         _ = _modelViewer.ReloadFilamentsAsync();
         PageTitle.Text = "Visualiseur 3D";
+        SetPageBrand("Visualiseur 3D");
         PageSubtitle.Text = "Déposez un STL, un OBJ ou un 3MF, ou ouvrez un fichier.";
         if (path is null) return;
         try { await _modelViewer.LoadModelAsync(path); }
@@ -80,8 +92,8 @@ public partial class MainWindow
         ShowWorkspace("Estimations");
         PageTitle.Text = "Estimations";
         PageSubtitle.Text = PageSubtitles.GetValueOrDefault("Estimations", string.Empty);
-        await LoadEstimateFilamentsAsync();
-        ResetEstimate_Click(this, new RoutedEventArgs());
+        if (!await LoadEstimateFilamentsAsync()) return;
+        if (!ResetEstimate_Click(this, new RoutedEventArgs())) return;
         EstimateName.Text = seed.Name;
         EstimateScopeIndex = 0;
         if (seed.WeightGrams is { } grams)
@@ -95,7 +107,7 @@ public partial class MainWindow
         }
         if (EstimateProject.ItemsSource is IEnumerable<ProjectSummary> projects)
             EstimateProject.SelectedItem = projects.FirstOrDefault(project => seed.ModelPath.StartsWith(project.ProjectPath, StringComparison.OrdinalIgnoreCase));
-        GoToEstimateStep(1);
+        EstimateFormScroll.Offset = default;
         Notify(seed.DurationHours is null ? "Estimation préparée à partir du modèle : vérifiez la durée machine."
             : seed.PrinterModel is null ? "Estimation préparée : poids et durée estimés par le logiciel, à vérifier."
             : "Estimation préparée : poids et durée viennent du découpeur.");
@@ -139,6 +151,7 @@ public partial class MainWindow
 
     private void CloseModelViewer()
     {
+        if (_viewerHistoryParent is { } parent) RememberNavigation(parent);
         _modelViewer?.Release();
         ViewerWorkspacePanel.IsVisible = false;
         ViewerNavButton.Classes.Remove("selected");
@@ -148,5 +161,6 @@ public partial class MainWindow
         _hiddenByViewer = [];
         PageTitle.Text = _viewerReturnTitle ?? "Vue d’ensemble";
         PageSubtitle.Text = _viewerReturnSubtitle ?? string.Empty;
+        SetPageBrand(_selectedNavigationButton?.Tag as string ?? "Accueil");
     }
 }

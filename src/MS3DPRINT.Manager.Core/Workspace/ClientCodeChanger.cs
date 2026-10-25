@@ -110,8 +110,8 @@ public sealed partial class ClientCodeChanger(string workspaceRoot)
             {
                 var rename = plan.Projects.FirstOrDefault(item => string.Equals(item.OldReference, estimate.ProjectReference, StringComparison.OrdinalIgnoreCase));
                 if (rename is null) continue;
-                estimateStore.Update(estimate with { ProjectReference = rename.NewReference });
-                undo.Push(() => estimateStore.Update(estimate));
+                var changed = estimateStore.Update(estimate with { ProjectReference = rename.NewReference });
+                undo.Push(() => estimateStore.Update(estimate with { Revision = changed.Revision }));
             }
 
             new ClientProfileStore(paths).Update(profile with { ClientCode = plan.NewCode }, profile.UpdatedAt);

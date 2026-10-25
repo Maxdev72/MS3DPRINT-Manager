@@ -16,44 +16,105 @@ using MS3DPRINT.Manager.Desktop.Viewer;
 
 namespace MS3DPRINT.Manager.Desktop;
 
-/// <summary>Estimates page: wizard steps, calculation, recap and saved estimates.</summary>
+/// <summary>Single-page estimates: live calculation, commercial adjustments and saved quotes.</summary>
 public partial class MainWindow
 {
-    private async Task LoadEstimateFilamentsAsync()
+    // The settings cache can change while editing another atelier in Settings.
+    // Track the quote's origin separately so it cannot follow that cache into another workspace.
+    private string? _estimateFormRoot;
+
+    private async Task<bool> LoadEstimateFilamentsAsync()
     {
+        var root = WorkspaceRoot;
+        var load = StartWorkspaceLoad("estimate-inventory", root);
+        var previousSuppression = _suppressEstimateChanges;
+        var applying = false;
+        var loaded = false;
         try
         {
-            var root = WorkspaceRoot;
             var (filaments, printers, projects) = await Task.Run(() =>
             {
                 var inventory = new WorkspaceInventoryReader();
                 return (inventory.LoadFilaments(root), inventory.LoadPrinters(root), new WorkspaceProjectReader().Load(root));
             });
+            if (!IsWorkspaceLoadCurrent(load)) return false;
+            var restoreDraft = _estimateFormRoot is null || !string.Equals(_estimateFormRoot, root, StringComparison.OrdinalIgnoreCase);
+            if (restoreDraft)
+            {
+                if (!FlushEstimateDraft()) { Notify("L’estimateur conserve la saisie de l’ancien atelier : son brouillon n’a pas pu être sauvegardé.", error: true); return false; }
+                BeginEstimateDraft();
+            }
+            applying = true;
+            _suppressEstimateChanges = true;
+            var workshopChanged = _estimateFormRoot is not null && !string.Equals(_estimateFormRoot, root, StringComparison.OrdinalIgnoreCase);
+            LoadWorkshopDefaults(root);
+            var untouched = _loadedEstimate is null && !_estimateDirty && _latestEstimateInputs is null;
             // The lists are reloaded on every visit: what is selected for the estimate in progress must survive it.
             var keptProject = (EstimateProject.SelectedItem as ProjectSummary)?.ProjectPath;
             var keptFilament = (EstimateFilament.SelectedItem as MS3DPRINT.Manager.Core.Filaments.FilamentProfile)?.Id;
             var editing = _loadedEstimate is not null;
             EstimateProject.ItemsSource = projects;
-            EstimateProject.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<ProjectSummary>((project, _) => new TextBlock { Text = project is null ? string.Empty : $"{project.Reference} · {project.ClientTitle()}" });
+            EstimateProject.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<ProjectSummary>((project, _) =>
+            {
+                var content = new StackPanel { Spacing = 3, Margin = new Avalonia.Thickness(0, 3), HorizontalAlignment = HorizontalAlignment.Stretch };
+                if (project is null) return content;
+                content.Children.Add(new TextBlock { Text = project.Title(), FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap });
+                content.Children.Add(new TextBlock { Text = $"{project.Reference} · {project.ClientTitle()}", FontSize = 13, TextWrapping = TextWrapping.Wrap, Classes = { "muted" } });
+                ToolTip.SetTip(content, $"{project.Title()}\n{project.Reference} · {project.ClientTitle()}");
+                return content;
+            });
             EstimateProject.SelectedItem = keptProject is null ? null : projects.FirstOrDefault(project => string.Equals(project.ProjectPath, keptProject, StringComparison.OrdinalIgnoreCase));
             EstimateFilament.ItemsSource = filaments;
-            EstimateFilament.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>((f, _) => new TextBlock { Text = f is null ? string.Empty : $"{f?.Brand} · {f?.Name} ({f?.PricePerKg:0.00} €/kg)" });
+            EstimateFilament.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>((f, _) => FilamentChoiceVisual.Create(f));
             var keptFilamentItem = keptFilament is null ? null : filaments.FirstOrDefault(filament => filament.Id == keptFilament);
             // an estimate being edited never falls back to the first filament: its own choice stays, or none
             EstimateFilament.SelectedItem = keptFilamentItem ?? (editing ? null : filaments.FirstOrDefault());
-            // the machine cost is the amortisation of the whole fleet: every active printer is added, none is chosen
             _fleetHourlyRate = PrinterCostCalculator.FleetHourlyRate(printers);
+            _fleetMaintenance = PrinterCostCalculator.FleetMaintenanceHourlyRate(printers);
             _fleetPowerWatts = PrinterCostCalculator.FleetAveragePowerWatts(printers);
-            if (!editing && _fleetHourlyRate > 0) EstimateMachineRate.Text = _fleetHourlyRate.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
-            RecalculateElectricity();
-            EstimateDetail.Text = filaments.Count == 0 ? "Aucun filament : ajoutez-en un à l’étape Impression." : "Renseignez vos paramètres puis calculez.";
-            await LoadSavedEstimatesAsync(root);
+            PopulateEstimatePrinters(printers);
+            if (workshopChanged)
+            {
+                ResetEstimate_Click(this, new RoutedEventArgs());
+                _suppressEstimateChanges = true;
+                Notify("Espace de travail changé : l’estimateur utilise les réglages du nouvel atelier. Les devis enregistrés restent dans leur espace d’origine.");
+            }
+            if (untouched)
+            {
+                ApplyWorkshopDefaults();
+                ApplyEstimatePrinter();
+                _estimateFilamentPrice.Text = Exact((EstimateFilament.SelectedItem as MS3DPRINT.Manager.Core.Filaments.FilamentProfile)?.PricePerKg ?? 0);
+                RecalculateElectricity();
+            }
+            EstimateDetail.Text = filaments.Count == 0 ? "Aucun filament : ajoutez-en un avec le bouton +." : "Le prix s’actualise pendant votre saisie.";
+            _estimateFormRoot = root;
+            if (restoreDraft && new EstimateDraftStore(root).LoadReadable().FirstOrDefault() is { } draft) RestoreEstimateDraft(draft);
+            loaded = true;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException)
         {
+            if (!IsWorkspaceLoadCurrent(load)) return false;
             EstimateFilament.ItemsSource = null;
             EstimateDetail.Text = "Les filaments ne peuvent pas être lus : " + exception.Message;
         }
+        finally
+        {
+            if (applying)
+            {
+                _suppressEstimateChanges = previousSuppression;
+                if (_loadedEstimate is null && _latestEstimateResult is null && !_estimateAwaitingNewInput) EstimateChanged(trackDraft: false);
+            }
+        }
+        if (loaded && IsWorkspaceLoadCurrent(load)) await LoadSavedEstimatesAsync(root);
+        return loaded && IsWorkspaceLoadCurrent(load);
+    }
+
+    private async void EstimateSearchFilament_Click(object? sender, RoutedEventArgs e)
+    {
+        var root = WorkspaceRoot; var navigation = CurrentNavigationStop?.Key;
+        var picker = new FilamentPickerWindow((EstimateFilament.ItemsSource as IEnumerable<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>)?.ToArray() ?? [], EstimateFilament.SelectedItem as MS3DPRINT.Manager.Core.Filaments.FilamentProfile);
+        if (!await picker.ShowDialog<bool>(this) || picker.SelectedFilament is not { } selected || !MatchesNavigationContext(root, navigation)) return;
+        EstimateFilament.SelectedItem = (EstimateFilament.ItemsSource as IEnumerable<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>)?.FirstOrDefault(f => f.Id == selected.Id) ?? EstimateFilament.SelectedItem;
     }
 
     private async void EstimateAddFilament_Click(object? sender, RoutedEventArgs e)
@@ -83,13 +144,23 @@ public partial class MainWindow
     /// <summary>Keeps the electricity cost in sync with machine time, printer power and kWh price.</summary>
     private void RecalculateElectricity()
     {
-        // Raised while the XAML is still loading, before the named controls exist.
-        if (EstimateElectricity is null || EstimateHours is null || EstimateKwhPrice is null || EstimateElectricityLabel is null) return;
-        var automatic = _fleetPowerWatts is > 0;
-        EstimateElectricity.IsReadOnly = automatic;
-        EstimateElectricityLabel.Text = automatic ? "Électricité estimée (calculée automatiquement)" : "Électricité estimée (saisie manuelle : puissance des imprimantes non renseignée)";
-        if (!automatic || !TryEstimateValue(EstimateHours.Text, out var hours) || !TryEstimateValue(EstimateKwhPrice.Text, out var pricePerKwh) || hours < 0 || pricePerKwh < 0) return;
-        EstimateElectricity.Text = PrinterCostCalculator.ElectricityCost(_fleetPowerWatts, hours, pricePerKwh).ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        if (EstimateElectricity is null || EstimateHours is null || EstimateKwhPrice is null || EstimateElectricityLabel is null || _updatingElectricity) return;
+        _updatingElectricity = true;
+        try
+        {
+            var multi = IsEstimateV2 && _estimateMachineEditors.Count > 0;
+            int? power = _fleetPowerWatts;
+            if (IsEstimateV2 && !string.IsNullOrWhiteSpace(_estimatePower.Text))
+                power = int.TryParse(_estimatePower.Text, out var parsed) && parsed >= 0 ? parsed : null;
+            else if (IsEstimateV2) power = null;
+            var automatic = !multi && power is > 0;
+            EstimateElectricity.IsReadOnly = automatic;
+            EstimateElectricityLabel.Text = multi ? "Électricité manuelle des machines sans puissance (par passage ; 0 si toutes connues)" : automatic
+                ? "Électricité par pièce / ensemble (calcul automatique)" : "Électricité par pièce / ensemble (puissance non renseignée)";
+            if (!automatic || !TryEstimateValue(EstimateHours.Text, out var hours) || !TryEstimateValue(EstimateKwhPrice.Text, out var pricePerKwh) || hours < 0 || pricePerKwh < 0) return;
+            EstimateElectricity.Text = Exact(hours * power!.Value / 1000m * pricePerKwh);
+        }
+        finally { _updatingElectricity = false; }
     }
 
     private int _estimateScopeIndex;
@@ -106,7 +177,8 @@ public partial class MainWindow
                 if (choice.Tag as string == value.ToString()) choice.Classes.Add("selected"); else choice.Classes.Remove("selected");
             }
             EstimatePrintInputs.IsVisible = value != 1;
-            UpdateEstimateStepper();
+            if (value != 0 && _estimateOptionalCosts is not null) _estimateOptionalCosts.IsExpanded = true;
+            UpdateEstimateQuickContext();
         }
     }
 
@@ -114,27 +186,79 @@ public partial class MainWindow
     {
         if (sender is not Button { Tag: string tag } || !int.TryParse(tag, out var index)) return;
         EstimateScopeIndex = index;
+        EstimateChanged();
         if (index == 1)
-            EstimateDetail.Text = "Renseignez le coût de modélisation puis calculez.";
+            EstimateDetail.Text = "Renseignez le coût de modélisation : le prix se met à jour automatiquement.";
     }
+
+    private readonly TextBox _estimateHistorySearch = new() { PlaceholderText = "Rechercher un devis : nom, client ou projet…" };
+    private readonly TextBlock _estimateHistoryCount = new() { Classes = { "muted" }, FontSize = 13 };
+    private EstimateReadResult _estimateHistoryData = new([], []);
+    private Control[] _estimateHistoryDraftRows = [];
+    private string? _estimateHistoryRoot;
+    private int _estimateHistoryLimit = 20;
 
     private async Task LoadSavedEstimatesAsync(string root)
     {
+        if (!string.Equals(root, WorkspaceRoot, StringComparison.OrdinalIgnoreCase)) return;
+        var load = StartWorkspaceLoad("estimate-history", root, trackNavigation: false);
         SavedEstimateList.Children.Clear();
+        _estimateHistoryRoot = null;
+        _estimateHistoryData = new([], []);
+        _estimateHistoryCount.Text = "Chargement des devis…";
         try
         {
-            var estimates = await Task.Run(() => new EstimateStore(root).LoadReadable());
-            if (estimates.Count == 0)
+            AddEstimateDraftRows(root);
+            var draftRows = SavedEstimateList.Children.ToArray();
+            var read = await Task.Run(() => new EstimateStore(root).LoadWithDiagnostics());
+            if (!IsWorkspaceLoadCurrent(load)) return;
+            _estimateHistoryRoot = root;
+            _estimateHistoryData = read;
+            _estimateHistoryDraftRows = draftRows;
+            _estimateHistoryLimit = 20;
+            RenderEstimateHistory();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException)
+        {
+            if (!IsWorkspaceLoadCurrent(load)) return;
+            _estimateHistoryCount.Text = "Historique indisponible";
+            SavedEstimateList.Children.Add(new TextBlock { Text = "Impossible de lire les estimations : " + exception.Message, Classes = { "muted" } });
+        }
+    }
+
+    private void RenderEstimateHistory()
+    {
+        if (!string.Equals(_estimateHistoryRoot, WorkspaceRoot, StringComparison.OrdinalIgnoreCase)) return;
+        SavedEstimateList.Children.Clear();
+        foreach (var row in _estimateHistoryDraftRows) SavedEstimateList.Children.Add(row);
+        var query = _estimateHistorySearch.Text?.Trim() ?? string.Empty;
+        var estimates = _estimateHistoryData.Estimates.Where(estimate => query.Length == 0
+            || MatchesSettingText(estimate.Name, query) || MatchesSettingText(estimate.ClientName, query)
+            || MatchesSettingText(estimate.ProjectReference, query)).ToArray();
+        _estimateHistoryCount.Text = query.Length == 0
+            ? $"{Math.Min(_estimateHistoryLimit, estimates.Length)} sur {estimates.Length} devis · du plus récent au plus ancien"
+            : $"{estimates.Length} résultat(s) sur {_estimateHistoryData.Estimates.Count} devis";
+        if (_estimateHistoryData.UnreadableFiles.Count > 0)
             {
-                SavedEstimateList.Children.Add(new TextBlock { Text = "Aucune estimation enregistrée.", Classes = { "muted" } });
+                var warning = EstimateHint($"{_estimateHistoryData.UnreadableFiles.Count} estimation(s) illisible(s) : fichiers conservés, les autres devis restent disponibles.");
+                ToolTip.SetTip(warning, string.Join(Environment.NewLine, _estimateHistoryData.UnreadableFiles));
+                SavedEstimateList.Children.Add(warning);
+            }
+            if (estimates.Length == 0)
+            {
+                SavedEstimateList.Children.Add(new TextBlock { Text = query.Length == 0 ? "Aucune estimation enregistrée." : "Aucun devis ne correspond à cette recherche.", Classes = { "muted" } });
                 return;
             }
-            foreach (var estimate in estimates.Take(5))
+            foreach (var estimate in estimates.Take(_estimateHistoryLimit))
             {
-                var text = new StackPanel { Spacing = 1 };
-                text.Children.Add(new TextBlock { Text = estimate.Name, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
-                text.Children.Add(new TextBlock { Text = $"{estimate.Result.FinalPrice:0.00} €", Classes = { "caption" } });
-                var button = new Button { Content = text, Tag = estimate, Classes = { "workspace-card" }, MinHeight = 52, Padding = new Avalonia.Thickness(12, 8) };
+                var text = new Grid { ColumnDefinitions = new ColumnDefinitions("*,94,110,Auto"), ColumnSpacing = 16 };
+                text.Children.Add(new TextBlock { Text = estimate.Name, FontSize = 15, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap, MaxLines = 2, VerticalAlignment = VerticalAlignment.Center });
+                var date = new TextBlock { Text = estimate.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy", EstimateCulture), FontSize = 13, Classes = { "muted" }, VerticalAlignment = VerticalAlignment.Center };
+                var price = new TextBlock { Text = EstimateMoney(estimate.Result.FinalPrice), FontSize = 17, FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
+                var resume = Icons.Label("IconArrowRight", "Reprendre", 16); resume.VerticalAlignment = VerticalAlignment.Center;
+                Grid.SetColumn(date, 1); Grid.SetColumn(price, 2); Grid.SetColumn(resume, 3);
+                text.Children.Add(date); text.Children.Add(price); text.Children.Add(resume);
+                var button = new Button { Content = text, Tag = estimate, Classes = { "estimate-history-row" }, HorizontalAlignment = HorizontalAlignment.Stretch, MinHeight = 56, Padding = new Avalonia.Thickness(0, 10) };
                 button.Click += LoadSavedEstimate_Click;
                 var trash = new Button { Content = Icons.Glyph("IconTrash"), Tag = estimate, Classes = { "icon-action" } };
                 ToolTip.SetTip(trash, "Envoyer à la corbeille");
@@ -145,11 +269,20 @@ public partial class MainWindow
                 Grid.SetColumn(trash, 1);
                 row.Children.Add(button);
                 row.Children.Add(trash);
+                var duplicate = new Button { Content = Icons.Glyph("IconCopy"), Tag = estimate, Classes = { "icon-action" } };
+                ToolTip.SetTip(duplicate, "Dupliquer ce devis");
+                Avalonia.Automation.AutomationProperties.SetName(duplicate, "Dupliquer " + estimate.Name);
+                duplicate.Click += DuplicateEstimate_Click;
+                row.ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"); Grid.SetColumn(duplicate, 1); Grid.SetColumn(trash, 2);
+                row.Children.Add(duplicate);
                 SavedEstimateList.Children.Add(row);
             }
+        if (estimates.Length > _estimateHistoryLimit)
+        {
+            var more = new Button { Content = "Afficher plus de devis", HorizontalAlignment = HorizontalAlignment.Stretch };
+            more.Click += (_, _) => { _estimateHistoryLimit += 20; RenderEstimateHistory(); };
+            SavedEstimateList.Children.Add(more);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException)
-        { SavedEstimateList.Children.Add(new TextBlock { Text = "Impossible de lire les estimations : " + exception.Message, Classes = { "muted" } }); }
     }
 
     private async void TrashEstimate_Click(object? sender, RoutedEventArgs e)
@@ -160,7 +293,7 @@ public partial class MainWindow
         {
             var root = WorkspaceRoot;
             await Task.Run(() => new EstimateStore(root).Trash(estimate.Id));
-            if (_loadedEstimate?.Id == estimate.Id) ResetEstimate_Click(sender, e);
+            if (!_estimateIsDuplicate && _loadedEstimate?.Id == estimate.Id) ResetEstimate_Click(sender, e);
             await LoadSavedEstimatesAsync(root);
             EstimateDetail.Text = "Estimation envoyée dans la corbeille.";
         }
@@ -171,38 +304,68 @@ public partial class MainWindow
     private void LoadSavedEstimate_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: EstimateProfile estimate }) return;
+        TryLoadEstimate(estimate);
+    }
+
+    private bool TryLoadEstimate(EstimateProfile estimate)
+    {
+        if (!FlushEstimateDraft()) return false;
+        BeginEstimateDraft(); _estimateIsDuplicate = false;
+        _estimateTimer?.Stop();
+        _suppressEstimateChanges = true;
         var inputs = estimate.Inputs;
         _loadedEstimate = estimate;
         EstimateName.Text = estimate.Name;
         EstimateScopeIndex = EstimateScopeRules.IsModellingOnly(estimate) ? 1 : 0;
         EstimateProject.SelectedItem = (EstimateProject.ItemsSource as IEnumerable<ProjectSummary>)?.FirstOrDefault(project => project.Reference == estimate.ProjectReference && project.ClientFolderName == estimate.ClientName);
         EstimateFilament.SelectedItem = (EstimateFilament.ItemsSource as IEnumerable<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>)?.FirstOrDefault(filament => $"{filament.Brand} {filament.Name}" == estimate.FilamentName);
-        EstimateWeight.Text = estimate.WeightGrams.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
-        EstimateHours.Text = estimate.MachineHours.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
-        EstimateMachineRate.Text = estimate.MachineHourlyRate.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
-        EstimateKwhPrice.Text = "0,25";
+        EstimateWeight.Text = Exact(estimate.WeightGrams);
+        EstimateHours.Text = Exact(estimate.MachineHours);
+        EstimateMachineRate.Text = Exact(estimate.MachineHourlyRate);
+        EstimateKwhPrice.Text = Exact(inputs.V2?.Production?.PricePerKwh ?? .25m);
         EstimateQuantity.Text = inputs.Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        EstimateMinimum.Text = inputs.MinimumPerPiece.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        EstimateMinimum.Text = Exact(inputs.MinimumPerPiece);
         EstimatePrintDataMode.SelectedIndex = inputs.PrintDataForWholeOrder ? 1 : 0;
         EstimateElectricity.Text = (inputs.PrintDataForWholeOrder ? inputs.ElectricityCost : inputs.ElectricityCost / Math.Max(1, inputs.Quantity)).ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
-        EstimateDesign.Text = inputs.DesignCost.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
-        EstimateLabor.Text = inputs.LaborCost.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
-        EstimatePostProcessing.Text = inputs.PostProcessingCost.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
-        EstimateConsumables.Text = inputs.ConsumablesCost.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
-        EstimatePackaging.Text = inputs.PackagingShippingCost.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
-        EstimateMisc.Text = inputs.MiscCost.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
-        EstimateMargin.Text = inputs.MarginPercent.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
-        EstimateFailure.Text = inputs.FailureRatePercent.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
-        EstimateDiscount.Text = inputs.DiscountPercent.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        EstimateDesign.Text = Exact(inputs.DesignCost);
+        EstimateLabor.Text = Exact(inputs.LaborCost);
+        EstimatePostProcessing.Text = Exact(inputs.PostProcessingCost);
+        EstimateConsumables.Text = Exact(inputs.ConsumablesCost);
+        EstimatePackaging.Text = Exact(inputs.PackagingShippingCost);
+        EstimateMisc.Text = Exact(inputs.MiscCost);
+        EstimateMargin.Text = Exact(inputs.MarginPercent);
+        EstimateFailure.Text = Exact(inputs.FailureRatePercent);
+        EstimateDiscount.Text = Exact(inputs.DiscountPercent);
+        RestoreEstimateV2(inputs);
+        if (inputs.V2?.Production is { } production)
+        {
+            EstimateWeight.Text = Exact(production.WeightGrams);
+            EstimateHours.Text = Exact(production.HoursPerRun);
+            EstimateMachineRate.Text = Exact(production.MachineHourlyRate);
+            EstimateElectricity.Text = Exact(production.ManualElectricityCost);
+        }
         _latestEstimateInputs = inputs;
         _latestEstimateResult = estimate.Result;
-        EstimateFinal.Text = estimate.Result.FinalPrice.ToString("0.00") + " €";
-        EstimateDetail.Text = "Estimation chargée. Revenez sur une étape pour ajuster les valeurs, puis enregistrez la mise à jour.";
-        ShowEstimateStep(3);
+        EstimateFinal.Text = EstimateMoney(estimate.Result.FinalPrice);
+        UpdateEstimatePriceSummary(inputs, estimate.Result);
+        EstimateDetail.Text = (inputs.EngineVersion == 1 ? "Moteur historique conservé. " : "Moteur V2. ") + "Devis chargé. Ajustez les valeurs puis enregistrez la mise à jour.";
+        RecalculateElectricity();
+        _estimateDirty = false;
+        _suppressEstimateChanges = false;
+        ArmEstimateSave(trackDraft: false);
+        BuildEstimateRecap();
+        EstimateFormScroll.Offset = default;
+        return true;
     }
 
-    private void ResetEstimate_Click(object? sender, RoutedEventArgs e)
+    private bool ResetEstimate_Click(object? sender, RoutedEventArgs e)
     {
+        if (!FlushEstimateDraft()) return false;
+        BeginEstimateDraft();
+        _estimateIsDuplicate = false;
+        _estimateAwaitingNewInput = false;
+        _estimateTimer?.Stop();
+        _suppressEstimateChanges = true;
         EstimateName.Text = "Nouvelle estimation";
         EstimateScopeIndex = 0;
         EstimateProject.SelectedItem = null;
@@ -221,18 +384,49 @@ public partial class MainWindow
         _latestEstimateResult = null;
         _loadedEstimate = null;
         EstimateFinal.Text = "—";
+        UpdateEstimatePriceSummary();
         EstimateDetail.Text = "Nouvelle estimation prête.";
-        // the fleet amortisation drives the hourly rate and the electricity cost, not the generic defaults above
-        if (_fleetHourlyRate > 0)
-            EstimateMachineRate.Text = _fleetHourlyRate.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        ResetEstimateV2();
+        _estimateOptionalCosts.IsExpanded = false;
+        _estimateAdjustments.IsExpanded = false;
+        _estimateProductionOptions.IsExpanded = false;
+        _estimateInputMessage.IsVisible = false;
         RecalculateElectricity();
-        GoToEstimateStep(0);
+        _estimateDirty = false;
+        _suppressEstimateChanges = false;
+        EstimateFormScroll.Offset = default;
+        EstimateChanged(trackDraft: false);
+        return true;
+    }
+
+    private bool _estimateSaving, _estimateAwaitingNewInput, _estimateIsDuplicate;
+
+    private void ArmEstimateSave(bool trackDraft = true)
+    {
+        if (_suppressEstimateChanges) return;
+        _estimateAwaitingNewInput = false;
+        EstimateSaveButton.IsEnabled = !_estimateSaving;
+        if (trackDraft) ScheduleEstimateDraft();
     }
 
     private async void SaveEstimate_Click(object? sender, RoutedEventArgs e)
     {
+        if (_estimateSaving || _estimateAwaitingNewInput) return;
+        if (_estimateFormRoot is not null && !string.Equals(_estimateFormRoot, WorkspaceRoot, StringComparison.OrdinalIgnoreCase))
+        { Notify("Rechargez l’estimateur dans le bon espace de travail avant d’enregistrer.", error: true); return; }
+        _estimateTimer?.Stop();
+        if ((_estimateDirty || _latestEstimateResult is null) && !CalculateEstimate())
+        {
+            EstimateFormScroll.Offset = default;
+            if (_estimateDurationInvalid) _estimateDurationHours.Focus();
+            else if (!int.TryParse(EstimateQuantity.Text, out var quantity) || quantity < 1) EstimateQuantity.Focus();
+            else if (EstimateFilament.SelectedItem is null && EstimateScopeIndex != 1 && !IsEstimateOutsourced) EstimateFilament.Focus();
+            return;
+        }
         if (_latestEstimateInputs is null || _latestEstimateResult is null)
         { EstimateDetail.Text = "Calculez l’estimation avant de l’enregistrer."; return; }
+        _estimateSaving = true;
+        EstimateSaveButton.IsEnabled = false;
         try
         {
             var root = WorkspaceRoot;
@@ -241,90 +435,40 @@ public partial class MainWindow
             TryEstimateValue(EstimateMachineRate.Text, out var savedRate);
             var project = EstimateProject.SelectedItem as ProjectSummary;
             var filament = EstimateFilament.SelectedItem as MS3DPRINT.Manager.Core.Filaments.FilamentProfile;
-            var stored = EstimateScopeRules.ForSave(EstimateScopeIndex == 1, filament is null ? null : $"{filament.Brand} {filament.Name}", EstimateScopeRules.FleetLabel,
+            var stored = EstimateScopeRules.ForSave(EstimateScopeIndex == 1, filament is null ? null : $"{filament.Brand} {filament.Name}", (IsEstimateV2 ? (_latestEstimateInputs.V2?.Production?.Allocations is { Count: > 0 } allocation ? string.Join(", ", allocation.Select(a => a.Name)) : _latestEstimateInputs.V2?.Production?.PrinterName ?? EstimateScopeRules.FleetLabel) : _loadedEstimate?.PrinterName ?? EstimateScopeRules.FleetLabel),
                 savedWeight, savedHours, savedRate, _loadedEstimate);
-            var profile = new EstimateProfile(_loadedEstimate?.Id ?? Guid.NewGuid(), string.IsNullOrWhiteSpace(EstimateName.Text) ? "Nouvelle estimation" : EstimateName.Text.Trim(), stored.Filament, stored.Printer, _latestEstimateInputs, _latestEstimateResult, _loadedEstimate?.CreatedAt ?? DateTimeOffset.UtcNow, stored.Grams, stored.Hours, stored.Rate,
+            if (IsEstimateOutsourced) stored = ("Fabrication sous-traitée", string.IsNullOrWhiteSpace(_estimateSupplier.Text) ? "Fournisseur externe" : _estimateSupplier.Text.Trim(), 0m, 0m, 0m);
+            var profile = new EstimateProfile(_estimateIsDuplicate ? Guid.NewGuid() : _loadedEstimate?.Id ?? Guid.NewGuid(), SuggestedEstimateName(), stored.Filament, stored.Printer, _latestEstimateInputs, _latestEstimateResult, _estimateIsDuplicate ? DateTimeOffset.UtcNow : _loadedEstimate?.CreatedAt ?? DateTimeOffset.UtcNow, stored.Grams, stored.Hours, stored.Rate,
                 project?.Reference ?? _loadedEstimate?.ProjectReference, project?.ClientFolderName ?? _loadedEstimate?.ClientName);
             var store = new EstimateStore(root);
-            if (_loadedEstimate is null) store.Create(profile);
-            else store.Update(profile);
+            if (_loadedEstimate is null || _estimateIsDuplicate) store.Create(profile);
+            else profile = store.Update(profile with { Revision = _loadedEstimate.Revision });
+            _loadedEstimate = profile;
+            _estimateIsDuplicate = false;
+            FlushEstimateDraft();
+            try { ConsumeEstimateDraft(); }
+            catch (Exception cleanup) when (cleanup is IOException or UnauthorizedAccessException) { Notify("Devis enregistré ; le brouillon n’a pas pu être retiré : " + cleanup.Message, error: true); }
             // the calculator starts over once saved: a saved estimate is reopened from the list, never edited by accident
             ResetEstimate_Click(sender, e);
+            _estimateAwaitingNewInput = true;
+            EstimateSaveButton.IsEnabled = false;
             EstimateDetail.Text = "Estimation enregistrée. Nouvelle estimation prête.";
+            Notify("Estimation enregistrée. Vous pouvez préparer la suivante.");
             await LoadSavedEstimatesAsync(root);
         }
+        catch (MS3DPRINT.Manager.Core.Workspace.ProfileConflictException exception)
+        {
+            FlushEstimateDraft();
+            EstimateDetail.Text = exception.Message;
+            Notify(exception.Message, error: true);
+            await LoadSavedEstimatesAsync(WorkspaceRoot);
+        }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException)
-        { EstimateDetail.Text = exception.Message; }
-    }
-
-    private int _estimateStep;
-
-    private void EstimateStep_Click(object? sender, RoutedEventArgs e)
-    {
-        if (sender is Button { Tag: string tag } && int.TryParse(tag, out var index)) GoToEstimateStep(index);
-    }
-
-    private void EstimateBack_Click(object? sender, RoutedEventArgs e) =>
-        GoToEstimateStep(_estimateStep == 2 && EstimateScopeIndex == 1 ? 0 : _estimateStep - 1);
-
-    private void EstimateNext_Click(object? sender, RoutedEventArgs e) =>
-        GoToEstimateStep(_estimateStep == 0 && EstimateScopeIndex == 1 ? 2 : _estimateStep + 1);
-
-    /// <summary>Shows one wizard step; the recap step is only reachable once the inputs compute a valid price.</summary>
-    private void GoToEstimateStep(int step)
-    {
-        step = Math.Clamp(step, 0, 3);
-        if (step == 1 && EstimateScopeIndex == 1) step = _estimateStep > 1 ? 0 : 2;
-        if (step > 1 && _estimateStep == 1 && EstimateScopeIndex != 1 && EstimateFilament.SelectedItem is null)
+        { EstimateDetail.Text = exception.Message; Notify(exception.Message, error: true); }
+        finally
         {
-            Notify("Choisissez un filament, ou ajoutez-en un avec « Nouveau filament ».", error: true);
-            return;
-        }
-        if (step == 3 && !CalculateEstimate())
-        {
-            Notify(EstimateDetail.Text ?? "Vérifiez les valeurs saisies.", error: true);
-            return;
-        }
-        ShowEstimateStep(step);
-    }
-
-    private void ShowEstimateStep(int step)
-    {
-        _estimateStep = step;
-        EstimateStep0.IsVisible = step == 0;
-        EstimateStep1.IsVisible = step == 1;
-        EstimateStep2.IsVisible = step == 2;
-        EstimateStep3.IsVisible = step == 3;
-        EstimateBackButton.IsVisible = step > 0;
-        EstimateNextButton.IsVisible = step < 3;
-        EstimateSaveButton.IsVisible = step == 3;
-        if (step == 3) BuildEstimateRecap();
-        UpdateEstimateStepper();
-    }
-
-    private void UpdateEstimateStepper()
-    {
-        foreach (var chip in EstimateStepper.Children.OfType<Button>())
-        {
-            var index = int.Parse((string)chip.Tag!, System.Globalization.CultureInfo.InvariantCulture);
-            chip.Classes.Set("active", index == _estimateStep);
-            chip.Classes.Set("done", index < _estimateStep && !(index == 1 && EstimateScopeIndex == 1));
-            chip.IsEnabled = !(index == 1 && EstimateScopeIndex == 1);
-            if (chip.Content is StackPanel { Children: [Border dot, ..] })
-            {
-                if (dot.Child is TextBlock firstNumber)
-                {
-                    dot.Child = null; // detach first: a control cannot have two parents
-                    dot.Child = new Panel { Children = { firstNumber, Icons.Glyph("IconCheck", 14) } };
-                }
-                if (dot.Child is Panel { Children: [TextBlock number, Control check] })
-                {
-                    var finished = index < _estimateStep && chip.IsEnabled;
-                    number.Text = (index + 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
-                    number.IsVisible = !finished;
-                    check.IsVisible = finished;
-                }
-            }
+            _estimateSaving = false;
+            EstimateSaveButton.IsEnabled = !_estimateAwaitingNewInput;
         }
     }
 
@@ -332,6 +476,8 @@ public partial class MainWindow
     {
         EstimateRecap.Children.Clear();
         if (_latestEstimateInputs is not { } inputs || _latestEstimateResult is not { } result) return;
+        if (result.V2 is not null) { BuildEstimateProfitability(inputs, result); return; }
+        EstimateRecap.Children.Add(EstimateHint("Moteur historique : aléas sur tous les coûts, majoration sur coût, forfait commercial."));
         void Row(string label, string value, bool strong = false, bool negative = false)
         {
             var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
@@ -374,34 +520,40 @@ public partial class MainWindow
 
     private bool CalculateEstimate()
     {
+        _estimateTimer?.Stop();
+        EstimateRecap.Children.Clear();
+        _latestEstimateInputs = null;
+        _latestEstimateResult = null;
+        EstimateFinal.Text = "—";
+        UpdateEstimatePriceSummary();
         var modellingOnly = EstimateScopeIndex == 1;
+        var internalPrinting = !modellingOnly && !IsEstimateOutsourced;
+        _estimateInputMessage.IsVisible = false;
+        if (internalPrinting && _estimateDurationInvalid)
+            return RejectEstimateInput("Corrigez la durée : heures entières et minutes inférieures à 60.");
         var filament = EstimateFilament.SelectedItem as MS3DPRINT.Manager.Core.Filaments.FilamentProfile;
-        if (!modellingOnly && filament is null)
+        if (internalPrinting && filament is null && !(IsEstimateV2 && _loadedEstimate?.Inputs.V2?.Production is not null))
         {
-            EstimateDetail.Text = "Choisissez un filament, ou ajoutez-en un avec « Nouveau filament ».";
-            return false;
+            return RejectEstimateInput("Choisissez un filament, ou ajoutez-en un avec « Nouveau filament ».");
         }
 
-        if (!int.TryParse(EstimateQuantity.Text?.Trim(), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var quantity) || quantity < 1)
+        if (!int.TryParse(modellingOnly ? "1" : EstimateQuantity.Text?.Trim(), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var quantity) || quantity < 1)
         {
-            EstimateDetail.Text = "La quantité de pièces doit être un nombre entier d’au moins 1.";
-            return false;
+            return RejectEstimateInput("La quantité de pièces doit être un nombre entier d’au moins 1.");
         }
         if (!TryEstimateValue(EstimateMinimum.Text, out var minimumPerPiece) || minimumPerPiece < 0)
         {
-            EstimateDetail.Text = "Le forfait minimum par pièce doit être un montant positif.";
-            return false;
+            return RejectEstimateInput("Le forfait minimum par pièce doit être un montant positif.");
         }
-        if (!TryEstimateValue(EstimateWeight.Text, out var grams) || !TryEstimateValue(EstimateHours.Text, out var hours) ||
-            !TryEstimateValue(EstimateMachineRate.Text, out var rate) || !TryEstimateValue(EstimateKwhPrice.Text, out var pricePerKwh) || !TryEstimateValue(EstimateElectricity.Text, out var electricity) ||
+        if (!TryEstimateValue(internalPrinting ? EstimateWeight.Text : "0", out var grams) || !TryEstimateValue(internalPrinting ? EstimateHours.Text : "0", out var hours) ||
+            !TryEstimateValue(IsEstimateOutsourced ? "0" : EstimateMachineRate.Text, out var rate) || !TryEstimateValue(IsEstimateOutsourced ? "0" : EstimateKwhPrice.Text, out var pricePerKwh) || !TryEstimateValue(IsEstimateOutsourced ? "0" : EstimateElectricity.Text, out var electricity) ||
             !TryEstimateValue(EstimateDesign.Text, out var design) || !TryEstimateValue(EstimateLabor.Text, out var labor) ||
             !TryEstimateValue(EstimatePostProcessing.Text, out var postProcessing) || !TryEstimateValue(EstimateConsumables.Text, out var consumables) ||
             !TryEstimateValue(EstimatePackaging.Text, out var packaging) || !TryEstimateValue(EstimateMisc.Text, out var misc) ||
             !TryEstimateValue(EstimateMargin.Text, out var margin) || !TryEstimateValue(EstimateFailure.Text, out var failure) || !TryEstimateValue(EstimateDiscount.Text, out var discount) ||
             grams < 0 || hours < 0 || rate < 0 || pricePerKwh < 0 || electricity < 0 || design < 0 || labor < 0 || postProcessing < 0 || consumables < 0 || packaging < 0 || misc < 0)
         {
-            EstimateDetail.Text = "Saisissez des montants positifs, avec une virgule ou un point.";
-            return false;
+            return RejectEstimateInput("Saisissez des montants positifs, avec une virgule ou un point.");
         }
 
         try
@@ -411,26 +563,31 @@ public partial class MainWindow
             var automaticElectricity = _fleetPowerWatts is > 0;
             // the field keeps what the user typed (per piece or for the whole order, like weight and time); the stored cost is always the total
             var electricityCost = modellingOnly ? 0m : automaticElectricity ? PrinterCostCalculator.ElectricityCost(_fleetPowerWatts, hours * printFactor, pricePerKwh) : electricity * printFactor;
-            if (automaticElectricity) EstimateElectricity.Text = electricityCost.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+
             var inputs = new EstimateInputs(
-                MaterialCost: modellingOnly ? 0m : filament!.PricePerKg * grams * printFactor / 1000m, MachineCost: machineCost, ElectricityCost: electricityCost,
+                MaterialCost: modellingOnly || IsEstimateV2 ? 0m : filament!.PricePerKg * grams * printFactor / 1000m, MachineCost: IsEstimateV2 ? 0 : machineCost, ElectricityCost: IsEstimateV2 ? 0 : electricityCost,
                 DesignCost: design, LaborCost: labor, PostProcessingCost: postProcessing, ConsumablesCost: consumables,
                 PackagingShippingCost: packaging, MiscCost: misc, MarginPercent: margin, FailureRatePercent: failure, DiscountPercent: discount,
-                Quantity: modellingOnly ? 1 : quantity, MinimumPerPiece: modellingOnly ? 0m : minimumPerPiece, PrintDataForWholeOrder: !modellingOnly && EstimatePrintDataMode.SelectedIndex == 1);
+                Quantity: modellingOnly ? 1 : quantity, MinimumPerPiece: modellingOnly ? 0m : minimumPerPiece, PrintDataForWholeOrder: internalPrinting && EstimatePrintDataMode.SelectedIndex == 1,
+                EngineVersion: IsEstimateV2 ? 2 : 1, V2: IsEstimateV2 ? ReadEstimateV2(modellingOnly, grams, hours, rate, pricePerKwh, electricity) : null);
             var result = EstimateCalculator.Calculate(inputs);
             _latestEstimateInputs = inputs;
             _latestEstimateResult = result;
-            EstimateFinal.Text = result.FinalPrice.ToString("0.00") + " €";
+            _estimateDirty = false;
+            EstimateFinal.Text = EstimateMoney(result.FinalPrice);
+            UpdateEstimatePriceSummary(inputs, result);
             EstimateDetail.Text = $"Coût brut : {result.RawCost:0.00} € · Avec aléas : {result.ExpectedCost:0.00} € · Avant remise : {result.SalePrice:0.00} €.";
+            if (result.V2 is { } profitability)
+                EstimateDetail.Text = $"Charges sur le prix final : {profitability.ChargeRatePercent:0.##} %.\nRésultat après les coûts et charges retenus, avant impôt personnel.";
+            BuildEstimateRecap();
             return true;
         }
-        catch (ArgumentOutOfRangeException)
+        catch (Exception exception) when (exception is ArgumentException or OverflowException)
         {
-            EstimateDetail.Text = "Le taux d’échec doit être entre 0 et 100 % (100 exclu), la remise entre 0 et 100 % et la marge positive.";
-            return false;
+            return RejectEstimateInput(exception is OverflowException ? "Les valeurs saisies sont trop élevées pour calculer ce devis." : exception.Message);
         }
     }
 
     private static bool TryEstimateValue(string? value, out decimal result) =>
-        decimal.TryParse(value?.Replace(',', '.'), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out result);
+        decimal.TryParse(value?.Replace(',', '.'), System.Globalization.NumberStyles.AllowDecimalPoint | System.Globalization.NumberStyles.AllowLeadingSign | System.Globalization.NumberStyles.AllowLeadingWhite | System.Globalization.NumberStyles.AllowTrailingWhite, System.Globalization.CultureInfo.InvariantCulture, out result);
 }

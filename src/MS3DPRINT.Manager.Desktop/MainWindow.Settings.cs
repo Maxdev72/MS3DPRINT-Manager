@@ -125,33 +125,28 @@ public partial class MainWindow
     private async Task LoadSettingsAsync()
     {
         var workspaceRoot = WorkspaceRoot;
+        var load = StartWorkspaceLoad("settings", workspaceRoot);
         StorageList.Children.Clear();
+        _settingsIndex.Clear();
         StorageList.Spacing = 16;
         // cards stay readable on a wide window instead of stretching across it
-        StorageList.MaxWidth = 960;
-        StorageList.HorizontalAlignment = HorizontalAlignment.Left;
+        StorageList.MaxWidth = 920;
+        StorageList.HorizontalAlignment = HorizontalAlignment.Stretch;
         var providers = await Task.Run(() => new WorkspaceStorageReader().Load(workspaceRoot));
+        if (!IsWorkspaceLoadCurrent(load)) return;
+        AddSettingsCard("atelier", BuildWorkshopSettingsCard(workspaceRoot));
 
         Border Card(string title, string description, Control? headerAction, params Control[] content)
         {
             var stack = new StackPanel { Spacing = 14 };
-            var heading = new StackPanel { Spacing = 3 };
-            heading.Children.Add(new TextBlock { Text = title, Classes = { "card-title" } });
-            if (description.Length > 0) heading.Children.Add(new TextBlock { Text = description, Classes = { "muted" }, TextWrapping = TextWrapping.Wrap });
-            Control header = heading;
-            if (headerAction is not null)
-            {
-                var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { heading, headerAction } };
-                Grid.SetColumn(headerAction, 1);
-                header = row;
-            }
-            stack.Children.Add(header);
+            var icon = title switch { "Performances" => "IconSettings", "Arborescence des projets" => "IconProjects", "Stockage" => "IconCollections", "Espace de travail" => "IconProjects", _ => "IconInfo" };
+            stack.Children.Add(SettingsCardHeader(icon, title, description, headerAction));
             foreach (var control in content) stack.Children.Add(control);
             return new Border { Classes = { "card-raised" }, Padding = new Avalonia.Thickness(22, 20), Child = stack };
         }
 
         // ---- workspace: the folder is shown as a field one can select from, and the three actions follow
-        var path = new SelectableTextBlock { Text = workspaceRoot, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center };
+        var path = new SelectableTextBlock { Text = workspaceRoot, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, FontSize = 15, LineHeight = 23 };
         var pathField = new Border
         {
             Background = (IBrush?)Avalonia.Application.Current?.FindResource("SurfaceBrush"), CornerRadius = new Avalonia.CornerRadius(8),
@@ -173,7 +168,10 @@ public partial class MainWindow
         var workspaceContent = new List<Control> { pathField, actions };
         if (fixedByEnvironment)
             workspaceContent.Add(new TextBlock { Text = "Cet espace de travail est imposé par la variable d’environnement MS3DPRINT_WORKSPACE : il ne peut pas être changé ici.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap });
-        StorageList.Children.Add(Card("Espace de travail", "Le dossier qui contient vos clients, projets et collections.", null, workspaceContent.ToArray()));
+        AddSettingsCard("storage", Card("Espace de travail", "Le dossier qui contient vos clients, projets et collections.", null, workspaceContent.ToArray()));
+        var backupStatus = await Task.Run(() => LoadBackupStatus(workspaceRoot));
+        if (!IsWorkspaceLoadCurrent(load)) return;
+        AddSettingsCard("storage", BuildBackupSettingsCard(workspaceRoot, backupStatus));
 
         // ---- project template: folders created in each new project
         var template = new ProjectTemplateStore(new WorkspaceMetadataPaths(workspaceRoot)).Load();
@@ -182,7 +180,7 @@ public partial class MainWindow
         var preview = new StackPanel { Spacing = 2 };
         foreach (var folder in template.Folders)
             preview.Children.Add(new TextBlock { Text = folder.Category is { } category ? $"{folder.Path}  ·  {ProjectTemplate.Label(category)}" : folder.Path, Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis });
-        StorageList.Children.Add(Card("Arborescence des projets", "Dossiers créés dans chaque nouveau projet et classement des fichiers importés. Les projets existants ne changent pas.", null, preview, editTemplate));
+        AddSettingsCard("organisation", Card("Arborescence des projets", "Dossiers créés dans chaque nouveau projet et classement des fichiers importés. Les projets existants ne changent pas.", null, preview, editTemplate));
 
         // ---- performance: how much of the processor the heavy work may take
         var performanceStore = new PerformanceSettings();
@@ -203,7 +201,7 @@ public partial class MainWindow
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             { Notify("Le réglage est appliqué mais n’a pas pu être enregistré : " + exception.Message, error: true); }
         };
-        StorageList.Children.Add(Card("Performances", "Part du processeur que les calculs lourds peuvent utiliser : estimations, orientation automatique, aperçus et rendu logiciel.", null, modeBox, modeText));
+        AddSettingsCard("application", Card("Performances", "Part du processeur que les calculs lourds peuvent utiliser : estimations, orientation automatique, aperçus et rendu logiciel.", null, modeBox, modeText));
 
         // ---- storage: the synchronised folders found on this computer; the clients of the services do the synchronising
         var providerRows = new StackPanel { Spacing = 0 };
@@ -231,7 +229,7 @@ public partial class MainWindow
         }
         var refresh = new Button { Content = Icons.Label("IconRefresh", "Actualiser", 16), Classes = { "ghost" }, VerticalAlignment = VerticalAlignment.Top };
         refresh.Click += RefreshSettings_Click;
-        StorageList.Children.Add(Card("Stockage", "Nextcloud, Google Drive et Dropbox : le logiciel utilise le dossier synchronisé par leur application, il ne se connecte pas à ces services lui-même.", refresh, providerRows));
+        AddSettingsCard("storage", Card("Stockage", "Nextcloud, Google Drive et Dropbox : le logiciel utilise le dossier synchronisé par leur application, il ne se connecte pas à ces services lui-même.", refresh, providerRows));
 
         // ---- about: the version tells which build is installed
         var informational = typeof(MainWindow).Assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
@@ -245,6 +243,10 @@ public partial class MainWindow
         var about = new List<Control>();
         if (versionText.Length > 0) about.Add(new TextBlock { Text = versionText, Classes = { "caption" } });
         about.Add(changelog);
-        StorageList.Children.Add(Card("MS3DPRINT Manager", "Gestion de vos clients, projets, collections, filaments, imprimantes et estimations.", null, about.ToArray()));
+        var licenses = new Button { Content = Icons.Label("IconInfo", "Identité visuelle et licences", 16), HorizontalAlignment = HorizontalAlignment.Left };
+        licenses.Click += async (_, _) => await new BrandResourcesWindow().ShowDialog<bool>(this);
+        about.Add(licenses);
+        AddSettingsCard("application", Card("MS3DPRINT Manager", "Gestion de vos clients, projets, collections, filaments, imprimantes et estimations.", null, about.ToArray()));
+        UpdateSettingsCategory();
     }
 }

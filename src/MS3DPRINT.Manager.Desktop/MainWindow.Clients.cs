@@ -53,12 +53,16 @@ public partial class MainWindow
     }
 
     private IReadOnlyList<ClientSummary> _allClients = [];
+    private bool _clientCatalogUnavailable;
 
     private string _clientKindFilter = string.Empty;
 
     private async Task LoadClientsAsync()
     {
+        RememberWorkspace("Clients");
         var workspaceRoot = WorkspaceRoot;
+        var load = StartWorkspaceLoad("clients", workspaceRoot);
+        _clientCatalogUnavailable = true;
         ClientList.Children.Clear();
         ClientList.Spacing = 0;
         _clientListMode = true;
@@ -67,20 +71,30 @@ public partial class MainWindow
         ClientsPanelActions.IsVisible = true;
         ClientsPanelHeader.IsVisible = true;
         ClientFilterBar.IsVisible = true;
+        ClientFilterBar.IsEnabled = false;
+        ClientsPanelSubtitle.Text = "Chargement des clients…";
         try
         {
-            _allClients = await Task.Run(() => new WorkspaceClientReader().Load(workspaceRoot));
+            var clients = await Task.Run(() => new WorkspaceClientReader().Load(workspaceRoot));
+            if (!IsWorkspaceLoadCurrent(load)) return;
+            _allClients = clients;
+            _clientCatalogUnavailable = false;
+            ClientFilterBar.IsEnabled = true;
             RenderClients();
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
-            ClientList.Children.Add(CreateEmptyState("IconAlert", "Impossible de lire les clients", exception.Message));
+            if (!IsWorkspaceLoadCurrent(load)) return;
+            _allClients = [];
+            ClientList.Children.Clear();
+            ClientsPanelSubtitle.Text = "Lecture des clients indisponible";
+            ClientList.Children.Add(CreateReadErrorState("Clients indisponibles", "Vérifiez l’accès au dossier de l’atelier, puis réessayez.", exception, LoadClientsAsync));
         }
     }
 
     private void RenderClients()
     {
-        if (!_clientListMode) return;
+        if (!_clientListMode || _clientCatalogUnavailable) return;
         ClientList.Children.Clear();
         var text = ClientFilterBox.Text?.Trim() ?? string.Empty;
         var clients = _allClients
@@ -99,18 +113,20 @@ public partial class MainWindow
         }
         if (clients.Length == 0)
         {
-            ClientList.Children.Add(CreateEmptyState("IconSearch", "Aucun résultat", "Aucun client ne correspond à ce filtre."));
+            ClientList.Children.Add(CreateEmptyState("IconSearch", "Aucun résultat", "Essayez un autre nom ou réaffichez tous les clients.", "Effacer les filtres", ClearClientFilters_Click));
             return;
         }
 
         clients = SortClients(clients);
-        ClientList.Children.Add(CreateSortableHeader(ClientRowColumns, ["CLIENT", "CODE", "FICHE", "PROJETS", "ACTIONS"], _clientSortColumn, _clientSortAscending, column =>
+        PagedRows.Render(ClientList, clients, CreateClientRow, () => CreateSortableHeader(ClientRowColumns, ["CLIENT", "CODE", "FICHE", "PROJETS", "ACTIONS"], _clientSortColumn, _clientSortAscending, column =>
         {
             _clientSortAscending = _clientSortColumn != column || !_clientSortAscending;
             _clientSortColumn = column;
             RenderClients();
-        }));
-        foreach (var client in clients)
+        }), (WorkspaceRoot, text, _clientKindFilter, _clientSortColumn, _clientSortAscending));
+    }
+
+    private Control CreateClientRow(ClientSummary client)
         {
             var open = new Button { Tag = client, HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch };
             open.Click += ClientEntry_Click;
@@ -119,19 +135,26 @@ public partial class MainWindow
             var code = new Button { Content = Icons.Label("IconEdit", "Changer le code…"), Tag = client }; code.Click += ChangeClientCode_Click;
             var rename = new Button { Content = Icons.Label("IconRename", "Renommer"), Tag = client }; rename.Click += RenameClient_Click;
             var move = new Button { Content = Icons.Label("IconMove", "Déplacer"), Tag = client }; move.Click += MoveClient_Click;
-            var trash = new Button { Content = Icons.Label("IconTrash", "Corbeille"), Tag = client }; trash.Click += TrashClient_Click;
+            var trash = new Button { Content = Icons.Label("IconTrash", "Corbeille"), Tag = client, Classes = { "menu-destructive" } }; trash.Click += TrashClient_Click;
             var kindVariant = client.IsProfileMissing ? "warning" : client.Kind == ClientKind.Individual ? "neutral" : "info";
-            ClientList.Children.Add(CreateActionRow(ClientRowColumns, open, CreateOverflowActions(folder, edit, code, rename, move, trash),
+            return CreateActionRow(ClientRowColumns, open, CreateOverflowActions(folder, edit, code, rename, move, trash),
                 CreateCompactTableCell(client.Title(), prominent: true),
                 CreateCompactTableCell(string.IsNullOrWhiteSpace(client.ClientCode) ? "—" : client.ClientCode, accent: true),
                 new Border { Classes = { "badge", kindVariant }, Child = new TextBlock { Text = client.ProfileLabel } },
-                CreateCompactTableCell(client.ProjectCount switch { 0 => "Aucun projet", 1 => "1 projet", var count => $"{count} projets" })));
-        }
+                CreateCompactTableCell(client.ProjectCount switch { 0 => "Aucun projet", 1 => "1 projet", var count => $"{count} projets" }));
     }
 
     private void ClientFilterText_Changed(object? sender, TextChangedEventArgs e)
     {
         if (ClientList is not null) RenderClients();
+    }
+
+    private void ClearClientFilters_Click(object? sender, RoutedEventArgs e)
+    {
+        _clientKindFilter = string.Empty;
+        SelectChip(ClientStatusFilters, string.Empty);
+        ClientFilterBox.Text = string.Empty;
+        RenderClients();
     }
 
     private void ClientFilter_Click(object? sender, RoutedEventArgs e)
@@ -150,6 +173,9 @@ public partial class MainWindow
 
     private async Task LoadClientDetailAsync(ClientSummary client)
     {
+        RememberClient(client);
+        var root = WorkspaceRoot;
+        var load = StartWorkspaceLoad("clients", root);
         ClientList.Children.Clear();
         ClientList.Spacing = 8;
         _clientListMode = false;
@@ -169,8 +195,8 @@ public partial class MainWindow
         ClientList.Children.Add(back);
         SetBreadcrumb(("Clients", GoToClientsAsync), (client.Title(), null));
 
-        var card = new StackPanel { Spacing = 8 };
-        card.Children.Add(new TextBlock { Text = client.Title(), FontSize = 18, FontWeight = FontWeight.SemiBold });
+        var card = new StackPanel { Spacing = 14 };
+        card.Children.Add(new TextBlock { Text = client.Title(), FontSize = 26, FontWeight = FontWeight.SemiBold, Classes = { "brand-heading" }, TextWrapping = TextWrapping.Wrap });
         card.Children.Add(new TextBlock { Text = $"{client.ProfileLabel} · {client.ClientCode} · {client.ProjectCount} projet(s)", Classes = { "muted" } });
         if (client.Profile?.PrimaryContact is { } contact)
         {
@@ -178,23 +204,23 @@ public partial class MainWindow
             if (!string.IsNullOrWhiteSpace(contact.Mobile)) lines.Add("Portable : " + contact.Mobile);
             if (!string.IsNullOrWhiteSpace(contact.Phone)) lines.Add("Téléphone : " + contact.Phone);
             if (!string.IsNullOrWhiteSpace(contact.Email)) lines.Add("E-mail : " + contact.Email);
-            if (lines.Count > 0) card.Children.Add(new TextBlock { Text = string.Join("  ·  ", lines), TextWrapping = TextWrapping.Wrap });
+            if (lines.Count > 0) card.Children.Add(new TextBlock { Text = string.Join(Environment.NewLine, lines), TextWrapping = TextWrapping.Wrap, LineHeight = 24 });
         }
         if (!string.IsNullOrWhiteSpace(client.Profile?.Address)) card.Children.Add(new TextBlock { Text = client.Profile.Address, TextWrapping = TextWrapping.Wrap });
-        if (!string.IsNullOrWhiteSpace(client.Profile?.Notes)) card.Children.Add(new TextBlock { Text = client.Profile.Notes, TextWrapping = TextWrapping.Wrap });
+        if (!string.IsNullOrWhiteSpace(client.Profile?.Notes)) card.Children.Add(EstimateSection("Notes du client", "Informations enregistrées dans la fiche", new TextBlock { Text = client.Profile.Notes, TextWrapping = TextWrapping.Wrap, LineHeight = 22 }));
         var edit = new Button { Content = Icons.Label("IconEdit", "Modifier la fiche"), Tag = client };
         edit.Click += EditClient_Click;
         var changeCode = new Button { Content = Icons.Label("IconRename", "Changer le code"), Tag = client };
         changeCode.Click += ChangeClientCode_Click;
-        var newProject = new Button { Content = "+  Nouveau projet", Tag = client, Classes = { "primary-action" } };
+        var newProject = new Button { Content = Icons.Label("IconPlus", "Nouveau projet"), Tag = client, Classes = { "primary-action" } };
         newProject.Click += CreateProjectForClient_Click;
-        card.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { newProject, edit, changeCode } });
-        ClientList.Children.Add(new Border { Classes = { "card-raised" }, Padding = new Avalonia.Thickness(18), Child = card });
+        card.Children.Add(new WrapPanel { ItemSpacing = 10, LineSpacing = 10, Children = { newProject, edit, changeCode } });
+        ClientList.Children.Add(new Border { Classes = { "client-overview" }, Child = card });
         try
         {
-            var root = WorkspaceRoot;
             var projects = await Task.Run(() => new WorkspaceProjectReader().Load(root)
                 .Where(project => string.Equals(project.ClientPath, client.ClientPath, StringComparison.OrdinalIgnoreCase)).ToArray());
+            if (!IsWorkspaceLoadCurrent(load)) return;
             if (projects.Length == 0)
             {
                 ClientList.Children.Add(CreateEmptyState("IconProjects", "Aucun projet pour ce client", "Créez son premier projet avec le bouton « Nouveau projet ».", "Nouveau projet", CreateProjectForClient_Click, client));
@@ -213,7 +239,7 @@ public partial class MainWindow
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
-            Notify("Impossible de lire les projets de ce client.", error: true);
+            if (IsWorkspaceLoadCurrent(load)) Notify("Impossible de lire les projets de ce client.", error: true);
         }
     }
 

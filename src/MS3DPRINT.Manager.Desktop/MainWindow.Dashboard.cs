@@ -19,57 +19,97 @@ namespace MS3DPRINT.Manager.Desktop;
 /// <summary>Home page: recent projects, attention list and quick actions.</summary>
 public partial class MainWindow
 {
-    private void BuildRecentProjects(IReadOnlyList<ProjectSummary> projects)
+    private static Control DashboardProjectTitle(ProjectSummary project, bool large = false)
     {
+        var title = new TextBlock
+        {
+            Text = project.Title(), FontWeight = FontWeight.SemiBold,
+            TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis
+        };
+        if (large) { title.FontSize = 16; title.LineHeight = 22; }
+        if (project.Priority == ProjectPriority.None) return title;
+        var flag = ProjectPriorityVisual.Flag(project.Priority);
+        flag.Classes.Add("dashboard-priority");
+        flag.VerticalAlignment = VerticalAlignment.Top;
+        flag.Margin = new Avalonia.Thickness(0, large ? 2 : 0, 0, 0);
+        ToolTip.SetTip(flag, ProjectPriorityVisual.Text(project.Priority));
+        Avalonia.Automation.AutomationProperties.SetName(flag, ProjectPriorityVisual.Text(project.Priority));
+        var line = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 8 };
+        Grid.SetColumn(title, 1);
+        line.Children.Add(flag); line.Children.Add(title);
+        return line;
+    }
+
+    private static string DashboardProjectName(ProjectSummary project, string deadline)
+        => $"Ouvrir {project.Title()} · {project.Reference}"
+            + (project.Priority == ProjectPriority.None ? "" : " · " + ProjectPriorityVisual.Text(project.Priority))
+            + " · " + deadline;
+
+    private void BuildWorkQueue(WorkspaceDashboard dashboard)
+    {
+        var projects = dashboard.WorkQueue;
         RecentProjectsList.Children.Clear();
         if (projects.Count == 0)
         {
-            RecentProjectsList.Children.Add(CreateEmptyState("IconProjects", "Aucun projet pour l’instant",
-                "Créez votre premier projet pour le retrouver ici.", "Nouveau projet", CreateProject_Click));
+            RecentProjectsList.Children.Add(dashboard.ProjectCount == 0
+                ? CreateEmptyState("IconProjects", "Votre atelier est prêt", "Créez un projet pour suivre ses fichiers, son estimation et sa fabrication.", "Nouveau projet", CreateProject_Click)
+                : CreateEmptyState("IconCheck", "Aucun projet actif à reprendre", "Les projets terminés et archivés restent consultables dans la liste des projets.", "Consulter les archives", async (_, _) => await OpenFilteredAsync("Projets", "ARCHIVES")));
             return;
         }
         foreach (var project in projects)
         {
-            var content = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
-            var text = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
-            text.Children.Add(new TextBlock { Text = $"{project.Reference} · {project.Title()}", FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
-            text.Children.Add(new TextBlock { Text = project.ClientTitle(), Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis });
-            var badge = CreateProjectStatusCell(project);
-            Grid.SetColumn(badge, 1);
+            var content = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 14 };
+            var text = new StackPanel { Spacing = 5, VerticalAlignment = VerticalAlignment.Center };
+            text.Children.Add(DashboardProjectTitle(project, large: true));
+            text.Children.Add(new TextBlock { Text = project.Reference + " · " + project.ClientTitle(), Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis });
+            text.Children.Add(new TextBlock { Text = project.Profile is null ? "Compléter la fiche du projet" : project.Status == ProjectStatus.InProgress ? "Poursuivre la fabrication" : "Préparer le projet", Classes = { "queue-next-action" } });
+            var state = new StackPanel { Spacing = 8, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right };
+            var badge = CreateStatusBadge(project.StatusLabel); badge.HorizontalAlignment = HorizontalAlignment.Right;
+            state.Children.Add(badge);
+            var (deadline, variant) = ProjectDeadlineLabel(project);
+            state.Children.Add(new TextBlock { Text = deadline, FontSize = 13, Foreground = (IBrush?)Avalonia.Application.Current?.FindResource(variant == "danger" || variant == "warning" ? "WarningBrush" : "MutedTextBrush") });
+            var arrow = Icons.Glyph("IconArrowRight", 18); Grid.SetColumn(arrow, 2);
+            Grid.SetColumn(state, 1);
             content.Children.Add(text);
-            content.Children.Add(badge);
-            var row = new Button { Classes = { "workspace-card" }, Tag = project, Content = content };
+            content.Children.Add(state); content.Children.Add(arrow);
+            var row = new Button { Classes = { "workspace-card", "queue-row" }, Tag = project, Content = content };
+            Avalonia.Automation.AutomationProperties.SetName(row, DashboardProjectName(project, deadline));
+            ToolTip.SetTip(row, DashboardProjectName(project, deadline));
             row.Click += RecentProject_Click;
             RecentProjectsList.Children.Add(row);
         }
     }
 
+    private static (string Text, string Variant) ProjectDeadlineLabel(ProjectSummary project)
+    {
+        if (project.Profile?.DueDate is not { } due) return ("Sans échéance", "neutral");
+        var days = due.DayNumber - DateOnly.FromDateTime(DateTime.Today).DayNumber;
+        return days switch
+        {
+            < 0 => ($"En retard de {-days} j", "danger"),
+            0 => ("Aujourd’hui", "warning"),
+            1 => ("Demain", "warning"),
+            <= 7 => ($"Dans {days} j", "warning"),
+            _ => ($"{due:dd/MM/yyyy}", "neutral")
+        };
+    }
+
     private void BuildAttention(WorkspaceDashboard dashboard)
     {
         AttentionList.Children.Clear();
-        var today = DateOnly.FromDateTime(DateTime.Today);
-
         foreach (var project in dashboard.Deadlines)
         {
-            var due = project.Profile!.DueDate!.Value;
-            var days = due.DayNumber - today.DayNumber;
-            var (text, variant) = days switch
-            {
-                < 0 => ($"En retard de {-days} j", "danger"),
-                0 => ("Aujourd’hui", "warning"),
-                1 => ("Demain", "warning"),
-                <= 7 => ($"Dans {days} j", "warning"),
-                _ => ($"{due:dd/MM}", "neutral")
-            };
-            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 10 };
+            var (text, variant) = ProjectDeadlineLabel(project);
+            var row = new StackPanel { Spacing = 6 };
             var labels = new StackPanel { Spacing = 1 };
-            labels.Children.Add(new TextBlock { Text = project.Title(), FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
-            labels.Children.Add(new TextBlock { Text = "Échéance · " + project.Reference, Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis });
-            var badge = new Border { Classes = { "badge", variant }, Child = new TextBlock { Text = text } };
-            Grid.SetColumn(badge, 1);
+            labels.Children.Add(DashboardProjectTitle(project));
+            labels.Children.Add(new TextBlock { Text = project.Reference, Classes = { "caption" }, TextWrapping = TextWrapping.Wrap });
+            var badge = new Border { Classes = { "badge", variant }, HorizontalAlignment = HorizontalAlignment.Left, Child = new TextBlock { Text = text } };
             row.Children.Add(labels);
             row.Children.Add(badge);
             var open = new Button { Classes = { "workspace-card" }, MinHeight = 52, Padding = new Avalonia.Thickness(12, 8), Tag = project, Content = row };
+            Avalonia.Automation.AutomationProperties.SetName(open, DashboardProjectName(project, text));
+            ToolTip.SetTip(open, DashboardProjectName(project, text));
             open.Click += RecentProject_Click;
             AttentionList.Children.Add(open);
         }

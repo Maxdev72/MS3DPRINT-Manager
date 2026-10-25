@@ -64,10 +64,11 @@ public sealed class ProjectCreationService
     }
 
     public (ProjectReference Reference, ProjectProfile Profile) CreateWithProfile(
-        ClientSummary client, int year, string projectName, ProjectProfileStore profiles, DateOnly? dueDate, string? description)
+        ClientSummary client, int year, string projectName, ProjectProfileStore profiles, DateOnly? dueDate, string? description, ProjectPriority priority = ProjectPriority.None)
     {
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(profiles);
+        if (!Enum.IsDefined(priority)) throw new ArgumentException("La priorité du projet est invalide.", nameof(priority));
         if (client.Profile is null) throw new InvalidOperationException("Complétez la fiche client avant de créer un projet suivi.");
 
         var reference = Create(client.ClientPath, client.ClientCode, year, projectName);
@@ -76,6 +77,7 @@ public sealed class ProjectCreationService
             $"{reference.ClientCode}-{reference.Year:D4}-{reference.Sequence:D3}", reference.FolderName,
             projectName.Trim(), ProjectStatus.Quote, now, dueDate, description, null, now,
             Path.GetRelativePath(WorkspaceRoot(client.ClientPath), Path.Combine(client.ClientPath, reference.FolderName)).Replace('\\', '/'));
+        profile = profile with { Priority = priority };
         try { profiles.Create(profile); }
         catch (Exception failure)
         {

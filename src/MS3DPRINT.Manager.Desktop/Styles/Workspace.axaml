@@ -1,0 +1,224 @@
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Style Selector="Window.workbench-ui Border.file-drop-target">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+  </Style>
+  <Style Selector="Window.workbench-ui Border.file-drop-target.drag-active">
+    <Setter Property="Background" Value="{DynamicResource CyanSoftBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" />
+  </Style>
+  <Style Selector="Window.workbench-ui Border.file-drop-target.drop-refused">
+    <Setter Property="Background" Value="{DynamicResource WarningSoftBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}" />
+  </Style>
+  <Style Selector="Window.workbench-ui Border.file-selection-row.file-selected">
+    <Setter Property="Background" Value="{DynamicResource CyanSoftBrush}" />
+    <Setter Property="CornerRadius" Value="4" />
+  </Style>
+  <!-- One visual family with the estimator: flat editing surfaces, raised supporting areas. -->
+  <Style Selector="Window.workbench-ui Border.card, Window.workbench-ui Border.card-raised, Window.workbench-ui Border.table-surface">
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="8" />
+  </Style>
+  <Style Selector="Window.workbench-ui Border.workspace-sheet">
+    <Setter Property="Padding" Value="24" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+  </Style>
+  <Style Selector="Window.workbench-ui.compact Border.workspace-sheet"><Setter Property="Padding" Value="16" /></Style>
+  <Style Selector="Window.workbench-ui Border.table-head">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="Margin" Value="0,8,0,0" />
+  </Style>
+  <Style Selector="Window.workbench-ui Border.table-head TextBlock">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+  </Style>
+  <Style Selector="Window.workbench-ui Button.sort-head">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+  </Style>
+  <Style Selector="Window.workbench-ui Button.table-row">
+    <Setter Property="MinHeight" Value="64" />
+    <Setter Property="CornerRadius" Value="4" />
+  </Style>
+  <Style Selector="Window.workbench-ui Button.table-row:pointerover, Window.workbench-ui Button.queue-row:pointerover">
+    <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
+  </Style>
+  <Style Selector="Window.workbench-ui Button.primary-action"><Setter Property="MinHeight" Value="42" /></Style>
+  <Style Selector="Window.workbench-ui Button.filter-chip">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0,0,0,2" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="Padding" Value="12,10" />
+    <Setter Property="MinHeight" Value="40" />
+  </Style>
+  <Style Selector="Window.workbench-ui Button.filter-chip.selected">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource CyanBrush}" />
+  </Style>
+  <Style Selector="Window.workbench-ui Button.filter-chip:pointerover"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /></Style>
+  <Style Selector="Window.workbench-ui Border.workbench-banner">
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+  </Style>
+  <Style Selector="Window.workbench-ui Border.project-overview, Window.workbench-ui Border.client-overview">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="Padding" Value="0,10,0,24" />
+    <Setter Property="Margin" Value="0,0,0,16" />
+  </Style>
+  <Style Selector="Window.workbench-ui Border.settings-section">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="Padding" Value="24" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="Window.workbench-ui Button.settings-tab.selected">
+    <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource CyanBrush}" />
+  </Style>
+  <Style Selector="Window.workbench-ui Button.settings-tab.selected Path.icon"><Setter Property="Stroke" Value="{DynamicResource CyanBrush}" /></Style>
+  <Style Selector="Window.workbench-ui Border.browser-toolbar, Window.workbench-ui Border.toolbar">
+    <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="8" />
+  </Style>
+  <Style Selector="Window.workbench-ui Button.browser-tab">
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="BorderThickness" Value="0,0,0,2" />
+  </Style>
+  <!-- These apply to both the side-panel host and separately opened dialogs. -->
+  <Style Selector="Grid.dialog-form TextBox, Grid.dialog-form ComboBox">
+    <Setter Property="MinHeight" Value="46" />
+    <Setter Property="FontSize" Value="16" />
+  </Style>
+  <Style Selector="Grid.dialog-form Button.primary-action"><Setter Property="MinHeight" Value="42" /></Style>
+  <Style Selector="Grid.dialog-form TextBlock.form-label">
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+  </Style>
+  <Style Selector="Window.workbench-ui Expander.estimate-section /template/ ToggleButton#ExpanderHeader /template/ Border#ToggleButtonBackground">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+  </Style>
+  <Style Selector="Border.estimate-history-surface">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="Window.workbench-ui Expander.estimate-history">
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="24,0,24,12" />
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Window.workbench-ui Expander.estimate-history /template/ ToggleButton#ExpanderHeader">
+    <Setter Property="Padding" Value="24,16" />
+  </Style>
+  <Style Selector="Window.workbench-ui Expander.estimate-history /template/ Border">
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="Window.workbench-ui Expander.estimate-history /template/ ToggleButton#ExpanderHeader /template/ Border#ToggleButtonBackground">
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="8" />
+  </Style>
+  <Style Selector="Window.workbench-ui Button.estimate-history-row">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Window.workbench-ui Button.estimate-history-row:pointerover">
+    <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
+  </Style>
+  <Style Selector="ComboBox#EstimateProject /template/ Popup#PART_Popup">
+    <Setter Property="MaxWidth" Value="{Binding Bounds.Width, RelativeSource={RelativeSource TemplatedParent}}" />
+  </Style>
+  <Style Selector="ComboBoxItem">
+    <Setter Property="Padding" Value="12,8" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Window.compact Expander.estimate-history"><Setter Property="Padding" Value="16,0,16,12" /></Style>
+  <Style Selector="Window.compact Expander.estimate-history /template/ ToggleButton#ExpanderHeader"><Setter Property="Padding" Value="16,16" /></Style>
+  <Style Selector="Border#SearchResultsPanel">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="CornerRadius" Value="8" />
+  </Style>
+  <Style Selector="Button.search-item">
+    <Setter Property="Padding" Value="12,12" />
+    <Setter Property="MinHeight" Value="64" />
+    <Setter Property="CornerRadius" Value="4" />
+  </Style>
+  <Style Selector="Button.search-item.selected /template/ ContentPresenter#PART_ContentPresenter, Button.search-item:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.search-item:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.priority-choice"><Setter Property="Padding" Value="10" /><Setter Property="CornerRadius" Value="6" /><Setter Property="Background" Value="Transparent" /><Setter Property="BorderBrush" Value="Transparent" /></Style>
+  <Style Selector="Button.priority-choice.selected"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource FocusBorderBrush}" /></Style>
+  <Style Selector="Button.project-priority"><Setter Property="Padding" Value="6" /><Setter Property="MinWidth" Value="32" /><Setter Property="MinHeight" Value="36" /><Setter Property="Background" Value="Transparent" /><Setter Property="BorderBrush" Value="Transparent" /></Style>
+  <Style Selector="Button.priority-choice:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.project-priority:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource FocusBorderBrush}" />
+  </Style>
+  <!-- One continuous reading line, including the cells that contain quick actions. -->
+  <Style Selector="Grid.workspace-row">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Transitions"><Transitions><BrushTransition Property="Background" Duration="0:0:0.12" /></Transitions></Setter>
+  </Style>
+  <Style Selector="Grid.workspace-row:pointerover, Grid.workspace-row:focus-within">
+    <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
+  </Style>
+  <Style Selector="Grid.workspace-row Button.table-row:pointerover, Grid.workspace-row Button.table-row:pressed">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Border.search-box">
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Transitions"><Transitions><BrushTransition Property="BorderBrush" Duration="0:0:0.14" /><BrushTransition Property="Background" Duration="0:0:0.14" /></Transitions></Setter>
+  </Style>
+  <Style Selector="Border.search-box:focus-within"><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /></Style>
+  <Style Selector="TextBox /template/ Border#PART_BorderElement">
+    <Setter Property="Transitions"><Transitions><BrushTransition Property="BorderBrush" Duration="0:0:0.14" /><BrushTransition Property="Background" Duration="0:0:0.14" /></Transitions></Setter>
+  </Style>
+  <Style Selector="Button.menu-action:not(.menu-destructive):pointerover Path.icon, Button.menu-action:not(.menu-destructive):focus-visible Path.icon">
+    <Setter Property="Stroke" Value="{DynamicResource CyanBrush}" />
+  </Style>
+  <Style Selector="Window.workbench-ui Expander /template/ ToggleButton#ExpanderHeader /template/ Border#ToggleButtonBackground">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" />
+    <Setter Property="Transitions"><Transitions><BrushTransition Property="Background" Duration="0:0:0.14" /><BrushTransition Property="BorderBrush" Duration="0:0:0.14" /></Transitions></Setter>
+  </Style>
+  <Style Selector="Window.workbench-ui Expander /template/ ToggleButton#ExpanderHeader:pointerover /template/ Border#ToggleButtonBackground">
+    <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
+  </Style>
+  <Style Selector="Window.workbench-ui Expander /template/ ToggleButton#ExpanderHeader:focus-visible /template/ Border#ToggleButtonBackground">
+    <Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" />
+  </Style>
+  <!-- Keep the same state feedback without interpolating when motion is reduced. -->
+  <Style Selector="Border.estimate-price-rail TextBox"><Setter Property="MinHeight" Value="46" /><Setter Property="FontSize" Value="18" /></Style>
+  <Style Selector="Border.settings-section TextBlock.settings-group-title">
+    <Setter Property="FontSize" Value="16" /><Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Margin" Value="0,20,0,6" /><Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+  </Style>
+  <Style Selector="Viewbox.settings-heading-icon Path.icon"><Setter Property="Stroke" Value="{DynamicResource CyanBrush}" /></Style>
+  <Style Selector="Window.compact Border.settings-section"><Setter Property="Padding" Value="18" /></Style>
+  <Style Selector="Button.settings-tab:focus-visible"><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /></Style>
+  <Style Selector="TextBlock.settings-search-hit"><Setter Property="Foreground" Value="{DynamicResource CyanBrush}" /></Style>
+  <Style Selector="Border.estimate-price-rail TextBlock.estimate-label"><Setter Property="FontSize" Value="14" /><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Style>
+  <Style Selector="Expander.estimate-price-details"><Setter Property="Padding" Value="0,8" /><Setter Property="BorderThickness" Value="0" /></Style>
+  <Style Selector="Expander.estimate-price-details /template/ ToggleButton#ExpanderHeader"><Setter Property="Padding" Value="0,12" /><Setter Property="MinHeight" Value="44" /></Style>
+  <Style Selector="Window.reduce-motion Grid.workspace-row, Window.reduce-motion Border, Window.reduce-motion TextBox /template/ Border#PART_BorderElement, Window.reduce-motion Expander /template/ ToggleButton#ExpanderHeader /template/ Border#ToggleButtonBackground">
+    <Setter Property="Transitions" Value="{x:Null}" />
+  </Style>
+</Styles>

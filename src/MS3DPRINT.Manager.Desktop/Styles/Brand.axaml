@@ -1,0 +1,75 @@
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- The site's identity, adapted for long desktop work: ink, electric blue, cyan and Bricolage. -->
+  <Style Selector="TextBlock.page-title, TextBlock.section-title, TextBlock.card-title, TextBlock.metric, TextBlock.brand-heading">
+    <Setter Property="FontFamily" Value="{DynamicResource BrandFont}" />
+  </Style>
+  <Style Selector="TextBlock.page-title"><Setter Property="FontSize" Value="32" /><Setter Property="LetterSpacing" Value="-0.5" /></Style>
+  <Style Selector="TextBlock.brand-heading"><Setter Property="FontWeight" Value="SemiBold" /></Style>
+  <Style Selector="Button"><Setter Property="CornerRadius" Value="4" /><Setter Property="RenderTransformOrigin" Value="50%,50%" /><Setter Property="RenderTransform" Value="scale(1)" />
+    <Setter Property="Transitions"><Transitions>
+      <BrushTransition Property="Background" Duration="0:0:0.15" /><BrushTransition Property="BorderBrush" Duration="0:0:0.15" />
+      <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" Easing="CubicEaseOut" />
+    </Transitions></Setter>
+  </Style>
+  <Style Selector="Button:pressed"><Setter Property="RenderTransform" Value="scale(0.985)" /></Style>
+  <Style Selector="Button.primary-action"><Setter Property="Background" Value="{DynamicResource BrandBlueBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource BrandBlueBrush}" /></Style>
+  <Style Selector="Button.primary-action:pointerover"><Setter Property="Background" Value="{DynamicResource BrandBlueHoverBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource BrandBlueHoverBrush}" /></Style>
+  <Style Selector="Button.primary-action:pressed"><Setter Property="Background" Value="{DynamicResource AccentPressedBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource AccentPressedBrush}" /></Style>
+  <Style Selector="TextBox, ComboBox"><Setter Property="CornerRadius" Value="4" /></Style>
+  <Style Selector="Border.card, Border.card-raised, Border.table-surface"><Setter Property="CornerRadius" Value="6" /></Style>
+  <Style Selector="Border.table-head"><Setter Property="CornerRadius" Value="4" /><Setter Property="Background" Value="{DynamicResource CyanSoftBrush}" /></Style>
+  <Style Selector="Border.table-head TextBlock"><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /></Style>
+  <Style Selector="Border.table-head Button.sort-head"><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /></Style>
+  <Style Selector="Border.table-head Button.sort-head.active"><Setter Property="Foreground" Value="{DynamicResource CyanBrush}" /></Style>
+  <Style Selector="Button.table-row"><Setter Property="CornerRadius" Value="0" /></Style>
+  <Style Selector="Button.table-row:pressed"><Setter Property="RenderTransform" Value="scale(1)" /></Style>
+  <Style Selector="Button.filter-chip, Button.settings-tab"><Setter Property="CornerRadius" Value="4" /></Style>
+  <Style Selector="Button.filter-chip.selected, Button.settings-tab.selected"><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /><Setter Property="Background" Value="{DynamicResource CyanSoftBrush}" /></Style>
+
+  <Style Selector="Border.module-mark"><Setter Property="Width" Value="44" /><Setter Property="Height" Value="44" /><Setter Property="CornerRadius" Value="6" /><Setter Property="Background" Value="{DynamicResource CyanSoftBrush}" /></Style>
+  <Style Selector="Border.module-mark Path.icon"><Setter Property="Width" Value="24" /><Setter Property="Height" Value="24" /><Setter Property="Stroke" Value="{DynamicResource CyanBrush}" /></Style>
+  <Style Selector="Border.navigation-indicator"><Setter Property="Background" Value="{DynamicResource BrandBlueBrush}" /><Setter Property="CornerRadius" Value="4" />
+    <Setter Property="RenderTransform" Value="translateY(0px)" />
+    <Setter Property="Transitions"><Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.22" Easing="CubicEaseOut" /></Transitions></Setter>
+  </Style>
+  <Style Selector="StackPanel#NavigationItems Button.nav-item.selected"><Setter Property="Background" Value="Transparent" /></Style>
+  <Style Selector="Button.nav-item.selected Path.icon"><Setter Property="Stroke" Value="{DynamicResource TextBrush}" /></Style>
+  <Style Selector="Button.nav-item"><Setter Property="CornerRadius" Value="4" /></Style>
+  <Style Selector="Image.compact-brand"><Setter Property="IsVisible" Value="False" /></Style>
+  <Style Selector="Window.compact Image.full-brand"><Setter Property="IsVisible" Value="False" /></Style>
+  <Style Selector="Window.compact Image.compact-brand"><Setter Property="IsVisible" Value="True" /></Style>
+
+  <Style Selector="Border.workbench-banner"><Setter Property="Background" Value="{DynamicResource WorkbenchBrush}" /><Setter Property="CornerRadius" Value="6" /><Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" /><Setter Property="BorderThickness" Value="1" /><Setter Property="Padding" Value="24" /></Style>
+  <Style Selector="Button.dashboard-stage"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderBrush" Value="Transparent" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Padding" Value="14,12" /></Style>
+  <Style Selector="Button.dashboard-stage:pointerover"><Setter Property="Background" Value="{DynamicResource CyanSoftBrush}" /></Style>
+  <Style Selector="Button.dashboard-stage TextBlock"><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Style>
+  <Style Selector="Button.dashboard-stage TextBlock.caption"><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /><Setter Property="FontWeight" Value="Normal" /></Style>
+  <Style Selector="Path.brand-layer"><Setter Property="Stroke" Value="{DynamicResource CyanBrush}" /><Setter Property="StrokeThickness" Value="1.5" /><Setter Property="Fill" Value="{DynamicResource CyanSoftBrush}" /><Setter Property="RenderTransform" Value="translateY(0px)" />
+    <Setter Property="Transitions"><Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.24" Easing="CubicEaseOut" /></Transitions></Setter>
+  </Style>
+  <Style Selector="Border.workbench-banner:pointerover Path.layer-top"><Setter Property="RenderTransform" Value="translateY(-4px)" /></Style>
+  <Style Selector="Border.workbench-banner:pointerover Path.layer-bottom"><Setter Property="RenderTransform" Value="translateY(4px)" /></Style>
+  <Style Selector="Path.action-arrow"><Setter Property="RenderTransform" Value="translateX(0px)" /><Setter Property="Transitions"><Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" Easing="CubicEaseOut" /></Transitions></Setter></Style>
+  <Style Selector="Button:pointerover Path.action-arrow"><Setter Property="RenderTransform" Value="translateX(3px)" /></Style>
+  <Style Selector="Expander.estimate-section"><Setter Property="CornerRadius" Value="4" /></Style>
+  <Style Selector="Border.estimate-summary"><Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /></Style>
+  <Style Selector="Border.estimate-status"><Setter Property="CornerRadius" Value="4" /></Style>
+  <Style Selector="TextBlock.estimate-input-error"><Setter Property="Foreground" Value="{DynamicResource WarningBrush}" /><Setter Property="FontSize" Value="14" /><Setter Property="LineHeight" Value="21" /></Style>
+  <Style Selector="StackPanel.estimate-zone-title Path.icon"><Setter Property="Stroke" Value="{DynamicResource CyanBrush}" /></Style>
+  <Style Selector="Border.settings-section TextBlock"><Setter Property="FontSize" Value="15" /><Setter Property="LineHeight" Value="23" /></Style>
+  <Style Selector="Border.settings-section TextBlock.card-title"><Setter Property="FontSize" Value="20" /><Setter Property="LineHeight" Value="26" /></Style>
+  <Style Selector="Border.settings-section TextBlock.settings-note"><Setter Property="FontSize" Value="14" /><Setter Property="LineHeight" Value="22" /></Style>
+  <Style Selector="TextBlock.settings-label"><Setter Property="FontWeight" Value="SemiBold" /><Setter Property="Margin" Value="0,12,0,0" /></Style>
+  <Style Selector="Button.settings-tab TextBlock.settings-nav-detail"><Setter Property="FontWeight" Value="Normal" /></Style>
+  <Style Selector="Border.estimate-form TextBlock.estimate-help, Grid.workshop-form TextBlock.faint"><Setter Property="FontSize" Value="14" /><Setter Property="LineHeight" Value="22" /></Style>
+  <Style Selector="Button.queue-row"><Setter Property="Padding" Value="16,14" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /></Style>
+  <Style Selector="TextBlock.queue-next-action"><Setter Property="Foreground" Value="{DynamicResource AccentBrush}" /><Setter Property="FontSize" Value="13" /><Setter Property="FontWeight" Value="Normal" /></Style>
+  <Style Selector="Grid.project-row Button.quick-row-action"><Setter Property="Opacity" Value="0" /></Style>
+  <Style Selector="Grid.project-row:pointerover Button.quick-row-action, Grid.project-row:focus-within Button.quick-row-action, Window.compact Grid.project-row Button.quick-row-action"><Setter Property="Opacity" Value="1" /></Style>
+  <Style Selector="Border.project-overview"><Setter Property="Padding" Value="22" /><Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" /><Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="6" /><Setter Property="Margin" Value="0,0,0,16" /></Style>
+
+  <!-- Windows' accessibility preference also suppresses the new spatial effects. -->
+  <Style Selector="Window.reduce-motion Button, Window.reduce-motion Border, Window.reduce-motion Path"><Setter Property="Transitions" Value="{x:Null}" /></Style>
+  <Style Selector="Window.reduce-motion Button:pressed"><Setter Property="RenderTransform" Value="scale(1)" /></Style>
+  <Style Selector="Window.reduce-motion Border.workbench-banner:pointerover Path.brand-layer, Window.reduce-motion Button:pointerover Path.action-arrow"><Setter Property="RenderTransform" Value="translate(0px,0px)" /></Style>
+</Styles>

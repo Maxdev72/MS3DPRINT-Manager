@@ -90,10 +90,57 @@ public partial class MainWindow
         return stack;
     }
 
-    // one look for every list header, sortable or not: the size of the sort buttons (Button.sort-head), the faint colour, the same padding
-    private const double HeaderFontSize = 11;
+    private static Control CreateReadErrorState(string title, string message, Exception exception, Func<Task> retry, bool compact = false)
+    {
+        var state = (StackPanel)CreateEmptyState("IconAlert", title, message, "Réessayer", async (sender, _) =>
+        {
+            if (sender is not Button button || !button.IsEnabled) return;
+            button.IsEnabled = false;
+            try { await retry(); }
+            finally { button.IsEnabled = true; }
+        });
+        state.Margin = new Avalonia.Thickness(16, 24);
+        var detail = new SelectableTextBlock { Text = exception.Message, TextWrapping = TextWrapping.Wrap, MaxWidth = 560, FontSize = 13 };
+        var detailBox = new Border
+        {
+            IsVisible = false, Padding = new Avalonia.Thickness(12), CornerRadius = new Avalonia.CornerRadius(4),
+            Background = (IBrush?)Avalonia.Application.Current?.FindResource("RaisedSurfaceBrush"),
+            Child = detail
+        };
+        var toggle = new Button { Content = Icons.Label("IconChevronDown", "Afficher le détail technique"), Classes = { "ghost" }, HorizontalAlignment = HorizontalAlignment.Center };
+        Avalonia.Automation.AutomationProperties.SetName(toggle, "Afficher le détail technique");
+        toggle.Click += (_, _) =>
+        {
+            detailBox.IsVisible = !detailBox.IsVisible;
+            var label = detailBox.IsVisible ? "Masquer le détail technique" : "Afficher le détail technique";
+            toggle.Content = Icons.Label(detailBox.IsVisible ? "IconChevronUp" : "IconChevronDown", label);
+            Avalonia.Automation.AutomationProperties.SetName(toggle, label);
+        };
+        state.Children.Add(toggle); state.Children.Add(detailBox);
+        if (compact)
+        {
+            var icon = state.Children[0]; var heading = (TextBlock)state.Children[1]; var explanation = (TextBlock)state.Children[2]; var retryButton = state.Children[3];
+            state.Children.Clear();
+            icon.Width = 32; icon.Height = 32;
+            if (icon is Border { Child: Control glyph }) { glyph.Width = 18; glyph.Height = 18; }
+            heading.HorizontalAlignment = HorizontalAlignment.Left; heading.TextWrapping = TextWrapping.Wrap;
+            explanation.HorizontalAlignment = HorizontalAlignment.Stretch; explanation.TextAlignment = TextAlignment.Left; explanation.MaxWidth = double.PositiveInfinity;
+            var text = new StackPanel { Spacing = 4, Children = { heading, explanation } };
+            toggle.HorizontalAlignment = HorizontalAlignment.Left;
+            var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), RowDefinitions = new RowDefinitions("Auto,Auto,Auto"), ColumnSpacing = 12, RowSpacing = 4, Margin = new Avalonia.Thickness(12) };
+            Grid.SetColumn(text, 1); Grid.SetColumn(retryButton, 2);
+            Grid.SetColumn(toggle, 1); Grid.SetRow(toggle, 1);
+            Grid.SetColumn(detailBox, 1); Grid.SetColumnSpan(detailBox, 2); Grid.SetRow(detailBox, 2);
+            grid.Children.Add(icon); grid.Children.Add(text); grid.Children.Add(retryButton); grid.Children.Add(toggle); grid.Children.Add(detailBox);
+            return grid;
+        }
+        return state;
+    }
 
-    private static readonly Avalonia.Thickness HeaderPadding = new(14, 6);
+    // one look for every list header, sortable or not: the size of the sort buttons (Button.sort-head), the faint colour, the same padding
+    private const double HeaderFontSize = 13;
+
+    private static readonly Avalonia.Thickness HeaderPadding = new(14, 12);
 
     /// <summary>Header whose labels are buttons: click to sort, click again to reverse. The last heading (actions) is not sortable.</summary>
     private static Border CreateSortableHeader(string columns, string[] headings, int active, bool ascending, Action<int> onSort)
@@ -104,12 +151,12 @@ public partial class MainWindow
             Control cell;
             if (index == headings.Length - 1)
                 // centred like the actions button below it
-                cell = new TextBlock { Text = headings[index], FontSize = HeaderFontSize, FontWeight = FontWeight.SemiBold, Classes = { "faint" }, HorizontalAlignment = HorizontalAlignment.Center };
+                cell = new TextBlock { Text = ReadableColumnHeading(headings[index]), FontSize = HeaderFontSize, FontWeight = FontWeight.SemiBold, Classes = { "faint" }, HorizontalAlignment = HorizontalAlignment.Center };
             else
             {
                 var column = index;
                 var label = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
-                label.Children.Add(new TextBlock { Text = headings[index] });
+                label.Children.Add(new TextBlock { Text = ReadableColumnHeading(headings[index]) });
                 if (index == active) label.Children.Add(Icons.Glyph(ascending ? "IconChevronUp" : "IconChevronDown", 11));
                 var button = new Button { Content = label, Classes = { "sort-head" } };
                 if (index == active) button.Classes.Add("active");
@@ -120,7 +167,7 @@ public partial class MainWindow
             Grid.SetColumn(cell, index);
             grid.Children.Add(cell);
         }
-        return new Border { Background = Avalonia.Media.Brushes.Transparent, Padding = HeaderPadding, Child = grid };
+        return new Border { Classes = { "table-head" }, Padding = HeaderPadding, Child = grid };
     }
 
     private static Border CreateCompactTableHeader(string columns, params string[] headings)
@@ -128,13 +175,13 @@ public partial class MainWindow
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions(columns), ColumnSpacing = 16 };
         for (var index = 0; index < headings.Length; index++)
         {
-            var heading = new TextBlock { Text = headings[index], FontSize = HeaderFontSize, FontWeight = FontWeight.SemiBold, Classes = { "faint" } };
+            var heading = new TextBlock { Text = ReadableColumnHeading(headings[index]), FontSize = HeaderFontSize, FontWeight = FontWeight.SemiBold, Classes = { "faint" } };
             // the actions button is centred in its column, so is its heading
             if (headings[index] == "ACTIONS") heading.HorizontalAlignment = HorizontalAlignment.Center;
             Grid.SetColumn(heading, index);
             grid.Children.Add(heading);
         }
-        return new Border { Background = Avalonia.Media.Brushes.Transparent, Padding = HeaderPadding, Child = grid };
+        return new Border { Classes = { "table-head" }, Padding = HeaderPadding, Child = grid };
     }
 
     /// <summary>Name with a leading icon, for file and folder rows.</summary>
@@ -143,26 +190,26 @@ public partial class MainWindow
         var icon = new Avalonia.Controls.Shapes.Path { Classes = { "icon" }, Width = 17, Height = 17 };
         if (accentIcon) icon.Classes.Add("icon-accent");
         if (Avalonia.Application.Current?.TryFindResource(iconKey, out var geometry) == true && geometry is Geometry data) icon.Data = data;
-        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, VerticalAlignment = VerticalAlignment.Center };
-        if (modelPath is not null && MS3DPRINT.Manager.Desktop.Viewer.ModelThumbnails.IsEligible(modelPath))
+        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 10, VerticalAlignment = VerticalAlignment.Center };
+        if (modelPath is not null && ThreeDFileSupport.IsPreviewable(modelPath))
         {
             // the icon stands in until the picture of the model is ready
             var picture = new Avalonia.Controls.Image { Stretch = Stretch.UniformToFill };
-            var frame = new Border { Width = 32, Height = 32, CornerRadius = new Avalonia.CornerRadius(6), ClipToBounds = true, IsVisible = false, Child = picture };
-            var slot = new Panel { Width = 32, Height = 32, Children = { icon, frame } };
+            var frame = new Border { Width = 40, Height = 40, CornerRadius = new Avalonia.CornerRadius(6), ClipToBounds = true, IsVisible = false, Child = picture };
+            var slot = new Panel { Width = 40, Height = 40, Children = { icon, frame } };
             icon.HorizontalAlignment = HorizontalAlignment.Center;
             icon.VerticalAlignment = VerticalAlignment.Center;
             row.Children.Add(slot);
-            _ = ShowThumbnailAsync(modelPath, picture, frame, icon);
-            AttachLargePreview(row, modelPath, text);
+            _ = new ThumbnailBinding(row, picture, token => ModelThumbnails.GetAsync(modelPath, token), ready => { frame.IsVisible = ready == true; icon.IsVisible = ready != true; });
         }
         else row.Children.Add(icon);
-        row.Children.Add(new TextBlock { Text = text, FontWeight = accentIcon ? FontWeight.SemiBold : FontWeight.Normal, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center });
+        var label = new TextBlock { Text = text, FontWeight = accentIcon ? FontWeight.SemiBold : FontWeight.Normal, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
+        Grid.SetColumn(label, 1); row.Children.Add(label);
         return row;
     }
 
     /// <summary>A larger picture of the model when the pointer rests on its row; the picture is made on the first visit and kept.</summary>
-    private static void AttachLargePreview(StackPanel row, string modelPath, string title)
+    private static void AttachLargePreview(Control row, string modelPath, string title)
     {
         const double size = MS3DPRINT.Manager.Desktop.Viewer.ModelThumbnails.PreviewSize;
         var picture = new Avalonia.Controls.Image { Width = size, Height = size, Stretch = Stretch.Uniform };
@@ -170,41 +217,22 @@ public partial class MainWindow
         var frame = new Border { Width = size, Height = size, CornerRadius = new Avalonia.CornerRadius(8), ClipToBounds = true, Background = new SolidColorBrush(Color.FromRgb(0x0E, 0x15, 0x22)), Child = new Panel { Children = { waiting, picture } } };
         var caption = new TextBlock { Text = title, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = size };
         // the whole name cell answers, not only the picture and the words
-        row.Background = Brushes.Transparent;
+        if (row is Panel panel) panel.Background = Brushes.Transparent;
         row.HorizontalAlignment = HorizontalAlignment.Stretch;
         ToolTip.SetTip(row, new StackPanel { Spacing = 8, Children = { frame, caption } });
         ToolTip.SetShowDelay(row, 350);
         ToolTip.SetPlacement(row, Avalonia.Controls.PlacementMode.Right);
+        var binding = new ThumbnailBinding(row, picture, token => ModelThumbnails.GetAsync(modelPath, token, ModelThumbnails.PreviewSize), ready =>
+        {
+            waiting.IsVisible = ready != true;
+            waiting.Text = ready == false ? "Aperçu indisponible pour ce fichier." : "Aperçu en cours…";
+        }, automatic: false);
 #if DEBUG
         // development hook (Debug builds only): opens the first preview by itself, to check it without a pointer
         if (Environment.GetEnvironmentVariable("MS3DPRINT_TEST_TIP") == "1")
-            Dispatcher.UIThread.Post(() => DispatcherTimer.RunOnce(() => { _ = ShowLargePreviewAsync(modelPath, picture, waiting); ToolTip.SetIsOpen(row, true); }, TimeSpan.FromSeconds(3)));
+            Dispatcher.UIThread.Post(() => DispatcherTimer.RunOnce(() => { _ = binding.StartAsync(); ToolTip.SetIsOpen(row, true); }, TimeSpan.FromSeconds(3)));
 #endif
-        var started = false;
-        row.PointerEntered += (_, _) =>
-        {
-            if (started) return;
-            started = true;
-            _ = ShowLargePreviewAsync(modelPath, picture, waiting);
-        };
-    }
-
-    private static async Task ShowLargePreviewAsync(string modelPath, Avalonia.Controls.Image picture, TextBlock waiting)
-    {
-        var bitmap = await MS3DPRINT.Manager.Desktop.Viewer.ModelThumbnails.GetAsync(modelPath, default, MS3DPRINT.Manager.Desktop.Viewer.ModelThumbnails.PreviewSize);
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (bitmap is null) { waiting.Text = "Aperçu indisponible pour ce fichier."; return; }
-            picture.Source = bitmap;
-            waiting.IsVisible = false;
-        });
-    }
-
-    private static async Task ShowThumbnailAsync(string modelPath, Avalonia.Controls.Image picture, Control frame, Control icon)
-    {
-        var bitmap = await MS3DPRINT.Manager.Desktop.Viewer.ModelThumbnails.GetAsync(modelPath);
-        if (bitmap is null) return;
-        Dispatcher.UIThread.Post(() => { picture.Source = bitmap; frame.IsVisible = true; icon.IsVisible = false; });
+        row.PointerEntered += (_, _) => _ = binding.StartAsync();
     }
 
     private static TextBlock CreateCompactTableCell(string value, bool prominent = false, bool accent = false)
@@ -213,6 +241,10 @@ public partial class MainWindow
         {
             Text = value,
             FontWeight = prominent ? FontWeight.SemiBold : FontWeight.Normal,
+            FontSize = prominent ? 16 : 15,
+            TextWrapping = prominent ? TextWrapping.Wrap : TextWrapping.NoWrap,
+            MaxLines = prominent ? 2 : 1,
+            LineHeight = 22,
             TextTrimming = TextTrimming.CharacterEllipsis,
             VerticalAlignment = VerticalAlignment.Center
         };
@@ -227,7 +259,7 @@ public partial class MainWindow
     private static string CellText(Control cell) => cell switch
     {
         TextBlock text => text.Text ?? string.Empty,
-        Panel panel => string.Join(" ", panel.Children.OfType<TextBlock>().Select(text => text.Text)),
+        Panel panel => string.Join(" ", panel.Children.Select(CellText).Where(text => text.Length > 0)),
         _ => string.Empty
     };
 
@@ -243,7 +275,7 @@ public partial class MainWindow
     private static Control CreateActionRow(string columns, Button? open, Button? actions, params Control[] cells)
     {
         var columnCount = columns.Split(',').Length;
-        var row = new Grid { ColumnDefinitions = new ColumnDefinitions(columns), ColumnSpacing = 16, Margin = new Avalonia.Thickness(14, 0), MinHeight = 46 };
+        var row = new Grid { Classes = { "workspace-row" }, ColumnDefinitions = new ColumnDefinitions(columns), ColumnSpacing = 16, Margin = new Avalonia.Thickness(14, 0), MinHeight = 60 };
         if (open is not null)
         {
             open.Classes.Add("table-row");
@@ -276,7 +308,7 @@ public partial class MainWindow
     }
 
     /// <summary>Project, client, status, due date, actions.</summary>
-    private const string ProjectRowColumns = "2*,*,190,130,64";
+    private const string ProjectRowColumns = "3*,1.4*,170,110,84";
 
     private const string TrashRowColumns = "2*,*,130";
 
@@ -286,14 +318,16 @@ public partial class MainWindow
 
     private bool _clientListMode;
 
-    private static Button CreateOverflowActions(params Button[] actions)
+    private Button CreateOverflowActions(params Button[] actions)
         => CreateOverflowActions(PlacementMode.BottomEdgeAlignedRight, actions);
 
-    private static Button CreateOverflowActions(PlacementMode placement, params Button[] actions)
+    private Button CreateOverflowActions(PlacementMode placement, params Button[] actions)
     {
-        var menu = new StackPanel { Spacing = 2, MinWidth = 184 };
+        var menu = new StackPanel { Spacing = 2, MinWidth = 216 };
         foreach (var action in actions)
         {
+            if (action.Classes.Contains("menu-destructive") && menu.Children.Count > 0)
+                menu.Children.Add(new Border { Height = 1, Margin = new Avalonia.Thickness(8, 6), Background = (IBrush?)Avalonia.Application.Current?.FindResource("SubtleBorderBrush") });
             action.Classes.Add("menu-action");
             action.HorizontalAlignment = HorizontalAlignment.Stretch;
             action.HorizontalContentAlignment = HorizontalAlignment.Left;
@@ -305,15 +339,18 @@ public partial class MainWindow
             Placement = placement,
             Content = new Border
             {
-                Background = (IBrush?)Avalonia.Application.Current?.FindResource("RaisedSurfaceBrush"),
+                Background = (IBrush?)Avalonia.Application.Current?.FindResource("SurfaceBrush"),
                 BorderBrush = (IBrush?)Avalonia.Application.Current?.FindResource("BorderBrush"),
                 BorderThickness = new Avalonia.Thickness(1),
-                CornerRadius = new Avalonia.CornerRadius(10),
+                CornerRadius = new Avalonia.CornerRadius(8),
                 Padding = new Avalonia.Thickness(6),
                 Child = menu
             }
         };
         flyout.FlyoutPresenterClasses.Add("action-menu-flyout");
+        // Popup roots are separate visual trees: read motion preference from the owning window.
+        flyout.Opened += (_, _) => BrandMotion.OpenOverlay((Control)flyout.Content!, MotionReduced);
+        foreach (var action in actions) action.Click += (_, _) => flyout.Hide();
         var overflow = new Button { Content = Icons.Glyph("IconMore", 18, dots: true), Classes = { "icon-action" } };
         ToolTip.SetTip(overflow, "Actions");
         Avalonia.Automation.AutomationProperties.SetName(overflow, "Actions");

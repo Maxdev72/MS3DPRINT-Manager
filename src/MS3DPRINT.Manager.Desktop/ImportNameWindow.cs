@@ -20,7 +20,7 @@ public sealed class ImportNameWindow : DialogWindow
     public string? DestinationDirectory { get; private set; }
 
     public ImportNameWindow(string originalName, string suggestedName, string projectReference,
-        IReadOnlyList<ImportDestination>? destinations = null, string? suggestedDestination = null)
+        IReadOnlyList<ImportDestination>? destinations = null, string? suggestedDestination = null, int fileNumber = 1, int totalFiles = 1)
     {
         FileName = originalName;
         _destinations = destinations;
@@ -40,8 +40,7 @@ public sealed class ImportNameWindow : DialogWindow
             var chosen = _name.Text?.Trim() ?? string.Empty;
             if (chosen.Length == 0 || chosen.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
             {
-                _error.Text = "Ce nom est vide ou contient un caractère interdit.";
-                _error.IsVisible = true;
+                FormKit.ShowError(_error, _name, "Ce nom est vide ou contient un caractère interdit.");
                 return;
             }
             FileName = chosen;
@@ -58,7 +57,14 @@ public sealed class ImportNameWindow : DialogWindow
         };
         if (chooseFolder) body.Add(FormKit.Field("Dossier de destination", _folder, hint: "Proposé selon le type de fichier."));
         body.Add(_error);
-        Layout("Importer dans le projet", "Vous pouvez renommer le fichier pour qu’il respecte la convention de nommage.", body, accept, extraAction: keep);
+        Button? cancel = null;
+        if (totalFiles > 1)
+        {
+            accept.Content = "Importer ce fichier";
+            cancel = new Button { Content = "Arrêter l’import" };
+            cancel.Click += (_, _) => Close(false);
+        }
+        Layout(totalFiles > 1 ? $"Importer · fichier {fileNumber} sur {totalFiles}" : "Importer dans le projet", "Vous pouvez renommer le fichier pour qu’il respecte la convention de nommage.", body, accept, cancel, extraAction: keep);
         Opened += (_, _) => { _name.Focus(); _name.SelectAll(); };
     }
 

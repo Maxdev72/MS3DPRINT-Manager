@@ -37,6 +37,7 @@ registre local nécessaire pour retrouver ces codes.
 **Navigation.** Le menu de gauche donne accès à l’Accueil, aux Projets, Clients, Collections, Filaments,
 Estimations, Imprimantes, à la Corbeille, aux Modèles 3D (recherche) et aux Paramètres. `Ctrl+1` à `Ctrl+9`, puis `Ctrl+0`, changent de page, `Ctrl+N`
 crée un projet et `Ctrl+K` ouvre la recherche. Sous 1100 px de large, le menu se réduit à une barre d’icônes.
+Les boutons arrière/avant de la souris et `Alt+←` / `Alt+→` parcourent l’historique des pages, fiches et dossiers de la session. Ils restent bloqués pendant la saisie dans un formulaire ouvert. Le brouillon d’estimation est conservé lors d’un changement de rubrique.
 Le logiciel retient la taille de sa fenêtre. Un fil d’Ariane cliquable indique où l’on se trouve dans un projet
 ou une fiche client.
 
@@ -77,6 +78,11 @@ gardés dans `%LOCALAPPDATA%\MS3DPRINT Manager\webview`, pas dans le dossier de 
 **Estimations.** Choisissez le type de prestation (impression 3D, modélisation seule, ou les deux), le filament
 et l’imprimante. L’électricité se calcule en direct à partir de la durée machine, de la puissance de l’imprimante
 et du prix du kWh. Calculez, enregistrez, rechargez ou envoyez à la corbeille une estimation.
+
+La **V2** distingue commande, pièce conforme et tentative, gère les plateaux et les machines mobilisées,
+les charges sur le chiffre d’affaires, la marge cible et les trois prix (plancher, conseillé, commercial).
+Les anciens devis conservent leur moteur historique. Les taux de cotisations sont à renseigner selon votre
+activité. Les profils France 2026 sont proposés dans **Paramètres → Atelier** ; les préférences restent propres à chaque espace de travail. Voir [le guide de l’estimateur V2](docs/estimateur-v2.md) et [l’explication de chaque champ](docs/guide-champs-estimateur.md).
 
 **Corbeille.** Les suppressions sont réversibles : **Restaurer** remet l’élément à son emplacement d’origine (si
 cet emplacement est occupé, libérez-le d’abord). Les références de projet restent réservées.

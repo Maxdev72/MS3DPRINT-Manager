@@ -10,6 +10,87 @@ public sealed class DownloadBufferTests : IDisposable
     public void Dispose() { if (Directory.Exists(_root)) Directory.Delete(_root, true); }
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Announced_downloads_remain_protected_while_their_offer_is_pending(bool archive)
+    {
+        var folder = Path.Combine(_root, "tampon"); using var buffer = new DownloadBuffer(folder);
+        var offered = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        buffer.FileReady += file => offered.TrySetResult(file.Path);
+        buffer.BatchReady += batch => offered.TrySetResult(batch.Files.Single().Path);
+        buffer.StartWatching();
+        if (archive) WriteZip(Path.Combine(folder, "pack.zip"), ("piece.stl", "modèle"));
+        else File.WriteAllText(Path.Combine(folder, "piece.stl"), "modèle");
+        var path = await offered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        buffer.Maintain(TimeSpan.Zero, 0); // A previously scheduled cleanup may have no UI keep snapshot yet.
+        Assert.True(File.Exists(path));
+        buffer.ReleaseOffered([path]);
+        // The watcher may still be returning from the announcement callback.
+        for (var attempt = 0; attempt < 20 && File.Exists(path); attempt++) { buffer.Maintain(TimeSpan.Zero, 0); await Task.Delay(10); }
+        Assert.False(File.Exists(path));
+    }
+
+    [Theory]
+    [InlineData("root")]
+    [InlineData("entry")]
+    [InlineData("nested")]
+    public void Cleanup_never_follows_or_removes_directory_links(string location)
+    {
+        var folder = Path.Combine(_root, "tampon"); Directory.CreateDirectory(folder);
+        var outside = Path.Combine(_root, "outside"); var protectedFile = Path.Combine(outside, "document.stl"); Fill(protectedFile, 100, 10);
+        var link = location == "nested" ? Path.Combine(folder, "pack", "lien") : Path.Combine(folder, "lien");
+        if (location == "nested") Directory.CreateDirectory(Path.GetDirectoryName(link)!);
+        static string Quote(string value) => "'" + value.Replace("'", "''") + "'";
+        var script = "$ErrorActionPreference='Stop'; New-Item -ItemType Junction -Path " + Quote(link) + " -Target " + Quote(outside) + " | Out-Null";
+        var start = new System.Diagnostics.ProcessStartInfo("powershell.exe") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardError = true };
+        start.ArgumentList.Add("-NoProfile"); start.ArgumentList.Add("-EncodedCommand"); start.ArgumentList.Add(Convert.ToBase64String(System.Text.Encoding.Unicode.GetBytes(script)));
+        using var process = System.Diagnostics.Process.Start(start)!; var error = process.StandardError.ReadToEnd(); process.WaitForExit(); Assert.True(process.ExitCode == 0, error);
+        try
+        {
+            if (location == "nested") Directory.SetLastWriteTimeUtc(Path.GetDirectoryName(link)!, DateTime.UtcNow.AddDays(-10));
+            new DownloadBuffer(location == "root" ? link : folder).Maintain(TimeSpan.FromDays(2), 0);
+            Assert.True(Directory.Exists(link)); Assert.True(File.Exists(protectedFile));
+        }
+        finally { if (Directory.Exists(link)) Directory.Delete(link, false); }
+    }
+
+    [Fact]
+    public void Cleanup_preserves_a_final_model_file_which_is_still_open_for_writing()
+    {
+        var folder = Path.Combine(_root, "tampon"); var active = Path.Combine(folder, "actif.stl"); Fill(active, 100, 10);
+        using var writing = new FileStream(active, FileMode.Open, FileAccess.Write, FileShare.Read);
+        new DownloadBuffer(folder).Maintain(TimeSpan.FromDays(2), 0);
+        Assert.True(File.Exists(active));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Maintain_keeps_protected_and_active_files_during_both_cleanup_phases(bool nested)
+    {
+        var folder = Path.Combine(_root, "tampon");
+        var container = nested ? Path.Combine(folder, "pack") : folder;
+        var kept = Path.Combine(container, "offert.stl");
+        var active = Path.Combine(container, "actif.stl.crdownload");
+        Fill(kept, 500, 10); Fill(active, 500, 10);
+        var ordinary = Path.Combine(folder, "ancien.stl"); Fill(ordinary, 500, 10);
+        if (nested) Directory.SetLastWriteTimeUtc(container, DateTime.UtcNow.AddDays(-10));
+        new DownloadBuffer(folder).Maintain(TimeSpan.FromDays(2), 0, [kept]);
+        Assert.True(File.Exists(kept)); Assert.True(File.Exists(active));
+        Assert.False(File.Exists(ordinary));
+    }
+
+    [Fact]
+    public void A_nested_active_download_alone_protects_its_container()
+    {
+        var folder = Path.Combine(_root, "tampon");
+        var active = Path.Combine(folder, "pack", "nested", "en-cours.tmp"); Fill(active, 500, 10);
+        Directory.SetLastWriteTimeUtc(Path.Combine(folder, "pack"), DateTime.UtcNow.AddDays(-10));
+        new DownloadBuffer(folder).Maintain(TimeSpan.FromDays(2), 0);
+        Assert.True(File.Exists(active));
+    }
+
+    [Theory]
     [InlineData("piece.STL", true)]
     [InlineData("boite.3mf", true)]
     [InlineData("support.step", true)]

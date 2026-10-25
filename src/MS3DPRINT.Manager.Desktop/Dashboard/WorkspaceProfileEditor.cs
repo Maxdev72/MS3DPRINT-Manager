@@ -14,7 +14,8 @@ public sealed class WorkspaceProfileEditor
         DateOnly? dueDate,
         string? description,
         string? notes,
-        string? projectName = null)
+        string? projectName = null,
+        ProjectPriority? priority = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(workspaceRoot);
         ArgumentNullException.ThrowIfNull(profile);
@@ -22,6 +23,7 @@ public sealed class WorkspaceProfileEditor
         return store.Update(profile with
         {
             Status = status,
+            Priority = priority ?? profile.Priority,
             DueDate = dueDate,
             Description = Normalize(description),
             Notes = Normalize(notes),

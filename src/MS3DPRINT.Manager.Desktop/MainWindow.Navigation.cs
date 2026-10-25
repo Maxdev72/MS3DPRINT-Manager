@@ -26,6 +26,10 @@ public partial class MainWindow
     /// <summary>Shows exactly one workspace panel and highlights its menu entry.</summary>
     private void ShowWorkspace(string destination)
     {
+        CancelFileRead();
+        DismissSearchResults();
+        if (!_showingDetail) RememberWorkspace(destination);
+        RefreshWorkspaceIdentity();
         foreach (var navigationButton in NavigationButtons())
         {
             if (navigationButton.Tag as string == destination) navigationButton.Classes.Add("selected");
@@ -34,6 +38,7 @@ public partial class MainWindow
         var dashboard = destination == "Accueil";
         DashboardStats.IsVisible = dashboard;
         DashboardContent.IsVisible = dashboard;
+        if (dashboard) _ = LoadRecentFilesAsync();
         ProjectsWorkspacePanel.IsVisible = destination == "Projets";
         ClientsWorkspacePanel.IsVisible = destination == "Clients";
         CollectionsWorkspacePanel.IsVisible = destination == "Collections";
@@ -47,20 +52,20 @@ public partial class MainWindow
         RefreshCentralWidth();
         if (ViewerWorkspacePanel.IsVisible) { _modelViewer?.Release(); ViewerWorkspacePanel.IsVisible = false; ViewerNavButton.Classes.Remove("selected"); _hiddenByViewer = []; RefreshCentralWidth(); }
         ClearBreadcrumb();
-        FadeIn(destination switch
+        RevealWorkspace(destination switch
         {
             "Projets" => ProjectsWorkspacePanel, "Clients" => ClientsWorkspacePanel, "Collections" => CollectionsWorkspacePanel,
             "Filaments" => FilamentsWorkspacePanel, "Estimations" => EstimatesWorkspacePanel, "Imprimantes" => PrintersWorkspacePanel,
-            "Modèles 3D" => ModelSearchWorkspacePanel, "Corbeille" => TrashWorkspacePanel, "Paramètres" => SettingsWorkspacePanel, _ => null
+            "Modèles 3D" => ModelSearchWorkspacePanel, "Corbeille" => TrashWorkspacePanel, "Paramètres" => SettingsWorkspacePanel, _ => DashboardContent
         });
         _selectedNavigationButton = NavigationButtons().FirstOrDefault(button => button.Tag as string == destination);
+        SetPageBrand(destination);
     }
 
-    private static void FadeIn(Control? panel)
+    private void RevealWorkspace(Control? panel)
     {
         if (panel is null) return;
-        panel.Opacity = 0;
-        Dispatcher.UIThread.Post(() => panel.Opacity = 1, DispatcherPriority.Background);
+        BrandMotion.Enter(panel, MotionReduced);
     }
 
     private void ClearBreadcrumb()
@@ -108,9 +113,16 @@ public partial class MainWindow
 
     private async void NavigationButton_Click(object? sender, RoutedEventArgs e)
     {
+        if (_historyNavigationBusy) return;
         if (sender is not Button button || button.Tag is not string destination)
             return;
 
+        await NavigateToWorkspaceAsync(destination);
+    }
+
+    private async Task NavigateToWorkspaceAsync(string destination)
+    {
+        if (!await EnsureWorkspaceAvailableAsync()) return;
         ShowWorkspace(destination);
         PageTitle.Text = destination;
         PageSubtitle.Text = PageSubtitles.GetValueOrDefault(destination, string.Empty);
@@ -153,10 +165,10 @@ public partial class MainWindow
 
     private void Window_KeyDown(object? sender, KeyEventArgs e)
     {
+        if (_panel is not null) return;
         if (e.Key == Key.Escape && SearchResultsPanel.IsVisible)
         {
-            SearchResultsPanel.IsVisible = false;
-            SearchResults.Children.Clear();
+            DismissSearchResults();
             e.Handled = true;
             return;
         }
@@ -167,6 +179,7 @@ public partial class MainWindow
         if (e.Key == Key.K)
         {
             SearchBox.Focus();
+            SearchBox.SelectAll();
             e.Handled = true;
         }
         else if (e.Key == Key.N)

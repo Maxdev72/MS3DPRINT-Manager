@@ -45,13 +45,16 @@ public sealed class WorkspaceLocationTests : IDisposable
         => Assert.Throws<DirectoryNotFoundException>(() => new WorkspaceLocation(_data).Save(Path.Combine(_data, "absent")));
 
     [Fact]
-    public void A_saved_folder_that_disappeared_falls_back_to_the_default()
+    public void A_saved_folder_that_disappeared_keeps_its_identity_without_starting_setup()
     {
         var workspace = Directory.CreateDirectory(Path.Combine(_data, "espace")).FullName;
         new WorkspaceLocation(_data).Save(workspace);
         Directory.Delete(workspace);
 
-        Assert.Equal(WorkspaceLocation.DefaultRoot, new WorkspaceLocation(_data).Resolve());
+        var location = new WorkspaceLocation(_data);
+        Assert.Equal(workspace, location.Resolve());
+        Assert.False(location.NeedsSetup);
+        Assert.False(Directory.Exists(workspace));
     }
 
     [Fact]

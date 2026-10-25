@@ -15,7 +15,7 @@ public sealed class TextPromptWindow : DialogWindow
         var save = new Button { Content = "Enregistrer" };
         save.Click += (_, _) =>
         {
-            if (string.IsNullOrWhiteSpace(Value)) { _error.Text = "Le nom ne peut pas être vide."; _error.IsVisible = true; return; }
+            if (string.IsNullOrWhiteSpace(Value)) { FormKit.ShowError(_error, _value, "Le nom ne peut pas être vide."); return; }
             Close(true);
         };
         Layout(title, detail, [FormKit.Field("Nom", _value), _error], save);

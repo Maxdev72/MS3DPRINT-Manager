@@ -1,6 +1,6 @@
 # Design — MS3DPRINT Manager
 
-> Extrait du code (`src/MS3DPRINT.Manager.Desktop/Styles/Theme.axaml` et `Controls.axaml`).
+> Extrait du code (`src/MS3DPRINT.Manager.Desktop/Styles/Theme.axaml`, `Controls.axaml` et `Brand.axaml`).
 
 ## Thème
 Un seul thème, sombre bleu-nuit. Toutes les couleurs sont des jetons `*Brush` dans `Theme.axaml` ;
@@ -8,24 +8,119 @@ ne pas écrire de valeur hexadécimale ailleurs.
 
 | Rôle | Jeton | Valeur |
 |---|---|---|
-| Fond de page | CanvasBrush | #080C14 |
-| Barre latérale | SidebarBrush | #0A101B |
-| Surface / surélevée | SurfaceBrush / RaisedSurfaceBrush | #0E1522 / #141D2D |
-| Survol / appui | HoverBrush / PressedBrush | #1B2740 / #25375A |
-| Bordures | BorderBrush / SubtleBorderBrush | #243247 / #1A2538 |
-| Texte / atténué / discret | TextBrush / MutedTextBrush / FaintTextBrush | #EAF0FC / #93A5C2 / #7385A3 |
-| Accent | AccentBrush (+ Soft, Pressed, Foreground) | #6B9BFF |
+| Fond de page | CanvasBrush | #071225 |
+| Barre latérale | SidebarBrush | #060E1C |
+| Surface / surélevée | SurfaceBrush / RaisedSurfaceBrush | #0C1A2D / #11243B |
+| Survol / appui | HoverBrush / PressedBrush | #183650 / #234967 |
+| Bordures | BorderBrush / SubtleBorderBrush | #2A4664 / #1C334E |
+| Texte / atténué / discret | TextBrush / MutedTextBrush / FaintTextBrush | #F5F9FF / #B1C2D9 / #91AAC8 |
+| Accent lisible / texte sur accent | AccentBrush / OnAccentBrush | #76B8FF / #071225 |
+| Action principale / texte | BrandBlueBrush / AccentForegroundBrush | #245CFF / #FFFFFF |
+| Accent cyan | CyanBrush / CyanSoftBrush | #38BDF8 / #0C3048 |
 | Succès / alerte / danger | SuccessBrush / WarningBrush / DangerBrush (+ Soft) | #46D6A4 / #F4BC52 / #F57F7F |
 
-Contrastes sur SurfaceBrush : texte 15:1, atténué 7:1, discret 4,6:1.
+Les textes utilisent trois niveaux contrastés sur les surfaces bleu nuit. Les glyphes des cases cochées et les numéros actifs utilisent OnAccentBrush, distinct du blanc réservé aux boutons bleus. Les espaces réservés ne subissent pas la demi-opacité Fluent.
 
 ## Composants
+- **Atelier indisponible** : panneau de récupération reprenant le chemin attendu, avec Réessayer, choix explicite d’un autre dossier et fermeture. Aucun repli silencieux. Un brouillon en attente exige le retour de son atelier avant changement, pour éviter de mélanger les données.
+- **Modalité clavier** : l’ouverture d’un panneau désactive les contrôles derrière lui sans perdre leur état initial, contient Tab / Maj+Tab et restaure le focus sur le déclencheur à la fermeture.
+- **Après import** : confirmation distincte de l’import déjà effectué, avec chemins sélectionnables de l’original et de la copie. « Conserver la source » reçoit le focus ; « Supprimer la source » est une action destructive explicite. Le texte indique la suppression définitive de l’original et la conservation de la copie ; aucun choix mémorisé d’un import à l’autre.
+- **Menus d’actions** : surface bleu nuit unique, contour fin, rayon 8 px et largeur minimale 216 px. Lignes de 42 px minimum avec icône et libellé alignés. Les états des présentateurs natifs sont explicitement thémés ; corbeille séparée par une ligne, icône et texte DangerBrush, survol DangerSoftBrush. Les autres actions utilisent HoverBrush et PressedBrush ; fermeture après sélection, confirmation séparée avant suppression.
 - **Boutons** : `primary-action` (une par écran), `ghost`, `danger`, `icon-action` (36×36 minimum, nom accessible obligatoire), `menu-action`.
 - **Surfaces** : `Border.panel` (page à plat), `card` / `card-raised` (jamais imbriquées), badges de statut.
 - **Listes** : `table-row` (ligne = bouton), en-têtes triables `sort-head`, menu d’actions « ⋯ ».
+- **Lecture des dossiers** : recherche et filtre disponibles dès l’ouverture ; statut textuel annonçant les résultats partiels, sans pourcentage inventé. Première page remplie progressivement puis stabilisée jusqu’au classement final. Annulation au départ, retour au contexte de recherche/page/défilement pendant la session. Une erreur conserve le panneau de récupération avec détail technique copiable et Réessayer.
+- **Sélection des fichiers** : colonne de cases à cocher séparée de l’ouverture et du menu, ligne sélectionnée CyanSoftBrush. Une barre compacte apparaît uniquement avec une sélection, compte les fichiers et garde Déplacer/Corbeille/Désélectionner visibles, avec retour à la ligne si nécessaire. La confirmation de corbeille et le bilan d’échecs utilisent le panneau latéral commun ; les erreurs restent copiables.
+- **Dépôt de fichiers** : zone compacte avant les filtres, icône Upload commune, nom de destination en tête du chemin tronqué et chemin complet en infobulle/nom accessible. Survol accepté CyanSoftBrush/CyanBrush ; refus WarningSoftBrush/WarningBrush avec explication. Le dépôt ne fait jamais disparaître automatiquement la source ; il rejoint les confirmations d’import existantes.
 - **Icônes** : géométries `Icon*` dessinées, trait 2 sur grille 24, via `Icons.Glyph`. Pas de symboles texte.
 - **Dialogues** : `DialogWindow` + `FormKit` (Entrée valide, Échap annule, boutons à droite).
 - **Notifications** : toast en bas à droite, fermable, texte qui nomme le problème et la solution.
 
 ## Règles
 Texte minimum 12 px. Une seule déclaration d’élévation par élément. Le menu actif se signale par un fond, pas par un liseré.
+
+## Structure commune
+Navigation de 248 px, réduite à un rail de 68 px sous 1100 px. Rubriques Activité / Atelier / Outils ; le pied indique le nom du dossier réellement utilisé. Titres de pages 32 px, sous-titres avec retour à la ligne, recherche globale 300 px ou 260 px en mode compact.
+Les listes métier utilisent une surface unique `table-surface`, un en-tête `table-head` et des lignes d’au moins 64 px. Les filtres sont séparés des actions ; le titre du projet précède sa référence et peut occuper deux lignes.
+Les formulaires partagent un en-tête fixe (titre 26 px, description, fermeture), un contenu défilant et un pied fixe. Champs 16 px / 46 px, labels 14 px et explications 13 px / interligne 20 px. L’atelier conserve ses champs numériques 16 px / 44 px.
+
+`Styles/Workspace.axaml`, chargé après `Brand.axaml`, harmonise les pages de la fenêtre principale avec l’estimateur. Surfaces métier à rayon 8 px, sans contour supplémentaire ; en-têtes de listes transparents, séparateurs discrets, filtres soulignés cyan et survols RaisedSurfaceBrush. Les fiches clients et projets utilisent un bandeau à plat ; les notes restent repliables. Les résumés de parc, matières et corbeille reflètent les données chargées. Les catégories des paramètres associent icône et libellé ; les barres d’outils du navigateur et du visualiseur partagent la même surface. La navigation latérale conserve son fond actif et les mouvements communs respectent ReduceMotion.
+Les paramètres se parcourent par rubriques Atelier, Organisation, Espace et stockage, Application, sans rechargement lors d’un changement de rubrique.
+Une recherche locale en tête de page filtre les sections de toutes les rubriques, sans distinction de casse ou d’accents. Un état explicite permet de rétablir la recherche ; effacer ou Échap retrouve la rubrique précédente. Les sections utilisent un en-tête avec icône cyan, titre et description ; les actions passent sous l’en-tête lorsque sa largeur est inférieure à 600 px. L’atelier distingue prix et rentabilité, production, cotisations et frais, puis machines et matières. Les cotisations et commissions affichent les taux configurés ou la mention « Désactivé ». Un lien explicite depuis l’estimateur efface la recherche pour ouvrir l’atelier.
+Après mesure des sections filtrées, la recherche atteint le premier libellé correspondant. Les libellés trouvés sont cyan et le courant est souligné ; Entrée et Maj+Entrée parcourent les correspondances, dont la position est annoncée dans la description. Le focus reste dans la recherche. Le défilement est immédiat, sans animation imposée, et les requêtes remplacées ou effacées annulent leur défilement différé.
+À partir de 1250 px, les rubriques forment une navigation latérale de 204 px avec leur description ; en dessous, elles redeviennent des onglets. Le contenu possède un titre, une aide et un défilement indépendant remis en haut lors d’un changement de rubrique. Texte des paramètres 15 px / 23 px, titres de sections 20 px / 26 px ; résumé d’atelier en lignes libellé / valeur avec unités.
+Les noms de projets et de clients peuvent occuper deux lignes ; les lignes de projets ont une hauteur minimale de 76 px. Les aides de saisie de l’estimateur utilisent 14 px / 22 px.
+
+## Estimations et atelier
+Les saisies en cours sont enregistrées automatiquement après 600 ms de pause, sans produire un devis enregistré. Un état discret accompagne la saisie ; au retour dans l’atelier, le dernier brouillon reprend ses valeurs, y compris les textes invalides. L’historique distingue les brouillons à reprendre des devis enregistrés et propose une copie indépendante via l’icône de duplication. Nouveau devis et suppression d’un brouillon demandent confirmation lorsqu’ils abandonnent une saisie. Une écriture échouée conserve la saisie et empêche de remplacer le formulaire ou de fermer la fenêtre tant qu’elle n’est pas sauvegardée.
+
+L’estimateur se remplit sur une seule page. Nom et projet associé partagent la première rangée ; les trois prestations sont identifiées par une icône et un libellé. Matière et machine partagent une rangée ; quantité et périmètre une deuxième, complétée du nombre de pièces par plateau lorsque ce mode est choisi ; poids et durée une troisième. La durée se saisit en heures et minutes. Les frais et réglages occasionnels sont repliables : « Ajouter des frais », « Options de fabrication » et « Réglages du devis ». Les nouvelles estimations sont V2 sans sélecteur ; la conversion historique reste explicite.
+Les interventions et frais facultatifs sont repliables ; un rappel indique le nombre de postes renseignés, sans jamais exclure les coûts repliés du calcul. La modélisation ouvre automatiquement ces coûts. Le détail machine et énergie est distinct du poids, de la durée et de la quantité. Une synthèse indique la production avant les échecs.
+Le formulaire est un éditeur sans contour, distinct du registre de prix surélevé à droite. La synthèse mesure 330 px, 290 px sous 1250 px et 258 px sous 1100 px. En mode compact, l’en-tête est raccourci et les marges réduites pour donner la priorité aux champs. Le formulaire ne comporte ni onglets ni étape de vérification : toutes les saisies et la synthèse restent accessibles ensemble.
+Libellés 14 px contrastés, champs numériques 18 px / hauteur 48 px et alignement à gauche, aides 14 px / 22 px. Tous les frais complémentaires se saisissent en totaux pour la commande. Prix final en Bricolage 42 px (32 px en compact), résultat en 22 px avec couleur et statut explicite. Le coût corrigé est décomposé en six postes nommés et chiffrés, accompagnés d’une barre proportionnelle ; le survol d’une ligne souligne le segment correspondant. Aucun montant n’est interpolé.
+Le registre de prix montre le total, le prix par pièce, le résultat après charges retenues et la marge réelle. Le prix commercial avant remise et la remise se modifient directement sous ces montants. « Comprendre le prix » replie le plancher, le conseillé et la décomposition des coûts ; le tableau complet reste dans un accordéon à la fin du formulaire. L’action « Enregistrer le devis » est fixe en bas du registre ; Ctrl+Entrée enregistre directement, après validation et calcul immédiat si nécessaire. Durant les 180 ms de recalcul, le dernier prix valide reste visible avec la mention « Actualisation » ; une erreur efface les résultats périmés. La barre de coûts se confirme sur 240 ms uniquement si sa composition change. La réduction des animations conserve tous les contenus et rend ces changements immédiats.
+Le thème natif reste sombre, y compris les listes déroulantes. Les espaces réservés utilisent MutedTextBrush. Une alerte de rentabilité associe texte explicite et couleur sémantique.
+Les menus déroulants natifs reprennent SurfaceBrush, HoverBrush, PressedBrush et CyanSoftBrush pour leur fond et leurs états. Le choix du projet occupe la largeur du champ, sans plafond interne centré ; nom et métadonnées s’alignent à gauche avec 12 px de marge. Les noms longs passent à la ligne sans agrandir le menu au-delà du champ.
+La fabrication externe s’active par une case explicite sous la prestation. Elle remplace le bloc slicer par deux rangées : fournisseur / quantité, achat total / transport fournisseur. Le graphique se réduit aux coûts pertinents : fournisseur et transport, travail interne et autres frais. Les montants restent des totaux de commande ; les paramètres d’impression masqués sont exclus du calcul et de la sauvegarde externe.
+
+## Fiche projet
+La duplication est disponible dans le menu de la liste et la fiche projet. Un panneau demande le nouveau nom et propose de copier les fichiers, option désactivée par défaut. Le texte précise la nouvelle référence, le statut À faire, la conservation des informations utiles et des originaux, et le maintien des devis enregistrés sur leur projet d’origine.
+Les priorités utilisent quatre drapeaux : haute rouge, moyenne ambre, basse bleue, aucune en contour. Le drapeau cliquable précède le nom dans la liste et le libellé complet est disponible en infobulle et dans la fiche. Le sélecteur de création / édition conserve les quatre choix et annonce le niveau sélectionné. Le filtre de priorité se combine aux filtres existants ; le tri explicite alterne haute / basse d’abord et laisse les projets sans priorité en fin de liste.
+
+L’import accepte plusieurs fichiers. Le formulaire de nommage de projet indique « fichier X sur Y » et conserve les choix de nom et de dossier propres à chaque fichier. « Arrêter l’import » interrompt la suite sans annuler les copies terminées. Chaque copie réussie garde sa confirmation de suppression de source ; les conflits ne déclenchent ni écrasement ni suppression de la source. Un bilan termine le lot.
+L’historique des estimations se trouve sous les deux colonnes de l’estimateur, dans une section repliable sur toute la largeur. Sa surface est alignée avec les panneaux supérieurs, sans cadre interne, avec le même fond et des marges de 24 px, réduites à 16 px en compact. Chaque ligne présente le nom sur deux lignes au maximum, la date, le montant aligné à droite et l’action « Reprendre ». La liste défile sur 112 px sous 820 px de hauteur, 168 px sous 960 px, puis 220 px ; la colonne de droite reste réservée au prix et à la rentabilité.
+
+L’estimateur commence par le nom du devis et le projet associé, affichés sur une rangée avant la prestation. Le sélecteur de projet montre le nom en première ligne, puis la référence et le client en seconde ligne, dans la liste comme après sélection. La remise est directement sous le prix ; les cotisations restent dans « Réglages du devis ».
+
+Le suivi présente statut, échéance modifiable, client et description, puis notes internes et estimations liées repliables. « Préparer une estimation » préremplit le projet et le nom ; les fichiers conservent leur propre titre et leurs actions. Les actions du suivi passent à la ligne en fenêtre compacte. Les devis illisibles sont ignorés en lecture pour conserver l’accès aux autres devis.
+
+## Accueil et listes de travail
+Dans les matières de l’Atelier, recherche, famille et remise à zéro restent au-dessus du tableau. Les filtres portent sur le catalogue chargé en mémoire, avant pagination ; une nouvelle requête repart de la première page. Les erreurs de lecture restent visibles et les filtres attendent une lecture valide. Les repères CF/GF/ESD décrivent le libellé matière ; le caractère abrasif est toujours celui enregistré dans la fiche.
+
+L’estimateur garde le sélecteur direct et ajoute une action de recherche nommée. Elle ouvre un panneau partageant les mêmes règles de recherche, avec prix, matière, couleur et caractère abrasif dans les résultats. Le bouton « Choisir ce filament » est nécessaire pour changer le devis ; filtrer, parcourir ou annuler ne change pas la bobine courante. La liste reprend les surfaces bleu nuit, survol et sélection cyan existants.
+
+Le champ Matière des fiches filament propose les 26 libellés du guide MS3DPRINT consulté le 24 octobre 2026 (docs/catalogue-matieres.md). Le sélecteur reste éditable et indique la possibilité de saisir une formulation personnalisée. Les anciennes valeurs hors liste restent visibles ; elles ne sont pas remplacées par la première suggestion. Le prix d’une bobine reste propre à sa fiche.
+
+Duplication et restauration présentent un libellé d’attente dans un bandeau réservé sous la zone centrale, sans recouvrir les fichiers ni bloquer la navigation. Le bouton source indique son état et reste désactivé jusqu’à la fin. Une même restauration est protégée par élément et par atelier, y compris après reconstruction de la liste. Les opérations gardent leur atelier d’origine ; leur fin ne rouvre pas une page quittée. Le bandeau disparaît à la fin et une seule notification confirme le résultat. Aucun pourcentage fictif ni animation supplémentaire en boucle.
+
+Les filtres Projets et Clients sont temporairement désactivés pendant la lecture et restent indisponibles en cas d’échec. Le message d’erreur et sa reprise gardent la place de la liste ; aucun ancien cache ne doit les remplacer après une frappe ou un tri différé. Une lecture réussie réactive les filtres en conservant leur valeur.
+
+Les catalogues Matières et Imprimantes distinguent les fiches lisibles des fichiers ignorés à la lecture. L’avertissement et son action de reprise font partie de l’en-tête paginé, afin de rester présents sur chaque page ; les lignes saines restent utilisables. Si toutes les fiches sont illisibles, l’interface affiche cet avertissement et non une invitation de catalogue vide. Les erreurs globales Projets/Clients/Atelier utilisent le même composant de reprise que Collections/Dossiers/Corbeille.
+L’avertissement partiel de l’Atelier emploie une disposition compacte : icône et explication à gauche, reprise à droite, détail dépliable sous le texte. Il laisse davantage de lignes visibles que l’état d’erreur d’une page entière.
+
+Les états vides proposent l’action de reprise au même endroit que l’explication : voir toutes les collections lorsque le filtre masque les résultats, ou importer dans un dossier vide. Les erreurs de lecture des collections, dossiers et corbeille partagent un message compréhensible, « Réessayer » et un détail technique sélectionnable, masqué par défaut. Le détail utilise la surface surélevée bleu nuit et un bouton de divulgation nommé ; aucune boîte de dialogue supplémentaire. Une corbeille partiellement lisible signale les entrées ignorées et laisse accessibles les restaurations saines.
+
+Les imports projet et dossier partagent un bandeau fixe en bas de la zone de travail. Il réserve sa hauteur et ne recouvre pas la liste. Le compteur indique les fichiers traités, sans prétendre mesurer les octets de la copie. Nom et étape restent visibles ; le chemin complet est disponible en infobulle. L’arrêt attend la copie courante. Dans la confirmation de source, l’action « Conserver et arrêter l’import » se place dans le corps afin de préserver les deux boutons du pied et le focus initial sur la conservation. Le bilan persiste jusqu’à fermeture ou démarrage d’un autre lot : importés, échecs, non traités, détails copiables et dépliables. Il remplace la notification finale redondante. Aucune animation en boucle ajoutée.
+
+Les listes « À reprendre » et « À surveiller » réutilisent les drapeaux de priorité des projets, devant le titre, sans ajouter de bouton ni de mouvement. Aucun drapeau supplémentaire pour les projets sans priorité. Les noms accessibles des lignes annoncent aussi référence, priorité et échéance. Les retards et échéances proches précèdent les priorités hautes, puis les fabrications ; à date égale, la priorité départage les projets.
+
+Dans la liste des échéances, le nom du projet occupe jusqu’à deux lignes, suivi de sa référence puis du badge sur une ligne distincte. Les variantes de nom et la référence restent identifiables sans survol.
+
+Les formulaires relient le libellé au champ et exposent unité et aide dans les métadonnées d’accessibilité. À la soumission, une erreur ciblée apparaît près du champ, ouvre son éventuelle section et y ramène le focus. Elle disparaît à la correction ; le résumé utilise une annonce polie. Le focus cyan reste identifiable indépendamment de la couleur de l’erreur.
+
+La barre du lecteur de documents regroupe navigation et zoom ; ses groupes passent à la ligne lorsque la fenêtre manque de largeur. Les commandes gardent leurs noms accessibles et infobulles.
+
+La recherche globale s’ouvre sous son champ, sur 560 px maximum (500 px en compact), dans la même palette. Les résultats privilégient le nom, puis référence et client, avec deux lignes possibles et une infobulle complète. La saisie et le collage sont temporisés sur 180 ms ; chaque changement annule la recherche précédente. Chargement, aucun résultat et erreur ont un état explicite. Ctrl+K sélectionne la recherche, les flèches parcourent les résultats, Entrée ouvre la fiche ou le fichier, Échap / clic extérieur ferment. Les changements de page et de vue annulent les requêtes en cours. Un résultat client ouvre directement sa fiche et conserve le bon retour arrière.
+La file « À reprendre » privilégie les retards et échéances à sept jours, puis les fabrications en cours. Elle contient au plus cinq projets actifs, sans archives ni projets terminés. Chaque ligne présente titre, référence, client, prochaine action, statut et échéance. La colonne d’attention défile indépendamment en petite fenêtre.
+Le crayon de modification dans les listes de projets apparaît au survol et au focus clavier ; il reste visible en mode compact. Le menu d’actions reste disponible. Les états de recherche sans résultat proposent de réinitialiser tous les filtres concernés.
+
+
+## Identité et mouvement
+
+Les navigateurs de fichiers partagent une barre recherche/format, un compteur et la pagination existante de 50 lignes. À largeur réduite, les filtres passent sur deux lignes. Nom, format, taille et actions gardent leurs colonnes ; le nom se tronque dans sa largeur disponible. Une miniature 3D de 40 px et une indication d’ouverture distinguent modèle, document et application associée. Le grand aperçu de 360 px répond depuis le bouton de ligne ; ses chargements gardent le cache et l’annulation existants.
+
+Les fichiers récents s’insèrent à l’accueil dans la colonne de droite : nom lisible sur deux lignes, date ou indisponibilité et bouton dossier identifié. Six raccourcis sont visibles initialement ; l’action Afficher les fichiers récents expose le reste dans la même zone défilante. Aucun mouvement supplémentaire n’est ajouté au filtrage ou à la lecture disque.
+
+La sauvegarde se trouve dans Espace et stockage, avec les surfaces et les boutons existants. Un choix « Inclure les documents » distingue clairement copie complète et données seules. Le dernier succès est lisible sous les actions ; les opérations affichent le bandeau commun et désactivent leurs contrôles. La restauration utilise le panneau latéral commun pour un aperçu vérifié, le chemin final sélectionnable et une confirmation explicite. Annuler reçoit le focus ; Entrée ne confirme pas la restauration. Aucun effet ou compteur animé n’est ajouté pendant les copies.
+Référence visuelle : https://ms3dprint.fr/ (consulté le 22 octobre 2026). Bleu nuit d'atelier, bleu électrique pour les actions, cyan pour les repères. Le logo officiel est embarqué ; les titres utilisent Bricolage Grotesque, les données et formulaires Segoe UI. Provenance et licence SIL OFL dans `Assets/SOURCES.md`, également consultables depuis Application.
+
+Les contrôles ont un rayon de 4 px, les surfaces de 6 px. Les icônes de rubrique sont présentées dans un repère cyan de 44 px. L'accueil présente les actions et les étapes cliquables de production, avec un motif vectoriel de couches 3D.
+
+Les transitions Avalonia restent courtes : bouton 120–150 ms, entrée de page 180 ms, repère de navigation 220 ms, panneau et couches 240 ms. Les changements rapides interrompent le mouvement précédent. Les nombres financiers sont affichés immédiatement ; seule leur zone reçoit une confirmation discrète de 140 ms. Aucun compteur interpolé ni animation en boucle. La préférence ReduceMotion retire les mouvements, y compris dans les dialogues séparés.
+
+Les menus et la recherche se révèlent depuis leur point d’ouverture : déplacement vertical de 6 px sur 160 ms, opacité de 92 à 100 % sur 120 ms. Une recherche déjà ouverte ne rejoue pas ce mouvement lors des frappes ou du remplacement des résultats. Le voile derrière un formulaire atteint son opacité sur 180 ms. Les fenêtres de menus détachées consultent la préférence de leur fenêtre principale ; les animations ne retardent jamais le focus, les clics ou la fermeture. En réduction des animations, voile, menus et panneau sont immédiatement à leur état final.
+Les lignes métier utilisent un fond continu au survol et au focus clavier, y compris derrière les actions rapides. Recherche et champs partagent des transitions de couleur de 120 à 140 ms ; les accordéons et les icônes des menus reprennent les surfaces bleu nuit et le focus cyan. La réduction des animations conserve ces états sans interpolation.
+
+Les listes de suggestions de la fiche client utilisent RaisedSurfaceBrush, HoverBrush et CyanSoftBrush, avec bordure et focus du thème. Le nom d’entreprise apparaît en 14 px semi-gras ; SIRET et adresse en 13 px secondaire, avec retour à la ligne. L’historique des devis reste sous l’estimateur : recherche dans tous les devis, compteur puis liste progressive de 20 lignes, sans accès disque à chaque frappe. Les brouillons restent visibles indépendamment du filtre des devis enregistrés.
+
+Les grandes listes métier utilisent des pages de 50 lignes. Au-delà de 50 éléments, un compteur de plage et les actions Précédent/Suivant apparaissent au-dessus et sous les lignes, dans les styles de boutons existants. Le clavier conserve un point de focus lors du changement de page. Une recherche ou un nouveau tri repart de la première page ; une édition avec le même contexte conserve la page, bornée au nouveau total. Les petites listes conservent leur présentation sans barre supplémentaire. Aucun mouvement n’est ajouté au changement des résultats ou aux chiffres.

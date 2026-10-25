@@ -57,7 +57,20 @@ public sealed class DocumentPreviewWindow : Window
         var fit = new Button { Content = "Ajuster à la largeur" };
         fit.Click += async (_, _) => { _fitWidth = true; await RefreshAsync(); };
         _print.Click += async (_, _) => await PrintAsync();
-        var toolbar = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { _previous, _pageText, _next, _zoomOut, _zoomText, _zoomIn, fit, _print } };
+        void Describe(Control control, string name)
+        {
+            Avalonia.Automation.AutomationProperties.SetName(control, name);
+            ToolTip.SetTip(control, name);
+        }
+        Describe(_previous, "Page précédente"); Describe(_next, "Page suivante");
+        Describe(_zoomOut, "Réduire le document"); Describe(_zoomIn, "Agrandir le document");
+        Describe(fit, "Ajuster le document à la largeur"); Describe(_print, "Imprimer le document");
+        Avalonia.Automation.AutomationProperties.SetHelpText(_zoomText, "Niveau de zoom actuel");
+        var navigation = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(0, 0, 12, 8), Children = { _previous, _pageText, _next } };
+        navigation.Bind(Visual.IsVisibleProperty, _previous.GetObservable(Visual.IsVisibleProperty));
+        var zoom = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(0, 0, 12, 8), Children = { _zoomOut, _zoomText, _zoomIn } };
+        fit.Margin = new Thickness(0, 0, 8, 8); _print.Margin = new Thickness(0, 0, 0, 8);
+        var toolbar = new WrapPanel { Orientation = Orientation.Horizontal, Children = { navigation, zoom, fit, _print } };
 
         _scroll.Content = _image;
         _scroll.PropertyChanged += (_, e) =>
@@ -75,7 +88,14 @@ public sealed class DocumentPreviewWindow : Window
         Content = root;
 
         Opened += async (_, _) => await LoadAsync();
-        Closed += (_, _) => { _closed = true; _version++; _resizeTimer.Stop(); _image.Source = null; _pdf = null; };
+        Closed += (_, _) => { _closed = true; _version++; _resizeTimer.Stop(); ReplaceImage(null); _pdf = null; };
+    }
+
+    private void ReplaceImage(Bitmap? bitmap)
+    {
+        var previous = _image.Source as Bitmap;
+        _image.Source = bitmap;
+        if (!ReferenceEquals(previous, bitmap)) previous?.Dispose();
     }
 
     private static IBrush? Resource(string key)
@@ -89,8 +109,8 @@ public sealed class DocumentPreviewWindow : Window
             if (_kind == PreviewFileKind.Image)
             {
                 var bitmap = await Task.Run(() => new Bitmap(_path));
-                if (_closed) return;
-                _image.Source = bitmap;
+                if (_closed) { bitmap.Dispose(); return; }
+                ReplaceImage(bitmap);
                 _pageWidth = bitmap.Size.Width; _pageHeight = bitmap.Size.Height;
                 ApplySize();
                 _message.Text = "Image affichée en lecture seule.";
@@ -127,8 +147,8 @@ public sealed class DocumentPreviewWindow : Window
             _message.Text = "Rendu de la page…";
             var bytes = await pdf.RenderPageAsync(pageIndex, pixels);
             var bitmap = await Task.Run(() => new Bitmap(new MemoryStream(bytes, writable: false)));
-            if (_closed || version != _version) return;
-            _image.Source = bitmap;
+            if (_closed || version != _version) { bitmap.Dispose(); return; }
+            ReplaceImage(bitmap);
             _image.Width = width; _image.Height = _pageHeight * _zoom;
             _pageText.Text = $"Page {_pageIndex + 1} / {pdf.PageCount}";
             _message.Text = "PDF affiché en lecture seule.";

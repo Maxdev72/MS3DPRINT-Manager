@@ -25,7 +25,7 @@ public sealed class ClientPickerWindow : DialogWindow
         var move = new Button { Content = "Déplacer" };
         move.Click += (_, _) =>
         {
-            if (SelectedClient is null) { _error.Text = "Choisissez le client destinataire."; _error.IsVisible = true; return; }
+            if (SelectedClient is null) { FormKit.ShowError(_error, _clients, "Choisissez le client destinataire."); return; }
             Close(true);
         };
         Layout("Déplacer le projet", "Les documents et la fiche projet suivent le dossier.", [FormKit.Field("Client destinataire", _clients), _error], move);

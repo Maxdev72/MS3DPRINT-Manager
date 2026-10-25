@@ -36,7 +36,11 @@ public sealed class ProjectTemplateWindow : DialogWindow
         var save = new Button { Content = "Enregistrer" };
         save.Click += (_, _) => Save();
         var reset = new Button { Content = "Rétablir le modèle standard" };
-        reset.Click += (_, _) => { ResetRequested = true; Close(true); };
+        reset.Click += async (_, _) =>
+        {
+            if (!await ConfirmRemovalWindow.AskAsync(reset, "Arborescence personnalisée", "Le modèle standard remplacera votre arborescence personnalisée. Les projets existants seront conservés.")) return;
+            ResetRequested = true; Close(true);
+        };
         var hint = new TextBlock
         {
             Text = "Écrivez « Dossier/Sous-dossier » pour créer un sous-dossier. La catégorie indique où sont classés les fichiers importés : un seul dossier par catégorie.",
@@ -75,7 +79,12 @@ public sealed class ProjectTemplateWindow : DialogWindow
             var position = index;
             var up = Tool("IconChevronUp", "Monter", position > 0, () => Move(position, -1));
             var down = Tool("IconChevronDown", "Descendre", position < _rows.Count - 1, () => Move(position, 1));
-            var remove = Tool("IconTrash", "Retirer ce dossier", true, () => { _rows.RemoveAt(position); Rebuild(); });
+            var remove = Tool("IconTrash", "Retirer ce dossier", true);
+            remove.Click += async (_, _) =>
+            {
+                if (!await ConfirmRemovalWindow.AskAsync(remove, string.IsNullOrWhiteSpace(row.Path.Text) ? "Dossier du modèle" : row.Path.Text, "Cette ligne sera retirée du modèle des prochains projets. Les dossiers et fichiers existants seront conservés.")) return;
+                _rows.Remove(row); Rebuild();
+            };
             var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto,Auto,Auto"), ColumnSpacing = 6 };
             row.Path.HorizontalAlignment = HorizontalAlignment.Stretch;
             Grid.SetColumn(row.Category, 1);
@@ -87,12 +96,12 @@ public sealed class ProjectTemplateWindow : DialogWindow
         }
     }
 
-    private static Button Tool(string icon, string tip, bool enabled, Action action)
+    private static Button Tool(string icon, string tip, bool enabled, Action? action = null)
     {
         var button = new Button { Content = Icons.Glyph(icon, 16), Classes = { "icon-action" }, IsEnabled = enabled, VerticalAlignment = VerticalAlignment.Center };
         ToolTip.SetTip(button, tip);
         Avalonia.Automation.AutomationProperties.SetName(button, tip);
-        button.Click += (_, _) => action();
+        if (action is not null) button.Click += (_, _) => action();
         return button;
     }
 

@@ -386,6 +386,7 @@ public sealed partial class ModelViewerView : UserControl
 
     /// <summary>Raised with the file name once a model is displayed.</summary>
     public event Action<string>? ModelLoaded;
+    public event Action<string>? FileOpened;
 
     /// <summary>Stops running loads and analyses when the viewer is left.</summary>
     public void Release()
@@ -396,6 +397,14 @@ public sealed partial class ModelViewerView : UserControl
         _assessDelay.Stop();
         _assessCancel?.Cancel();
         _autoOrientCancel?.Cancel();
+        _gpuWatch?.Stop();
+        if (_viewport is MeshViewport software) software.Release();
+    }
+
+    public void Resume()
+    {
+        if (_viewport is MeshViewport software) software.Resume();
+        else if (_viewport is GpuViewportHost { IsReady: false }) _gpuWatch?.Start();
     }
 
     private static Control Place(Control control, int column) { Grid.SetColumn(control, column); return control; }
@@ -611,6 +620,7 @@ public sealed partial class ModelViewerView : UserControl
             // development hook, like the other MS3DPRINT_START_* variables: open on this tab of the side panel (0 to 3)
             if (int.TryParse(Environment.GetEnvironmentVariable("MS3DPRINT_START_TAB"), out var startTab) && startTab >= 0 && startTab < _tabs.Length) ShowTab(startTab);
             ModelLoaded?.Invoke(Path.GetFileName(path));
+            FileOpened?.Invoke(path);
             _viewport.Visual.Focus();
         }
         catch (OperationCanceledException) when (load.IsCancellationRequested) { }
@@ -962,7 +972,10 @@ public sealed partial class ModelViewerView : UserControl
             Cells(line.Label, line.First, line.Second, line.Difference, header: false);
 
         var remove = new Button { Content = "Retirer la comparaison" };
-        remove.Click += (_, _) => ClearComparison();
+        remove.Click += async (_, _) =>
+        {
+            if (await ConfirmRemovalWindow.AskAsync(remove, "Comparaison 3D", "La comparaison sera retirée du visualiseur. Les fichiers 3D seront conservés.")) ClearComparison();
+        };
         _compareNote.Text = "Zones rouges (B) : B dépasse A. Zones bleues (A) : A dépasse B. Les surfaces identiques restent bleues.";
         _compareDetails.Children.Add(_showFirst);
         _compareDetails.Children.Add(_showSecond);

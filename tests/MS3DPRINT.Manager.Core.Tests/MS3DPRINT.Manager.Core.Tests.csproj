@@ -10,6 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Avalonia.Headless" Version="12.1.4" />
     <PackageReference Include="coverlet.collector" Version="6.0.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
     <PackageReference Include="xunit" Version="2.5.3" />
@@ -24,6 +25,7 @@
     <ProjectReference Include="..\..\src\MS3DPRINT.Manager.Core\MS3DPRINT.Manager.Core.csproj" />
     <ProjectReference Include="..\..\src\MS3DPRINT.Manager.Desktop\MS3DPRINT.Manager.Desktop.csproj" />
     <ProjectReference Include="..\..\src\MS3DPRINT.Manager.Windows\MS3DPRINT.Manager.Windows.csproj" />
+    <ProjectReference Include="..\..\src\MS3DPRINT.Manager.Windows.App\MS3DPRINT.Manager.Windows.App.csproj" />
   </ItemGroup>
 
 </Project>

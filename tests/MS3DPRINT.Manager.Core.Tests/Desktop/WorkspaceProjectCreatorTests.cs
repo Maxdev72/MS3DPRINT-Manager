@@ -58,10 +58,11 @@ public sealed class WorkspaceProjectCreatorTests
             new ClientProfileStore(paths).Create(client);
             var summary = new ClientSummary(clientPath, "ACME", "ACME", "ACME", ClientKind.Professional, client, 0);
 
-            var reference = new WorkspaceProjectCreator().CreateTracked(root, summary, 2026, "Épée d’échecs");
+            var reference = new WorkspaceProjectCreator().CreateTracked(root, summary, 2026, "Épée d’échecs", ProjectPriority.High);
 
             Assert.EndsWith("_EPEE_D_ECHECS", reference.FolderName);
             Assert.Equal("Épée d’échecs", new ProjectProfileStore(paths).LoadAll().Single().ProjectName);
+            Assert.Equal(ProjectPriority.High, new ProjectProfileStore(paths).LoadAll().Single().Priority);
         }
         finally { Directory.Delete(root, true); }
     }
@@ -75,6 +76,7 @@ public sealed class WorkspaceProjectCreatorTests
             var clientPath = Path.Combine(root, "01_CLIENTS", "LEGACY");
             Directory.CreateDirectory(clientPath);
             var summary = new ClientSummary(clientPath, "LEGACY", "LEGACY", "LG", ClientKind.Professional, null, 0);
+            Assert.Throws<InvalidOperationException>(() => new WorkspaceProjectCreator().CreateTracked(root, summary, 2026, "Pièce prioritaire", ProjectPriority.High));
 
             var reference = new WorkspaceProjectCreator().CreateTracked(root, summary, 2026, "Pièce test");
 

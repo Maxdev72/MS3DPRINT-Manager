@@ -49,6 +49,11 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        InitializeShellPresentation();
+        InitializeFilamentFilters();
+        InitializeEstimateV2();
+        InitializeEstimateDrafts();
+        InitializeNavigationHistory();
         MS3DPRINT.Estimator.Parallelism.Apply(new PerformanceSettings().Load());
         if (DesktopApplication.ReduceMotion) Classes.Add("reduce-motion");
         if (_placement.Load() is { } saved)
@@ -72,6 +77,7 @@ public partial class MainWindow : Window
                 WindowState == WindowState.Maximized,
                 (WindowState == WindowState.Normal ? Position : _normalPosition)?.X,
                 (WindowState == WindowState.Normal ? Position : _normalPosition)?.Y));
+        Closed += (_, _) => { CancelFileRead(); _searchCancellation?.Cancel(); _searchCancellation?.Dispose(); _searchCancellation = null; };
     }
 
     private PixelPoint? _normalPosition;
@@ -90,6 +96,7 @@ public partial class MainWindow : Window
     }
 
     private bool _preloaded;
+    private string? _preloadedRoot;
 
     private string _collectionCategoryFilter = string.Empty;
 
@@ -102,6 +109,7 @@ public partial class MainWindow : Window
         foreach (var navigation in NavigationButtons().Take(10))
             ToolTip.SetTip(navigation, $"{navigation.Tag} (Ctrl+{shortcut++ % 10})");
         if (_workspaceLocation.NeedsSetup) await RunWorkspaceSetupAsync();
+        if (!await EnsureWorkspaceAvailableAsync()) return;
         await PreloadAsync();
         // MS3DPRINT_START_PAGE=Clients opens that page directly (screenshots, demos).
         if (Environment.GetEnvironmentVariable("MS3DPRINT_START_PAGE") is { Length: > 0 } page &&
@@ -115,7 +123,7 @@ public partial class MainWindow : Window
             if (projects.FirstOrDefault(project => project.Reference == reference) is { } found)
             {
                 _projectOriginClient = null;
-                ShowWorkspace("Projets");
+                ShowWorkspaceForDetail("Projets");
                 PageTitle.Text = found.Title();
                 PageSubtitle.Text = $"{found.Reference} · {found.ClientTitle()}";
                 await LoadProjectDirectoryAsync(found, found.ProjectPath);
@@ -128,7 +136,7 @@ public partial class MainWindow : Window
             var clients = await Task.Run(() => new WorkspaceClientReader().Load(root));
             if (clients.FirstOrDefault(client => client.ClientCode == clientCode) is { } found)
             {
-                ShowWorkspace("Clients");
+                ShowWorkspaceForDetail("Clients");
                 PageTitle.Text = "Clients";
                 await LoadClientDetailAsync(found);
             }
@@ -157,13 +165,18 @@ public partial class MainWindow : Window
     /// <summary>Reads the dashboard data once, so a splash screen can wait for it before showing the window.</summary>
     public async Task PreloadAsync(bool force = false)
     {
-        if (_preloaded && !force) return;
-        _preloaded = true;
         var workspaceRoot = WorkspaceRoot;
+        if (!Directory.Exists(workspaceRoot)) { _preloaded = false; return; }
+        if (_preloaded && !force && _preloadedRoot == workspaceRoot) return;
+        _preloaded = true;
+        _preloadedRoot = workspaceRoot;
+        var load = StartWorkspaceLoad("dashboard", workspaceRoot, trackNavigation: false);
+        RefreshWorkspaceIdentity();
 
         try
         {
             var dashboard = await Task.Run(() => new WorkspaceDashboardReader().Load(workspaceRoot));
+            if (!IsWorkspaceLoadCurrent(load)) return;
             ProjectCountText.Text = dashboard.ProjectCount.ToString();
             QuoteCountText.Text = dashboard.QuoteCount.ToString();
             InProgressCountText.Text = dashboard.InProgressCount.ToString();
@@ -171,11 +184,13 @@ public partial class MainWindow : Window
             NavProjectsBadge.IsVisible = dashboard.ProjectCount > 0;
             NavClientsCount.Text = dashboard.ClientCount.ToString();
             NavClientsBadge.IsVisible = dashboard.ClientCount > 0;
-            BuildRecentProjects(dashboard.RecentProjects);
+            BuildWorkQueue(dashboard);
             BuildAttention(dashboard);
+            await LoadRecentFilesAsync();
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
+            if (!IsWorkspaceLoadCurrent(load)) return;
             Notify("Impossible de lire l’espace de travail.", error: true);
         }
     }
@@ -194,8 +209,9 @@ public partial class MainWindow : Window
         // Below 1100 px the sidebar shrinks to an icon rail so the content keeps its room.
         var compact = windowWidth < 1100;
         if (compact) Classes.Add("compact"); else Classes.Remove("compact");
-        var sidebarWidth = compact ? 68d : 232d;
+        var sidebarWidth = compact ? 68d : 248d;
         RootGrid.ColumnDefinitions[0].Width = new GridLength(sidebarWidth);
+        GlobalSearchContainer.Width = compact ? 260 : 300;
         // The model search is a browser: its page chrome is thinned so the web page gets the room.
         var browser = ModelSearchWorkspacePanel.IsVisible;
         CentralWorkspace.Margin = browser ? new Avalonia.Thickness(16, 12) : new Avalonia.Thickness(34, 28);
@@ -204,8 +220,11 @@ public partial class MainWindow : Window
         var centralMargins = browser ? 32d : 68d;
         var available = Math.Max(0, windowWidth - sidebarWidth - centralMargins);
         var wide = ViewerWorkspacePanel.IsVisible || browser;
-        CentralWorkspace.MaxWidth = wide ? double.PositiveInfinity : 1200;
-        CentralWorkspace.Width = wide ? available : Math.Min(1200, available);
+        CentralWorkspace.MaxWidth = wide ? double.PositiveInfinity : 1400;
+        CentralWorkspace.Width = wide ? available : Math.Min(1400, available);
+        SearchResultsPanel.Width = Math.Min(compact ? 500 : 560, available);
+        SearchResultsPanel.MaxHeight = Math.Max(180, Math.Min(520, (Bounds.Height > 0 ? Bounds.Height : Height) - 160));
+        if (SearchResultsPanel.IsVisible) Dispatcher.UIThread.Post(PositionSearchResults, DispatcherPriority.Render);
     }
 
     /// <summary>Last line of defence: an unexpected error is shown and logged, and the work in progress stays open.</summary>
@@ -253,6 +272,7 @@ public partial class MainWindow : Window
         void Dismiss() => ToastHost.Children.Remove(toast);
         close.Click += (_, _) => Dismiss();
         ToastHost.Children.Add(toast);
+        BrandMotion.Enter(toast, MotionReduced, 18);
         while (ToastHost.Children.Count > 4) ToastHost.Children.RemoveAt(0);
         DispatcherTimer.RunOnce(Dismiss, TimeSpan.FromSeconds(error ? 8 : 4.5));
     }
