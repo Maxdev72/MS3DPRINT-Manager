@@ -3,6 +3,7 @@
 ## 25 octobre 2026
 
 ### Application compagnon Android, version 1.1
+- Design repensé : saisie avec montant en grand, date et règlement en puces, sections et bouton d’envoi toujours visible ; en-tête avec le cube MS3DPRINT et un voyant d’état du PC ; navigation à pastille ; projets avec bande de statut, barre d’encaissement et trois indicateurs (actifs, en retard, à encaisser) ; activité avec carte de synthèse ; envois regroupés par jour avec montants signés.
 - Application refaite en cinq écrans : Saisir (achat ou recette, appareil photo, galerie, PDF), Projets (recherche, filtres, bilan, saisie préremplie depuis un projet), Activité (chiffre d’affaires, mois par mois, seuils), Envois (état de chaque saisie, renvoi) et Réglages. Même palette que le logiciel PC, icône du cube MS3DPRINT.
 - Le PC publie l’état de l’atelier (projets, clients, activité, seuils, fournisseurs récents) dans le dossier « Echanges mobile » ; le téléphone le lit sans jamais écrire dans les registres. Paramètres > Atelier > « Application mobile » : publication automatique toutes les 3 minutes, publication immédiate, ouverture du dossier, désactivation.
 - Les recettes saisies sur le téléphone s’importent depuis le bouton « Téléphone » de la page Recettes, comme les achats depuis la page Achats ; le PC signale l’arrivée de nouvelles saisies et leur nombre dans l’en-tête des pages.

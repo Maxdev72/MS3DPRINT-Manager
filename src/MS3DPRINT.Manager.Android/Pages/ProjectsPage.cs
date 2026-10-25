@@ -28,6 +28,7 @@ public sealed class ProjectsPage : UserControl
     private readonly TextBox _search = Ui.Ui.Input(new TextBox { Watermark = "Rechercher un projet, un client, une référence" });
     private readonly StackPanel _list = new() { Spacing = 10 };
     private readonly TextBlock _count = Ui.Ui.Muted("");
+    private readonly Grid _tiles = new() { ColumnDefinitions = new ColumnDefinitions("*,*,*"), ColumnSpacing = 8 };
     private readonly List<Button> _chips = [];
     private readonly ContentControl _host = new();
     private readonly Control _listView;
@@ -46,7 +47,7 @@ public sealed class ProjectsPage : UserControl
         }
         _search.TextChanged += (_, _) => Rebuild();
         var chips = new ScrollViewer { Content = chipRow, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Hidden, VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled };
-        var top = new StackPanel { Spacing = 12, Margin = new Thickness(16, 12, 16, 4), Children = { _search, chips, _count } };
+        var top = new StackPanel { Spacing = 12, Margin = new Thickness(16, 12, 16, 4), Children = { _tiles, _search, chips, _count } };
         var scroll = new ScrollViewer { Content = new StackPanel { Children = { top, new Border { Margin = new Thickness(16, 4, 16, 24), Child = _list } } }, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled };
         _listView = scroll;
         _host.Content = _listView;
@@ -73,6 +74,16 @@ public sealed class ProjectsPage : UserControl
     {
         _list.Children.Clear();
         var snapshot = _app.Snapshot;
+        _tiles.Children.Clear();
+        _tiles.IsVisible = snapshot is not null;
+        if (snapshot is not null)
+        {
+            var live = snapshot.Projects.Where(p => !p.Archived && p.Status != "Completed").ToList();
+            var late = live.Count(p => p.DueDate is { } d && d < DateOnly.FromDateTime(DateTime.Today));
+            var left = snapshot.Projects.Where(p => !p.Archived && p.Quoted is { } q && q > p.Collected).Sum(p => p.Quoted!.Value - p.Collected);
+            Control[] tiles = [Look.Tile("projets actifs", live.Count.ToString(CultureInfo.InvariantCulture)), Look.Tile("en retard", late.ToString(CultureInfo.InvariantCulture), late > 0 ? Pal.Danger : Pal.Text), Look.Tile("à encaisser", RevenueExporter.Money(left), left > 0 ? Pal.Warning : Pal.Text)];
+            for (var i = 0; i < tiles.Length; i++) { Grid.SetColumn(tiles[i], i); _tiles.Children.Add(tiles[i]); }
+        }
         if (snapshot is null)
         {
             _count.Text = "";
@@ -107,7 +118,16 @@ public sealed class ProjectsPage : UserControl
         if (project.DueDate is { } date) right.Children.Add(new TextBlock { Text = date.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture), FontSize = 13, Foreground = overdue ? Pal.Danger : Pal.Muted, HorizontalAlignment = HorizontalAlignment.Right, FontWeight = overdue ? FontWeight.SemiBold : FontWeight.Normal });
         var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12, Children = { left, right } };
         Grid.SetColumn(right, 1);
-        var card = new Button { Content = row, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch, Padding = new Thickness(16, 14), Background = Pal.Surface, BorderBrush = Pal.Subtle, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(14) };
+        var body = new StackPanel { Spacing = 10, Children = { row } };
+        if (project.Quoted is { } quoted && quoted > 0)
+        {
+            body.Children.Add(new ProgressBar { Minimum = 0, Maximum = 1, Value = Math.Min(1, (double)(project.Collected / quoted)), Height = 6, Foreground = project.Collected >= quoted ? Pal.Success : Pal.Accent, Background = Pal.Raised });
+            body.Children.Add(new TextBlock { Text = $"{RevenueExporter.Money(project.Collected)} encaissés sur {RevenueExporter.Money(quoted)}", FontSize = 12, Foreground = Pal.Faint });
+        }
+        var stripe = new Border { Width = 5, Background = project.Archived ? Pal.Neutral : fore, CornerRadius = new CornerRadius(14, 0, 0, 14) };
+        var inner = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), Children = { stripe, new Border { Padding = new Thickness(14, 14, 16, 14), Child = body } } };
+        Grid.SetColumn(inner.Children[1], 1);
+        var card = new Button { Content = inner, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch, Padding = new Thickness(0), Background = Pal.Surface, BorderBrush = Pal.Subtle, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(14), ClipToBounds = true };
         card.Click += (_, _) => _host.Content = Detail(project);
         return card;
     }

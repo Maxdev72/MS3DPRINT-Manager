@@ -25,6 +25,8 @@ public sealed class MainView : UserControl
     private readonly TextBlock _badgeText = new() { FontSize = 11, FontWeight = FontWeight.Bold, Foreground = Pal.Canvas, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
     private readonly Grid _overlay = new() { IsVisible = false, Background = Brush.Parse("#CC060A12") };
     private readonly Button _refresh;
+    private readonly Border _status = new() { Width = 10, Height = 10, CornerRadius = new CornerRadius(5), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) };
+    private readonly List<Border> _pills = [];
     private int _current;
 
     public MainView()
@@ -36,9 +38,11 @@ public sealed class MainView : UserControl
 
         _refresh = new Button { Content = Glyph.Icon(Glyph.Refresh, 22, Pal.Muted), Background = Brushes.Transparent, MinWidth = 48, MinHeight = 48, Padding = new Thickness(0) };
         _refresh.Click += async (_, _) => await RefreshAsync();
-        var titleBlock = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { _title, _sub } };
-        var bar = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Margin = new Thickness(18, 10, 8, 8), Children = { titleBlock, _refresh } };
-        Grid.SetColumn(_refresh, 1);
+        var subLine = new StackPanel { Orientation = Orientation.Horizontal, Children = { _status, _sub } };
+        var titleBlock = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { _title, subLine } };
+        var logo = Look.Logo(38); logo.Margin = new Thickness(0, 0, 12, 0); logo.VerticalAlignment = VerticalAlignment.Center;
+        var bar = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), Margin = new Thickness(18, 10, 8, 8), Children = { logo, titleBlock, _refresh } };
+        Grid.SetColumn(titleBlock, 1); Grid.SetColumn(_refresh, 2);
 
         var nav = new Grid { Background = Pal.Sidebar };
         string[] icons = [Glyph.Plus, Glyph.Projects, Glyph.Activity, Glyph.Upload, Glyph.Settings];
@@ -46,7 +50,9 @@ public sealed class MainView : UserControl
         {
             nav.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
             var index = i;
-            var content = new StackPanel { Spacing = 2, HorizontalAlignment = HorizontalAlignment.Center, Children = { Glyph.Icon(icons[i], 24, Pal.Faint), new TextBlock { Text = _titles[i], FontSize = 11, Foreground = Pal.Faint, HorizontalAlignment = HorizontalAlignment.Center } } };
+            var pill = new Border { CornerRadius = new CornerRadius(16), Padding = new Thickness(20, 4), HorizontalAlignment = HorizontalAlignment.Center, Child = Glyph.Icon(icons[i], 24, Pal.Faint) };
+            _pills.Add(pill);
+            var content = new StackPanel { Spacing = 2, HorizontalAlignment = HorizontalAlignment.Center, Children = { pill, new TextBlock { Text = _titles[i], FontSize = 11, Foreground = Pal.Faint, HorizontalAlignment = HorizontalAlignment.Center } } };
             var tab = new Button { Content = content, Background = Brushes.Transparent, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center, MinHeight = 62, Padding = new Thickness(0, 6), CornerRadius = new CornerRadius(0) };
             tab.Click += (_, _) => Go(index);
             var holder = new Grid { Children = { tab } };
@@ -117,7 +123,8 @@ public sealed class MainView : UserControl
             _pages[i].IsVisible = i == index;
             var on = i == index;
             var content = (StackPanel)_tabs[i].Content!;
-            Glyph.Paint(content.Children[0], on ? Pal.Accent : Pal.Faint);
+            _pills[i].Background = on ? Pal.AccentSoft : Brushes.Transparent;
+            Glyph.Paint(_pills[i].Child!, on ? Pal.Accent : Pal.Faint);
             ((TextBlock)content.Children[1]).Foreground = on ? Pal.Accent : Pal.Faint;
             ((TextBlock)content.Children[1]).FontWeight = on ? FontWeight.SemiBold : FontWeight.Normal;
         }
@@ -145,7 +152,9 @@ public sealed class MainView : UserControl
         _sub.Text = !_app.Exchange.IsConfigured ? "Dossier d’échange non choisi"
             : snapshot is null ? "En attente de l’état du PC"
             : "État du PC : " + Ago(snapshot.GeneratedAt) + (_app.PendingCount > 0 ? $" · {_app.PendingCount} en attente d’envoi" : "");
-        _sub.Foreground = !_app.Exchange.IsConfigured || _app.PendingCount > 0 ? Pal.Warning : Pal.Faint;
+        var attention = !_app.Exchange.IsConfigured || _app.PendingCount > 0;
+        _sub.Foreground = attention ? Pal.Warning : Pal.Faint;
+        _status.Background = attention ? Pal.Warning : snapshot is null ? Pal.Faint : Pal.Success;
         _badge.IsVisible = _app.PendingCount > 0; _badgeText.Text = _app.PendingCount.ToString();
     }
 

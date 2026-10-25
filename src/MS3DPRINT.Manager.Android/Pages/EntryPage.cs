@@ -24,43 +24,65 @@ public sealed class EntryPage : UserControl
     private readonly AppServices _app = AppServices.Current;
     private readonly (Control View, Func<int> Selected, Action<int> Select) _mode;
     private readonly (Control View, Func<int> Selected, Action<int> Select) _nature;
-    private readonly DatePicker _date = Ui.Ui.Input(new DatePicker { SelectedDate = DateTimeOffset.Now });
+    private readonly (Control View, Func<int> Selected, Action<int> Select) _dateChoice;
+    private readonly (Control View, Func<int> Selected, Action<int> Select) _paymentChoice;
+    private readonly DatePicker _date = Ui.Ui.Input(new DatePicker { SelectedDate = DateTimeOffset.Now, IsVisible = false });
     private readonly AutoCompleteBox _supplier = Ui.Ui.Input(new AutoCompleteBox { Watermark = "Nom du fournisseur", MinimumPrefixLength = 0, FilterMode = AutoCompleteFilterMode.Contains });
     private readonly AutoCompleteBox _client = Ui.Ui.Input(new AutoCompleteBox { Watermark = "Nom du client (facultatif)", MinimumPrefixLength = 0, FilterMode = AutoCompleteFilterMode.Contains });
     private readonly TextBox _label = Ui.Ui.Input(new TextBox { Watermark = "Ex. Visserie, bobines PLA" });
-    private readonly TextBox _amount = Ui.Ui.Input(new TextBox { Watermark = "0,00" });
+    private readonly TextBox _amount = new()
+    {
+        Watermark = "0,00", FontSize = 38, FontWeight = FontWeight.SemiBold, Foreground = Pal.Text, Background = Brushes.Transparent, BorderThickness = new Thickness(0), MinHeight = 64,
+        Padding = new Thickness(0, 8), VerticalContentAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Stretch
+    };
     private readonly TextBox _goods = Ui.Ui.Input(new TextBox { Watermark = "Part marchandises en €" });
-    private readonly ComboBox _payment = Ui.Ui.Input(new ComboBox { ItemsSource = PaymentMethods, SelectedIndex = 0 });
     private readonly TextBox _reference = Ui.Ui.Input(new TextBox { Watermark = "N° de facture ou de ticket (facultatif)" });
     private readonly TextBox _invoice = Ui.Ui.Input(new TextBox { Watermark = "N° de facture (facultatif)" });
     private readonly AutoCompleteBox _project = Ui.Ui.Input(new AutoCompleteBox { Watermark = "Référence du projet (facultatif)", MinimumPrefixLength = 0, FilterMode = AutoCompleteFilterMode.Contains });
     private readonly Dictionary<Control, TextBlock> _errors = [];
-    private readonly StackPanel _supplierField, _clientField, _purchaseExtras, _revenueExtras, _goodsField, _dateField, _amountField;
+    private readonly StackPanel _supplierField, _clientField, _purchaseExtras, _revenueExtras, _goodsField, _dateField;
+    private readonly TextBlock _amountLabel = new() { FontSize = 12, FontWeight = FontWeight.Bold, Foreground = Pal.Faint, LetterSpacing = 1.2 };
+    private readonly TextBlock _dateSummary = new() { FontSize = 14, Foreground = Pal.Muted };
     private readonly Image _preview = new() { MaxHeight = 240, Stretch = Stretch.Uniform, IsVisible = false, HorizontalAlignment = HorizontalAlignment.Center };
     private readonly TextBlock _attachmentState = Ui.Ui.Muted("Aucune pièce jointe.");
     private readonly Button _removeAttachment = Ui.Ui.Quiet("Retirer la pièce jointe", Glyph.Close);
     private readonly Button _send = Ui.Ui.Primary("Envoyer au PC", Glyph.Send);
     private readonly ContentControl _result = new();
-    private readonly StackPanel _form = new() { Spacing = 16, Margin = new Thickness(16, 12, 16, 28) };
+    private readonly StackPanel _form = new() { Spacing = 14, Margin = new Thickness(16, 12, 16, 24) };
     private readonly ScrollViewer _scroll;
+    private readonly Avalonia.Threading.DispatcherTimer _draftTimer = new() { Interval = TimeSpan.FromMilliseconds(700) };
     private byte[]? _attachment;
     private string _attachmentExt = ".jpg";
     private bool _busy;
+    private bool _restoring;
 
     public EntryPage()
     {
-        _mode = Ui.Ui.Segmented(["Achat", "Recette"], _ => ApplyMode());
-        _nature = Ui.Ui.Segmented(["Prestation", "Marchandises", "Mixte"], _ => ApplyMode());
+        _mode = Ui.Ui.Segmented(["Achat", "Recette"], _ => { ApplyMode(); DraftChanged(); });
+        _nature = Ui.Ui.Segmented(["Prestation", "Marchandises", "Mixte"], _ => { ApplyMode(); DraftChanged(); });
+        _dateChoice = Look.Chips(["Aujourd’hui", "Hier", "Autre date"], i => { ApplyDateChoice(i); DraftChanged(); });
+        _paymentChoice = Look.Chips(PaymentMethods, _ => DraftChanged());
         Avalonia.Input.TextInput.TextInputOptions.SetContentType(_amount, Avalonia.Input.TextInput.TextInputContentType.Number);
         Avalonia.Input.TextInput.TextInputOptions.SetContentType(_goods, Avalonia.Input.TextInput.TextInputContentType.Number);
 
-        _dateField = F("Date d’achat", _date);
+        // hero: the amount is what the user types first, so it is large and alone
+        var euro = new TextBlock { Text = "€", FontSize = 30, FontWeight = FontWeight.SemiBold, Foreground = Pal.Muted, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0) };
+        var amountRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { _amount, euro } };
+        Grid.SetColumn(euro, 1);
+        var amountError = new TextBlock { FontSize = 13, Foreground = Pal.Danger, TextWrapping = TextWrapping.Wrap, IsVisible = false };
+        _errors[_amount] = amountError;
+        var hero = new Border
+        {
+            Background = Pal.Raised, BorderBrush = Pal.Border, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(18), Padding = new Thickness(20, 14, 20, 12),
+            Child = new StackPanel { Spacing = 2, Children = { _amountLabel, amountRow, amountError } }
+        };
+
+        _dateField = F("Date", new StackPanel { Spacing = 10, Children = { _dateChoice.View, _date, _dateSummary } }, errorFor: _date);
         _supplierField = F("Fournisseur", _supplier);
         _clientField = F("Client", _client);
-        _amountField = F("Montant payé (€)", _amount);
         _goodsField = F("Part marchandises", _goods, "Le reste est compté en prestations.");
-        _purchaseExtras = new StackPanel { Spacing = 16, Children = { F("Pièce justificative", _reference, "Sans numéro, le PC écrira « Ticket du … ».") } };
-        _revenueExtras = new StackPanel { Spacing = 16, Children = { F("Nature de la recette", _nature.View), _goodsField, F("Facture", _invoice) } };
+        _purchaseExtras = new StackPanel { Spacing = 14, Children = { F("Pièce justificative", _reference, "Sans numéro, le PC écrira « Ticket du … ».") } };
+        _revenueExtras = new StackPanel { Spacing = 14, Children = { F("Nature de la recette", _nature.View), _goodsField, F("Facture", _invoice) } };
 
         _removeAttachment.Click += (_, _) => SetAttachment(null, ".jpg");
         _removeAttachment.HorizontalAlignment = HorizontalAlignment.Left; _removeAttachment.IsVisible = false;
@@ -68,45 +90,46 @@ public sealed class EntryPage : UserControl
         var gallery = Ui.Ui.Secondary("Galerie", Glyph.Image); gallery.Click += async (_, _) => await PickAsync();
         var buttons = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*"), ColumnSpacing = 10 };
         Grid.SetColumn(gallery, 1); buttons.Children.Add(camera); buttons.Children.Add(gallery);
-        var attachmentCard = Ui.Ui.Card(new StackPanel { Spacing = 10, Children =
-        {
-            new TextBlock { Text = "Ticket ou facture", FontSize = 14, FontWeight = FontWeight.SemiBold, Foreground = Pal.Muted },
-            buttons, _preview, _attachmentState, _removeAttachment,
-            Ui.Ui.Text("Une facture PDF reçue par e-mail ou dans un autre appli : touchez « Partager » puis « MS3DPRINT Compagnon ».", 12, Pal.Faint)
-        } });
 
         _send.Click += async (_, _) => await SendAsync();
         _project.SelectionChanged += (_, _) => OnProjectChosen();
-        foreach (var box in new Control[] { _supplier, _client, _label, _amount, _goods, _reference, _invoice, _project, _date })
+        foreach (var box in new Control[] { _supplier, _client, _label, _amount, _goods, _reference, _invoice, _project })
         {
-            if (box is TextBox text) text.TextChanged += (_, _) => Clear(box);
-            else if (box is AutoCompleteBox auto) auto.TextChanged += (_, _) => Clear(box);
+            if (box is TextBox text) text.TextChanged += (_, _) => { Clear(box); DraftChanged(); };
+            else if (box is AutoCompleteBox auto) auto.TextChanged += (_, _) => { Clear(box); DraftChanged(); };
         }
+        _date.SelectedDateChanged += (_, _) => { Clear(_date); UpdateDateSummary(); DraftChanged(); };
+        _draftTimer.Tick += (_, _) => { _draftTimer.Stop(); SaveDraft(); };
 
-        _form.Children.Add(_mode.View); _form.Children.Add(_result);
-        _form.Children.Add(_dateField); _form.Children.Add(_supplierField); _form.Children.Add(_clientField);
-        _form.Children.Add(F("Libellé", _label)); _form.Children.Add(_amountField);
-        _form.Children.Add(_revenueExtras);
-        _form.Children.Add(F("Mode de règlement", _payment)); _form.Children.Add(_purchaseExtras);
-        _form.Children.Add(F("Projet", _project, "Pour rattacher la ligne au bilan d’un projet."));
-        _form.Children.Add(attachmentCard); _form.Children.Add(_send);
+        _form.Children.Add(_mode.View); _form.Children.Add(_result); _form.Children.Add(hero);
+        _form.Children.Add(Look.Section("Détails", _dateField, _supplierField, _clientField, F("Libellé", _label)));
+        _form.Children.Add(Look.Section("Règlement", F("Mode de règlement", _paymentChoice.View), _purchaseExtras, _revenueExtras));
+        _form.Children.Add(Look.Section("Rattachement", F("Projet", _project, "Pour rattacher la ligne au bilan d’un projet.")));
+        _form.Children.Add(Look.Section("Justificatif", buttons, _preview, _attachmentState, _removeAttachment,
+            Ui.Ui.Text("Une facture PDF reçue par e-mail ou dans une autre application : touchez « Partager » puis « MS3DPRINT Compagnon ».", 12, Pal.Faint)));
+
         _scroll = new ScrollViewer { Content = _form, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
-        Content = _scroll;
+        // the send button stays under the thumb, whatever the length of the form
+        var bar = new Border { Background = Pal.Sidebar, BorderBrush = Pal.Subtle, BorderThickness = new Thickness(0, 1, 0, 0), Padding = new Thickness(16, 10), Child = _send };
+        var root = new Grid { RowDefinitions = new RowDefinitions("*,Auto"), Children = { _scroll, bar } };
+        Grid.SetRow(bar, 1);
+        Content = root;
         _app.Changed += RefreshSuggestions;
-        ApplyMode(); RefreshSuggestions(); WireDraft();
+        ApplyMode(); ApplyDateChoice(0); RefreshSuggestions();
     }
 
     /// <summary>A labelled field with its own error line, so the message appears where the problem is.</summary>
-    private StackPanel F(string label, Control input, string? hint = null)
+    private StackPanel F(string label, Control input, string? hint = null, Control? errorFor = null)
     {
         var field = Ui.Ui.Field(label, input, hint);
         var error = new TextBlock { FontSize = 13, Foreground = Pal.Danger, TextWrapping = TextWrapping.Wrap, IsVisible = false };
         field.Children.Add(error);
-        _errors[input] = error;
+        _errors[errorFor ?? input] = error;
         return field;
     }
 
     private bool IsRevenue => _mode.Selected() == 1;
+    private string Payment => PaymentMethods[Math.Clamp(_paymentChoice.Selected(), 0, PaymentMethods.Length - 1)];
 
     private static void SetLabel(StackPanel field, string text) { if (field.Children.FirstOrDefault() is TextBlock label) label.Text = text; }
 
@@ -117,61 +140,22 @@ public sealed class EntryPage : UserControl
         _purchaseExtras.IsVisible = !revenue; _revenueExtras.IsVisible = revenue;
         _goodsField.IsVisible = revenue && _nature.Selected() == 2;
         SetLabel(_dateField, revenue ? "Date d’encaissement" : "Date d’achat");
-        SetLabel(_amountField, revenue ? "Montant encaissé (€)" : "Montant payé (€)");
+        _amountLabel.Text = revenue ? "MONTANT ENCAISSÉ" : "MONTANT PAYÉ";
         if (_send.Content is StackPanel row && row.Children.OfType<TextBlock>().FirstOrDefault() is { } label) label.Text = revenue ? "Envoyer la recette au PC" : "Envoyer l’achat au PC";
         _result.Content = null;
     }
 
-    private readonly Avalonia.Threading.DispatcherTimer _draftTimer = new() { Interval = TimeSpan.FromMilliseconds(700) };
-    private bool _restoring;
-
-    private void WireDraft()
+    /// <summary>Today and yesterday are one tap; any other day opens the date wheel.</summary>
+    private void ApplyDateChoice(int choice)
     {
-        _draftTimer.Tick += (_, _) => { _draftTimer.Stop(); SaveDraft(); };
-        foreach (var box in new Control[] { _supplier, _client, _label, _amount, _goods, _reference, _invoice, _project })
-        {
-            if (box is TextBox text) text.TextChanged += (_, _) => DraftChanged();
-            else if (box is AutoCompleteBox auto) auto.TextChanged += (_, _) => DraftChanged();
-        }
-        _payment.SelectionChanged += (_, _) => DraftChanged();
-        _date.SelectedDateChanged += (_, _) => DraftChanged();
+        _date.IsVisible = choice == 2;
+        if (choice == 0) _date.SelectedDate = DateTimeOffset.Now;
+        else if (choice == 1) _date.SelectedDate = DateTimeOffset.Now.AddDays(-1);
+        UpdateDateSummary();
     }
 
-    private void DraftChanged() { if (!_restoring) { _draftTimer.Stop(); _draftTimer.Start(); } }
-
-    /// <summary>Writes the form to the phone's memory.</summary>
-    public void SaveDraft()
-    {
-        var draft = new EntryDraft
-        {
-            Mode = _mode.Selected(), Nature = _nature.Selected(), Supplier = _supplier.Text ?? "", Client = _client.Text ?? "", Label = _label.Text ?? "", Amount = _amount.Text ?? "",
-            Goods = _goods.Text ?? "", Payment = _payment.SelectedItem as string ?? "", Reference = _reference.Text ?? "", Invoice = _invoice.Text ?? "", Project = _project.Text ?? "",
-            Date = _date.SelectedDate?.DateTime
-        };
-        _app.Data.Draft = draft.IsEmpty ? null : draft;
-        _app.Store.Save(_app.Data);
-    }
-
-    /// <summary>Puts back what was typed before the app was closed.</summary>
-    public void RestoreDraft()
-    {
-        if (_app.Data.Draft is not { IsEmpty: false } draft) return;
-        _restoring = true;
-        try
-        {
-            _mode.Select(Math.Clamp(draft.Mode, 0, 1)); _nature.Select(Math.Clamp(draft.Nature, 0, 2));
-            _supplier.Text = draft.Supplier; _client.Text = draft.Client; _label.Text = draft.Label; _amount.Text = draft.Amount; _goods.Text = draft.Goods;
-            _reference.Text = draft.Reference; _invoice.Text = draft.Invoice; _project.Text = draft.Project;
-            if (PaymentMethods.Contains(draft.Payment)) _payment.SelectedItem = draft.Payment;
-            if (draft.Date is { } date && DateOnly.FromDateTime(date) <= DateOnly.FromDateTime(DateTime.Today)) _date.SelectedDate = new DateTimeOffset(date);
-            ApplyMode();
-            _result.Content = Ui.Ui.Banner("Votre saisie en cours a été retrouvée.", BannerKind.Info);
-        }
-        finally { _restoring = false; }
-    }
-
-    /// <summary>A photo taken while Android had closed the app.</summary>
-    public void AttachRecovered(byte[] photo) { SetAttachment(photo, ".jpg"); _result.Content = Ui.Ui.Banner("Votre photo a été retrouvée.", BannerKind.Info); _scroll.ScrollToHome(); }
+    private void UpdateDateSummary() =>
+        _dateSummary.Text = DateOnly.FromDateTime((_date.SelectedDate ?? DateTimeOffset.Now).Date).ToString("dddd d MMMM yyyy", French);
 
     private void RefreshSuggestions()
     {
@@ -223,7 +207,7 @@ public sealed class EntryPage : UserControl
     /// <summary>Shows the message under the faulty field and scrolls to it.</summary>
     private bool Invalid(Control control, string message)
     {
-        if (control is TemplatedControl t) t.BorderBrush = Pal.Danger;
+        if (control is TemplatedControl t && !ReferenceEquals(control, _amount)) t.BorderBrush = Pal.Danger;
         if (_errors.TryGetValue(control, out var error)) { error.Text = message; error.IsVisible = true; }
         else _result.Content = Ui.Ui.Banner(message, BannerKind.Error);
         control.BringIntoView();
@@ -318,6 +302,53 @@ public sealed class EntryPage : UserControl
             + (data.Nature == RevenueNature.Mixed ? " La facture mélange vente et prestation : renseignez la part marchandises." : ""), BannerKind.Info);
     }
 
+    // ---- draft: what was typed survives a closed app --------------------------------------------------------------------------------------------
+
+    private void DraftChanged() { if (!_restoring) { _draftTimer.Stop(); _draftTimer.Start(); } }
+
+    /// <summary>Writes the form to the phone's memory.</summary>
+    public void SaveDraft()
+    {
+        var draft = new EntryDraft
+        {
+            Mode = _mode.Selected(), Nature = _nature.Selected(), Supplier = _supplier.Text ?? "", Client = _client.Text ?? "", Label = _label.Text ?? "", Amount = _amount.Text ?? "",
+            Goods = _goods.Text ?? "", Payment = Payment, Reference = _reference.Text ?? "", Invoice = _invoice.Text ?? "", Project = _project.Text ?? "",
+            Date = _date.SelectedDate?.DateTime
+        };
+        _app.Data.Draft = draft.IsEmpty ? null : draft;
+        _app.Store.Save(_app.Data);
+    }
+
+    /// <summary>Puts back what was typed before the app was closed.</summary>
+    public void RestoreDraft()
+    {
+        if (_app.Data.Draft is not { IsEmpty: false } draft) return;
+        _restoring = true;
+        try
+        {
+            _mode.Select(Math.Clamp(draft.Mode, 0, 1)); _nature.Select(Math.Clamp(draft.Nature, 0, 2));
+            _supplier.Text = draft.Supplier; _client.Text = draft.Client; _label.Text = draft.Label; _amount.Text = draft.Amount; _goods.Text = draft.Goods;
+            _reference.Text = draft.Reference; _invoice.Text = draft.Invoice; _project.Text = draft.Project;
+            var payment = Array.IndexOf(PaymentMethods, draft.Payment);
+            if (payment >= 0) _paymentChoice.Select(payment);
+            if (draft.Date is { } date && DateOnly.FromDateTime(date) <= DateOnly.FromDateTime(DateTime.Today))
+            {
+                var day = DateOnly.FromDateTime(date); var today = DateOnly.FromDateTime(DateTime.Today);
+                _date.SelectedDate = new DateTimeOffset(date);
+                var choice = day == today ? 0 : day == today.AddDays(-1) ? 1 : 2;
+                _dateChoice.Select(choice); _date.IsVisible = choice == 2; UpdateDateSummary();
+            }
+            ApplyMode();
+            _result.Content = Ui.Ui.Banner("Votre saisie en cours a été retrouvée.", BannerKind.Info);
+        }
+        finally { _restoring = false; }
+    }
+
+    /// <summary>A photo taken while Android had closed the app.</summary>
+    public void AttachRecovered(byte[] photo) { SetAttachment(photo, ".jpg"); _result.Content = Ui.Ui.Banner("Votre photo a été retrouvée.", BannerKind.Info); _scroll.ScrollToHome(); }
+
+    // ---- sending -------------------------------------------------------------------------------------------------------------------------------
+
     private async Task SendAsync()
     {
         if (_busy) return;
@@ -329,7 +360,7 @@ public sealed class EntryPage : UserControl
         if (string.IsNullOrWhiteSpace(_label.Text)) { Invalid(_label, "Renseignez le libellé."); return; }
         if (!FilamentPrice.TryParse(_amount.Text, out var amount) || amount <= 0) { Invalid(_amount, "Saisissez un montant strictement positif (par exemple 18,90)."); return; }
         amount = Math.Round(amount, 2, MidpointRounding.AwayFromZero);
-        var payment = _payment.SelectedItem as string ?? "Autre";
+        var payment = Payment;
         var project = ProjectReferenceOf(_project.Text);
         var label = _label.Text.Trim();
         var id = Guid.NewGuid();
@@ -381,9 +412,14 @@ public sealed class EntryPage : UserControl
 
     private void ResetForm()
     {
-        _supplier.Text = ""; _client.Text = ""; _label.Text = ""; _amount.Text = ""; _goods.Text = ""; _reference.Text = ""; _invoice.Text = ""; _project.Text = "";
-        _date.SelectedDate = DateTimeOffset.Now; SetAttachment(null, ".jpg");
-        foreach (var error in _errors.Values) error.IsVisible = false;
+        _restoring = true;
+        try
+        {
+            _supplier.Text = ""; _client.Text = ""; _label.Text = ""; _amount.Text = ""; _goods.Text = ""; _reference.Text = ""; _invoice.Text = ""; _project.Text = "";
+            _dateChoice.Select(0); ApplyDateChoice(0); SetAttachment(null, ".jpg");
+            foreach (var error in _errors.Values) error.IsVisible = false;
+        }
+        finally { _restoring = false; }
         _draftTimer.Stop(); _app.Data.Draft = null; _app.Store.Save(_app.Data);
         RefreshSuggestions();
     }

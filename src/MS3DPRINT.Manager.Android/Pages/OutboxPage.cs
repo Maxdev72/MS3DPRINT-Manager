@@ -44,7 +44,11 @@ public sealed class OutboxPage : UserControl
             _stack.Children.Add(Ui.Ui.EmptyState("Rien d’envoyé", "Les achats et recettes que vous notez apparaissent ici, avec leur état."));
             return;
         }
-        foreach (var item in _app.Data.History) _stack.Children.Add(Card(item));
+        foreach (var day in _app.Data.History.GroupBy(h => DateOnly.FromDateTime(h.At.ToLocalTime().DateTime)).OrderByDescending(g => g.Key))
+        {
+            _stack.Children.Add(new TextBlock { Text = Look.DayLabel(day.Key).ToUpperInvariant(), FontSize = 12, FontWeight = FontWeight.Bold, Foreground = Pal.Faint, LetterSpacing = 1.2, Margin = new Thickness(4, 8, 0, 0) });
+            foreach (var item in day.OrderByDescending(h => h.At)) _stack.Children.Add(Card(item));
+        }
         if (_app.Data.History.Any(h => h.Status == "Sent"))
         {
             var clear = Ui.Ui.Quiet("Effacer les envois confirmés de cette liste", Glyph.Trash);
@@ -61,9 +65,10 @@ public sealed class OutboxPage : UserControl
             "Failed" => ("À renvoyer", Pal.WarningSoft, Pal.Warning),
             _ => ("En attente", Pal.WarningSoft, Pal.Warning)
         };
-        var kind = Ui.Ui.Pill(item.Kind == "recette" ? "Recette" : "Achat", item.Kind == "recette" ? Pal.SuccessSoft : Pal.AccentSoft, item.Kind == "recette" ? Pal.Success : Pal.Accent);
+        var income = item.Kind == "recette";
+        var kind = Ui.Ui.Pill(income ? "Recette" : "Achat", income ? Pal.SuccessSoft : Pal.AccentSoft, income ? Pal.Success : Pal.Accent);
         var head = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 10 };
-        var amount = new TextBlock { Text = RevenueExporter.Money(item.Amount), FontSize = 18, FontWeight = FontWeight.SemiBold, Foreground = Pal.Text, VerticalAlignment = VerticalAlignment.Center };
+        var amount = new TextBlock { Text = (income ? "+ " : "− ") + RevenueExporter.Money(item.Amount), FontSize = 19, FontWeight = FontWeight.SemiBold, Foreground = income ? Pal.Success : Pal.Text, VerticalAlignment = VerticalAlignment.Center };
         Grid.SetColumn(amount, 1);
         head.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { kind, Ui.Ui.Pill(statusText, back, fore) } }); head.Children.Add(amount);
         var stack = new StackPanel { Spacing = 6, Children =

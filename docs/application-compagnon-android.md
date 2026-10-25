@@ -10,6 +10,8 @@ Le téléphone sert à **noter sur le terrain** (achats, recettes, photos de tic
 - en sens inverse, le PC publie `etat-pc.json` dans le même dossier (projets, clients, activité de l’année, seuils, fournisseurs récents). Le téléphone le lit, sans jamais le modifier.
 
 ## Écrans
+Les composants visuels communs (cartes à section, puces, indicateurs, logo, carte de synthèse) sont dans `Ui/Look.cs`.
+
 - **Saisir** : Achat ou Recette. Date, fournisseur ou client (suggestions), libellé, montant (clavier numérique), règlement, pièce, projet, pièce jointe (appareil photo, galerie ou PDF). Les erreurs s’affichent sous le champ concerné. Une recette peut être mixte (part marchandises).
 - **Projets** : recherche, filtres (Actifs, Devis, En cours, Terminés, Archivés), fiche avec échéance, priorité et bilan (estimé, encaissé, reste, achats). Depuis la fiche, « Noter un encaissement » ou « Noter un achat » préremplit la saisie (le reste à encaisser est proposé comme montant).
 - **Activité** : chiffre d’affaires encaissé de l’année, marchandises et prestations, achats payés, graphique mois par mois, seuils d’activité (barres de progression), nombre de saisies à importer.

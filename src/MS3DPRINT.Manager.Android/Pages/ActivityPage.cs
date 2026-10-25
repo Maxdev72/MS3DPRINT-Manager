@@ -40,18 +40,18 @@ public sealed class ActivityPage : UserControl
         if (age > TimeSpan.FromDays(1)) _stack.Children.Add(Ui.Ui.Banner($"Ces chiffres datent du {snapshot.GeneratedAt:dd/MM/yyyy à HH:mm}. Ouvrez MS3DPRINT Manager sur le PC pour les mettre à jour.", BannerKind.Warning));
         else _stack.Children.Add(Ui.Ui.Muted($"État du PC du {snapshot.GeneratedAt:dd/MM/yyyy à HH:mm}"));
 
+        var light = Brush.Parse("#C9D8FF");
         var total = new StackPanel { Spacing = 4, Children =
         {
-            Ui.Ui.Text("Chiffre d’affaires encaissé", 14, Pal.Muted),
-            Ui.Ui.Text(RevenueExporter.Money(activity.Total), 34, Pal.Text, bold: true),
-            new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(0, 6, 0, 0), Children =
+            new TextBlock { Text = "CHIFFRE D’AFFAIRES ENCAISSÉ", FontSize = 12, FontWeight = FontWeight.Bold, Foreground = light, LetterSpacing = 1.2 },
+            new TextBlock { Text = RevenueExporter.Money(activity.Total), FontSize = 38, FontWeight = FontWeight.Bold, Foreground = Brushes.White },
+            new Grid { ColumnDefinitions = new ColumnDefinitions("*,*"), ColumnSpacing = 10, Margin = new Thickness(0, 10, 0, 0), Children =
             {
-                Ui.Ui.Pill("Marchandises " + RevenueExporter.Money(activity.Goods), Pal.AccentSoft, Pal.Accent),
-                Ui.Ui.Pill("Prestations " + RevenueExporter.Money(activity.Services), Pal.SuccessSoft, Pal.Success)
+                HeroFigure("Marchandises", activity.Goods, 0), HeroFigure("Prestations", activity.Services, 1)
             } },
-            Ui.Ui.Text("Achats payés : " + RevenueExporter.Money(activity.PurchasesTotal), 15, Pal.Muted)
+            new TextBlock { Text = "Achats payés : " + RevenueExporter.Money(activity.PurchasesTotal), FontSize = 14, Foreground = light, Margin = new Thickness(0, 10, 0, 0) }
         } };
-        _stack.Children.Add(Ui.Ui.Card(total));
+        _stack.Children.Add(new Border { Background = Look.HeroGradient, CornerRadius = new CornerRadius(22), Padding = new Thickness(22, 20), Child = total });
 
         _stack.Children.Add(Ui.Ui.Section("Mois par mois"));
         _stack.Children.Add(Ui.Ui.Card(Months(activity.Months)));
@@ -68,6 +68,17 @@ public sealed class ActivityPage : UserControl
             Ui.Ui.Text(waiting == 0 ? "Rien en attente" : $"{waiting} saisie{(waiting > 1 ? "s" : "")} en attente", 17, waiting == 0 ? Pal.Success : Pal.Warning, bold: true),
             Ui.Ui.Muted($"{activity.PendingFromPhone} reçue{(activity.PendingFromPhone > 1 ? "s" : "")} par le PC, à confirmer ; {_app.PendingCount} encore sur le téléphone.")
         } }));
+    }
+
+    private static Control HeroFigure(string label, decimal amount, int column)
+    {
+        var box = new Border
+        {
+            Background = Brush.Parse("#26FFFFFF"), CornerRadius = new CornerRadius(12), Padding = new Thickness(12, 8),
+            Child = new StackPanel { Children = { new TextBlock { Text = RevenueExporter.Money(amount), FontSize = 16, FontWeight = FontWeight.SemiBold, Foreground = Brushes.White }, new TextBlock { Text = label, FontSize = 12, Foreground = Brush.Parse("#C9D8FF") } } }
+        };
+        Grid.SetColumn(box, column);
+        return box;
     }
 
     private static Control Months(IReadOnlyList<decimal> months)
