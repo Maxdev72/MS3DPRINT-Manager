@@ -51,6 +51,8 @@ public partial class MainWindow
         var duplicate = new Button { Content = Icons.Label("IconCopy", "Dupliquer"), Tag = project };
         duplicate.Click += DuplicateProject_Click; actions.Children.Add(duplicate);
 
+        content.Children.Add(BuildClassificationSection(project));
+
         var history = new StackPanel { Spacing = 4 };
         try
         {

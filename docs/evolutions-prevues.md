@@ -11,7 +11,7 @@
 ## Classement intelligent des fichiers générés par les logiciels externes
 
 - Demande de l’utilisateur enregistrée le 25 octobre 2026.
-- Statut : prévu pour une prochaine étape, à cadrer avant développement.
+- Statut : développé le 25 octobre 2026 pour les `.3mf` de Bambu Studio et OrcaSlicer (voir `docs/superpowers/specs/2026-10-25-classement-fichiers-externes-design.md`). Reste à étendre : PrusaSlicer, Cura et d’autres types de fichiers.
 - Exemple fourni : après ouverture d’un STL du projet, Bambu Studio enregistre un projet `.3mf` à côté du fichier source ; MS3DPRINT doit pouvoir repérer ce fichier et proposer son classement dans le dossier approprié du même projet.
 - Direction retenue : reconnaître le rôle et l’origine du fichier, en examinant son contenu lorsque nécessaire, plutôt que décider uniquement à partir de son extension.
 - Prévoir l’association au projet et au fichier source, une proposition de classement à confirmer et une protection des fichiers encore ouverts ou en cours d’enregistrement.

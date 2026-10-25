@@ -2,6 +2,12 @@
 
 ## 25 octobre 2026
 
+### Classement des fichiers enregistrés par les logiciels externes
+- La fiche d’un projet repère les fichiers `.3mf` enregistrés par Bambu Studio ou OrcaSlicer ailleurs que dans le dossier 3MF du projet (par exemple à côté du STL ouvert) et propose de les classer dans le dossier prévu par le modèle de projet, avec le nom `nom__RÉFÉRENCE.3mf`. L’origine est reconnue par le contenu du fichier ; le STL source est indiqué lorsqu’il est retrouvé dans le projet.
+- Rien ne bouge sans clic sur « Classer » ; « Ignorer » mémorise le choix. Un fichier modifié depuis moins de 15 secondes, ouvert par un autre programme ou d’une autre origine (export CAO) n’est jamais proposé. Aucun écrasement : un nom déjà pris reçoit un numéro.
+- L’analyse se relance toutes les 10 secondes tant que la fiche du projet est affichée. Sur l’espace de travail de l’atelier, 147 des 171 fichiers `.3mf` sont reconnus comme des projets Bambu Studio.
+- Conception : docs/superpowers/specs/2026-10-25-classement-fichiers-externes-design.md.
+
 ### Livre de recettes et registre des achats
 - Nouvelle page « Recettes » : registre chronologique des encaissements, avec date d’encaissement, client, libellé, nature (marchandises, prestations ou mixte), mode de règlement, numéro de facture et projet. Un sélecteur d’année et le total encaissé sont affichés en tête.
 - Le journal est en ajout seul (`.ms3dprint-manager/revenues/AAAA.jsonl`, inclus dans les sauvegardes) : aucune ligne n’est supprimée ni modifiée. Une recette erronée s’annule avec un motif obligatoire ; elle reste visible, barrée, et sort des totaux. Une ligne illisible est signalée sans masquer les autres.
