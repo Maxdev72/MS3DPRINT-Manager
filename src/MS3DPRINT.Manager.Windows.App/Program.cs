@@ -20,6 +20,9 @@ internal static class Program
             var owner = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow?.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
             OpenWithDialog.Show(path, owner);
         };
+        var ocr = new MS3DPRINT.Manager.Windows.WindowsOcrEngine();
+        if (ocr.IsAvailable) MS3DPRINT.Manager.Core.Recognition.DocumentReader.Ocr = ocr;
+        MS3DPRINT.Manager.Core.Recognition.DocumentReader.Rasterizer = new MS3DPRINT.Manager.Windows.WindowsPdfRasterizer();
         DesktopApplication.ReduceMotion = !ClientAreaAnimationsEnabled();
         DesktopApplication.BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }

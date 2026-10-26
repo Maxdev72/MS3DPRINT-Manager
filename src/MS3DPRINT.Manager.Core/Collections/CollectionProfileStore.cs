@@ -96,7 +96,7 @@ public sealed class CollectionProfileStore
                 JsonSerializer.Serialize(stream, profile, JsonOptions);
                 stream.Flush(flushToDisk: true);
             }
-            if (replace) File.Replace(temporary, active, destinationBackupFileName: null);
+            if (replace) Storage.AtomicFile.Replace(temporary, active);
             else File.Move(temporary, active, overwrite: false);
         }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }

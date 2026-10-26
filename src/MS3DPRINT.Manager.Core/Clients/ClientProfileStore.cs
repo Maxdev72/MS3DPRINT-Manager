@@ -80,7 +80,7 @@ public sealed class ClientProfileStore
             WorkspacePathSafety.EnsureNoLinks(activePath);
             File.Copy(activePath, Path.Combine(_paths.HistoryDirectory, profile.Id + "-" + DateTimeOffset.UtcNow.Ticks + ".json"), overwrite: false);
             WorkspacePathSafety.EnsureNoLinks(activePath);
-            File.Replace(temporaryPath, activePath, destinationBackupFileName: null);
+            Storage.AtomicFile.Replace(temporaryPath, activePath);
         }
         finally
         {

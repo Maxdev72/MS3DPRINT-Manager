@@ -18,6 +18,9 @@ Les composants visuels communs (cartes à section, puces, indicateurs, logo, car
 - **Envois** : historique avec l’état de chaque saisie (Envoyé, En attente, À renvoyer), bouton « Réessayer l’envoi », suppression d’une saisie non envoyée (avec confirmation).
 - **Réglages** : choix du dossier d’échange, test d’accès, actualisation de l’état du PC, explications.
 
+## Lecture des documents
+Une photo, une capture d’écran, une image de la galerie ou un PDF (par la galerie ou « Partager ») est lu sur le téléphone : ML Kit (modèle intégré à l’application, pas de réseau) reconnaît le texte, puis le même moteur que sur le PC (`Core/Recognition`) trouve montant, date, numéro, fournisseur ou client, règlement. Achat ou recette est choisi selon le document quand il est identifiable. Seuls les champs vides, ou remplis par une lecture précédente, sont renseignés : ce que vous avez tapé n’est jamais écrasé. Un bandeau indique ce qu’il faut vérifier en priorité.
+
 ## Fonctions utiles
 - **Hors ligne** : une saisie est d’abord enregistrée sur le téléphone puis envoyée. Si le dossier est injoignable, elle attend et repart toute seule (au démarrage, au retour dans l’application ou avec « Réessayer »).
 - **Facture reçue par e-mail** : depuis une autre application, « Partager » puis « MS3DPRINT Compagnon ». Le PDF est lu sur le téléphone (même lecteur que sur le PC) : numéro, montant, client et nature sont préremplis, il reste à indiquer la date de paiement.

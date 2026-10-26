@@ -74,7 +74,7 @@ public sealed class ClientCodeRegistry
                 if (File.Exists(_activePath))
                 {
                     PreserveExistingBackup();
-                    File.Replace(temporaryPath, _activePath, _previousPath);
+                    AtomicFile.Replace(temporaryPath, _activePath, _previousPath);
                 }
                 else
                 {

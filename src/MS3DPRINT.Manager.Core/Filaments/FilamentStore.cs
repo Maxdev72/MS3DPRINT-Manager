@@ -117,7 +117,7 @@ public sealed class FilamentStore
                 stream.Flush(true);
             }
             CheckLinks(destination);
-            if (replace) File.Replace(temporary, destination, null);
+            if (replace) Storage.AtomicFile.Replace(temporary, destination);
             else File.Move(temporary, destination);
         }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }

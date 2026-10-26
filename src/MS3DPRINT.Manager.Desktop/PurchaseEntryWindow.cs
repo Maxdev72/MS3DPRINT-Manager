@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using MS3DPRINT.Manager.Core.Filaments;
+using MS3DPRINT.Manager.Core.Recognition;
 using MS3DPRINT.Manager.Core.Purchases;
 
 namespace MS3DPRINT.Manager.Desktop;
@@ -34,14 +35,18 @@ public sealed class PurchaseEntryWindow : DialogWindow
         Title = existing is null ? "Enregistrer un achat" : "Corriger un achat"; Width = 520; Height = existing is null ? 780 : 880; MinWidth = 440;
         _date.Text = today.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
         _supplier.ItemsSource = suppliers;
-        var attach = new Button { Content = Icons.Label("IconUpload", existing is null ? "Joindre le justificatif (PDF)…" : "Remplacer le justificatif…", 16) };
+        var attach = new Button { Content = Icons.Label("IconUpload", existing is null ? "Lire un justificatif (PDF, image)…" : "Remplacer le justificatif…", 16) };
         attach.Click += async (_, _) => await PickDocumentAsync();
+        var paste = new Button { Content = "Coller une capture" };
+        ToolTip.SetTip(paste, "Colle l’image copiée (capture d’écran, photo copiée) ou le fichier copié, puis la lit · Ctrl+V");
+        paste.Click += async (_, _) => await PasteDocumentAsync();
+        var readers = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 10, Children = { attach, paste } };
         var save = new Button { Content = existing is null ? "Enregistrer" : "Enregistrer la correction" };
         save.Click += Save_Click;
         var body = new List<Control>
         {
             FormKit.Field("Date d’achat", _date), FormKit.Field("Fournisseur", _supplier), FormKit.Field("Libellé", _label), FormKit.Field("Montant payé", _amount, "€"),
-            FormKit.Field("Mode de règlement", _payment), FormKit.Field("Pièce justificative", _reference), FormKit.Field("Projet", _project), attach, _document, _error
+            FormKit.Field("Mode de règlement", _payment), FormKit.Field("Pièce justificative", _reference), FormKit.Field("Projet", _project), readers, _document, _error
         };
         if (existing is not null)
         {
@@ -58,17 +63,40 @@ public sealed class PurchaseEntryWindow : DialogWindow
             existing is null ? "Notez chaque achat à sa date, avec la facture du fournisseur comme justificatif." : "La ligne garde son historique : rien n’est effacé, la correction et son motif sont ajoutés au registre.",
             body, save);
         foreach (var field in new[] { _date, _label, _amount, _reference, _project }) field.TextChanged += (_, _) => FormKit.ClearError(_error);
+        DocumentReadingUi.EnableDrop(this, path => _ = LoadDocumentAsync(path));
+        KeyDown += async (_, e) => { if (e.Key == Avalonia.Input.Key.V && e.KeyModifiers == Avalonia.Input.KeyModifiers.Control && FocusManager?.GetFocusedElement() is not TextBox) { e.Handled = true; await PasteDocumentAsync(); } };
     }
 
     private async Task PickDocumentAsync()
     {
-        if (TopLevel.GetTopLevel(this)?.StorageProvider is not { } storage) return;
-        var chosen = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
-        {
-            Title = "Choisir le justificatif", AllowMultiple = false,
-            FileTypeFilter = [new FilePickerFileType("Justificatif (PDF ou image)") { Patterns = ["*.pdf", "*.png", "*.jpg", "*.jpeg"] }]
-        });
-        if (chosen.FirstOrDefault()?.TryGetLocalPath() is { } path) { SourceDocumentPath = path; _document.Text = "Justificatif : " + Path.GetFileName(path); }
+        if (await DocumentReadingUi.PickAsync(this, "Choisir le justificatif (PDF ou image)") is { } path) await LoadDocumentAsync(path);
+    }
+
+    private async Task PasteDocumentAsync()
+    {
+        if (await DocumentReadingUi.PasteAsync(this) is { } path) await LoadDocumentAsync(path);
+        else _document.Text = "Rien à coller : copiez d’abord une capture d’écran, une image ou un fichier.";
+    }
+
+    /// <summary>Attaches the document, reads it locally and proposes values; the user checks every field before saving.</summary>
+    public async Task LoadDocumentAsync(string path)
+    {
+        SourceDocumentPath = path;
+        var head = "Justificatif : " + Path.GetFileName(path) + "\n";
+        _document.Text = head + "Lecture du document en cours…";
+        DocumentReading reading;
+        try { reading = await DocumentReader.ReadAsync(path, DocumentReadingUi.Context); }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+        { _document.Text = head + "Lecture impossible (" + exception.Message + "). Saisissez les informations à la main."; return; }
+        if (reading.IsEmpty) { _document.Text = head + DocumentReadingUi.Describe(reading, DocumentDirection.Purchase); return; }
+        if (reading.Party is { } supplier && reading.Direction != DocumentDirection.Revenue) _supplier.Text = supplier.Value;
+        if (reading.Date is { } date && date.Value <= DateOnly.FromDateTime(DateTime.Today)) _date.Text = date.Value.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
+        if (reading.TotalTtc is { } total) _amount.Text = DocumentReadingUi.Money(total.Value);
+        if (reading.Number is { } number) _reference.Text = number.Value;
+        else if (reading.Date is { } day && string.IsNullOrWhiteSpace(_reference.Text)) _reference.Text = $"Ticket du {day.Value:dd/MM/yyyy}";
+        if (string.IsNullOrWhiteSpace(_label.Text) && reading.Label is { } label) _label.Text = label.Value;
+        if (reading.Payment is { IsReliable: true } payment && RevenueEntryWindow.PaymentMethods.Contains(payment.Value)) _payment.SelectedItem = payment.Value;
+        _document.Text = head + DocumentReadingUi.Describe(reading, DocumentDirection.Purchase);
     }
 
     private void Save_Click(object? sender, RoutedEventArgs e)

@@ -10,6 +10,7 @@ using MS3DPRINT.Manager.Companion.Services;
 using MS3DPRINT.Manager.Companion.Ui;
 using MS3DPRINT.Manager.Core.Filaments;
 using MS3DPRINT.Manager.Core.Mobile;
+using MS3DPRINT.Manager.Core.Recognition;
 using MS3DPRINT.Manager.Core.Revenues;
 
 namespace MS3DPRINT.Manager.Companion.Pages;
@@ -233,6 +234,7 @@ public sealed class EntryPage : UserControl
             var bytes = await CameraCapture.TakePhotoAsync(activity);
             if (bytes is null) return;
             SetAttachment(bytes, ".jpg"); _result.Content = null;
+            _ = ReadDocumentAsync(bytes, "photo.jpg");
         }
         catch (Exception exception) when (exception is InvalidOperationException or IOException or Java.Lang.Exception)
         { _result.Content = Ui.Ui.Banner("Photo impossible : " + exception.Message, BannerKind.Error); }
@@ -260,46 +262,96 @@ public sealed class EntryPage : UserControl
 
     public void ShowProblem(string message) { _result.Content = Ui.Ui.Banner(message, BannerKind.Error); _scroll.ScrollToHome(); }
 
-    /// <summary>A photo or a PDF given by the gallery, the file picker or the Android "Share" menu.</summary>
+    /// <summary>A photo, a screenshot or a PDF given by the gallery, the file picker or the Android "Share" menu.</summary>
     public void Receive(byte[] bytes, string name)
     {
         if (bytes.Length == 0) { _result.Content = Ui.Ui.Banner("Ce fichier est vide.", BannerKind.Error); return; }
         if (bytes.Length > 25 * 1024 * 1024) { _result.Content = Ui.Ui.Banner("Ce fichier est trop volumineux (25 Mo maximum).", BannerKind.Error); return; }
-        var isPdf = bytes.Length > 4 && bytes[0] == '%' && bytes[1] == 'P' && bytes[2] == 'D' && bytes[3] == 'F';
-        if (isPdf)
+        if (DocumentReader.IsPdf(bytes)) SetAttachment(bytes, ".pdf", name);
+        else
         {
-            SetAttachment(bytes, ".pdf", name);
-            ReadInvoice(bytes);
-            _scroll.ScrollToHome();
-            return;
+            var normalized = PhotoTools.Normalize(bytes);
+            if (normalized is null) { _result.Content = Ui.Ui.Banner("Ce fichier n’est ni une image ni un PDF lisible.", BannerKind.Error); return; }
+            SetAttachment(normalized, ".jpg");
         }
-        var normalized = PhotoTools.Normalize(bytes);
-        if (normalized is null) { _result.Content = Ui.Ui.Banner("Ce fichier n’est ni une image ni un PDF lisible.", BannerKind.Error); return; }
-        SetAttachment(normalized, ".jpg"); _result.Content = null;
+        _result.Content = null;
+        _scroll.ScrollToHome();
+        // The original is read, not the reduced copy that travels to the PC: more pixels, better reading.
+        _ = ReadDocumentAsync(bytes, name);
     }
 
-    /// <summary>Reads an invoice (same reader as the PC, entirely on the phone) and pre-fills a collection; the user still checks everything.</summary>
-    private void ReadInvoice(byte[] pdf)
+    private AnalysisContext ReadingContext()
     {
-        IndyInvoiceData? data = null;
-        var path = Path.Combine(Path.GetTempPath(), "facture-" + Guid.NewGuid().ToString("N")[..8] + ".pdf");
-        try { File.WriteAllBytes(path, pdf); data = IndyInvoiceReader.Read(path); }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { data = null; }
-        finally { try { File.Delete(path); } catch (IOException) { } }
-        if (data is null) { _result.Content = Ui.Ui.Banner("Facture jointe. Elle n’a pas pu être lue automatiquement : saisissez les informations à la main.", BannerKind.Info); return; }
-        _mode.Select(1); ApplyMode();
-        if (data.InvoiceNumber is { } number) { _invoice.Text = number; if (string.IsNullOrWhiteSpace(_label.Text)) _label.Text = "Facture " + number; }
-        if (data.TotalTtc is { } total) _amount.Text = total.ToString("0.00", French);
-        if (data.ClientName is { } client)
+        var snapshot = _app.Snapshot;
+        return new AnalysisContext
         {
-            var known = _app.Snapshot?.Clients.FirstOrDefault(c => string.Equals(c.Name, client, StringComparison.CurrentCultureIgnoreCase))?.Name;
-            _client.Text = known ?? client;
-        }
-        if (data.Nature is { } nature) _nature.Select(nature switch { RevenueNature.Goods => 1, RevenueNature.Mixed => 2, _ => 0 });
+            KnownSuppliers = Merge(_app.Data.Suppliers, snapshot?.Suppliers).ToList(),
+            KnownClients = Merge(_app.Data.Clients, snapshot?.Clients.Select(c => c.Name)).ToList(),
+            Today = DateOnly.FromDateTime(DateTime.Today)
+        };
+    }
+
+    /// <summary>Reads the document on the phone (text of a PDF, or OCR of a photo or screenshot) and pre-fills the form. The user checks everything and gives the real dates.</summary>
+    private async Task ReadDocumentAsync(byte[] bytes, string name)
+    {
+        var attached = _attachment;
+        _result.Content = Ui.Ui.Banner("Lecture du document en cours…", BannerKind.Info);
+        DocumentReading reading;
+        try { reading = await DocumentReader.ReadAsync(bytes, name, ReadingContext()); }
+        catch (Exception exception) when (exception is IOException or InvalidOperationException or ArgumentException or Java.Lang.Exception)
+        { _result.Content = Ui.Ui.Banner("Lecture automatique impossible (" + exception.Message + "). Saisissez les informations à la main ; la pièce reste jointe.", BannerKind.Info); return; }
+        if (!ReferenceEquals(attached, _attachment)) return; // the attachment was removed or replaced while reading
+        Apply(reading);
+    }
+
+    private readonly Dictionary<Control, string> _auto = [];
+
+    /// <summary>Fills a field from the reading unless the user typed in it. A value put by an earlier reading is replaced, so choosing another document starts afresh.</summary>
+    private void FillIfBlank(TextBox box, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return;
+        if (string.IsNullOrWhiteSpace(box.Text) || _auto.TryGetValue(box, out var previous) && previous == box.Text) { box.Text = value; _auto[box] = value; }
+    }
+
+    private void FillIfBlank(AutoCompleteBox box, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return;
+        if (string.IsNullOrWhiteSpace(box.Text) || _auto.TryGetValue(box, out var previous) && previous == box.Text) { box.Text = value; _auto[box] = value; }
+    }
+
+    private void Apply(DocumentReading reading)
+    {
+        if (reading.IsEmpty) { _result.Content = Ui.Ui.Banner(ReadingSummary.Describe(reading, IsRevenue ? DocumentDirection.Revenue : DocumentDirection.Purchase), BannerKind.Info); return; }
+        var detected = reading.Direction;
+        if (detected == DocumentDirection.Revenue && !IsRevenue) _mode.Select(1);
+        else if (detected == DocumentDirection.Purchase && IsRevenue) _mode.Select(0);
         ApplyMode();
-        _result.Content = Ui.Ui.Banner("Facture lue : numéro, montant et client sont préremplis. Vérifiez-les et indiquez la date à laquelle le paiement a été reçu"
-            + (data.IssuedOn is { } issued ? $" (facture émise le {issued:dd/MM/yyyy})." : ".")
-            + (data.Nature == RevenueNature.Mixed ? " La facture mélange vente et prestation : renseignez la part marchandises." : ""), BannerKind.Info);
+        var revenue = IsRevenue;
+        if (reading.TotalTtc is { } total) FillIfBlank(_amount, total.Value.ToString("0.00", French));
+        if (reading.Party is { } party)
+        {
+            var known = (revenue ? _app.Snapshot?.Clients.Select(c => c.Name) : _app.Snapshot?.Suppliers)?.FirstOrDefault(n => string.Equals(n, party.Value, StringComparison.CurrentCultureIgnoreCase));
+            if (revenue) FillIfBlank(_client, known ?? party.Value); else FillIfBlank(_supplier, known ?? party.Value);
+        }
+        if (reading.Number is { } number) FillIfBlank(revenue ? _invoice : _reference, number.Value);
+        else if (!revenue && reading.Date is { } day) FillIfBlank(_reference, $"Ticket du {day.Value:dd/MM/yyyy}");
+        if (reading.Label is { } label) FillIfBlank(_label, revenue && reading.Number is { } n ? "Facture " + n.Value : label.Value);
+        if (!revenue && reading.Payment is { IsReliable: true } payment && Array.IndexOf(PaymentMethods, payment.Value) is >= 0 and var index) _paymentChoice.Select(index);
+        if (revenue && reading.Nature is { } nature) _nature.Select(nature switch { RevenueNature.Goods => 1, RevenueNature.Mixed => 2, _ => 0 });
+        if (!revenue && reading.Date is { } date && date.Value <= DateOnly.FromDateTime(DateTime.Today))
+        {
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            var choice = date.Value == today ? 0 : date.Value == today.AddDays(-1) ? 1 : 2;
+            _dateChoice.Select(choice);
+            if (choice == 2) _date.SelectedDate = new DateTimeOffset(date.Value.ToDateTime(TimeOnly.MinValue));
+            ApplyDateChoice(choice);
+        }
+        ApplyMode();
+        var text = ReadingSummary.Describe(reading, revenue ? DocumentDirection.Revenue : DocumentDirection.Purchase);
+        if (revenue) text += "\nIndiquez la date à laquelle le paiement a été reçu" + (reading.Date is { } issued ? $" (document daté du {issued.Value:dd/MM/yyyy})." : ".");
+        var uncertain = reading.TotalTtc is not { IsReliable: true } || reading.Date is { IsReliable: false };
+        _result.Content = Ui.Ui.Banner(text, uncertain ? BannerKind.Warning : BannerKind.Info);
+        DraftChanged();
     }
 
     // ---- draft: what was typed survives a closed app --------------------------------------------------------------------------------------------
@@ -345,7 +397,7 @@ public sealed class EntryPage : UserControl
     }
 
     /// <summary>A photo taken while Android had closed the app.</summary>
-    public void AttachRecovered(byte[] photo) { SetAttachment(photo, ".jpg"); _result.Content = Ui.Ui.Banner("Votre photo a été retrouvée.", BannerKind.Info); _scroll.ScrollToHome(); }
+    public void AttachRecovered(byte[] photo) { SetAttachment(photo, ".jpg"); _result.Content = Ui.Ui.Banner("Votre photo a été retrouvée.", BannerKind.Info); _scroll.ScrollToHome(); _ = ReadDocumentAsync(photo, "photo.jpg"); }
 
     // ---- sending -------------------------------------------------------------------------------------------------------------------------------
 

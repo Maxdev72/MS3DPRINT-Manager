@@ -73,7 +73,7 @@ public sealed class ProjectProfileStore
             WorkspacePathSafety.EnsureNoLinks(active);
             File.Copy(active, System.IO.Path.Combine(_paths.HistoryDirectory, profile.Id + "-" + DateTimeOffset.UtcNow.Ticks + ".json"), false);
             WorkspacePathSafety.EnsureNoLinks(active);
-            File.Replace(temporary, active, null);
+            Storage.AtomicFile.Replace(temporary, active);
         }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
         return profile;

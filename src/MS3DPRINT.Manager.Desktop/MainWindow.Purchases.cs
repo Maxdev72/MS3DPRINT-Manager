@@ -40,6 +40,7 @@ public partial class MainWindow
             });
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or System.Text.Json.JsonException) { suppliers = []; }
+        RefreshReadingContext(root, null, suppliers);
         var dialog = new PurchaseEntryWindow(suppliers, DateOnly.FromDateTime(DateTime.Today));
         if (!await dialog.ShowDialog<bool>(this) || dialog.Result is not { } entry) return;
         try
@@ -74,6 +75,7 @@ public partial class MainWindow
             });
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or System.Text.Json.JsonException) { suppliers = []; }
+        RefreshReadingContext(root, null, suppliers);
         var dialog = new PurchaseEntryWindow(suppliers, DateOnly.FromDateTime(DateTime.Today), entry);
         if (!await dialog.ShowDialog<bool>(this) || dialog.Result is not { } corrected) return;
         try

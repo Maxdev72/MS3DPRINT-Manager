@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using MS3DPRINT.Manager.Core.Filaments;
+using MS3DPRINT.Manager.Core.Recognition;
 using MS3DPRINT.Manager.Core.Revenues;
 
 namespace MS3DPRINT.Manager.Desktop;
@@ -48,11 +49,15 @@ public sealed class RevenueEntryWindow : DialogWindow
         _nature.SelectionChanged += (_, _) => { _goods.IsVisible = SelectedNature == RevenueNature.Mixed; FormKit.ClearError(_error); };
         var save = new Button { Content = existing is null ? "Enregistrer" : "Enregistrer la correction" };
         save.Click += Save_Click;
-        var import = new Button { Content = Icons.Label("IconUpload", existing is null ? "Importer une facture PDF…" : "Remplacer la facture PDF…", 16) };
+        var import = new Button { Content = Icons.Label("IconUpload", existing is null ? "Lire une facture (PDF, image)…" : "Remplacer la facture…", 16) };
         import.Click += async (_, _) => await PickInvoiceAsync();
+        var paste = new Button { Content = "Coller une capture" };
+        ToolTip.SetTip(paste, "Colle l’image copiée (capture d’écran, photo copiée) ou le fichier copié, puis la lit · Ctrl+V");
+        paste.Click += async (_, _) => await PasteInvoiceAsync();
+        var readers = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 10, Children = { import, paste } };
         var body = new List<Control>
         {
-            import, _invoiceNote, FormKit.Field("Date d’encaissement", _date), FormKit.Field("Client", _client), FormKit.Field("Libellé", _label),
+            readers, _invoiceNote, FormKit.Field("Date d’encaissement", _date), FormKit.Field("Client", _client), FormKit.Field("Libellé", _label),
             FormKit.Field("Montant encaissé", _amount, "€"), FormKit.Field("Nature", _nature), FormKit.Field("Part marchandises", _goods, "€", "Le reste est compté en prestations."),
             FormKit.Field("Mode de règlement", _payment), FormKit.Field("Pièce justificative (facture)", _invoice), FormKit.Field("Projet", _project), _error
         };
@@ -67,6 +72,8 @@ public sealed class RevenueEntryWindow : DialogWindow
             body, save);
         foreach (var field in new[] { _date, _label, _amount, _goods, _invoice, _project }) field.TextChanged += (_, _) => FormKit.ClearError(_error);
         if (invoicePdf is not null) Opened += (_, _) => LoadInvoice(invoicePdf);
+        DocumentReadingUi.EnableDrop(this, LoadInvoice);
+        KeyDown += async (_, e) => { if (e.Key == Avalonia.Input.Key.V && e.KeyModifiers == Avalonia.Input.KeyModifiers.Control && FocusManager?.GetFocusedElement() is not TextBox) { e.Handled = true; await PasteInvoiceAsync(); } };
     }
 
     private void Fill(RevenueEntry entry)
@@ -91,29 +98,36 @@ public sealed class RevenueEntryWindow : DialogWindow
 
     private async Task PickInvoiceAsync()
     {
-        if (TopLevel.GetTopLevel(this)?.StorageProvider is not { } storage) return;
-        var chosen = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
-        {
-            Title = "Choisir la facture au format PDF", AllowMultiple = false,
-            FileTypeFilter = [new FilePickerFileType("Facture PDF") { Patterns = ["*.pdf"] }]
-        });
-        if (chosen.FirstOrDefault()?.TryGetLocalPath() is { } path) LoadInvoice(path);
+        if (await DocumentReadingUi.PickAsync(this, "Choisir la facture (PDF ou image)") is { } path) await LoadInvoiceAsync(path);
     }
 
-    /// <summary>Reads the PDF locally and proposes values; the user still checks every field and gives the collection date.</summary>
-    public void LoadInvoice(string pdfPath)
+    private async Task PasteInvoiceAsync()
     {
-        var data = IndyInvoiceReader.Read(pdfPath);
+        if (await DocumentReadingUi.PasteAsync(this) is { } path) await LoadInvoiceAsync(path);
+        else { _invoiceNote.IsVisible = true; _invoiceNote.Text = "Rien à coller : copiez d’abord une capture d’écran, une image ou un fichier."; }
+    }
+
+    /// <summary>Reads the document locally and proposes values; the user still checks every field and gives the collection date.</summary>
+    public void LoadInvoice(string path) => _ = LoadInvoiceAsync(path);
+
+    public async Task LoadInvoiceAsync(string path)
+    {
         _invoiceNote.IsVisible = true;
-        SourcePdfPath = pdfPath;
-        if (data is null) { _invoiceNote.Text = "Cette facture n’a pas pu être lue automatiquement. Saisissez les informations à la main ; le PDF reste joint."; return; }
-        if (data.InvoiceNumber is { } number) { _invoice.Text = number; if (string.IsNullOrWhiteSpace(_label.Text)) _label.Text = "Facture " + number; }
-        if (data.TotalTtc is { } total) _amount.Text = total.ToString("0.00", French);
-        if (data.ClientName is { } client) _client.Text = client;
-        if (data.Nature is { } nature) _nature.SelectedIndex = Array.FindIndex(Natures, n => n.Nature == nature);
-        _invoiceNote.Text = "Facture lue : vérifiez les champs et indiquez la date à laquelle le paiement a été reçu"
-            + (data.IssuedOn is { } issued ? $" (facture émise le {issued:dd/MM/yyyy})." : ".")
-            + (data.Nature == RevenueNature.Mixed ? " La facture mélange vente et prestation : renseignez la part marchandises." : "");
+        SourcePdfPath = path;
+        _invoiceNote.Text = "Lecture du document en cours…";
+        DocumentReading reading;
+        try { reading = await DocumentReader.ReadAsync(path, DocumentReadingUi.Context); }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+        { _invoiceNote.Text = "Ce document n’a pas pu être lu : " + exception.Message + " Saisissez les informations à la main ; le fichier reste joint."; return; }
+        if (reading.IsEmpty) { _invoiceNote.Text = DocumentReadingUi.Describe(reading, DocumentDirection.Revenue); return; }
+        if (reading.Number is { } number) { _invoice.Text = number.Value; if (string.IsNullOrWhiteSpace(_label.Text)) _label.Text = "Facture " + number.Value; }
+        else if (string.IsNullOrWhiteSpace(_label.Text) && reading.Label is { } label) _label.Text = label.Value;
+        if (reading.TotalTtc is { } total) _amount.Text = DocumentReadingUi.Money(total.Value);
+        if (reading.Party is { } client && reading.Direction != DocumentDirection.Purchase) _client.Text = client.Value;
+        if (reading.Nature is { } nature) _nature.SelectedIndex = Array.FindIndex(Natures, n => n.Nature == nature);
+        _invoiceNote.Text = DocumentReadingUi.Describe(reading, DocumentDirection.Revenue)
+            + "\nIndiquez la date à laquelle le paiement a été reçu" + (reading.Date is { } issued ? $" (document daté du {issued.Value:dd/MM/yyyy})." : ".")
+            + (reading.Nature == RevenueNature.Mixed ? " La facture mélange vente et prestation : renseignez la part marchandises." : "");
     }
 
     private RevenueNature SelectedNature => Natures[Math.Max(0, _nature.SelectedIndex)].Nature;

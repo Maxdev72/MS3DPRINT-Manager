@@ -2,6 +2,13 @@
 
 ## 25 octobre 2026
 
+### Lecture automatique des factures, tickets et captures d’écran
+- Le logiciel et l’application lisent maintenant n’importe quelle facture, ticket de caisse, capture d’écran ou photo : PDF avec texte, PDF numérisé, PNG, JPEG, BMP, WebP… Rien ne quitte l’appareil : reconnaissance de texte de Windows sur le PC, ML Kit (modèle intégré) sur le téléphone.
+- Le moteur trouve le montant à payer (en écartant prix unitaires, TVA, rendu monnaie, acompte, volume de carburant…), la date du document (pas l’échéance), le numéro de facture, de commande ou de ticket, le fournisseur ou le client, le mode de règlement et la nature, vérifie que HT + TVA = TTC et signale les montants en dollars, les devis, avoirs et confirmations de commande. Chaque champ incertain est signalé « à vérifier ».
+- Il distingue un achat d’une recette grâce à votre entreprise (Paramètres > Mon entreprise), aux fournisseurs et clients déjà connus et aux enseignes courantes. Captures sombres, minuscules, penchées ou ombrées : plusieurs traitements de l’image sont essayés et le meilleur est gardé.
+- PC : pages Recettes et Achats, « Lire une facture (PDF, image) », « Coller une capture » (Ctrl+V), glisser-déposer d’un fichier. Les achats sont désormais préremplis comme les recettes (fournisseur, date, montant, pièce, libellé, règlement) et le justificatif est joint. Téléphone : photo, galerie, partage, y compris les captures d’écran.
+- Correctif : « Impossible de supprimer le fichier à remplacer » lors d’un changement de priorité ou de toute modification d’une fiche : Nextcloud ou l’antivirus tenait le fichier un instant, l’enregistrement est maintenant retenté pendant quelques secondes.
+
 ### Application compagnon Android, version 1.1
 - Design repensé : saisie avec montant en grand, date et règlement en puces, sections et bouton d’envoi toujours visible ; en-tête avec le cube MS3DPRINT et un voyant d’état du PC ; navigation à pastille ; projets avec bande de statut, barre d’encaissement et trois indicateurs (actifs, en retard, à encaisser) ; activité avec carte de synthèse ; envois regroupés par jour avec montants signés.
 - Application refaite en cinq écrans : Saisir (achat ou recette, appareil photo, galerie, PDF), Projets (recherche, filtres, bilan, saisie préremplie depuis un projet), Activité (chiffre d’affaires, mois par mois, seuils), Envois (état de chaque saisie, renvoi) et Réglages. Même palette que le logiciel PC, icône du cube MS3DPRINT.

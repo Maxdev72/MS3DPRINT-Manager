@@ -30,7 +30,7 @@ public static class PhotoTools
 
     public static byte[]? NormalizeFile(string path) => Normalize(File.ReadAllBytes(path));
 
-    private static float Orientation(byte[] source)
+    internal static float Orientation(byte[] source)
     {
         try
         {

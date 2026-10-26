@@ -29,9 +29,18 @@ public static class IndyInvoiceReader
         ArgumentException.ThrowIfNullOrWhiteSpace(pdfPath);
         var info = new FileInfo(pdfPath);
         if (!info.Exists || info.Length is 0 or > MaxPdfBytes) return null;
+        try { return ReadWithText(File.ReadAllBytes(pdfPath)).Data; }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { return null; }
+    }
+
+    /// <summary>The text of the first pages (reading order) and what the Indy layouts make of it. Text is empty for a scanned PDF or a file that is not a PDF.</summary>
+    public static (IndyInvoiceData? Data, string Text) ReadWithText(byte[] pdf)
+    {
+        ArgumentNullException.ThrowIfNull(pdf);
+        if (pdf.Length is 0 || pdf.Length > MaxPdfBytes) return (null, "");
         try
         {
-            using var document = PdfDocument.Open(pdfPath);
+            using var document = PdfDocument.Open(pdf);
             var text = new System.Text.StringBuilder();
             string? client = null;
             foreach (var page in document.GetPages().Take(3))
@@ -39,11 +48,11 @@ public static class IndyInvoiceReader
                 text.AppendLine(UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor.ContentOrderTextExtractor.GetText(page));
                 if (page.Number == 1) client = ClientNameOnFirstPage(page);
             }
-            return Parse(text.ToString(), client);
+            return (Parse(text.ToString(), client), text.ToString());
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or NotSupportedException
             or UglyToad.PdfPig.Core.PdfDocumentFormatException)
-        { return null; }
+        { return (null, ""); }
     }
 
     public static IndyInvoiceData? Parse(string text, string? clientName = null)

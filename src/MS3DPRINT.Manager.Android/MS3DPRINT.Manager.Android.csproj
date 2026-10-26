@@ -28,6 +28,8 @@
   <ItemGroup>
     <PackageReference Include="Avalonia.Android" Version="12.1.4" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
+    <!-- Text recognition with the model bundled in the app: works offline, no Google Play download. -->
+    <PackageReference Include="Xamarin.Google.MLKit.TextRecognition" Version="116.0.1.9" />
   </ItemGroup>
 
   <ItemGroup>

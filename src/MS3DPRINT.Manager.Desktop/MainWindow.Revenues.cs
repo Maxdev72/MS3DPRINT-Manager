@@ -29,6 +29,20 @@ public partial class MainWindow
         await LoadRevenuesAsync();
     }
 
+    /// <summary>Tells the document reader who the user is (company, known clients and suppliers) so that it can tell a purchase from a revenue and never takes the user for the other party.</summary>
+    private void RefreshReadingContext(string root, IReadOnlyList<string>? clients, IReadOnlyList<string>? suppliers)
+    {
+        RevenueHeader header;
+        try { header = new RevenueHeaderStore(root).Load(); }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or System.Text.Json.JsonException) { header = new(); }
+        var current = DocumentReadingUi.Context;
+        DocumentReadingUi.Context = new MS3DPRINT.Manager.Core.Recognition.AnalysisContext
+        {
+            OwnBusinessName = header.BusinessName, OwnOwnerName = header.OwnerName, OwnSiret = header.Siret,
+            KnownClients = clients ?? current.KnownClients, KnownSuppliers = suppliers ?? current.KnownSuppliers, Today = DateOnly.FromDateTime(DateTime.Today)
+        };
+    }
+
     private async void CreateRevenue_Click(object? sender, RoutedEventArgs e) => await OpenRevenueEntryAsync(null);
 
     private async Task OpenRevenueEntryAsync(string? invoicePdf, RevenueSuggestion? suggestion = null)
@@ -38,6 +52,7 @@ public partial class MainWindow
         try { clientList = await Task.Run(() => new ClientCatalog(new ClientProfileStore(new MS3DPRINT.Manager.Core.Workspace.WorkspaceMetadataPaths(root))).Load(root)); }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or System.Text.Json.JsonException) { clientList = []; }
         var clients = clientList.Select(c => c.DisplayName).Where(n => !string.IsNullOrWhiteSpace(n)).Order().ToArray();
+        RefreshReadingContext(root, clients, null);
         var dialog = new RevenueEntryWindow(clients, DateOnly.FromDateTime(DateTime.Today), invoicePdf);
         if (suggestion is not null) dialog.Suggest(suggestion);
         if (!await dialog.ShowDialog<bool>(this) || dialog.Result is not { } entry) return;
@@ -68,7 +83,9 @@ public partial class MainWindow
         IReadOnlyList<ClientSummary> clientList;
         try { clientList = await Task.Run(() => new ClientCatalog(new ClientProfileStore(new MS3DPRINT.Manager.Core.Workspace.WorkspaceMetadataPaths(root))).Load(root)); }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or System.Text.Json.JsonException) { clientList = []; }
-        var dialog = new RevenueEntryWindow(clientList.Select(c => c.DisplayName).Where(n => !string.IsNullOrWhiteSpace(n)).Order().ToArray(), DateOnly.FromDateTime(DateTime.Today), null, entry);
+        var correctionClients = clientList.Select(c => c.DisplayName).Where(n => !string.IsNullOrWhiteSpace(n)).Order().ToArray();
+        RefreshReadingContext(root, correctionClients, null);
+        var dialog = new RevenueEntryWindow(correctionClients, DateOnly.FromDateTime(DateTime.Today), null, entry);
         if (!await dialog.ShowDialog<bool>(this) || dialog.Result is not { } corrected) return;
         try
         {

@@ -26,6 +26,10 @@ public sealed class App : Application
             Styles.Add(style);
         }
         RequestedThemeVariant = ThemeVariant.Dark;
+        // Reading of invoices, receipts and screenshots: text recognition and PDF rendering are those of the phone, nothing is sent anywhere.
+        try { MS3DPRINT.Manager.Core.Recognition.DocumentReader.Ocr = new Services.MlKitOcrEngine(); }
+        catch (Java.Lang.Exception) { MS3DPRINT.Manager.Core.Recognition.DocumentReader.Ocr = null; }
+        MS3DPRINT.Manager.Core.Recognition.DocumentReader.Rasterizer = new Services.AndroidPdfRasterizer();
     }
 
     public override void OnFrameworkInitializationCompleted()
