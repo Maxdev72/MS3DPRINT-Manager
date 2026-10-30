@@ -95,6 +95,7 @@ public partial class MainWindow
         InitializeEstimateQuickForm();
         InitializeEstimateDesign();
         InitializeEstimateSubcontracting();
+        InitializeQuantityPricing();
     }
 
     private void UpdateEstimateLayout()

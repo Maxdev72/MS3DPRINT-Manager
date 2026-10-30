@@ -179,9 +179,13 @@
   <!-- One continuous reading line, including the cells that contain quick actions. -->
   <Style Selector="Grid.workspace-row">
     <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Border.workspace-row-background">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="CornerRadius" Value="4" />
     <Setter Property="Transitions"><Transitions><BrushTransition Property="Background" Duration="0:0:0.12" /></Transitions></Setter>
   </Style>
-  <Style Selector="Grid.workspace-row:pointerover, Grid.workspace-row:focus-within">
+  <Style Selector="Grid.workspace-row:pointerover > Border.workspace-row-background, Grid.workspace-row:focus-within > Border.workspace-row-background">
     <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
   </Style>
   <Style Selector="Grid.workspace-row Button.table-row:pointerover, Grid.workspace-row Button.table-row:pressed">
@@ -225,4 +229,42 @@
   <Style Selector="Window.reduce-motion Grid.workspace-row, Window.reduce-motion Border, Window.reduce-motion TextBox /template/ Border#PART_BorderElement, Window.reduce-motion Expander /template/ ToggleButton#ExpanderHeader /template/ Border#ToggleButtonBackground">
     <Setter Property="Transitions" Value="{x:Null}" />
   </Style>
+  <Style Selector="Button.project-calendar-day"><Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" /><Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="4" /></Style>
+  <Style Selector="Button.project-calendar-day.outside-month"><Setter Property="Opacity" Value="0.5" /></Style>
+  <Style Selector="Button.project-calendar-day.selected"><Setter Property="Background" Value="{DynamicResource CyanSoftBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /></Style>
+  <Style Selector="Button.project-calendar-day:pointerover"><Setter Property="Background" Value="{DynamicResource HoverBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /></Style>
+  <Style Selector="Calendar.project-date-picker"><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /><Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /></Style>
+  <Style Selector="Border.project-task-row"><Setter Property="BorderThickness" Value="0,0,0,1" /><Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" /></Style>
+  <Style Selector="Border.project-task-row.drop-before"><Setter Property="BorderThickness" Value="0,2,0,1" /><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /></Style>
+  <Style Selector="Border.project-task-row.drop-after"><Setter Property="BorderThickness" Value="0,0,0,2" /><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /></Style>
+  <!-- Project views are primary navigation, visually stronger than the catalogue filters. -->
+  <Style Selector="Window.workbench-ui StackPanel#ProjectViewTabs Button.filter-chip">
+    <Setter Property="FontSize" Value="16" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="MinHeight" Value="50" />
+    <Setter Property="MinWidth" Value="128" />
+    <Setter Property="Padding" Value="20,10" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+  </Style>
+  <Style Selector="Window.workbench-ui StackPanel#ProjectViewTabs Button.filter-chip.selected">
+    <Setter Property="Background" Value="{DynamicResource BrandBlueBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BrandBlueBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+  </Style>
+  <Style Selector="Window.workbench-ui StackPanel#ProjectViewTabs Button.filter-chip:pointerover">
+    <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BrandBlueBrush}" />
+  </Style>
+  <Style Selector="Window.workbench-ui StackPanel#ProjectViewTabs Button.filter-chip.selected:pointerover">
+    <Setter Property="Background" Value="{DynamicResource BrandBlueBrush}" />
+  </Style>
+  <Style Selector="Window.workbench-ui StackPanel#ProjectViewTabs Button.filter-chip:focus-visible">
+    <Setter Property="BorderBrush" Value="{DynamicResource TextBrush}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+  <Style Selector="Window.workbench-ui StackPanel#ProjectViewTabs Button.filter-chip Path.icon"><Setter Property="Stroke" Value="{Binding $parent[Button].Foreground}" /></Style>
 </Styles>

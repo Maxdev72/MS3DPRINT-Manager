@@ -261,7 +261,7 @@ public sealed class ModelBrowserView : UserControl
         }
         _downloadDialog.Add(files);
         if (problem is not null) _downloadDialog.Say(problem);
-        _downloadDialog.Activate();
+        if (!_downloadDialog.IsChoosingDestination) _downloadDialog.Activate();
         // after every download: what the user is looking at stays, the rest is trimmed to the age and size limits
         var shown = _downloadDialog.Paths;
         _ = Task.Run(() => { try { _buffer.Maintain(BufferKeeps, BufferMaxBytes, shown); } catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { } });

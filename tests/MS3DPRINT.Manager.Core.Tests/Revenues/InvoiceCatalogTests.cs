@@ -69,6 +69,14 @@ public sealed class InvoiceCatalogTests : IDisposable
     }
 
     [Fact]
+    public void Supplier_invoices_are_not_proposed_as_customer_receivables()
+    {
+        Invoice(Path.Combine("06_FOURNISSEURS", "Amazon", "04_FACTURES", "Facture-FACT202610-99.pdf"), "FACT202610-99", "10,00");
+        Invoice(Path.Combine("CLIENTS", "Martin", "Facture-FACT202610-33.pdf"), "FACT202610-33", "85,31");
+        Assert.Equal("FACT202610-33", Assert.Single(InvoiceCatalog.Scan(_root).Candidates).Data.InvoiceNumber);
+    }
+
+    [Fact]
     public void Scan_can_be_cancelled_and_reports_progress()
     {
         for (var i = 1; i <= 3; i++) Invoice(Path.Combine("CLIENTS", "A", $"Facture-{i}.pdf"), $"FACT202610-0{i}", "10,00");

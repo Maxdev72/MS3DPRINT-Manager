@@ -50,6 +50,11 @@ public partial class MainWindow
         actions.Children.Add(estimate); actions.Children.Add(collect); actions.Children.Add(folder); content.Children.Add(actions);
         var duplicate = new Button { Content = Icons.Label("IconCopy", "Dupliquer"), Tag = project };
         duplicate.Click += DuplicateProject_Click; actions.Children.Add(duplicate);
+        var copy = CreateOverflowActions(CreateProjectCopyActions(project));
+        copy.Content = Icons.Label("IconCopy", "Copier");
+        Avalonia.Automation.AutomationProperties.SetName(copy, "Copier les informations du projet");
+        ToolTip.SetTip(copy, "Copier le nom, la référence ou le chemin du projet");
+        actions.Children.Add(copy);
 
         content.Children.Add(BuildClassificationSection(project));
         content.Children.Add(BuildProjectBalanceSection(project));

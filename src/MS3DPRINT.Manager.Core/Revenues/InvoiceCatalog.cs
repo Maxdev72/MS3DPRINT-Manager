@@ -39,7 +39,7 @@ public static class InvoiceCatalog
                 try { attributes = File.GetAttributes(entry); } catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { continue; }
                 if ((attributes & FileAttributes.Directory) != 0)
                 {
-                    if ((attributes & FileAttributes.ReparsePoint) != 0 || name.StartsWith('.')) continue;
+                    if ((attributes & FileAttributes.ReparsePoint) != 0 || name.StartsWith('.') || name.Equals("06_FOURNISSEURS", StringComparison.OrdinalIgnoreCase)) continue;
                     pending.Push(entry);
                 }
                 else if (name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) && InvoiceName.IsMatch(name))

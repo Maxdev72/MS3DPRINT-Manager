@@ -14,4 +14,5 @@ public sealed record ProjectProfile(
     string? Notes,
     DateTimeOffset UpdatedAt,
     string? RelativePath = null,
-    ProjectPriority Priority = ProjectPriority.None);
+    ProjectPriority Priority = ProjectPriority.None,
+    IReadOnlyList<ProjectTask>? Tasks = null);

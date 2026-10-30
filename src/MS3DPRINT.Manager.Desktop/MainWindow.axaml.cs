@@ -60,6 +60,11 @@ public partial class MainWindow : Window
         {
             Width = Math.Max(MinWidth, saved.Width);
             Height = Math.Max(MinHeight, saved.Height);
+            if (saved.ProjectSortColumn is >= -1 and <= 4)
+            {
+                _projectSortColumn = saved.ProjectSortColumn;
+                _projectSortAscending = saved.ProjectSortAscending;
+            }
             if (saved.X is { } x && saved.Y is { } y)
             {
                 WindowStartupLocation = WindowStartupLocation.Manual;
@@ -70,18 +75,21 @@ public partial class MainWindow : Window
             if (saved.Maximized) WindowState = WindowState.Maximized;
         }
         PositionChanged += (_, e) => { if (WindowState == WindowState.Normal) _normalPosition = e.Point; };
-        Closing += (_, _) =>
-            _placement.Save(new WindowPlacement(
-                WindowState == WindowState.Normal ? Bounds.Width : Width,
-                WindowState == WindowState.Normal ? Bounds.Height : Height,
-                WindowState == WindowState.Maximized,
-                (WindowState == WindowState.Normal ? Position : _normalPosition)?.X,
-                (WindowState == WindowState.Normal ? Position : _normalPosition)?.Y));
+        Closing += (_, _) => SaveWindowPreferences();
         Closed += (_, _) => { CancelFileRead(); _searchCancellation?.Cancel(); _searchCancellation?.Dispose(); _searchCancellation = null; };
     }
 
     private PixelPoint? _normalPosition;
     private bool _positionRestored;
+
+    private void SaveWindowPreferences()
+        => _placement.Save(new WindowPlacement(
+            WindowState == WindowState.Normal ? Bounds.Width : Width,
+            WindowState == WindowState.Normal ? Bounds.Height : Height,
+            WindowState == WindowState.Maximized,
+            (WindowState == WindowState.Normal ? Position : _normalPosition)?.X,
+            (WindowState == WindowState.Normal ? Position : _normalPosition)?.Y,
+            _projectSortColumn, _projectSortAscending));
 
     /// <summary>Puts the window back on a visible monitor when its saved place is no longer reachable.</summary>
     private void EnsureOnScreen()
@@ -254,7 +262,7 @@ public partial class MainWindow : Window
         if (--_busy <= 0) { _busy = 0; BusyBar.IsVisible = false; }
     }
 
-    /// <summary>Short feedback bubble in the bottom-right corner; it fades away on its own.</summary>
+    /// <summary>Short feedback bubble below the search in the top-right corner; it fades away on its own.</summary>
     private void Notify(string message, bool error = false)
     {
         // an identical toast already on screen is not stacked a second time

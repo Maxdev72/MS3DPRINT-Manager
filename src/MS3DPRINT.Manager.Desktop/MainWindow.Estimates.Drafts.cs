@@ -76,7 +76,7 @@ public partial class MainWindow
             var frequencies = _estimateFrequencies;
             var options = new EstimateV2Options(Charges: _estimateQuoteCharges, PricingMode: _estimatePricingMode, FeeKind: _estimateFeeKind,
                 GeneralFixedCost: _estimateGeneralFixedCost, DesignFrequency: frequencies[0], LaborFrequency: frequencies[1],
-                PostProcessingFrequency: frequencies[2], ConsumablesFrequency: frequencies[3], PackagingFrequency: frequencies[4], MiscFrequency: frequencies[5], ChargePresetId: _estimateChargePresetId);
+                PostProcessingFrequency: frequencies[2], ConsumablesFrequency: frequencies[3], PackagingFrequency: frequencies[4], MiscFrequency: frequencies[5], ChargePresetId: _estimateChargePresetId, QuantityTiers: _estimateQuantityTiers);
             var project = EstimateProject.SelectedItem as ProjectSummary;
             return new EstimateDraft(_estimateDraftId, DateTimeOffset.UtcNow, DraftFields().ToDictionary(pair => pair.Key, pair => pair.Value.Text),
                 _estimateEngineVersion, EstimateScopeIndex, EstimatePrintDataMode.SelectedIndex, EstimateFilament.SelectedItem as FilamentProfile,

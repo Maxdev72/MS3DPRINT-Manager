@@ -27,6 +27,8 @@ public sealed class DownloadDialog : DialogWindow
     private readonly List<(BufferedFile File, CheckBox Box, Control Row)> _files = [];
     private readonly Func<Task<string?>>? _pickFolder;
     private bool _busy;
+    private bool _closed;
+    public bool IsChoosingDestination { get; private set; }
 
     /// <param name="pickFolder">Asks the user for a folder of the workspace (null: the "store" action is not offered).</param>
     public DownloadDialog(Func<Task<string?>>? pickFolder = null)
@@ -35,6 +37,7 @@ public sealed class DownloadDialog : DialogWindow
         Title = "Téléchargement terminé";
         Width = 560; MinWidth = 440; SizeToContent = SizeToContent.Height; MaxHeight = 640;
         CanResize = false;
+        Closed += (_, _) => _closed = true;
 
         _open.Click += async (_, _) => await OpenAsync();
         _openWith.Click += (_, _) => OpenWith();
@@ -103,11 +106,18 @@ public sealed class DownloadDialog : DialogWindow
         var weight = _files.Sum(item => item.File.Length);
         _summary.Text = _files.Count == 0 ? string.Empty
             : (_files.Count > 1 ? _files.Count + " fichiers · " : "") + SizeText(weight) + " · dans le tampon du logiciel";
-        _open.IsEnabled = !_busy && ticked > 0;
+        RefreshActions();
         _open.Content = ticked > 1 ? "Ouvrir les " + ticked + " dans le slicer" : "Ouvrir dans le slicer";
         _openWith.IsVisible = ticked == 1;
         _store.IsVisible = _pickFolder is not null && ticked > 0;
         _note.Text = string.Empty;
+    }
+
+    private void RefreshActions()
+    {
+        _open.IsEnabled = !_busy && Ticked().Count > 0;
+        _store.IsEnabled = !_busy;
+        _openWith.IsEnabled = !_busy;
     }
 
     /// <summary>Moves the ticked files out of the buffer into a folder of the workspace: what is kept there is no longer cleaned up.</summary>
@@ -117,8 +127,15 @@ public sealed class DownloadDialog : DialogWindow
         var paths = Ticked();
         if (paths.Count == 0) return;
         _busy = true;
+        IsChoosingDestination = true;
+        var wasVisible = IsVisible;
+        var owner = Owner as Window;
+        RefreshActions();
         try
         {
+            // This is an owned native window; the folder picker is hosted in MainWindow's
+            // side panel. Hide the native window so it cannot cover or steal focus from it.
+            if (wasVisible) Hide();
             var folder = await _pickFolder();
             if (string.IsNullOrWhiteSpace(folder)) return;
             IReadOnlyList<string> moved;
@@ -137,7 +154,19 @@ public sealed class DownloadDialog : DialogWindow
             Refresh();
             _note.Text = moved.Count + (moved.Count > 1 ? " fichiers rangés dans « " : " fichier rangé dans « ") + Path.GetFileName(folder.TrimEnd('\\', '/')) + " ».";
         }
-        finally { _busy = false; }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { _note.Text = "Impossible de choisir le dossier : " + exception.Message; }
+        finally
+        {
+            _busy = false;
+            IsChoosingDestination = false;
+            RefreshActions();
+            if (wasVisible && !_closed && (owner is null || owner.IsVisible))
+            {
+                if (owner is not null) Show(owner); else Show();
+                Activate();
+            }
+        }
     }
 
     private List<string> Ticked()
@@ -148,7 +177,7 @@ public sealed class DownloadDialog : DialogWindow
     {
         if (_busy) return;
         _busy = true;
-        _open.IsEnabled = false;
+        RefreshActions();
         try
         {
             var paths = Ticked();
@@ -165,7 +194,7 @@ public sealed class DownloadDialog : DialogWindow
             // the slicer takes a moment to start: a quick second click must not launch it again
             await Task.Delay(TimeSpan.FromSeconds(3));
             _busy = false;
-            _open.IsEnabled = Ticked().Count > 0;
+            RefreshActions();
         }
     }
 

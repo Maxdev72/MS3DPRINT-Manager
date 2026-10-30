@@ -25,7 +25,7 @@ public partial class MainWindow
         _projectPrioritySortButton.Click += (_, _) =>
         {
             _projectSortAscending = _projectSortColumn != 4 || !_projectSortAscending;
-            _projectSortColumn = 4; RenderProjects();
+            _projectSortColumn = 4; SaveWindowPreferences(); RenderProjects();
         };
         var filters = new WrapPanel { ItemSpacing = 12, LineSpacing = 8 };
         filters.Children.Add(_projectPriorityFilterBox); filters.Children.Add(_projectPrioritySortButton);

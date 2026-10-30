@@ -114,8 +114,12 @@ public partial class MainWindow
 
     /// <summary>Lists the invoices already filed in the workspace that have no revenue line, and records the ones the user confirms as paid.</summary>
     private async void ImportInvoices_Click(object? sender, RoutedEventArgs e)
+        => await ImportInvoicesAsync();
+
+    private async Task ImportInvoicesAsync()
     {
         var root = WorkspaceRoot;
+        var navigationKey = CurrentNavigationStop?.Key;
         Notify("Recherche des factures de l’espace de travail…");
         InvoiceScan scan; IReadOnlyList<RevenueLine> lines;
         try
@@ -129,7 +133,7 @@ public partial class MainWindow
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or System.Text.Json.JsonException)
         { Notify("Recherche des factures impossible : " + exception.Message, error: true); return; }
-        if (!string.Equals(root, WorkspaceRoot, StringComparison.OrdinalIgnoreCase)) return;
+        if (!MatchesNavigationContext(root, navigationKey) || !RevenuesWorkspacePanel.IsVisible) return;
         var missing = InvoiceCatalog.Unrecorded(scan.Candidates, lines);
         if (missing.Count == 0)
         {
@@ -138,20 +142,34 @@ public partial class MainWindow
         }
         var dialog = new RevenueBatchWindow(missing, scan.Unreadable.Count, DateOnly.FromDateTime(DateTime.Today));
         if (!await dialog.ShowDialog<bool>(this)) return;
-        var saved = 0; var failures = new List<string>();
+        var saved = 0; int? latestSavedYear = null;
+        var duplicates = new List<string>(); var failures = new List<string>();
         var entries = dialog.Result;
         await Task.Run(() =>
         {
             var journal = new RevenueJournal(root);
             foreach (var entry in entries)
             {
-                try { journal.Append(entry); saved++; }
-                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException) { failures.Add($"{entry.InvoiceNumber} : {exception.Message}"); }
+                try
+                {
+                    if (journal.TryAppendInvoice(entry))
+                    {
+                        saved++;
+                        latestSavedYear = Math.Max(latestSavedYear ?? entry.ReceivedOn.Year, entry.ReceivedOn.Year);
+                    }
+                    else duplicates.Add(entry.InvoiceNumber);
+                }
+                catch (Exception exception) when (exception is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException) { failures.Add($"{entry.InvoiceNumber} : {exception.Message}"); }
             }
         });
-        if (entries.Count > 0) _revenueYear = entries.Max(x => x.ReceivedOn.Year);
+        if (latestSavedYear is { } year) _revenueYear = year;
         if (RevenuesWorkspacePanel.IsVisible) await LoadRevenuesAsync();
-        Notify(failures.Count == 0 ? $"{saved} recette{(saved > 1 ? "s" : "")} enregistrée{(saved > 1 ? "s" : "")}." : $"{saved} enregistrée(s), {failures.Count} en échec : {failures[0]}", error: failures.Count > 0);
+        var message = $"{saved} recette{(saved > 1 ? "s" : "")} enregistrée{(saved > 1 ? "s" : "")}.";
+        if (duplicates.Count > 0)
+            message += $" {duplicates.Count} facture{(duplicates.Count > 1 ? "s" : "")} déjà enregistrée{(duplicates.Count > 1 ? "s" : "")} ignorée{(duplicates.Count > 1 ? "s" : "")} : "
+                + string.Join(", ", duplicates.Take(3)) + (duplicates.Count > 3 ? "…" : "") + ".";
+        if (failures.Count > 0) message += $" {failures.Count} en échec : {failures[0]}";
+        Notify(message, error: failures.Count > 0);
     }
 
     private async void CancelRevenue_Click(object? sender, RoutedEventArgs e)

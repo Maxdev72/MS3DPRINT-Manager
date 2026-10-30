@@ -58,14 +58,23 @@ public partial class MainWindow
         }
         foreach (var project in projects)
         {
+            var tasks = ProjectTasks.Items(project.Profile);
+            var nextTask = ProjectTasks.Next(project.Profile);
+            var actionText = nextTask is not null ? "Prochaine tâche : " + nextTask.Title
+                : tasks.Count > 0 ? "Toutes les tâches sont terminées · vérifier le projet"
+                : project.Profile is null ? "Compléter la fiche du projet"
+                : project.Status == ProjectStatus.InProgress ? "Poursuivre la fabrication" : "Préparer le projet";
             var content = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 14 };
             var text = new StackPanel { Spacing = 5, VerticalAlignment = VerticalAlignment.Center };
             text.Children.Add(DashboardProjectTitle(project, large: true));
             text.Children.Add(new TextBlock { Text = project.Reference + " · " + project.ClientTitle(), Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis });
-            text.Children.Add(new TextBlock { Text = project.Profile is null ? "Compléter la fiche du projet" : project.Status == ProjectStatus.InProgress ? "Poursuivre la fabrication" : "Préparer le projet", Classes = { "queue-next-action" } });
+            var nextAction = new TextBlock { Text = actionText, Classes = { "queue-next-action" }, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis };
+            ToolTip.SetTip(nextAction, actionText);
+            text.Children.Add(nextAction);
             var state = new StackPanel { Spacing = 8, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right };
             var badge = CreateStatusBadge(project.StatusLabel); badge.HorizontalAlignment = HorizontalAlignment.Right;
             state.Children.Add(badge);
+            if (tasks.Count > 0) state.Children.Add(new TextBlock { Text = $"{tasks.Count(t => t.IsCompleted)} / {tasks.Count} tâches", Classes = { "caption" } });
             var (deadline, variant) = ProjectDeadlineLabel(project);
             state.Children.Add(new TextBlock { Text = deadline, FontSize = 13, Foreground = (IBrush?)Avalonia.Application.Current?.FindResource(variant == "danger" || variant == "warning" ? "WarningBrush" : "MutedTextBrush") });
             var arrow = Icons.Glyph("IconArrowRight", 18); Grid.SetColumn(arrow, 2);
@@ -73,9 +82,12 @@ public partial class MainWindow
             content.Children.Add(text);
             content.Children.Add(state); content.Children.Add(arrow);
             var row = new Button { Classes = { "workspace-card", "queue-row" }, Tag = project, Content = content };
-            Avalonia.Automation.AutomationProperties.SetName(row, DashboardProjectName(project, deadline));
-            ToolTip.SetTip(row, DashboardProjectName(project, deadline));
-            row.Click += RecentProject_Click;
+            var rowName = DashboardProjectName(project, deadline) + " · " + actionText;
+            Avalonia.Automation.AutomationProperties.SetName(row, rowName);
+            ToolTip.SetTip(row, rowName);
+            if (tasks.Count > 0)
+                row.Click += async (_, _) => await OpenProjectTaskTrackingAsync(project);
+            else row.Click += RecentProject_Click;
             RecentProjectsList.Children.Add(row);
         }
     }

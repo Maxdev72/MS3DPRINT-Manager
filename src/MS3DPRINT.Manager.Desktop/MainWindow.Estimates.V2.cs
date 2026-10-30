@@ -284,7 +284,7 @@ public partial class MainWindow
             _estimatePricingMode, _estimateFeeKind, string.IsNullOrWhiteSpace(_estimateCommercial.Text) ? null : EstimateNumber(_estimateCommercial), _estimateGeneralFixedCost,
             frequency[0], frequency[1], frequency[2], frequency[3], frequency[4], frequency[5],
             _estimateCostEditors.Select(c => new EstimateCostItem(c.Name.Text ?? "Poste", EstimateNumber(c.Amount), c.RepeatOnFailure.IsChecked == true ? CostFrequency.PerAttempt : CostFrequency.PerOrder, c.Enabled.IsChecked == true)).ToArray(), _estimateChargePresetId,
-            ComplementaryCostsAreTotals: true, Subcontracting: ReadEstimateSubcontracting());
+            ComplementaryCostsAreTotals: true, Subcontracting: ReadEstimateSubcontracting(), QuantityTiers: _estimateQuantityTiers);
     }
 
     private void SetEstimateFrequencies(EstimateV2Options options)
@@ -296,6 +296,7 @@ public partial class MainWindow
 
     private void RestoreEstimateV2(EstimateInputs inputs)
     {
+        _estimateQuantityTiers=inputs.V2?.QuantityTiers?.ToArray();
         var options = inputs.V2 ?? new(); var p = options.Production; var c = options.Charges ?? new();
         _estimateEngineVersion = inputs.EngineVersion == 2 ? 2 : 1;
         RestoreEstimateSubcontracting(options.Subcontracting);

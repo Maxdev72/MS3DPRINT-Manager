@@ -1,10 +1,12 @@
 using System.Globalization;
+using System.Text.Json;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using MS3DPRINT.Manager.Core.Filaments;
 using MS3DPRINT.Manager.Core.Recognition;
 using MS3DPRINT.Manager.Core.Revenues;
+using MS3DPRINT.Manager.Desktop.Clients;
 
 namespace MS3DPRINT.Manager.Desktop;
 
@@ -193,24 +195,119 @@ public sealed class RevenueCancelWindow : DialogWindow
 /// <summary>Workshop identity printed at the top of the exported book.</summary>
 public sealed class RevenueHeaderWindow : DialogWindow
 {
-    private readonly TextBox _business = new() { PlaceholderText = "Nom de l’entreprise" };
+    private static readonly HttpClient LookupHttp = new() { Timeout = TimeSpan.FromSeconds(8) };
+    private readonly IClientLookup _lookup;
+    private readonly TextBox _business = new() { PlaceholderText = "Rechercher par nom ou SIRET" };
     private readonly TextBox _owner = new() { PlaceholderText = "Nom de l’entrepreneur" };
     private readonly TextBox _siret = new() { PlaceholderText = "14 chiffres" };
-    private readonly TextBox _address = new() { PlaceholderText = "Adresse postale" };
+    private readonly TextBox _address = new() { PlaceholderText = "Tapez pour rechercher l’adresse" };
     private readonly TextBox _email = new() { PlaceholderText = "adresse@exemple.fr" };
     private readonly TextBox _phone = new() { PlaceholderText = "Téléphone" };
+    private readonly ListBox _companyResults = new() { IsVisible = false, MaxHeight = 240, Classes = { "lookup-suggestions" } };
+    private readonly ListBox _addressResults = new() { IsVisible = false, MaxHeight = 200, Classes = { "lookup-suggestions" } };
+    private readonly TextBlock _lookupStatus = new() { IsVisible = false, FontSize = 13, TextWrapping = Avalonia.Media.TextWrapping.Wrap, Classes = { "muted" } };
+    private CancellationTokenSource? _companySearch;
+    private CancellationTokenSource? _addressSearch;
+    private bool _applyingSuggestion;
+    private bool _closed;
+    private string _knownBusiness;
+    private string _knownAddress;
     public RevenueHeader Result => new(_business.Text?.Trim() ?? "", _siret.Text?.Trim() ?? "", _owner.Text?.Trim() ?? "",
         _address.Text?.Trim() ?? "", _email.Text?.Trim() ?? "", _phone.Text?.Trim() ?? "");
 
-    public RevenueHeaderWindow(RevenueHeader current)
+    public RevenueHeaderWindow(RevenueHeader current, IClientLookup? lookup = null)
     {
+        _lookup = lookup ?? new PublicClientLookup(LookupHttp);
+        _knownBusiness = current.BusinessName.Trim(); _knownAddress = current.Address.Trim();
         Title = "Informations de mon entreprise"; Width = 500; Height = 700; MinWidth = 420;
         _business.Text = current.BusinessName; _owner.Text = current.OwnerName; _siret.Text = current.Siret;
         _address.Text = current.Address; _email.Text = current.Email; _phone.Text = current.Phone;
         var save = new Button { Content = "Enregistrer" };
         save.Click += (_, _) => Close(true);
+        Avalonia.Automation.AutomationProperties.SetName(_companyResults, "Entreprises trouvées");
+        Avalonia.Automation.AutomationProperties.SetName(_addressResults, "Adresses trouvées");
+        Avalonia.Automation.AutomationProperties.SetLiveSetting(_lookupStatus, Avalonia.Automation.AutomationLiveSetting.Polite);
+        _companyResults.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<CompanySuggestion>((item, _) =>
+            new StackPanel { Spacing = 4, Children =
+            {
+                new TextBlock { Text = item?.Name ?? "", FontSize = 14, FontWeight = Avalonia.Media.FontWeight.SemiBold, TextWrapping = Avalonia.Media.TextWrapping.Wrap },
+                new TextBlock { Text = string.Join(" · ", new[] { item?.Siret, item?.Address }.Where(v => !string.IsNullOrWhiteSpace(v))), FontSize = 13, Classes = { "muted" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap }
+            } });
+        _addressResults.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<AddressSuggestion>((item, _) =>
+            new TextBlock { Text = item?.Label ?? "", FontSize = 14, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+        _companyResults.SelectionChanged += (_, _) =>
+        {
+            if (_closed || _companyResults.SelectedItem is not CompanySuggestion company) return;
+            _companySearch?.Cancel(); _addressSearch?.Cancel();
+            _applyingSuggestion = true;
+            _knownBusiness = company.Name.Trim(); _business.Text = company.Name;
+            _siret.Text = company.Siret ?? "";
+            if (!string.IsNullOrWhiteSpace(company.Address)) { _knownAddress = company.Address.Trim(); _address.Text = company.Address; }
+            _applyingSuggestion = false;
+            _companyResults.IsVisible = _addressResults.IsVisible = _lookupStatus.IsVisible = false;
+            _companyResults.SelectedItem = null;
+        };
+        _addressResults.SelectionChanged += (_, _) =>
+        {
+            if (_closed || _addressResults.SelectedItem is not AddressSuggestion address) return;
+            _addressSearch?.Cancel(); _applyingSuggestion = true;
+            _knownAddress = address.Label.Trim(); _address.Text = address.Label;
+            _applyingSuggestion = false;
+            _addressResults.IsVisible = _lookupStatus.IsVisible = false; _addressResults.SelectedItem = null;
+        };
+        _business.TextChanged += async (_, _) =>
+        {
+            if (_closed || _applyingSuggestion) return;
+            _companySearch?.Cancel(); _companyResults.IsVisible = false;
+            var query = _business.Text?.Trim() ?? "";
+            if (query == _knownBusiness) return;
+            using var cancellation = new CancellationTokenSource(); _companySearch = cancellation;
+            try { await SearchAsync(query, _companyResults, _lookup.SearchCompaniesAsync, cancellation.Token); }
+            finally { if (ReferenceEquals(_companySearch, cancellation)) _companySearch = null; }
+        };
+        _address.TextChanged += async (_, _) =>
+        {
+            if (_closed || _applyingSuggestion) return;
+            _addressSearch?.Cancel(); _addressResults.IsVisible = false;
+            var query = _address.Text?.Trim() ?? "";
+            if (query == _knownAddress) return;
+            using var cancellation = new CancellationTokenSource(); _addressSearch = cancellation;
+            try { await SearchAsync(query, _addressResults, _lookup.SearchAddressesAsync, cancellation.Token); }
+            finally { if (ReferenceEquals(_addressSearch, cancellation)) _addressSearch = null; }
+        };
         Layout("Mon entreprise", "Ces informations figurent en haut du livre des recettes, du registre des achats et de leurs exports.",
-            [FormKit.Field("Entreprise", _business), FormKit.Field("Entrepreneur", _owner), FormKit.Field("SIRET", _siret),
-             FormKit.Field("Adresse", _address), FormKit.Field("E-mail", _email), FormKit.Field("Téléphone", _phone)], save);
+            [FormKit.Field("Entreprise", _business, hint: "Saisissez au moins 3 caractères, puis sélectionnez votre entreprise."), _companyResults,
+             FormKit.Field("Entrepreneur", _owner), FormKit.Field("SIRET", _siret),
+             FormKit.Field("Adresse", _address), _addressResults, _lookupStatus, FormKit.Field("E-mail", _email), FormKit.Field("Téléphone", _phone)], save);
+    }
+
+    private async Task SearchAsync<T>(string query, ListBox results, Func<string, CancellationToken, Task<IReadOnlyList<T>>> lookup, CancellationToken token)
+    {
+        _lookupStatus.IsVisible = false;
+        if (query.Length < 3) return;
+        try
+        {
+            await Task.Delay(350, token);
+            var suggestions = await lookup(query, token);
+            token.ThrowIfCancellationRequested();
+            if (_closed) return;
+            results.SelectedItem = null;
+            results.ItemsSource = suggestions; results.IsVisible = suggestions.Count > 0;
+            _lookupStatus.Text = "Aucune suggestion trouvée. La saisie manuelle reste possible.";
+            _lookupStatus.IsVisible = suggestions.Count == 0;
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        catch (Exception e) when (e is HttpRequestException or JsonException or OperationCanceledException)
+        {
+            if (_closed || token.IsCancellationRequested) return;
+            _lookupStatus.Text = "Suggestions indisponibles. Vérifiez la connexion ou poursuivez la saisie manuellement.";
+            _lookupStatus.IsVisible = true;
+        }
+    }
+
+    protected override void OnDialogClosed()
+    {
+        _closed = true; _companySearch?.Cancel(); _addressSearch?.Cancel();
+        _companyResults.IsVisible = _addressResults.IsVisible = false;
     }
 }

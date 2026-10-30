@@ -30,8 +30,25 @@ public sealed class RevenueJournal
     {
         Validate(entry, today ?? DateOnly.FromDateTime(DateTime.Today));
         var path = PathFor(entry.ReceivedOn.Year);
+        using var bookMutation = ProfileMutationLock.Acquire(_directory);
         using var mutation = ProfileMutationLock.Acquire(path);
         WriteUnlocked(path, new Record("entry", entry, null));
+    }
+
+    /// <summary>
+    /// Automatic invoice import: rechecks all years immediately before writing. Local writers share a book lock,
+    /// so two cooperating processes cannot import the same invoice in different years at the same time.
+    /// Manual collections may still share a number (instalments); cancelled lines do not block a replacement.
+    /// </summary>
+    public bool TryAppendInvoice(RevenueEntry entry, DateOnly? today = null)
+    {
+        Validate(entry, today ?? DateOnly.FromDateTime(DateTime.Today));
+        using var bookMutation = ProfileMutationLock.Acquire(_directory);
+        var path = PathFor(entry.ReceivedOn.Year);
+        using var mutation = ProfileMutationLock.Acquire(path);
+        if (LoadVerifiedInvoiceLines().Any(line => !line.IsCancelled && SameInvoice(line.Entry.InvoiceNumber, entry.InvoiceNumber))) return false;
+        WriteUnlocked(path, new Record("entry", entry, null));
+        return true;
     }
 
     public void Cancel(RevenueEntry entry, string reason, DateTimeOffset cancelledAt)
@@ -40,6 +57,7 @@ public sealed class RevenueJournal
         if (string.IsNullOrWhiteSpace(reason)) throw new ArgumentException("Le motif d’annulation est obligatoire.", nameof(reason));
         var year = entry.ReceivedOn.Year;
         var path = PathFor(year);
+        using var bookMutation = ProfileMutationLock.Acquire(_directory);
         using var mutation = ProfileMutationLock.Acquire(path);
         var line = Load(year).Lines.FirstOrDefault(l => l.Entry.Id == entry.Id)
             ?? throw new InvalidOperationException("Cette recette est introuvable dans le livre.");
@@ -62,6 +80,7 @@ public sealed class RevenueJournal
         Validate(corrected, today ?? DateOnly.FromDateTime(DateTime.Today));
         var year = current.ReceivedOn.Year;
         var path = PathFor(year);
+        using var bookMutation = ProfileMutationLock.Acquire(_directory);
         using var mutation = ProfileMutationLock.Acquire(path);
         var line = Load(year).Lines.FirstOrDefault(l => l.Entry.Id == current.Id)
             ?? throw new InvalidOperationException("Cette recette est introuvable dans le livre.");
@@ -115,6 +134,45 @@ public sealed class RevenueJournal
         return Years().Any(year => Load(year).Lines.Any(l => !l.IsCancelled
             && string.Equals(l.Entry.InvoiceNumber.Trim(), invoiceNumber.Trim(), StringComparison.OrdinalIgnoreCase)));
     }
+
+    /// <summary>Records an explicit partial or final payment, after checking that the balance shown to the user is still current.</summary>
+    public void AppendInvoicePayment(RevenueEntry entry, decimal invoiceTotal, decimal expectedCollected, DateOnly? today = null)
+    {
+        Validate(entry, today ?? DateOnly.FromDateTime(DateTime.Today));
+        if (invoiceTotal <= 0 || expectedCollected < 0) throw new ArgumentOutOfRangeException(nameof(invoiceTotal));
+        using var bookMutation = ProfileMutationLock.Acquire(_directory);
+        var path = PathFor(entry.ReceivedOn.Year);
+        using var mutation = ProfileMutationLock.Acquire(path);
+        var lines = LoadVerifiedInvoiceLines();
+        if (lines.Any(line => line.Entry.Id == entry.Id)) throw new InvalidOperationException("Ce paiement a déjà été enregistré.");
+        var collected = lines.Where(line => !line.IsCancelled && SameInvoice(line.Entry.InvoiceNumber, entry.InvoiceNumber)).Sum(line => line.Entry.Amount);
+        if (collected != expectedCollected)
+            throw new InvalidOperationException("Les encaissements de cette facture ont changé. Le solde va être actualisé ; vérifiez-le avant de ressaisir le paiement.");
+        if (entry.Amount > invoiceTotal - collected)
+            throw new InvalidOperationException("Le paiement dépasse le reste à encaisser de cette facture. Actualisez le suivi et vérifiez le montant.");
+        WriteUnlocked(path, new Record("entry", entry, null));
+    }
+
+    public IReadOnlyList<RevenueLine> LoadInvoiceLines()
+    {
+        using var bookMutation = ProfileMutationLock.Acquire(_directory);
+        return LoadVerifiedInvoiceLines();
+    }
+
+    private IReadOnlyList<RevenueLine> LoadVerifiedInvoiceLines()
+    {
+        var lines = new List<RevenueLine>();
+        foreach (var year in Years())
+        {
+            var book = Load(year);
+            if (book.Errors.Count > 0 || book.Lines.Any(line => string.IsNullOrWhiteSpace(line.Entry.InvoiceNumber)))
+                throw new InvalidDataException($"Vérification des doublons impossible : le livre des recettes de {year} contient des lignes illisibles. Rechargez-le après correction ou synchronisation.");
+            lines.AddRange(book.Lines);
+        }
+        return lines;
+    }
+
+    private static bool SameInvoice(string first, string second) => string.Equals(first.Trim(), second.Trim(), StringComparison.OrdinalIgnoreCase);
 
     private string PathFor(int year) => Path.Combine(_directory, year.ToString("0000") + ".jsonl");
 

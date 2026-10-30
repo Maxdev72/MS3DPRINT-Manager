@@ -40,6 +40,7 @@ public sealed partial class EstimateUiTests
             Assert.Equal(first.Id, entry.Id); Assert.Equal("Leroy Merlin", entry.Supplier); Assert.Equal(18.9m, entry.Amount);
             Assert.StartsWith("Ticket du", entry.Reference);
             Assert.NotNull(RevenueInvoiceArchive.Resolve(_root, entry.DocumentPath));
+            Assert.StartsWith(Path.Combine("06_FOURNISSEURS", "LEROY_MERLIN", "04_FACTURES", DateTime.Today.Year.ToString()), entry.DocumentPath);
             for (var i = 0; i < 800 && MobileInbox.Scan(_root).Items.Count > 0; i++) await Task.Delay(10);
             Assert.Empty(MobileInbox.Scan(_root).Items);
             Assert.Equal(2, Directory.GetFiles(Path.Combine(MobileInbox.FolderFor(_root), MobileExchange.ProcessedFolderName)).Length);

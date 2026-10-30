@@ -151,6 +151,14 @@ public partial class MainWindow
     private void RenderProjects()
     {
         if (!_projectListMode || _projectCatalogUnavailable) return;
+        ProjectListViewButton.Classes.Set("selected", !_projectTrackingView && !_projectCalendarView);
+        ProjectTrackingViewButton.Classes.Set("selected", _projectTrackingView);
+        ProjectCalendarViewButton.Classes.Set("selected", _projectCalendarView);
+        ProjectStatusFilters.IsVisible = !_projectCalendarView || _projectCalendarFiltersVisible;
+        if (_projectPriorityFilterBox.Parent is Control priorityFilters) priorityFilters.IsVisible = !_projectCalendarView || _projectCalendarFiltersVisible;
+        _projectPrioritySortButton.IsVisible = !_projectCalendarView;
+        ProjectFilterBar.RowSpacing = _projectCalendarView && !_projectCalendarFiltersVisible ? 0 : 14;
+        ProjectFilterBox.PlaceholderText = _projectTrackingView ? "Rechercher un projet ou une tâche…" : "Filtrer les projets…";
         UpdatePrioritySortButton();
         ProjectList.Children.Clear();
         var text = ProjectFilterBox.Text?.Trim() ?? string.Empty;
@@ -158,7 +166,7 @@ public partial class MainWindow
             .Where(project => MatchesProjectStatus(project, _projectStatusFilter))
             .Where(project => _projectPriorityFilter is null || project.Priority == _projectPriorityFilter)
             .Where(project => text.Length == 0 ||
-                              $"{project.Reference} {project.ProjectName} {project.ClientFolderName}".Contains(text, StringComparison.CurrentCultureIgnoreCase))
+                              $"{project.Reference} {project.ProjectName} {project.ClientFolderName}".Contains(text, StringComparison.CurrentCultureIgnoreCase) || MatchesProjectTaskSearch(project, text))
             .ToArray();
         var archivedCount = _allProjects.Count(project => project.IsArchived);
         var scopeCount = _projectStatusFilter == "ARCHIVES" ? archivedCount : _allProjects.Count - archivedCount;
@@ -180,10 +188,13 @@ public partial class MainWindow
         }
 
         projects = SortProjects(projects);
+        if (_projectCalendarView) { RenderProjectCalendar(projects); return; }
+        if (_projectTrackingView) { RenderProjectTracking(projects); return; }
         PagedRows.Render(ProjectList, projects, CreateProjectRow, () => CreateSortableHeader(ProjectRowColumns, ["PROJET", "CLIENT", "STATUT", "ÉCHÉANCE", "ACTIONS"], _projectSortColumn, _projectSortAscending, column =>
         {
             _projectSortAscending = _projectSortColumn != column || !_projectSortAscending;
             _projectSortColumn = column;
+            SaveWindowPreferences();
             RenderProjects();
         }), (WorkspaceRoot, text, _projectStatusFilter, _projectPriorityFilter, _projectSortColumn, _projectSortAscending));
     }
@@ -198,7 +209,7 @@ public partial class MainWindow
             var move = new Button { Content = Icons.Label("IconMove", "Déplacer"), Tag = project }; move.Click += MoveProject_Click;
             var duplicate = new Button { Content = Icons.Label("IconCopy", "Dupliquer le projet"), Tag = project }; duplicate.Click += DuplicateProject_Click;
             var trash = new Button { Content = Icons.Label("IconTrash", "Corbeille"), Tag = project, Classes = { "menu-destructive" } }; trash.Click += TrashProject_Click;
-            var row = (Grid)CreateActionRow(ProjectRowColumns, open, CreateOverflowActions(folder, edit, duplicate, rename, move, trash),
+            var row = (Grid)CreateActionRow(ProjectRowColumns, open, CreateOverflowActions([folder, edit, .. CreateProjectCopyActions(project), duplicate, rename, move, trash]),
                 CreateProjectNameCell(project),
                 CreateProjectClientCell(project.ClientTitle()),
                 CreateStatusPicker(project),

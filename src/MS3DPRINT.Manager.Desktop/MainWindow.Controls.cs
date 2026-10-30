@@ -276,6 +276,10 @@ public partial class MainWindow
     {
         var columnCount = columns.Split(',').Length;
         var row = new Grid { Classes = { "workspace-row" }, ColumnDefinitions = new ColumnDefinitions(columns), ColumnSpacing = 16, Margin = new Avalonia.Thickness(14, 0), MinHeight = 60 };
+        // Match the full-width hit target while keeping the columns inset from the edges.
+        var background = new Border { Classes = { "workspace-row-background" }, Margin = new Avalonia.Thickness(-14, 0), IsHitTestVisible = false };
+        Grid.SetColumnSpan(background, columnCount);
+        row.Children.Add(background);
         if (open is not null)
         {
             open.Classes.Add("table-row");

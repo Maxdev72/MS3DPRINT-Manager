@@ -29,7 +29,8 @@ public sealed record EstimateV2Options(EstimateProduction? Production = null, Es
     CostFrequency PostProcessingFrequency = CostFrequency.PerGoodPiece, CostFrequency ConsumablesFrequency = CostFrequency.PerAttempt,
     CostFrequency PackagingFrequency = CostFrequency.PerOrder, CostFrequency MiscFrequency = CostFrequency.PerOrder,
     IReadOnlyList<EstimateCostItem>? ExtraCosts = null, string? ChargePresetId = null,
-    bool ComplementaryCostsAreTotals = false, EstimateSubcontracting? Subcontracting = null);
+    bool ComplementaryCostsAreTotals = false, EstimateSubcontracting? Subcontracting = null,
+    IReadOnlyList<QuantityPriceTier>? QuantityTiers = null);
 
 public sealed record EstimateProfitability(decimal MaterialCost, decimal MachineCost, decimal ElectricityCost, decimal LaborCost, decimal OtherCost,
     decimal AttemptCost, decimal NonRepeatedCost, decimal FailureProvision, decimal FloorPrice, decimal RecommendedPrice,

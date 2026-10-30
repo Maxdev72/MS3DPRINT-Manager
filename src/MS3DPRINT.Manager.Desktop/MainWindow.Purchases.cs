@@ -48,7 +48,7 @@ public partial class MainWindow
             var journal = new PurchaseJournal(root);
             if (dialog.SourceDocumentPath is { } source)
             {
-                var stored = await Task.Run(() => RevenueInvoiceArchive.Store(root, source, null, entry.PurchasedOn.Year, "purchases"));
+                var stored = await Task.Run(() => RevenueInvoiceArchive.StorePurchase(root, source, entry.Supplier, entry.PurchasedOn.Year));
                 entry = entry with { DocumentPath = stored };
             }
             var duplicate = await Task.Run(() => journal.IsReferenceKnown(entry.Supplier, entry.Reference));
@@ -81,9 +81,10 @@ public partial class MainWindow
         try
         {
             var reason = dialog.CorrectionReason;
-            if (dialog.SourceDocumentPath is { } source)
+            var source = dialog.SourceDocumentPath ?? RevenueInvoiceArchive.Resolve(root, corrected.DocumentPath);
+            if (source is not null)
             {
-                var stored = await Task.Run(() => RevenueInvoiceArchive.Store(root, source, null, corrected.PurchasedOn.Year, "purchases"));
+                var stored = await Task.Run(() => RevenueInvoiceArchive.StorePurchase(root, source, corrected.Supplier, corrected.PurchasedOn.Year));
                 corrected = corrected with { DocumentPath = stored };
             }
             await Task.Run(() => new PurchaseJournal(root).Correct(entry, corrected, reason, DateTimeOffset.Now));
@@ -132,12 +133,12 @@ public partial class MainWindow
                 try
                 {
                     if (known.Contains(item.Purchase.Id)) { already++; MobileInbox.MarkProcessed(root, item); continue; }
-                    var stored = item.PhotoPath is null ? null : RevenueInvoiceArchive.Store(root, item.PhotoPath, null, item.Purchase.PurchasedOn.Year, "purchases");
+                    var stored = item.PhotoPath is null ? null : RevenueInvoiceArchive.StorePurchase(root, item.PhotoPath, item.Purchase.Supplier, item.Purchase.PurchasedOn.Year);
                     journal.Append(MobileExchange.ToEntry(item.Purchase, stored));
                     MobileInbox.MarkProcessed(root, item);
                     imported++;
                 }
-                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or System.Text.Json.JsonException)
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException)
                 { failures.Add($"{item.Purchase.Supplier} : {exception.Message}"); }
             }
         });
@@ -203,6 +204,8 @@ public partial class MainWindow
 
     private async Task LoadPurchasesAsync()
     {
+        ApplyPurchaseView();
+        if (_purchaseScheduleView) { await LoadExpensePlansAsync(); return; }
         var root = WorkspaceRoot;
         var load = StartWorkspaceLoad("purchases", root);
         PurchaseList.Children.Clear();

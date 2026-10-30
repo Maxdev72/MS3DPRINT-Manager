@@ -1,5 +1,84 @@
 # Journal des modifications
 
+## 28 octobre 2026
+
+### Tarifs par quantité dans l’estimateur
+- « Tarifs par quantité » ouvre une grille pour 1, 5, 10, 20 et 50 pièces, avec les remises par défaut de 0 %, 5 %, 10 %, 13 % et 25 %. Chaque pourcentage reste modifiable ; les remises validées sont conservées dans le devis et son brouillon. Annuler ne modifie pas la grille conservée.
+- Chaque ligne affiche le prix unitaire, le total client, le résultat et la marge estimés, avec alerte sous le prix plancher. La référence est le prix commercial avant remise ramené à une pièce, s’il est saisi, ou le conseillé recalculé pour une pièce. La remise du devis ne se cumule pas avec celles de la grille.
+- Les coûts des lots sont projetés selon les fréquences des postes et les plateaux complets si une capacité est connue. Sans capacité, les poids et durées de la commande sont extrapolés par pièce ; les prix fournisseur restent à confirmer. « Copier la grille » copie uniquement les quantités, prix, remises et totaux. La quantité et le prix du devis en cours ne changent pas automatiquement.
+
+## 27 octobre 2026
+
+### Échéancier des charges et financements
+- Achats propose Registre / Échéancier. Chaque fiche affiche l’organisme, le libellé, le montant habituel, les prochaines et dernières échéances, le nombre restant et le total restant à payer. Les échéances se déplient pour consulter les montants et confirmer chaque paiement à sa date réelle.
+- Financements saisis à partir des mensualités connues, ou tableau bancaire importé en CSV UTF-8 / collé depuis Excel. Capital, intérêts, assurance et capital restant dû sont conservés sans recalcul ; les lignes invalides sont refusées et un aperçu précède l’enregistrement. Pas d’extraction automatique depuis un PDF ou une image.
+- Charges mensuelles, trimestrielles ou annuelles, avec fin facultative. Sans fin, la période de prévision est explicite ; le total ne représente pas une dette globale. Une date passée ne confirme aucun paiement et aucune écriture automatique n’est ajoutée au registre des achats.
+- Annulation de paiement et archivage après confirmation, restauration des archives, protection des échéances payées lors d’une modification et contrôle des écritures concurrentes. Les fiches sont conservées dans les métadonnées de l’atelier.
+
+### Sélecteur de destination des modèles téléchargés
+- « Ranger dans un projet » masque temporairement la fenêtre des modèles reçus pour laisser le panneau de destination accessible. La fenêtre revient après validation ou annulation avec sa sélection conservée ; les nouveaux fichiers reçus pendant ce choix ne lui redonnent pas le premier plan.
+- Une erreur du sélecteur réaffiche les fichiers avec un message explicite, sans déplacement. La fenêtre ne se rouvre pas si elle ou son propriétaire ont été fermés.
+
+## 26 octobre 2026
+
+### Vues des projets plus lisibles
+- Liste, Suivi et Calendrier disposent de boutons distincts avec icônes : texte de 16 px en demi-gras, hauteur de 50 px et sélection avec fond bleu plein. Les autres vues restent discrètes pour mieux distinguer la sélection ; les filtres du catalogue conservent leur présentation compacte.
+
+### Réorganisation directe des tâches
+- Une poignée à gauche de chaque tâche permet de la glisser avant ou après une autre tâche du même projet. Un trait cyan indique la position de dépôt ; le nouvel ordre est enregistré et actualise la prochaine action. Échap annule le déplacement.
+- Le raccourci Alt + Haut/Bas et les commandes Monter/Descendre restent disponibles. Les notes, cases cochées et tâches terminées masquées sont conservées ; le focus reste sur la tâche déplacée pour permettre plusieurs déplacements au clavier.
+
+### Calendrier local des projets — troisième étape
+- Projets propose une vue Calendrier avec un mois commençant le lundi, navigation entre mois, retour à aujourd’hui et nombre d’échéances par jour. Sélectionner un jour affiche les projets correspondants ; « À venir » réunit les échéances passées et futures dans une liste chronologique.
+- « À planifier » retrouve les projets sans date. Planifier ou modifier une échéance ouvre un véritable calendrier ; la date est enregistrée dans la fiche projet et reprise par les alertes d’accueil. Le retrait d’une échéance exige confirmation. Les tâches, statuts et fichiers sont conservés, et un conflit de version laisse la date choisie disponible dans le formulaire.
+- Recherche et filtres du catalogue restent applicables ; les filtres de statut et priorité se déplient sur demande pour laisser la place au mois. Les profils historiques doivent être complétés avant planification. Cette étape fonctionne localement ; la connexion Google Agenda n’est pas encore incluse.
+
+### Prochaines actions sur le tableau de bord — deuxième étape
+- « À reprendre » affiche la première tâche non terminée et la progression de chaque projet qui possède une liste. Un clic ouvre directement le projet déplié dans Suivi, en écartant les anciens filtres susceptibles de le masquer.
+- Au retour sur l’accueil, les prochaines actions et les compteurs sont relus. Une liste entièrement cochée est distinguée d’un projet sans tâches ; elle ne termine pas automatiquement le projet. L’ordre des urgences, les priorités et les alertes d’échéance sont conservés.
+- Les intitulés longs se limitent à deux lignes avec leur texte complet en infobulle. Le calendrier et les notifications Google Agenda restent les prochaines étapes.
+
+### Suivi des tâches par projet — première étape
+- La page Projets propose les vues « Liste » et « Suivi ». Dans Suivi, chaque projet se déplie pour ajouter des tâches, les cocher, modifier leur texte et leurs notes ou changer leur ordre depuis le menu d’actions. La première tâche non terminée est affichée comme prochaine action.
+- Recherche dans les projets, les tâches et leurs notes, masquage des tâches terminées, filtres existants et tri par priorité. Les projets historiques proposent de compléter leur fiche avant d’ajouter des tâches.
+- Les tâches sont enregistrées dans la fiche projet et conservées lors des autres modifications. Le retrait d’une tâche demande confirmation. Les écritures concurrentes sont refusées sans écraser la fiche ; les brouillons d’ajout restent disponibles pendant la session quand la vue se réaffiche. Cocher une tâche ne modifie ni le statut du projet ni le registre des encaissements.
+- Les rappels sur l’accueil, le calendrier et la connexion Google Agenda constituent les étapes suivantes et ne sont pas encore inclus.
+
+### Suivi des factures et paiements partiels
+- Dans Recettes → Factures, le suivi affiche le montant facturé, déjà encaissé et restant, avec les états « À encaisser », « Partiellement encaissée » et « Soldée ». Recherche, filtres, aperçu PDF et historique des paiements restent accessibles, y compris pour les factures soldées.
+- Une facture seule ne crée aucune recette. « Enregistrer un paiement » permet de saisir la date réelle, le montant reçu et sa nature, puis de revenir au suivi en conservant recherche et filtre. Les paiements partiels et la répartition mixte sont pris en charge ; le solde est revérifié avant écriture pour refuser une saisie devenue périmée ou excessive.
+- Les encaissements de toutes les années, corrections et annulations alimentent le suivi sans nouveau registre. Les PDF du dossier fournisseurs sont exclus. L’import groupé reste accessible depuis le suivi, avec sa protection contre les doublons.
+
+### Protection contre les doublons à l’import des recettes
+- Juste avant d’écrire chaque facture importée, le logiciel revérifie son numéro dans toutes les années du livre, sans tenir compte de la casse ni des espaces en début ou fin. Les factures déjà présentes sont ignorées et leurs numéros sont indiqués dans le bilan, même si leur recette a été ajoutée pendant que l’import était ouvert.
+- Une recette annulée peut être remplacée ; une référence corrigée est reconnue avec sa valeur actuelle. Un verrou partagé entre les écritures locales protège la vérification et l’ajout. Les encaissements partiels saisis manuellement restent possibles.
+- Si le registre contient une ligne illisible et que la vérification ne peut pas être menée, l’import concerné est refusé avec un message explicite et aucun ajout à cette ligne.
+
+### Import des factures mixtes
+- Les factures mêlant marchandises et prestations sont sélectionnables dans « Factures sans recette ». La nature « Mixte » affiche une part marchandises à renseigner et calcule le reste en prestations en direct.
+- L’enregistrement exige une part positive et strictement inférieure au total après arrondi au centime. Les erreurs restent auprès de la facture concernée et aucune sélection n’est enregistrée tant que le formulaire n’est pas valide. La répartition est conservée dans le livre des recettes et ses totaux.
+
+### Aperçu des factures pendant l’import des recettes
+- Chaque facture de « Factures sans recette » dispose d’un bouton « Voir la facture », y compris les factures mixtes. Le lecteur PDF intégré s’ouvre séparément avec zoom et navigation entre pages ; les cases, dates, natures et règlements saisis dans l’import restent conservés.
+- Les lignes s’adaptent au panneau latéral : numéro, client, montant et accès au PDF restent visibles ; les champs passent à la ligne au besoin. Un fichier absent ou une erreur de lecture sont signalés sans fermer l’import ni enregistrer de recette.
+
+### Justificatifs des achats classés par fournisseur
+- Les nouveaux PDF et tickets en image sont copiés dans `06_FOURNISSEURS/NOM_DU_FOURNISSEUR/04_FACTURES/ANNÉE`, depuis une saisie PC comme depuis un import du téléphone. Le dossier fournisseur existant est réutilisé ; les différences de casse, d’espaces et d’accents ne créent pas un second dossier.
+- Les fichiers d’origine sont conservés, un justificatif identique est réutilisé et aucun fichier existant n’est écrasé. Le registre conserve le lien vers le justificatif classé. Une correction du fournisseur reclasse aussi le justificatif joint, tout en préservant l’ancien pour l’historique.
+- Les justificatifs déjà enregistrés dans le dossier commun ont aussi été copiés dans les dossiers fournisseurs, avec vérification des empreintes et conservation des originaux et du registre. La copie des PDF Nextcloud porte sur le contenu, sans recopier les attributs de stockage du fichier source.
+
+### Mémorisation du tri des projets
+- Le dernier tri choisi (projet, client, statut, échéance ou priorité) et son sens sont enregistrés automatiquement sur ce PC dès le clic et restaurés au prochain lancement. Le tri par priorité conserve ainsi le choix « haute d’abord » ou « basse d’abord ».
+
+### Autocomplétion de l’identité de l’atelier
+- « Mon entreprise » propose les mêmes recherches d’entreprises et d’adresses que les clients. Saisir un nom ou un SIRET dans « Entreprise », puis choisir une suggestion, préremplit le nom, le SIRET et l’adresse sans modifier l’entrepreneur, l’e-mail ou le téléphone.
+- Les valeurs déjà enregistrées ne déclenchent pas de recherche à l’ouverture. Les réponses périmées sont ignorées ; sans connexion ou sans résultat, la saisie manuelle reste disponible.
+
+### Notifications et copie des informations des projets
+- Les notifications apparaissent en haut à droite, sous la barre de recherche.
+- La fiche projet propose un bouton « Copier » ; le menu « ⋯ » de la liste offre les mêmes quatre commandes : nom affiché, référence, nom et référence, chemin du dossier. Le texte se colle directement dans Fusion 360 ou toute autre application.
+- Le survol des lignes couvre toute leur largeur, y compris les marges latérales et la zone des actions.
+
 ## 25 octobre 2026
 
 ### Lecture automatique des factures, tickets et captures d’écran

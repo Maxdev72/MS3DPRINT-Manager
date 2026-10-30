@@ -43,11 +43,11 @@ public sealed partial class EstimateUiTests
             Assert.DoesNotContain(texts, t => t.StartsWith("FACT202610-53"));
             var boxes = body.GetVisualDescendants().OfType<CheckBox>().ToArray();
             Assert.Equal(2, boxes.Length); Assert.All(boxes, b => Assert.NotEqual(true, b.IsChecked));
-            Assert.Single(boxes, b => b.IsEnabled);
+            Assert.All(boxes, b => Assert.True(b.IsEnabled));
             DialogAction(owner, "Enregistrer la sélection");
             Dispatcher.UIThread.RunJobs();
             Assert.Single(journal.Load(2026).Lines);
-            boxes.Single(b => b.IsEnabled).IsChecked = true;
+            boxes[0].IsChecked = true;
             DialogAction(owner, "Enregistrer la sélection");
             for (var i = 0; i < 800 && journal.Load(2026).Lines.Count < 2; i++) await Task.Delay(10);
             var added = journal.Load(2026).Lines.Select(l => l.Entry).Single(x => x.InvoiceNumber == "FACT202610-51");

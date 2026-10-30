@@ -4,12 +4,59 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using MS3DPRINT.Manager.Core.Purchases;
+using MS3DPRINT.Manager.Core.Revenues;
 using MS3DPRINT.Manager.Desktop;
 
 namespace MS3DPRINT.Manager.Core.Tests.Estimates;
 
 public sealed partial class EstimateUiTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public Task Purchase_receipts_follow_the_supplier_on_creation_and_correction(bool correction) => Run(async () =>
+    {
+        var source = Path.Combine(_root, "facture-test.pdf"); File.WriteAllText(source, "Justificatif test");
+        var journal = new PurchaseJournal(_root);
+        var legacy = RevenueInvoiceArchive.Store(_root, source, null, DateTime.Today.Year, "purchases");
+        var original = UiPurchase("DOC-001", 20m) with { Supplier = "Ancien fournisseur", DocumentPath = legacy };
+        if (correction) journal.Append(original);
+        var owner = await Open(); owner.Show();
+        try
+        {
+            await (Task)Invoke(owner, "NavigateToWorkspaceAsync", "Achats")!;
+            if (correction) Invoke(owner, "CorrectPurchase_Click", new Button { Tag = original }, new RoutedEventArgs());
+            else Invoke(owner, "CreatePurchase_Click", null, new RoutedEventArgs());
+            var dialog = await WaitForDialog<PurchaseEntryWindow>(owner);
+            Dispatcher.UIThread.RunJobs(); owner.UpdateLayout();
+            var body = owner.FindControl<Border>("SidePanelBody")!;
+            IdentityControl<ComboBox>(body, "Fournisseur").Text = "Nouveau fournisseur";
+            if (correction) IdentityControl<TextBox>(body, "Motif de la correction").Text = "Correction du fournisseur";
+            else
+            {
+                IdentityControl<TextBox>(body, "Libellé").Text = "Bobines";
+                IdentityControl<TextBox>(body, "Montant payé").Text = "20";
+                IdentityControl<TextBox>(body, "Pièce justificative").Text = "DOC-001";
+                typeof(PurchaseEntryWindow).GetProperty(nameof(PurchaseEntryWindow.SourceDocumentPath))!.SetValue(dialog, source);
+            }
+            DialogAction(owner, correction ? "Enregistrer la correction" : "Enregistrer");
+            for (var attempt = 0; attempt < 200 && !journal.Load(DateTime.Today.Year).Lines.Any(l => l.Entry.Supplier == "Nouveau fournisseur"); attempt++)
+                await Task.Delay(10);
+            var line = Assert.Single(journal.Load(DateTime.Today.Year).Lines);
+            Assert.Equal("Nouveau fournisseur", line.Entry.Supplier);
+            Assert.StartsWith(Path.Combine("06_FOURNISSEURS", "NOUVEAU_FOURNISSEUR", "04_FACTURES"), line.Entry.DocumentPath);
+            Assert.NotNull(RevenueInvoiceArchive.Resolve(_root, line.Entry.DocumentPath));
+            Assert.True(File.Exists(source));
+            if (correction)
+            {
+                Assert.Single(line.Corrections!);
+                Assert.Equal(legacy, line.FirstRecorded.DocumentPath);
+                Assert.NotNull(RevenueInvoiceArchive.Resolve(_root, legacy));
+            }
+        }
+        finally { owner.Close(); }
+    });
+
     private static PurchaseEntry UiPurchase(string reference, decimal amount) =>
         new(Guid.NewGuid(), DateOnly.FromDateTime(DateTime.Today), "Bambu Lab", "Bobines PLA", amount, "Carte bancaire", reference, null, null, DateTimeOffset.UtcNow);
 
