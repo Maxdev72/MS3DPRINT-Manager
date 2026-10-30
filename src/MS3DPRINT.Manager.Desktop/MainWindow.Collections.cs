@@ -134,9 +134,11 @@ public partial class MainWindow
         {
             var root = WorkspaceRoot;
             var newName = dialog.Value;
-            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).RenameCollection(item, CollectionCategory(root, item), newName));
+            var renamed = await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).RenameCollection(item, CollectionCategory(root, item), newName));
+            var refreshFolder = RelocateFolderWorkspace(root, item.Path, renamed);
             Notify("Collection renommée.");
             await LoadCollectionsAsync();
+            if (refreshFolder && FolderWorkspacePanel.IsVisible) await LoadFolderWorkspaceAsync();
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         { Notify(exception.Message, error: true); }
@@ -151,9 +153,11 @@ public partial class MainWindow
         try
         {
             var root = WorkspaceRoot;
-            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).MoveCollection(item, CollectionCategory(root, item), destination));
+            var moved = await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).MoveCollection(item, CollectionCategory(root, item), destination));
+            var refreshFolder = RelocateFolderWorkspace(root, item.Path, moved);
             Notify("Collection déplacée.");
             await LoadCollectionsAsync();
+            if (refreshFolder && FolderWorkspacePanel.IsVisible) await LoadFolderWorkspaceAsync();
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         { Notify(exception.Message, error: true); }

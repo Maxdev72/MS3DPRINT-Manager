@@ -220,7 +220,9 @@ public partial class MainWindow
         {
             var root = WorkspaceRoot;
             var newName = dialog.Value;
-            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).RenamePath(context.Path, newName));
+            var renamed = await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).RenamePath(context.Path, newName));
+            RelocateFolderWorkspace(root, context.Path, renamed);
+            if (context.Project is null) context = context with { Directory = RelocatedFolderPath(context.Directory, context.Path, renamed)! };
             Notify(isDirectory ? "Dossier renommé." : "Fichier renommé.");
             await ReloadDirectoryAsync(context);
         }
@@ -256,7 +258,9 @@ public partial class MainWindow
         {
             var isDirectory = Directory.Exists(context.Path);
             var root = WorkspaceRoot;
-            await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).MovePath(context.Path, destination));
+            var moved = await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).MovePath(context.Path, destination));
+            RelocateFolderWorkspace(root, context.Path, moved);
+            if (context.Project is null) context = context with { Directory = RelocatedFolderPath(context.Directory, context.Path, moved)! };
             Notify(isDirectory ? "Dossier déplacé." : "Fichier déplacé.");
             await ReloadDirectoryAsync(context);
         }

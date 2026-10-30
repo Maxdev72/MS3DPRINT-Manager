@@ -45,13 +45,7 @@ public partial class MainWindow
             ViewerNavButton.Classes.Add("selected");
             RefreshCentralWidth();
         }
-        var parent = _viewerHistoryParent;
-        RememberNavigation(new("viewer:" + path, async () =>
-        {
-            if (parent is not null) await parent.Restore();
-            ShowModelViewer(path);
-            _viewerHistoryParent = parent;
-        }));
+        RememberNavigation(CreateViewerNavigationStop(new(path, _viewerHistoryParent)));
         if (_modelViewer is null)
         {
             _modelViewer = new ModelViewerView(CloseModelViewer, () =>
@@ -148,6 +142,14 @@ public partial class MainWindow
         { Notify(exception.Message, error: true); }
         finally { try { File.Delete(temporaryPng); } catch (IOException) { } }
     }
+
+    private NavigationStop CreateViewerNavigationStop(ViewerNavigationLocation location)
+        => new("viewer:" + location.Path, async () =>
+        {
+            if (location.Parent is not null) await location.Parent.Restore();
+            ShowModelViewer(location.Path);
+            _viewerHistoryParent = location.Parent;
+        }, Viewer: location);
 
     private void CloseModelViewer()
     {

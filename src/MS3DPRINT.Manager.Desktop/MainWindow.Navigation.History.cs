@@ -9,7 +9,9 @@ namespace MS3DPRINT.Manager.Desktop;
 
 public partial class MainWindow
 {
-    private sealed record NavigationStop(string Key, Func<Task> Restore);
+    private sealed record NavigationStop(string Key, Func<Task> Restore, FolderNavigationLocation? Folder = null, ViewerNavigationLocation? Viewer = null);
+    private sealed record FolderNavigationLocation(string Root, string Directory, NavigationStop? Parent, string? Title, string? Subtitle);
+    private sealed record ViewerNavigationLocation(string? Path, NavigationStop? Parent);
     private readonly List<NavigationStop> _navigationHistory = [];
     private int _navigationPosition = -1;
     private bool _replayingNavigation;
@@ -104,18 +106,40 @@ public partial class MainWindow
         var title = _folderWorkspaceReturnTitle;
         var subtitle = _folderWorkspaceReturnSubtitle;
         if (root is null || directory is null) return;
-        RememberNavigation(new("folder:" + directory, async () =>
+        RememberNavigation(CreateFolderNavigationStop(new(root, directory, parent, title, subtitle)));
+    }
+
+    private NavigationStop CreateFolderNavigationStop(FolderNavigationLocation location)
+        => new("folder:" + location.Directory, async () =>
         {
-            if (!Directory.Exists(root) || !Directory.Exists(directory)) throw new InvalidOperationException("Ce dossier n’est plus disponible.");
-            if (parent is not null) await parent.Restore();
-            _folderHistoryParent = parent;
-            _folderWorkspaceRoot = root; _folderWorkspaceDirectory = directory;
-            _folderWorkspaceReturnTitle = title; _folderWorkspaceReturnSubtitle = subtitle;
+            if (!Directory.Exists(location.Root) || !Directory.Exists(location.Directory)) throw new InvalidOperationException("Ce dossier n’est plus disponible.");
+            if (location.Parent is not null) await location.Parent.Restore();
+            _folderHistoryParent = location.Parent;
+            _folderWorkspaceRoot = location.Root; _folderWorkspaceDirectory = location.Directory;
+            _folderWorkspaceReturnTitle = location.Title; _folderWorkspaceReturnSubtitle = location.Subtitle;
             _hiddenByFolderWorkspace = WorkspacePanels().Where(p => p.IsVisible).ToList();
             foreach (var panel in _hiddenByFolderWorkspace) panel.IsVisible = false;
             FolderWorkspacePanel.IsVisible = true;
             await LoadFolderWorkspaceAsync();
-        }));
+        }, location);
+
+    private NavigationStop? RelocateFolderNavigation(NavigationStop? stop, string source, string target)
+    {
+        if (stop?.Viewer is { } viewer)
+        {
+            var updatedViewer = viewer with { Path = RelocatedFolderPath(viewer.Path, source, target), Parent = RelocateFolderNavigation(viewer.Parent, source, target) };
+            return updatedViewer == viewer ? stop : CreateViewerNavigationStop(updatedViewer);
+        }
+        if (stop?.Folder is not { } location) return stop;
+        var updated = location with
+        {
+            Root = RelocatedFolderPath(location.Root, source, target)!,
+            Directory = RelocatedFolderPath(location.Directory, source, target)!,
+            Parent = RelocateFolderNavigation(location.Parent, source, target)
+        };
+        if (!MS3DPRINT.Manager.Core.Workspace.WorkspaceEntityPaths.IsInside(updated.Root, updated.Directory))
+            updated = updated with { Root = target };
+        return updated == location ? stop : CreateFolderNavigationStop(updated);
     }
 
     private async Task<bool> NavigateHistoryAsync(int direction)

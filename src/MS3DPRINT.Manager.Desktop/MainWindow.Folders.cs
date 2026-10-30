@@ -29,6 +29,29 @@ public partial class MainWindow
 
     private ProjectDirectoryContext FolderContext(string path) => new(null, _folderWorkspaceDirectory ?? _folderWorkspaceRoot ?? string.Empty, path);
 
+    private static string? RelocatedFolderPath(string? path, string source, string target)
+    {
+        if (path is null || !MS3DPRINT.Manager.Core.Workspace.WorkspaceEntityPaths.IsInside(source, path)) return path;
+        return Path.GetFullPath(Path.Combine(target, Path.GetRelativePath(source, path)));
+    }
+
+    /// <summary>Keep open folders and their history attached to a successfully renamed or moved directory.</summary>
+    private bool RelocateFolderWorkspace(string workspaceRoot, string source, string target)
+    {
+        if (!string.Equals(workspaceRoot, WorkspaceRoot, StringComparison.OrdinalIgnoreCase)) return false;
+        var root = RelocatedFolderPath(_folderWorkspaceRoot, source, target);
+        var directory = RelocatedFolderPath(_folderWorkspaceDirectory, source, target);
+        if (root is not null && directory is not null && !MS3DPRINT.Manager.Core.Workspace.WorkspaceEntityPaths.IsInside(root, directory)) root = target;
+        var changed = root != _folderWorkspaceRoot || directory != _folderWorkspaceDirectory;
+        if (changed) CancelFileRead();
+        _folderWorkspaceRoot = root; _folderWorkspaceDirectory = directory;
+        for (var index = 0; index < _navigationHistory.Count; index++)
+            _navigationHistory[index] = RelocateFolderNavigation(_navigationHistory[index], source, target)!;
+        _folderHistoryParent = RelocateFolderNavigation(_folderHistoryParent, source, target);
+        _viewerHistoryParent = RelocateFolderNavigation(_viewerHistoryParent, source, target);
+        return changed;
+    }
+
     private async void CreateWorkspaceFolder_Click(object? sender, RoutedEventArgs e)
     {
         if (string.IsNullOrWhiteSpace(_folderWorkspaceDirectory)) return;
