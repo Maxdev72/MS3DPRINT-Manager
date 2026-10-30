@@ -3,6 +3,7 @@
 ## 30 octobre 2026
 
 ### Création des collections et glisser-déposer sortant
+- À l’import dans une collection, un nom `fichier__NOM_COLLECTION.ext` est proposé, comme dans les projets. La référence utilise le nom normalisé de la collection, même dans ses sous-dossiers. On peut modifier le nom, conserver l’original ou arrêter l’import. La proposition fonctionne aussi lors d’un dépôt de fichiers et dans les anciennes collections.
 - À la création d’un modèle 3D, produit ou fournisseur, le nom du dossier est normalisé et affiché en aperçu : « Pots décoratifs » devient `POTS_DECORATIFS`. Le nom lisible saisi est conservé dans la fiche et la liste Collections. Les noms sans lettre ni chiffre sont refusés ; un dossier existant n’est jamais écrasé.
 - Les fichiers des listes peuvent être glissés vers l’Explorateur ou une application compatible. Cocher plusieurs fichiers puis glisser le nom d’un fichier sélectionné transmet toute la sélection. L’opération demande une copie ; les originaux restent en place.
 

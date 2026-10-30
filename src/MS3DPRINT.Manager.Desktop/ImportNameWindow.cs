@@ -6,7 +6,7 @@ namespace MS3DPRINT.Manager.Desktop;
 /// <summary>A folder offered when a file is imported from the project root.</summary>
 public sealed record ImportDestination(string Label, string Path);
 
-/// <summary>Imports a file: choose the folder (from the project root only) and whether to rename it to follow the project's naming rule.</summary>
+/// <summary>Imports a file using a project or collection reference, with an optional destination choice.</summary>
 public sealed class ImportNameWindow : DialogWindow
 {
     private readonly TextBox _name = new();
@@ -20,7 +20,7 @@ public sealed class ImportNameWindow : DialogWindow
     public string? DestinationDirectory { get; private set; }
 
     public ImportNameWindow(string originalName, string suggestedName, string projectReference,
-        IReadOnlyList<ImportDestination>? destinations = null, string? suggestedDestination = null, int fileNumber = 1, int totalFiles = 1)
+        IReadOnlyList<ImportDestination>? destinations = null, string? suggestedDestination = null, int fileNumber = 1, int totalFiles = 1, bool isCollection = false)
     {
         FileName = originalName;
         _destinations = destinations;
@@ -53,7 +53,7 @@ public sealed class ImportNameWindow : DialogWindow
         var body = new List<Control>
         {
             FormKit.Field("Nom d’origine", new TextBlock { Text = originalName, TextWrapping = TextWrapping.Wrap, FontWeight = FontWeight.SemiBold }),
-            FormKit.Field("Nom proposé", _name, hint: $"Convention : nom du fichier + « __ » + référence du projet ({projectReference}).")
+            FormKit.Field("Nom proposé", _name, hint: $"Convention : nom du fichier + « __ » + référence {(isCollection ? "de la collection" : "du projet")} ({projectReference}).")
         };
         if (chooseFolder) body.Add(FormKit.Field("Dossier de destination", _folder, hint: "Proposé selon le type de fichier."));
         body.Add(_error);
@@ -64,7 +64,7 @@ public sealed class ImportNameWindow : DialogWindow
             cancel = new Button { Content = "Arrêter l’import" };
             cancel.Click += (_, _) => Close(false);
         }
-        Layout(totalFiles > 1 ? $"Importer · fichier {fileNumber} sur {totalFiles}" : "Importer dans le projet", "Vous pouvez renommer le fichier pour qu’il respecte la convention de nommage.", body, accept, cancel, extraAction: keep);
+        Layout(totalFiles > 1 ? $"Importer · fichier {fileNumber} sur {totalFiles}" : isCollection ? "Importer dans la collection" : "Importer dans le projet", "Vous pouvez renommer le fichier pour qu’il respecte la convention de nommage.", body, accept, cancel, extraAction: keep);
         Opened += (_, _) => { _name.Focus(); _name.SelectAll(); };
     }
 

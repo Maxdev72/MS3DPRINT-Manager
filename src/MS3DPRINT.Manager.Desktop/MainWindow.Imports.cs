@@ -1,4 +1,7 @@
 using MS3DPRINT.Manager.Core.Workspace;
+using MS3DPRINT.Manager.Core.Collections;
+using MS3DPRINT.Manager.Core.Files;
+using MS3DPRINT.Manager.Core.Naming;
 using Avalonia.Platform.Storage;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -75,6 +78,9 @@ public partial class MainWindow
         var importedCount = 0; var failures = 0; var stopped = false;
         try
         {
+            var category = Path.GetRelativePath(root, directory).Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)[0];
+            var collectionReference = category is "02_MODELES_3D" or "03_PRODUITS_MS3DPRINT" or "06_FOURNISSEURS"
+                ? await Task.Run(() => CollectionImportReference(root, directory, category)) : null;
             for (var index = 0; index < sources.Count; index++)
             {
                 if (_importStopRequested || !MatchesNavigationContext(root, navigationKey)) { stopped = true; break; }
@@ -82,7 +88,19 @@ public partial class MainWindow
                 UpdateImportProgress(index + 1, sources.Count, source, "Copie en cours");
                 try
                 {
-                    var imported = await Task.Run(() => new ManagedFileService(root).Import(source, directory));
+                    string? finalName = null;
+                    if (collectionReference is not null)
+                    {
+                        UpdateImportProgress(index + 1, sources.Count, source, "Choix du nom");
+                        var originalName = Path.GetFileName(source);
+                        var naming = new ImportNameWindow(originalName, ProjectFileClassifier.SuggestImportName(originalName, collectionReference),
+                            collectionReference, fileNumber: index + 1, totalFiles: sources.Count, isCollection: true);
+                        if (!await naming.ShowDialog<bool>(this)) { stopped = true; break; }
+                        if (_importStopRequested || !MatchesNavigationContext(root, navigationKey)) { stopped = true; break; }
+                        finalName = naming.FileName;
+                    }
+                    UpdateImportProgress(index + 1, sources.Count, source, "Copie en cours");
+                    var imported = await Task.Run(() => new ManagedFileService(root).Import(source, directory, finalName));
                     importedCount++;
                     ImportBatchProgress.Value = importedCount + failures;
                     if (!MatchesNavigationContext(root, navigationKey)) { stopped = true; break; }
@@ -93,8 +111,20 @@ public partial class MainWindow
                 { failures++; ImportBatchProgress.Value = importedCount + failures; RecordImportError(Path.GetFileName(source) + " : " + exception.Message); }
             }
         }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { stopped = true; RecordImportError(exception.Message); }
         finally { stopped |= _importStopRequested; CompleteImportBatch(importedCount, failures, sources.Count, stopped); }
         if (MatchesNavigationContext(root, navigationKey)) await LoadFolderWorkspaceAsync();
+    }
+
+    private static string? CollectionImportReference(string root, string directory, string category)
+    {
+        var collection = new CollectionCatalog().Load(root, category)
+            .Where(item => WorkspaceEntityPaths.IsInside(item.Path, directory))
+            .OrderByDescending(item => item.Path.Length).FirstOrDefault();
+        if (collection is null) return null;
+        var reference = NameNormalizer.Normalize(collection.Name);
+        return reference.Length == 0 ? null : reference;
     }
 
     private async Task ConfirmImportedSourceRemovalAsync(string root, string source, string imported)

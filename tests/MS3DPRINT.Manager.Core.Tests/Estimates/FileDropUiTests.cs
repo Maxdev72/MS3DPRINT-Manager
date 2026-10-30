@@ -60,7 +60,7 @@ public sealed partial class EstimateUiTests
             FileDrag(browser, data, drop: true);
             foreach (var path in new[] { a, b })
             {
-                if (projectFolder) { await WaitForDialog<ImportNameWindow>(owner); DialogAction(owner, "Garder le nom d’origine"); }
+                await WaitForDialog<ImportNameWindow>(owner); DialogAction(owner, "Garder le nom d’origine");
                 await WaitForDialog<ConfirmImportSourceWindow>(owner);
                 Assert.True(File.Exists(Path.Combine(folder, Path.GetFileName(path)))); Assert.True(File.Exists(path));
                 Assert.Equal(DragDropEffects.None, FileDrag(browser, data).DragEffects);
@@ -119,6 +119,7 @@ public sealed partial class EstimateUiTests
             await OpenFileTestFolder(owner, folder);
             var browser = owner.FindControl<StackPanel>("FolderWorkspaceList")!.Children.OfType<FileBrowserView>().Single();
             using var data = DroppedFiles(path); FileDrag(browser, data, drop: true);
+            await WaitForDialog<ImportNameWindow>(owner); DialogAction(owner, "Garder le nom d’origine");
             if (!collision)
             {
                 await WaitForDialog<ConfirmImportSourceWindow>(owner);
