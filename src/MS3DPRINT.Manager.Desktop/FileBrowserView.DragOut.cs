@@ -58,13 +58,15 @@ public sealed partial class FileBrowserView
             {
                 var provider = TopLevel.GetTopLevel(handle)?.StorageProvider;
                 if (provider is null) return;
-                var transfer = new DataTransfer();
+                var files = new List<IStorageFile>(paths.Length);
                 foreach (var filePath in paths)
                 {
                     var file = await provider.TryGetFileFromPathAsync(filePath);
                     if (file is null) return;
-                    transfer.Add(DataTransferItem.CreateFile(file));
+                    files.Add(file);
                 }
+                var transfer = new DataTransfer();
+                foreach (var file in files) transfer.Add(DataTransferItem.CreateFile(file));
                 // Do not dispose transfer here: Avalonia owns it after drag starts.
                 await DragDrop.DoDragDropAsync(pressed, transfer, DragDropEffects.Copy);
             }
