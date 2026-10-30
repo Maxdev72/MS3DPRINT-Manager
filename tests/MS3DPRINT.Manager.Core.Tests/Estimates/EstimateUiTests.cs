@@ -296,7 +296,8 @@ public sealed partial class EstimateUiTests : IDisposable
     [Fact]
     public Task Empty_collection_category_offers_a_working_return_to_all_collections() => Run(async () =>
     {
-        new MS3DPRINT.Manager.Desktop.Dashboard.WorkspaceCollectionCreator().Create(_root, "02_MODELES_3D", "Support de démonstration");
+        var collection = new MS3DPRINT.Manager.Desktop.Dashboard.WorkspaceCollectionCreator().Create(_root, "02_MODELES_3D", "Support de démonstration");
+        new MS3DPRINT.Manager.Desktop.Dashboard.WorkspaceCollectionEditor().Save(_root, collection, "02_MODELES_3D", collection.Name, null, null);
         var owner = await Open(); owner.Show();
         try
         {
