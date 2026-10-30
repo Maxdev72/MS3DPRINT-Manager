@@ -118,6 +118,7 @@ public sealed partial class FileBrowserView
                     if (!e.GetCurrentPoint(open).Properties.IsLeftButtonPressed || (e.KeyModifiers & (KeyModifiers.Control | KeyModifiers.Shift)) == 0) return;
                     SelectFile(entry.FullPath, e.KeyModifiers); e.Handled = true;
                 }, Avalonia.Interactivity.RoutingStrategies.Tunnel);
+                AttachOutgoingFileDrag(open, entry.FullPath);
                 open.KeyDown += (_, e) =>
                 {
                     if (e.Key == Key.Space && (e.KeyModifiers & (KeyModifiers.Control | KeyModifiers.Shift)) != 0)
