@@ -15,6 +15,7 @@ using Avalonia.Input;
 
 namespace MS3DPRINT.Manager.Core.Tests;
 
+[Collection("WorkspaceEnvironment")]
 public sealed class RemoteWorkspaceUiTests
 {
     [Theory]

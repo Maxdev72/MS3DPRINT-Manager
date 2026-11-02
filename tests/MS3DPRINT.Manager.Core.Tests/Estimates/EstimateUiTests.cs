@@ -1785,7 +1785,8 @@ public sealed partial class EstimateUiTests : IDisposable
             var categories = window.FindControl<WrapPanel>("SettingsCategories");
             Assert.NotNull(categories);
             var cards = window.FindControl<StackPanel>("StorageList")!.Children;
-            Assert.Equal(4, cards.Count(c => c.IsVisible)); // company information + activity thresholds + mobile app + quote pricing
+            Assert.Equal(5, cards.Count(c => c.IsVisible)); // company information + activity thresholds + mobile app + quote pricing + remote access
+            Assert.Contains(cards.Where(c => c.IsVisible).SelectMany(c => c.GetLogicalDescendants()).OfType<Button>(), b => b.Content as string == "Ouvrir l’atelier distant MS3DForge");
             Assert.All(cards.Where(c => c.IsVisible), c => Assert.Equal("atelier", Assert.IsType<Border>(c).Tag));
             var storage = categories.Children.OfType<Button>().Single(b => b.Tag as string == "storage");
             storage.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
@@ -1830,7 +1831,7 @@ public sealed partial class EstimateUiTests : IDisposable
             Invoke(owner, "EstimateWorkshopSettings_Click", null, new RoutedEventArgs());
             Assert.Equal("", owner.FindControl<TextBox>("SettingsSearchBox")!.Text);
             for (var i = 0; i < 100 && owner.FindControl<StackPanel>("StorageList")!.Children.Count == 0; i++) { await Task.Delay(10); Dispatcher.UIThread.RunJobs(); }
-            Assert.Equal(4, owner.FindControl<StackPanel>("StorageList")!.Children.Count(c => c.IsVisible));
+            Assert.Equal(5, owner.FindControl<StackPanel>("StorageList")!.Children.Count(c => c.IsVisible));
         }
         finally { owner.Close(); }
     });
