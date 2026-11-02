@@ -2,8 +2,9 @@
 
 Cette tranche prépare le futur accès web, PC et Android. Elle fournit une API
 privée, un compte propriétaire et la consultation des fiches clients/projets.
-Elle ne fournit encore ni interface web, ni migration, ni modification métier,
-ni connexion des applications PC/Android. Elle n'est pas un déploiement de
+Elle permet aussi d'exporter et de préparer une migration isolée avec bilan.
+Elle ne fournit encore ni interface web, ni activation d'un atelier migré,
+ni modification métier, ni connexion des applications PC/Android. Elle n'est pas un déploiement de
 l'accès distant complet sur `ms3dforge.fr`.
 
 ## Stockage et connexion
@@ -107,12 +108,77 @@ une seule instance ; aucun équilibrage entre plusieurs instances.
 
 ## Vérifications et étapes suivantes
 
+### Préparer une migration sur des données de test
+
+Ces commandes sont administratives et locales ; elles n'ouvrent pas de port
+HTTP, ne transfèrent rien vers Internet et ne changent pas la racine active.
+Utiliser un atelier fictif pour cette tranche. Avant un export réel, il faudra
+fermer Manager et suspendre les autres écritures, y compris celles arrivant
+par synchronisation, puis valider le parcours de sauvegarde et de bascule.
+
+Après construction du projet serveur et configuration de ses deux racines :
+
+```powershell
+dotnet build src/MS3DPRINT.Manager.Server '-bl:outputs/server-migration-build-{}.binlog'
+dotnet src/MS3DPRINT.Manager.Server/bin/Debug/net10.0/MS3DPRINT.Manager.Server.dll --export-migration C:/Temp/atelier-test-export
+```
+
+Le dossier d'export doit être neuf, avec un parent existant, en dehors de la
+source. L'export inventorie les fichiers, valide les métadonnées et relations
+clients/projets, puis produit `workspace.zip` et `report.json` si les contrôles
+sont favorables. L'inventaire source est comparé après export, y compris ses
+SHA256. Le serveur ne verrouille pas les écritures d'applications tierces :
+l'arrêt de ces écritures reste nécessaire.
+
+Pour préparer la restauration d'une archive transférée par l'administrateur,
+reprendre l'empreinte affichée à l'export, depuis un canal de confiance :
+
+```powershell
+dotnet src/MS3DPRINT.Manager.Server/bin/Debug/net10.0/MS3DPRINT.Manager.Server.dll --stage-migration C:/Temp/atelier-test-export/workspace.zip --sha256 EMPREINTE_SHA256_DE_L_EXPORT
+```
+
+Cette commande exige une archive complète avec documents. Elle en fait une
+copie privée, vérifie l'empreinte attendue, puis restaure sous un nouveau dossier
+`Server__StateRoot/migrations/<identifiant>/workspace`. Les octets extraits sont
+comparés au manifeste original et les métadonnées relues. Le bilan est écrit
+dans le dossier de préparation ; le serveur continue d'utiliser son ancien
+`Server__WorkspaceRoot`.
+
+- Code de sortie **0** : les contrôles de ce lot sont favorables ; une revue
+  reste nécessaire. Ce résultat n'active rien.
+- Code **2** : contrôle refusé. Consulter `report.json` s'il a pu être créé.
+  Un dossier déjà existant est refusé avant toute écriture.
+- Code **1** : arguments de commande invalides.
+
+Une exclusion inconnue, un JSON/JSONL illisible, une référence client absente,
+une référence projet en double, un dossier sans fiche ou une incohérence de
+chemin bloque le bilan. Les chemins absolus et les séparateurs Windows dans
+les champs de chemin exigent une conversion explicite ; ce lot ne réécrit pas
+les données. Les métadonnées et journaux de plus de 16 Mio sont conservés sur
+la source et signalés comme nécessitant un contrôle en flux avant migration.
+
+Le périmètre copié est celui de la sauvegarde complète : dossiers métier,
+`.ms3dprint-manager` (historiques et modules non portés inclus) et registres de
+codes clients reconnus dans `data`. Les autres entrées sont listées comme
+exclusions bloquantes. L'indicateur `.ms3dprint-manager/last-backup.json` est
+explicitement exclu avec un avertissement, car il ne décrit pas la nouvelle
+sauvegarde. Les liens, collisions de casse et noms non portables sont refusés.
+
+Une interruption ou un audit défavorable peut laisser une archive et une copie
+partielle ou préparée à examiner. Rien n'est supprimé automatiquement et une
+nouvelle tentative utilise un nouveau dossier. Il n'existe pas encore de reprise
+réseau, de conversion de tous les anciens formats ni de commande d'activation.
+Un bilan favorable ne valide pas les règles comptables des modules non encore
+portés : ceux-ci restent indisponibles à la modification distante.
+
+### Couverture
+
 Les tests utilisent uniquement des dossiers temporaires et des secrets générés
 pour chaque exécution. Ils couvrent expiration, hachage, révocation, CSRF,
 HTTPS, refus des origines web sur le login natif, limitation des tentatives,
 configuration des dossiers et lecture des métadonnées sans chemins absolus.
 
-Avant production : migrateur avec bilan et SHA256, commandes versionnées et
+Avant production : conversion des anciens chemins et activation validée, commandes versionnées et
 reçus durables, transferts et corbeille, clients web/PC/Android, confiance proxy
 explicite, configuration du domaine, limites de stockage, sauvegarde extérieure
 et restauration testée. Les projets Coolify MS3DPRINT-FR et MS3DPRINT-SHOP

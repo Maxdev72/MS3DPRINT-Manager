@@ -196,7 +196,7 @@ public sealed class WorkspaceBackupService
         return new(directories.Order(StringComparer.Ordinal).ToArray(), files.OrderBy(f => f.Path, StringComparer.Ordinal).ToArray());
     }
 
-    private static void ValidateRelative(string? path)
+    internal static void ValidateRelative(string? path)
     {
         if (string.IsNullOrWhiteSpace(path) || path.Length > 2000 || path.Contains('\\')) throw new InvalidDataException("Chemin invalide dans la sauvegarde.");
         var parts = path.Split('/');
@@ -205,7 +205,7 @@ public sealed class WorkspaceBackupService
         if ((path.StartsWith(".ms3dprint-manager/operations/", StringComparison.OrdinalIgnoreCase) || path.StartsWith(".ms3dprint-manager/renames/", StringComparison.OrdinalIgnoreCase)) && path.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
             throw new IOException("Une opération de classement est en attente. Terminez sa récupération dans le logiciel avant de sauvegarder cet espace.");
     }
-    private static bool IsRegistry(string path) => path.Equals("data/client-codes.json", StringComparison.OrdinalIgnoreCase) ||
+    internal static bool IsRegistry(string path) => path.Equals("data/client-codes.json", StringComparison.OrdinalIgnoreCase) ||
         (path.StartsWith("data/client-codes.previous", StringComparison.OrdinalIgnoreCase) && path.EndsWith(".json", StringComparison.OrdinalIgnoreCase) && path.Count(c => c == '/') == 1);
     private static bool IsTrash(string path) => path.Equals(".ms3dprint-manager/trash", StringComparison.OrdinalIgnoreCase) || path.StartsWith(".ms3dprint-manager/trash/", StringComparison.OrdinalIgnoreCase);
     private static bool Reserved(string part)
@@ -216,7 +216,7 @@ public sealed class WorkspaceBackupService
     private static FileStream Open(string path) => new(path, FileMode.Open, FileAccess.Read, FileShare.Read);
     private static bool Inside(string path, string root) => path.Equals(root, StringComparison.OrdinalIgnoreCase) || path.StartsWith(Path.TrimEndingDirectorySeparator(root) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
     private static IOException Changed() => new("Des fichiers ont changé pendant la sauvegarde. Enregistrez vos modifications et réessayez.");
-    private static string CopyAndHash(Stream input, Stream output, long expectedBytes)
+    internal static string CopyAndHash(Stream input, Stream output, long expectedBytes)
     {
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         var buffer = new byte[81920]; long copied = 0; int read;

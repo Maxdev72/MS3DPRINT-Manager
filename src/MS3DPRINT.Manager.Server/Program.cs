@@ -5,7 +5,14 @@ public partial class Program
     public static int Main(string[] args)
     {
         var createOwner = args.Contains("--create-owner", StringComparer.Ordinal);
-        using var app = ServerApplication.Build(args.Where(a => a != "--create-owner").ToArray());
+        var migration = args.Any(a => a is "--export-migration" or "--stage-migration");
+        if (createOwner && migration)
+        {
+            Console.Error.WriteLine("Exécutez la création du propriétaire et la préparation de migration séparément.");
+            return 1;
+        }
+        using var app = ServerApplication.Build(migration ? [] : args.Where(a => a != "--create-owner").ToArray());
+        if (migration) return MigrationCommands.Execute(args, app.Services.GetRequiredService<ServerStorage>(), Console.Out);
         if (createOwner)
         {
             try
