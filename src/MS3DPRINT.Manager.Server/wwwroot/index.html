@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#071225">
+  <meta name="description" content="Votre atelier MS3DForge : clients, projets et suivi à distance.">
+  <title>MS3DForge · Atelier</title>
+  <link rel="stylesheet" href="/app.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <svg class="svg-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-8H9v8H4a1 1 0 0 1-1-1Z"/></symbol>
+    <symbol id="i-project" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></symbol>
+    <symbol id="i-clients" viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M17 4a3 3 0 0 1 0 6m1 4a5 5 0 0 1 3 4v3"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5M6 6a8 8 0 0 1 13 3M5 15a8 8 0 0 0 13 3"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="m15 4 5 5M4 20l5-1L21 7a2 2 0 0 0-5-5L4 14Z"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24"><path d="m6 14 6-6 6 6"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="m6 10 6 6 6-6"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 4H4v16h6M8 12h13m-5-5 5 5-5 5"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></symbol>
+  </svg>
+  <a class="skip-link" href="#main-content">Aller au contenu</a>
+  <div id="boot-view" class="boot-view" role="status">Ouverture de l’atelier…</div>
+
+  <section id="login-view" class="login-view" hidden aria-labelledby="login-title">
+    <div class="login-intro">
+      <a class="wordmark" href="/" aria-label="MS3DForge, accueil"><span class="brand-mark">M</span><span>MS3D<span class="brand-light">FORGE</span></span></a>
+      <div class="login-copy"><h1>Votre atelier.<br>Toujours à portée.</h1><p>Retrouvez vos clients, faites avancer vos projets et gardez le fil de votre travail, même loin du PC.</p>
+        <ul class="login-benefits"><li>Un seul état de l’atelier, sur vos appareils.</li><li>Des tâches et des échéances au même endroit.</li><li>Un accès réservé à votre compte.</li></ul>
+      </div>
+      <p class="release-note">Première version · Clients, projets et tâches</p>
+    </div>
+    <div class="login-panel"><form id="login-form" class="login-form" method="post" action="/api/v1/auth/login">
+      <svg class="icon login-lock"><use href="#i-lock"/></svg>
+      <h2 id="login-title">Entrer dans l’atelier</h2><p class="muted">Connectez-vous avec votre compte propriétaire.</p>
+      <label for="login-name">Identifiant</label><input id="login-name" name="username" autocomplete="username" required maxlength="100" autofocus>
+      <label for="login-password">Mot de passe</label><input id="login-password" name="password" type="password" autocomplete="current-password" required maxlength="1024">
+      <p id="login-error" class="form-error" role="alert" hidden></p>
+      <button class="button primary login-submit" type="submit">Se connecter <svg class="icon"><use href="#i-arrow"/></svg></button>
+      <p class="login-footnote">L’atelier reste accessible quand le PC est éteint.</p>
+    </form></div>
+  </section>
+
+  <div id="workspace-view" class="workspace" hidden>
+    <aside class="sidebar">
+      <a class="wordmark" href="/" aria-label="MS3DForge, accueil"><span class="brand-mark">M</span><span>MS3D<span class="brand-light">FORGE</span></span></a>
+      <div class="workspace-name"><span class="workspace-avatar">M</span><div><strong>Mon atelier</strong><span>Accès distant</span></div></div>
+      <nav aria-label="Navigation principale">
+        <button class="nav-item active" data-view="overview" aria-current="page"><svg class="icon"><use href="#i-home"/></svg><span>Vue d’ensemble</span></button>
+        <button class="nav-item" data-view="projects"><svg class="icon"><use href="#i-project"/></svg><span>Projets</span><span id="project-count" class="nav-count"></span></button>
+        <button class="nav-item" data-view="clients"><svg class="icon"><use href="#i-clients"/></svg><span>Clients</span><span id="client-count" class="nav-count"></span></button>
+      </nav>
+      <div class="sidebar-bottom"><div id="connection-state" class="connection-state"><span class="status-dot"></span><span>Connexion en cours</span></div><button id="logout-button" class="nav-item" aria-label="Se déconnecter"><svg class="icon"><use href="#i-logout"/></svg><span>Se déconnecter</span></button><span class="sidebar-version">MS3DForge · Première version</span></div>
+    </aside>
+    <div class="workspace-body">
+      <header class="topbar"><span class="breadcrumb">Atelier <span aria-hidden="true">/</span> <strong id="breadcrumb-current">Vue d’ensemble</strong></span><div class="topbar-actions"><span id="updated-label" class="updated-label"></span><button id="refresh-button" class="icon-button" aria-label="Actualiser l’atelier" title="Actualiser l’atelier"><svg class="icon"><use href="#i-refresh"/></svg></button><span class="account-avatar" title="Compte propriétaire">M</span></div></header>
+      <main id="main-content" tabindex="-1">
+        <div id="global-error" class="notice error-notice" role="alert" hidden></div>
+        <div id="pending-operation" class="notice pending-notice" hidden><span id="pending-message">La réponse du serveur n’est pas arrivée. Vérifiez le résultat avant un nouvel envoi.</span><div class="detail-toolbar"><button id="verify-command" class="button secondary">Vérifier l’envoi</button><button id="retry-command" class="button secondary" hidden>Renvoyer cet envoi</button></div></div>
+        <section class="page-heading"><div><h1 id="page-title">L’atelier, en vue.</h1><p id="page-subtitle" class="muted">Vos projets et les prochaines actions à reprendre.</p></div><button id="primary-action" class="button primary"><svg class="icon"><use href="#i-plus"/></svg><span>Nouveau projet</span></button></section>
+        <div id="overview-summary" class="overview-summary"></div>
+        <section id="list-section" aria-label="Liste de l’atelier"><div class="list-toolbar"><div id="list-tabs" class="segmented" aria-label="Filtrer les projets"><button class="selected" data-filter="active" aria-pressed="true">En cours</button><button data-filter="all" aria-pressed="false">Tous</button><button data-filter="Completed" aria-pressed="false">Terminés</button></div><label class="search-field"><svg class="icon"><use href="#i-search"/></svg><input id="search-input" type="search" placeholder="Rechercher un projet…" aria-label="Rechercher dans l’atelier"></label></div><div id="list-content" class="list-content" aria-live="polite"></div><div id="list-footer" class="list-footer"></div></section>
+        <section id="detail-section" class="detail-section" hidden></section>
+      </main>
+      <footer class="workspace-footer"><span>Votre travail est enregistré sur le serveur.</span><span>MS3DPRINT Manager · Accès distant</span></footer>
+    </div>
+  </div>
+
+  <dialog id="form-dialog" aria-labelledby="form-title"><div class="dialog-heading"><div><h2 id="form-title"></h2><p id="form-description" class="muted"></p></div><button id="close-dialog" class="icon-button" aria-label="Fermer le formulaire"><svg class="icon"><use href="#i-close"/></svg></button></div>
+    <form id="client-form" class="edit-form" hidden>
+      <label for="client-kind">Type de client</label><select id="client-kind"><option value="Professional">Professionnel</option><option value="Individual">Particulier</option></select>
+      <div id="company-fields"><label for="client-company">Raison sociale</label><input id="client-company" maxlength="200"></div>
+      <div id="person-fields" class="form-grid" hidden><div><label for="client-first">Prénom</label><input id="client-first" maxlength="100"></div><div><label for="client-last">Nom</label><input id="client-last" maxlength="100"></div></div>
+      <div><label for="client-code">Code client</label><input id="client-code" maxlength="20" required class="code-input"><p id="client-code-help" class="field-help">Un code court pour reconnaître vos références de projet.</p></div>
+      <fieldset><legend>Coordonnées</legend><div class="form-grid"><div><label for="contact-first">Prénom du contact</label><input id="contact-first" maxlength="100"></div><div><label for="contact-last">Nom du contact</label><input id="contact-last" maxlength="100"></div><div><label for="contact-email">E-mail</label><input id="contact-email" type="email" maxlength="254"></div><div><label for="contact-phone">Téléphone</label><input id="contact-phone" type="tel" maxlength="50"></div></div><label for="client-address">Adresse</label><textarea id="client-address" maxlength="2000" rows="2"></textarea></fieldset>
+      <label for="client-notes">Notes</label><textarea id="client-notes" maxlength="10000" rows="3"></textarea><p class="form-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" class="button secondary cancel-dialog">Annuler</button><button type="submit" class="button primary">Enregistrer le client</button></div>
+    </form>
+    <form id="project-form" class="edit-form" hidden><label for="project-client">Client</label><select id="project-client" required></select><label for="project-name">Nom du projet</label><input id="project-name" required maxlength="200"><div class="form-grid"><div><label for="project-year">Année de référence</label><input id="project-year" type="number" min="1000" max="9999" required></div><div><label for="project-due">Échéance</label><input id="project-due" type="date"></div></div><label for="project-priority">Priorité</label><select id="project-priority"><option value="None">Normale</option><option value="Low">Basse</option><option value="Medium">Moyenne</option><option value="High">Haute</option></select><label for="project-description">Description</label><textarea id="project-description" rows="3" maxlength="10000"></textarea><p class="field-help">La référence et les dossiers seront créés par l’atelier.</p><p class="form-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" class="button secondary cancel-dialog">Annuler</button><button class="button primary" type="submit">Créer le projet</button></div></form>
+    <form id="project-edit-form" class="edit-form" hidden><label for="edit-status">État du projet</label><select id="edit-status"><option value="Quote">Devis</option><option value="InProgress">En cours</option><option value="Completed">Terminé</option></select><div class="form-grid"><div><label for="edit-due">Échéance</label><input id="edit-due" type="date"></div><div><label for="edit-priority">Priorité</label><select id="edit-priority"><option value="None">Normale</option><option value="Low">Basse</option><option value="Medium">Moyenne</option><option value="High">Haute</option></select></div></div><label for="edit-description">Description</label><textarea id="edit-description" maxlength="10000" rows="3"></textarea><label for="edit-notes">Notes</label><textarea id="edit-notes" maxlength="10000" rows="4"></textarea><p class="form-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" class="button secondary cancel-dialog">Annuler</button><button class="button primary" type="submit">Enregistrer</button></div></form>
+    <form id="task-edit-form" class="edit-form" hidden><label for="task-title">Tâche</label><input id="task-title" required maxlength="500"><label for="task-notes">Notes</label><textarea id="task-notes" maxlength="10000" rows="5"></textarea><p class="form-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" class="button secondary cancel-dialog">Annuler</button><button class="button primary" type="submit">Enregistrer la tâche</button></div></form>
+  </dialog>
+  <dialog id="confirm-dialog" class="confirm-dialog" aria-labelledby="confirm-title"><h2 id="confirm-title">Retirer cette tâche ?</h2><p id="confirm-item" class="confirm-item"></p><p class="muted">Elle sera retirée du suivi de ce projet. Les autres tâches et les documents seront conservés.</p><div class="dialog-actions"><button id="confirm-cancel" class="button secondary" autofocus>Annuler</button><button id="confirm-remove" class="button danger">Retirer la tâche</button></div></dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>

@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.AspNetCore.DataProtection.Repositories;
+using Microsoft.AspNetCore.HttpOverrides;
+using System.Net;
 using System.Threading.RateLimiting;
 using MS3DPRINT.Manager.Server.Authentication;
 using MS3DPRINT.Manager.Server.Workspace;
@@ -13,6 +15,15 @@ public static class ServerApplication
     public static WebApplication Build(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
+        builder.Services.Configure<ForwardedHeadersOptions>(options =>
+        {
+            options.KnownProxies.Clear();
+            options.KnownIPNetworks.Clear();
+            foreach (var address in builder.Configuration.GetSection("Server:TrustedProxyAddresses").GetChildren())
+                options.KnownProxies.Add(IPAddress.Parse(address.Value ?? ""));
+            options.ForwardLimit = 1;
+            options.ForwardedHeaders = options.KnownProxies.Count == 0 ? ForwardedHeaders.None : ForwardedHeaders.XForwardedProto;
+        });
         builder.Services.AddSingleton<ServerStorage>();
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton<SessionStore>();
@@ -46,11 +57,14 @@ public static class ServerApplication
         var app = builder.Build();
         _ = app.Services.GetRequiredService<ServerStorage>();
         _ = app.Services.GetRequiredService<SessionStore>();
+        app.UseForwardedHeaders();
         app.UseExceptionHandler();
         app.Use(async (context, next) =>
         {
             context.Response.Headers.CacheControl = "no-store";
             context.Response.Headers.XContentTypeOptions = "nosniff";
+            context.Response.Headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
+            context.Response.Headers["Referrer-Policy"] = "no-referrer";
             if (!context.Request.IsHttps && context.Request.Path != "/health")
             {
                 await Results.Problem(statusCode: 400, title: "Une connexion HTTPS est requise.").ExecuteAsync(context);
@@ -61,6 +75,8 @@ public static class ServerApplication
         app.UseAuthentication();
         app.UseAuthorization();
         app.UseRateLimiter();
+        app.UseDefaultFiles();
+        app.UseStaticFiles();
         app.MapAuthentication();
         app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
         app.MapWorkspace();

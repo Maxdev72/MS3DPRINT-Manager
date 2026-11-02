@@ -29,6 +29,8 @@ public sealed class WorkspaceCommands
     {
         ValidateClient(command.Kind, command.CompanyName, command.FirstName, command.LastName, command.Address, command.Notes, command.Contact);
         var code = NormalizeRequired(command.ClientCode, 32);
+        if (_clients.LoadAll().Any(existing => string.Equals(NameNormalizer.Normalize(existing.ClientCode), code, StringComparison.Ordinal)))
+            return new(409, new { error = "Ce code est déjà attribué à un autre client. Choisissez un code différent." });
         var folder = NormalizeRequired(command.Kind == ClientKind.Professional ? command.CompanyName : string.Join(" ", command.FirstName, command.LastName), 200);
         Portable(folder);
         if (folder is "00_CLIENT" or "99_ARCHIVES") throw new ArgumentException();

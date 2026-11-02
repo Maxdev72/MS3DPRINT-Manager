@@ -2,6 +2,11 @@
 
 ## 2 novembre 2026
 
+### Première candidate du compagnon distant
+- Serveur privé MS3DForge et interface web pour les clients, projets et tâches, avec versions de fiches et reçus de commandes pour contrôler les envois interrompus.
+- Accès au même atelier serveur depuis Paramètres → Atelier → Accès serveur sur PC et l'onglet Serveur sur Android. La session reste en mémoire ; HTTPS est obligatoire.
+- Les ateliers local et distant restent distincts dans cette candidate. Les documents, modules métier supplémentaires et la synchronisation automatique ne sont pas encore disponibles à distance. Voir [le guide de la candidate](docs/compagnon-premiere-version.md).
+
 ### Pointage manuel des achats et recettes
 - Une colonne « Pointé » permet de confirmer la présence d'une ligne sur le relevé bancaire. Les filtres Tous / À pointer / Pointés affichent les lignes correspondantes et les totaux excluent les annulations.
 - La sélection à gauche permet de pointer ou dépointer plusieurs lignes, y compris sur plusieurs pages. Le retrait d'un pointage demande confirmation et conserve les écritures et leurs montants.

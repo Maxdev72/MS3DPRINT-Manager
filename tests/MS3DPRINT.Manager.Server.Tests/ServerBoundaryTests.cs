@@ -1,9 +1,30 @@
 using System.Net;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 
 namespace MS3DPRINT.Manager.Server.Tests;
 
 public sealed class ServerBoundaryTests
 {
+    [Theory]
+    [InlineData("192.0.2.10", 401)]
+    [InlineData("192.0.2.11", 400)]
+    public async Task Only_the_explicit_proxy_can_forward_https(string peer, int expectedStatus)
+    {
+        using var host = new ServerFixture();
+        using var configured = host.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, config) =>
+            config.AddInMemoryCollection(new Dictionary<string, string?> { ["Server:TrustedProxyAddresses:0"] = "192.0.2.10" })));
+        var response = await configured.Server.SendAsync(context =>
+        {
+            context.Connection.RemoteIpAddress = IPAddress.Parse(peer);
+            context.Request.Scheme = "http";
+            context.Request.Method = "GET";
+            context.Request.Path = "/api/v1/clients";
+            context.Request.Headers["X-Forwarded-Proto"] = "https";
+        });
+        Assert.Equal(expectedStatus, response.Response.StatusCode);
+    }
+
     [Fact]
     public async Task Health_is_minimal_and_private_routes_require_login()
     {

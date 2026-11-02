@@ -10,6 +10,23 @@ namespace MS3DPRINT.Manager.Server.Tests;
 
 public sealed class WorkspaceCommandTests
 {
+    [Theory]
+    [InlineData("AE")]
+    [InlineData(" ae ")]
+    [InlineData("AÉ")]
+    public async Task Normalized_client_codes_are_unique_before_creating_any_folder(string code)
+    {
+        using var host = new ServerFixture();
+        using var http = await host.AuthenticatedClient();
+        await CreateClient(http);
+        var input = new { commandId = Guid.NewGuid(), kind = "Professional", clientCode = code, companyName = "Autre client", contact = new { } };
+        var result = await http.PostAsJsonAsync("/api/v1/clients", input);
+        Assert.Equal(HttpStatusCode.Conflict, result.StatusCode);
+        Assert.Single(new ClientProfileStore(new WorkspaceMetadataPaths(host.Workspace)).LoadAll());
+        Assert.Single(Directory.GetDirectories(Path.Combine(host.Workspace, "01_CLIENTS")));
+        Assert.Equal(HttpStatusCode.Conflict, (await http.PostAsJsonAsync("/api/v1/clients", input)).StatusCode);
+    }
+
     [Fact]
     public async Task Creates_real_client_and_project_with_core_reference_and_pathless_details()
     {
