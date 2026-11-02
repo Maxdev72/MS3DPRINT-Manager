@@ -8,6 +8,10 @@ publiée est autonome et tient dans un exécutable unique.
 
 ## Prérequis
 
+Le [socle serveur de l’accès distant](docs/acces-distant-serveur.md) se développe
+séparément de l’application portable. Il n’est pas encore relié aux interfaces
+web, PC et Android et ne migre aucune donnée réelle.
+
 Le SDK .NET 10 est nécessaire pour compiler et exécuter l'application depuis
 les sources. L'exécutable publié pour Windows x64 n'a pas besoin d'un runtime
 .NET installé.
