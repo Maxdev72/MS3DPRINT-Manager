@@ -18,6 +18,46 @@ namespace MS3DPRINT.Manager.Core.Tests;
 public sealed class RemoteWorkspaceUiTests
 {
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Uncertain_command_survives_reauthentication_and_explicit_logout(bool logout)
+    {
+        await using var session = HeadlessUnitTestSession.StartNew(typeof(EstimateTestApplication));
+        await session.Dispatch(async () =>
+        {
+            var handler = new FakeServer { WithProject = true, LoseMutationResponse = true, UncertainReceipt = true };
+            using var view = new RemoteWorkspaceView(new HttpClient(handler));
+            var window = new Window { Content = view, Width = 480, Height = 800 }; window.Show();
+            try
+            {
+                Field(view, "RemoteName").Text = "owner"; Field(view, "RemotePassword").Text = "secret";
+                await Click(view, "RemoteLogin");
+                Find<ComboBox>(view, "RemoteClients").SelectedIndex = 0; Find<ComboBox>(view, "RemoteProjects").SelectedIndex = 0; await Idle(view);
+                Field(view, "RemoteTaskTitle").Text = "Brouillon dont le résultat est inconnu";
+                await Click(view, "RemoteSaveTask");
+                var id = handler.LastCommandId;
+                Assert.NotEqual(Guid.Empty, id); Assert.True(Find<Button>(view, "RemoteReceipt").IsVisible);
+                if (logout) await Click(view, "RemoteLogout");
+                else { handler.ReceiptUnauthorized = true; await Click(view, "RemoteReceipt"); }
+                Assert.True(Find<Button>(view, "RemoteLogin").IsEnabled);
+                Assert.False(Field(view, "RemoteServer").IsEnabled);
+                handler.ReceiptUnauthorized = false;
+                Field(view, "RemotePassword").Text = "secret"; await Click(view, "RemoteLogin");
+                Assert.True(Find<Button>(view, "RemoteReceipt").IsVisible);
+                Assert.False(Field(view, "RemoteServer").IsEnabled);
+                Assert.Equal("Brouillon dont le résultat est inconnu", Field(view, "RemoteTaskTitle").Text);
+                Find<ComboBox>(view, "RemoteClients").SelectedIndex = 0; Find<ComboBox>(view, "RemoteProjects").SelectedIndex = 0; await Idle(view);
+                await Click(view, "RemoteRefresh"); Assert.False(Find<Button>(view, "RemoteSaveTask").IsEnabled);
+                await Click(view, "RemoteSaveTask"); Assert.Equal(1, handler.MutationCount);
+                await Click(view, "RemoteReceipt"); Assert.Equal(id, handler.LastReceiptId);
+                Assert.False(Find<Button>(view, "RemoteSaveTask").IsEnabled);
+            }
+            finally { window.Close(); }
+            return true;
+        }, CancellationToken.None);
+    }
+
+    [Theory]
     [InlineData(0, ClientKind.Professional)]
     [InlineData(1, ClientKind.Individual)]
     public async Task Creates_client_and_its_project_in_remote_mode(int kind, ClientKind expected)
@@ -162,12 +202,24 @@ public sealed class RemoteWorkspaceUiTests
         public bool Offline { get; set; }
         public bool WithProject { get; set; }
         public bool Conflict { get; set; }
+        public bool LoseMutationResponse { get; set; }
+        public bool UncertainReceipt { get; set; }
+        public bool ReceiptUnauthorized { get; set; }
+        public Guid LastCommandId { get; private set; }
+        public Guid LastReceiptId { get; private set; }
+        public int MutationCount { get; private set; }
         public CreateClientCommand? ClientCreation { get; set; }
         public CreateProjectCommand? ProjectCreation { get; set; }
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             if (Offline) throw new HttpRequestException();
             var path = request.RequestUri!.AbsolutePath;
+            if (path.Contains("/commands/"))
+            {
+                LastReceiptId = Guid.Parse(path.Split('/').Last());
+                if (ReceiptUnauthorized) return new(HttpStatusCode.Unauthorized);
+                return Response(new CommandReceiptResponse(LastReceiptId, UncertainReceipt ? "Uncertain" : "Completed", UncertainReceipt ? null : 409, null));
+            }
             if (path.EndsWith("clients") && request.Method == HttpMethod.Post)
             {
                 var json = await request.Content!.ReadAsStringAsync(cancellationToken);
@@ -184,9 +236,10 @@ public sealed class RemoteWorkspaceUiTests
             }
             if (path.Contains("/tasks") && request.Method != HttpMethod.Get)
             {
-                if (Conflict) return new(HttpStatusCode.Conflict);
                 using var json = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(cancellationToken));
                 var input = json.RootElement;
+                LastCommandId = input.GetProperty("commandId").GetGuid(); MutationCount++;
+                if (Conflict) return new(HttpStatusCode.Conflict);
                 Assert.Equal(_version, input.GetProperty("expectedUpdatedAt").GetDateTimeOffset());
                 Assert.NotEqual(Guid.Empty, input.GetProperty("commandId").GetGuid());
                 var segments = path.Split('/');
@@ -200,6 +253,7 @@ public sealed class RemoteWorkspaceUiTests
                     else Tasks[index] = task with { Title = input.GetProperty("title").GetString()!, Notes = input.GetProperty("notes").GetString() };
                 }
                 _version = _version.AddSeconds(1);
+                if (LoseMutationResponse) throw new HttpRequestException("Response lost after commit");
                 return Response(Detail());
             }
             object result = path.EndsWith("login")

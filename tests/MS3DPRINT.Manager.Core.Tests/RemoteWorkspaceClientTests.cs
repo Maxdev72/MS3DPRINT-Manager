@@ -8,6 +8,32 @@ namespace MS3DPRINT.Manager.Core.Tests;
 
 public sealed class RemoteWorkspaceClientTests
 {
+    [Theory]
+    [InlineData("Uncertain", null, RemoteFailure.Uncertain)]
+    [InlineData("Completed", 409, RemoteFailure.Conflict)]
+    [InlineData("Completed", 201, RemoteFailure.Uncertain)]
+    [InlineData("Unavailable", null, RemoteFailure.Uncertain)]
+    [InlineData("Unauthorized", null, RemoteFailure.Uncertain)]
+    public async Task Conflict_is_classified_from_durable_receipt_without_replaying_mutation(string state, int? status, RemoteFailure expected)
+    {
+        var handler = new Handler(_ => Task.FromResult(Json(new { accessToken = "token", expiresIn = 3600 })));
+        var client = New(handler); await client.LoginAsync("owner", "secret");
+        var id = Guid.NewGuid(); var mutations = 0; var receipts = 0;
+        handler.Respond = request =>
+        {
+            if (request.Method != HttpMethod.Get) { mutations++; return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Conflict)); }
+            receipts++;
+            Assert.EndsWith($"/commands/{id}", request.RequestUri!.AbsolutePath);
+            if (state == "Unavailable") throw new HttpRequestException();
+            if (state == "Unauthorized") return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized));
+            return Task.FromResult(Json(new { commandId = id, state, statusCode = status, result = (object?)null }));
+        };
+        var error = await Assert.ThrowsAsync<RemoteWorkspaceException>(() => client.AddTaskAsync(Guid.NewGuid(), new(id, DateTimeOffset.UtcNow, "Task", null)));
+        Assert.Equal(expected, error.Kind); Assert.Equal(id, error.CommandId);
+        Assert.Equal(1, mutations); Assert.Equal(1, receipts);
+        if (state == "Unauthorized") Assert.False(client.IsAuthenticated);
+    }
+
     [Fact]
     public async Task Commands_use_string_enums_and_read_server_detail_versions()
     {
@@ -64,8 +90,12 @@ public sealed class RemoteWorkspaceClientTests
         var handler = new Handler(_ => Task.FromResult(Json(new { accessToken = "token", expiresIn = 3600 })));
         var client = New(handler);
         await client.LoginAsync("owner", "secret");
-        handler.Respond = _ => { count++; return Task.FromResult(new HttpResponseMessage((HttpStatusCode)status)); };
         var command = new AddTaskCommand(Guid.NewGuid(), DateTimeOffset.UtcNow, "Préparer", "Notes du brouillon");
+        handler.Respond = request =>
+        {
+            if (request.Method == HttpMethod.Get) return Task.FromResult(Json(new { commandId = command.CommandId, state = "Completed", statusCode = 409, result = (object?)null }));
+            count++; return Task.FromResult(new HttpResponseMessage((HttpStatusCode)status));
+        };
         var error = await Assert.ThrowsAsync<RemoteWorkspaceException>(() => client.AddTaskAsync(Guid.NewGuid(), command));
         Assert.Equal(expected, error.Kind);
         Assert.Equal(command.CommandId, error.CommandId);

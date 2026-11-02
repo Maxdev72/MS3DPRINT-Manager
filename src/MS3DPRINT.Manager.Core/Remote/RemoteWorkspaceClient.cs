@@ -104,7 +104,12 @@ public sealed class RemoteWorkspaceClient
                 throw new RemoteWorkspaceException(RemoteFailure.Unauthorized, "Connexion refusée ou session expirée : reconnectez-vous.", commandId);
             }
             if (response.StatusCode == HttpStatusCode.Conflict)
+            {
+                // A 409 can also be a durable Pending command. Only its receipt proves a version conflict.
+                if (commandId is { } id && !await IsRecordedConflictAsync(id, cancellationToken).ConfigureAwait(false))
+                    throw new RemoteWorkspaceException(RemoteFailure.Uncertain, "Résultat incertain : vérifiez le reçu de la commande avant toute nouvelle modification.", id);
                 throw new RemoteWorkspaceException(RemoteFailure.Conflict, "Conflit : le serveur a changé. Votre brouillon est conservé ; actualisez avant de réessayer.", commandId);
+            }
             if (!response.IsSuccessStatusCode)
                 throw new RemoteWorkspaceException(commandId.HasValue && (int)response.StatusCode >= 500 ? RemoteFailure.Uncertain : RemoteFailure.Rejected,
                     commandId.HasValue && (int)response.StatusCode >= 500 ? "Résultat incertain : vérifiez le reçu et actualisez, sans renvoyer la commande." : $"Le serveur a refusé la demande ({(int)response.StatusCode}). Vérifiez les champs et la version de l’application.", commandId);
@@ -122,6 +127,16 @@ public sealed class RemoteWorkspaceClient
             throw new RemoteWorkspaceException(commandId.HasValue ? RemoteFailure.Uncertain : RemoteFailure.InvalidResponse,
                 "Réponse serveur incompatible. Actualisez et vérifiez la version de l’application avant toute modification.", commandId, ex);
         }
+    }
+
+    private async Task<bool> IsRecordedConflictAsync(Guid commandId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var receipt = await GetCommandReceiptAsync(commandId, cancellationToken).ConfigureAwait(false);
+            return receipt.CommandId == commandId && receipt.State == "Completed" && receipt.StatusCode == 409;
+        }
+        catch (RemoteWorkspaceException) { return false; }
     }
 
     private sealed record LoginResponse(string AccessToken, int ExpiresIn);

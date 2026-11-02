@@ -56,6 +56,8 @@ public sealed class RemoteWorkspaceView : UserControl, IDisposable
     private ProjectDetailResponse? _project;
     private Guid? _editingTask;
     private Guid? _uncertainCommand;
+    private Uri? _sessionServer;
+    private Uri? _uncertainServer;
     private bool _busy;
     private bool _online;
     private bool _binding;
@@ -97,12 +99,15 @@ public sealed class RemoteWorkspaceView : UserControl, IDisposable
     private async Task LoginAsync()
     {
         if (!Uri.TryCreate((_server.Text ?? "").Trim(), UriKind.Absolute, out var uri)) throw new ArgumentException("Adresse HTTPS invalide.");
+        if (_uncertainCommand is not null && uri != _uncertainServer)
+            throw new ArgumentException("Reconnectez-vous au serveur de la commande incertaine pour vérifier son reçu.");
         var client = new RemoteWorkspaceClient(_http, uri);
         var password = _password.Text ?? "";
         _password.Text = "";
         await client.LoginAsync((_name.Text ?? "").Trim(), password);
         _client?.ForgetSession(); _client = client;
-        _clientSnapshot = []; _projectSnapshot = []; _project = null; _uncertainCommand = null;
+        _sessionServer = uri;
+        _clientSnapshot = []; _projectSnapshot = []; _project = null;
         BindClients(); RenderTasks();
         await RefreshAsync();
     }
@@ -113,7 +118,13 @@ public sealed class RemoteWorkspaceView : UserControl, IDisposable
     {
         _online = false;
         try { if (_client is not null) await _client.LogoutAsync(); }
-        finally { _client?.ForgetSession(); _status.Text = "Session fermée sur cet appareil. Dernière vue consultable jusqu’à la fermeture de cet écran."; }
+        finally
+        {
+            _client?.ForgetSession();
+            _status.Text = _uncertainCommand is { } id
+                ? "Session fermée. La commande " + id + " reste incertaine : reconnectez-vous au même serveur pour vérifier son reçu. Les modifications restent bloquées."
+                : "Session fermée sur cet appareil. Dernière vue consultable jusqu’à la fermeture de cet écran.";
+        }
     }
 
     private async Task RefreshAsync()
@@ -204,6 +215,7 @@ public sealed class RemoteWorkspaceView : UserControl, IDisposable
         if (receipt.State == "Completed" && receipt.StatusCode is >= 200 and < 500)
         {
             _uncertainCommand = null;
+            _uncertainServer = null;
             await RefreshAsync();
             _status.Text = $"Commande vérifiée : résultat serveur {receipt.StatusCode}. Contrôlez la vue actualisée et votre brouillon avant toute nouvelle action.";
         }
@@ -218,7 +230,11 @@ public sealed class RemoteWorkspaceView : UserControl, IDisposable
         catch (RemoteWorkspaceException ex)
         {
             _online = false;
-            if (ex.Kind == RemoteFailure.Uncertain) _uncertainCommand = ex.CommandId;
+            if (ex.Kind == RemoteFailure.Uncertain && ex.CommandId is { } id)
+            {
+                _uncertainCommand = id;
+                _uncertainServer = _sessionServer;
+            }
             _status.Text = ex.Message + (ex.Kind == RemoteFailure.Uncertain ? " Reçu : " + ex.CommandId : "");
         }
         catch (ArgumentException ex) { _status.Text = ex.Message; }
@@ -300,7 +316,8 @@ public sealed class RemoteWorkspaceView : UserControl, IDisposable
         var authenticated = _client?.IsAuthenticated == true;
         var writable = authenticated && _online && !_busy && _uncertainCommand is null;
         _login.IsEnabled = !_busy && !authenticated;
-        _server.IsEnabled = _name.IsEnabled = _password.IsEnabled = !_busy && !authenticated;
+        _server.IsEnabled = !_busy && !authenticated && _uncertainCommand is null;
+        _name.IsEnabled = _password.IsEnabled = !_busy && !authenticated;
         _logout.IsEnabled = !_busy && authenticated;
         _refresh.IsEnabled = !_busy && authenticated;
         _receipt.IsVisible = _uncertainCommand is not null; _receipt.IsEnabled = !_busy && authenticated;
