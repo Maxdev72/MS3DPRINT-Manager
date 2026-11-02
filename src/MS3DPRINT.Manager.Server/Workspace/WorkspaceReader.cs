@@ -1,3 +1,4 @@
+using MS3DPRINT.Manager.Core.Remote;
 using MS3DPRINT.Manager.Core.Clients;
 using MS3DPRINT.Manager.Core.Projects;
 using MS3DPRINT.Manager.Core.Workspace;

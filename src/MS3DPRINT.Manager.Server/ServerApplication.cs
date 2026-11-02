@@ -17,6 +17,9 @@ public static class ServerApplication
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton<SessionStore>();
         builder.Services.AddSingleton<WorkspaceReader>();
+        builder.Services.AddSingleton<CommandStore>();
+        builder.Services.AddSingleton<WorkspaceCommands>();
+        builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter(allowIntegerValues: false)));
         builder.Services.AddDataProtection().SetApplicationName("MS3DFORGE.Server");
         builder.Services.AddOptions<KeyManagementOptions>().Configure<ServerStorage, ILoggerFactory>((options, storage, logger) =>
             options.XmlRepository = new FileSystemXmlRepository(new DirectoryInfo(Path.Combine(storage.StateRoot, "keys")), logger));
@@ -60,8 +63,8 @@ public static class ServerApplication
         app.UseRateLimiter();
         app.MapAuthentication();
         app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
-        app.MapGet("/api/v1/clients", (WorkspaceReader reader) => Results.Ok(reader.ReadClients())).RequireAuthorization();
-        app.MapGet("/api/v1/projects", (WorkspaceReader reader) => Results.Ok(reader.ReadProjects())).RequireAuthorization();
+        app.MapWorkspace();
+
         return app;
     }
 }
