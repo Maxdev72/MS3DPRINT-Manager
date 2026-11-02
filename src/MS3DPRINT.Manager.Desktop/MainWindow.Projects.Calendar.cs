@@ -27,7 +27,7 @@ public partial class MainWindow
         var toolbar = new WrapPanel { ItemSpacing = 8, LineSpacing = 8 };
         Button Action(string label, string name, Action action)
         {
-            var button = new Button { Content = label, Classes = { "ghost" } };
+            var button = new Button { Content = label, Classes = { "filter-chip" } };
             AutomationProperties.SetName(button, name); button.Click += (_, _) => action(); toolbar.Children.Add(button); return button;
         }
         var month = Action("Mois", "Vue mensuelle des échéances", () => { _projectCalendarAgenda = false; RenderProjects(); });
@@ -51,13 +51,15 @@ public partial class MainWindow
         }
         else
         {
-            var heading = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 10 };
+            body.Children.Remove(toolbar);
+            var heading = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto,Auto"), ColumnSpacing = 8 };
             var previous = CalendarNavigation("IconArrowLeft", "Mois précédent", -1);
             var next = CalendarNavigation("IconArrowRight", "Mois suivant", 1);
             previous.IsEnabled = _projectCalendarMonth.Year > 1 || _projectCalendarMonth.Month > 1;
             next.IsEnabled = _projectCalendarMonth.Year < 9999 || _projectCalendarMonth.Month < 12;
-            var caption = new TextBlock { Text = CalendarCulture.TextInfo.ToTitleCase(_projectCalendarMonth.ToString("MMMM yyyy", CalendarCulture)), FontSize = 20, FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-            Grid.SetColumn(caption, 1); Grid.SetColumn(next, 2); heading.Children.Add(previous); heading.Children.Add(caption); heading.Children.Add(next); body.Children.Add(heading);
+            var caption = new TextBlock { Text = CalendarCulture.TextInfo.ToTitleCase(_projectCalendarMonth.ToString("MMMM yyyy", CalendarCulture)), FontSize = 22, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+            Grid.SetColumn(toolbar, 1); Grid.SetColumn(previous, 2); Grid.SetColumn(next, 3);
+            heading.Children.Add(caption); heading.Children.Add(toolbar); heading.Children.Add(previous); heading.Children.Add(next); body.Children.Add(heading);
             var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*,*,*,*,*"), RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,Auto,Auto,Auto"), ColumnSpacing = 3, RowSpacing = 3 };
             var weekdays = new[] { "Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam.", "Dim." };
             for (var i = 0; i < 7; i++)
@@ -69,17 +71,20 @@ public partial class MainWindow
             for (var i = 0; i < days.Count; i++)
             {
                 var day = days[i];
-                var button = new Button { Classes = { "project-calendar-day" }, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Top, Padding = new Thickness(8, 5), MinHeight = 52, IsEnabled = day.Date is not null };
+                var button = new Button { Classes = { "project-calendar-day" }, HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Top, Padding = new Thickness(8, 5), MinHeight = 52, IsEnabled = day.Date is not null };
                 if (day.Date is { } date)
                 {
                     button.Tag = date;
                     button.Classes.Set("selected", date == _projectCalendarDay);
                     button.Classes.Set("outside-month", date.Month != _projectCalendarMonth.Month);
+                    button.Classes.Set("today", date == DateOnly.FromDateTime(DateTime.Today));
+                    button.Classes.Set("has-deadline", day.Projects.Count > 0);
                     var content = new StackPanel { Spacing = 4 };
                     content.Children.Add(new TextBlock { Text = date.Day.ToString(), FontWeight = date == DateOnly.FromDateTime(DateTime.Today) ? FontWeight.Bold : FontWeight.Normal });
                     if (day.Projects.Count > 0)
                     {
                         content.Children.Add(new TextBlock { Text = $"{day.Projects.Count} échéance{(day.Projects.Count == 1 ? "" : "s")}", FontSize = 12, Foreground = (IBrush?)Application.Current?.FindResource("CyanBrush"), TextTrimming = TextTrimming.CharacterEllipsis });
+                        content.Children.Add(new TextBlock { Text = day.Projects[0].Title(), FontSize = 12, MaxLines = 1, TextTrimming = TextTrimming.CharacterEllipsis });
                     }
                     button.Content = content;
                     var name = date.ToString("dddd d MMMM yyyy", CalendarCulture) + (day.Projects.Count == 0 ? " · aucune échéance" : " · " + string.Join(", ", day.Projects.Select(p => p.Title())));
@@ -118,7 +123,12 @@ public partial class MainWindow
         text.Children.Add(new TextBlock { Text = project.Title(), FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap });
         text.Children.Add(CalendarHint(project.Reference + " · " + project.ClientTitle()));
         var facts = new WrapPanel { ItemSpacing = 12, LineSpacing = 6 };
-        if (project.Profile?.DueDate is { } due) facts.Children.Add(CalendarHint(due.ToString("dd/MM/yyyy") + " · " + ProjectDeadlineLabel(project).Text));
+        if (project.Profile?.DueDate is { } due)
+        {
+            var date = due.ToString("dd/MM/yyyy");
+            var label = ProjectDeadlineLabel(project).Text;
+            facts.Children.Add(CalendarHint(date == label ? date : date + " · " + label));
+        }
         facts.Children.Add(CreateStatusBadge(project.StatusLabel));
         if (project.Priority != ProjectPriority.None) facts.Children.Add(ProjectPriorityVisual.Label(project.Priority));
         text.Children.Add(facts);

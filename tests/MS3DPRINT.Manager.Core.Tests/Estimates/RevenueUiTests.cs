@@ -47,7 +47,7 @@ public sealed partial class EstimateUiTests
             Assert.True(line.IsCancelled); Assert.Equal("Doublon", line.Cancellation!.Reason);
             for (var i = 0; i < 800 && !list.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text?.Contains("annulée : Doublon") == true); i++) await Task.Delay(10);
             var struck = list.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Text?.Contains("annulée : Doublon") == true);
-            Assert.Equal(TextDecorations.Strikethrough, struck.TextDecorations);
+            Assert.Contains(struck.TextDecorations!, decoration => decoration.Location == TextDecorationLocation.Strikethrough);
             Assert.Contains("1 recette ", Field<TextBlock>(owner, "_revenuePageSummary").Text!);
         }
         finally { owner.Close(); }

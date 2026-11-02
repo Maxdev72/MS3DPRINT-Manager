@@ -55,15 +55,15 @@
   </Style>
   <Style Selector="Window.workbench-ui Button.primary-action"><Setter Property="MinHeight" Value="42" /></Style>
   <Style Selector="Window.workbench-ui Button.filter-chip">
-    <Setter Property="Background" Value="Transparent" />
-    <Setter Property="BorderBrush" Value="Transparent" />
-    <Setter Property="BorderThickness" Value="0,0,0,2" />
-    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="4" />
     <Setter Property="Padding" Value="12,10" />
     <Setter Property="MinHeight" Value="40" />
   </Style>
   <Style Selector="Window.workbench-ui Button.filter-chip.selected">
-    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Background" Value="{DynamicResource CyanSoftBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource CyanBrush}" />
   </Style>
@@ -88,7 +88,7 @@
   </Style>
   <Style Selector="Window.workbench-ui Button.settings-tab.selected">
     <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
-    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource CyanBrush}" />
   </Style>
   <Style Selector="Window.workbench-ui Button.settings-tab.selected Path.icon"><Setter Property="Stroke" Value="{DynamicResource CyanBrush}" /></Style>
@@ -230,11 +230,34 @@
     <Setter Property="Transitions" Value="{x:Null}" />
   </Style>
   <Style Selector="Button.project-calendar-day"><Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" /><Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="4" /></Style>
-  <Style Selector="Button.project-calendar-day.outside-month"><Setter Property="Opacity" Value="0.5" /></Style>
+  <Style Selector="Button.project-calendar-day.has-deadline"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /></Style>
+  <Style Selector="Button.project-calendar-day.outside-month"><Setter Property="Foreground" Value="{DynamicResource FaintTextBrush}" /><Setter Property="Background" Value="{DynamicResource CanvasBrush}" /></Style>
+  <Style Selector="Button.project-calendar-day.today"><Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Style>
   <Style Selector="Button.project-calendar-day.selected"><Setter Property="Background" Value="{DynamicResource CyanSoftBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /></Style>
   <Style Selector="Button.project-calendar-day:pointerover"><Setter Property="Background" Value="{DynamicResource HoverBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /></Style>
-  <Style Selector="Calendar.project-date-picker"><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /><Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /></Style>
+  <Style Selector="Button.project-calendar-day:focus-visible"><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /></Style>
+  <Style Selector="Calendar.project-date-picker"><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /><Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" /><Setter Property="CornerRadius" Value="6" /></Style>
+  <Style Selector="CalendarDayButton, CalendarButton"><Setter Property="FontSize" Value="15" /><Setter Property="MinWidth" Value="46" /></Style>
+  <Style Selector="CalendarDayButton /template/ Border, CalendarButton /template/ Border"><Setter Property="CornerRadius" Value="4" /></Style>
+  <Style Selector="CalendarDayButton:selected /template/ Border#Root"><Setter Property="Background" Value="{DynamicResource CyanSoftBrush}" /></Style>
+  <Style Selector="CalendarDayButton:selected /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Style>
+  <Style Selector="CalendarDayButton:today /template/ Border#Root, CalendarButton:selected /template/ Border#Root"><Setter Property="Background" Value="{DynamicResource AccentBrush}" /></Style>
+  <Style Selector="CalendarDayButton:today /template/ ContentPresenter#PART_ContentPresenter, CalendarButton:selected /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" /></Style>
+  <Style Selector="CalendarDayButton:today > TextBlock, CalendarButton:selected > TextBlock"><Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" /></Style>
+  <Style Selector="CalendarDayButton:inactive:not(:today) > TextBlock, CalendarButton:inactive:not(:selected) > TextBlock"><Setter Property="Foreground" Value="{DynamicResource FaintTextBrush}" /></Style>
+  <Style Selector="CalendarDayButton:focus-visible /template/ Border#Border, CalendarButton:focus-visible /template/ Border#Border"><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /></Style>
+  <Style Selector="CalendarItem /template/ Button#PART_HeaderButton"><Setter Property="FontSize" Value="16" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
   <Style Selector="Border.project-task-row"><Setter Property="BorderThickness" Value="0,0,0,1" /><Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" /></Style>
+  <Style Selector="Border.project-task-row Button.task-row-action">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="Border.project-task-row Button.task-row-action:pointerover, Border.project-task-row Button.task-row-action:pressed">
+    <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+  </Style>
+  <Style Selector="Border.project-task-row Button.task-row-action:focus-visible">
+    <Setter Property="Background" Value="{DynamicResource CyanSoftBrush}" />
+  </Style>
   <Style Selector="Border.project-task-row.drop-before"><Setter Property="BorderThickness" Value="0,2,0,1" /><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /></Style>
   <Style Selector="Border.project-task-row.drop-after"><Setter Property="BorderThickness" Value="0,0,0,2" /><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /></Style>
   <!-- Project views are primary navigation, visually stronger than the catalogue filters. -->
@@ -245,9 +268,9 @@
     <Setter Property="MinWidth" Value="128" />
     <Setter Property="Padding" Value="20,10" />
     <Setter Property="CornerRadius" Value="6" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="BorderBrush" Value="Transparent" />
-    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
+    <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
   </Style>
   <Style Selector="Window.workbench-ui StackPanel#ProjectViewTabs Button.filter-chip.selected">
@@ -262,7 +285,7 @@
   <Style Selector="Window.workbench-ui StackPanel#ProjectViewTabs Button.filter-chip.selected:pointerover">
     <Setter Property="Background" Value="{DynamicResource BrandBlueBrush}" />
   </Style>
-  <Style Selector="Window.workbench-ui StackPanel#ProjectViewTabs Button.filter-chip:focus-visible">
+  <Style Selector="Window.workbench-ui Button.filter-chip:focus-visible, Window.workbench-ui StackPanel#ProjectViewTabs Button.filter-chip:focus-visible">
     <Setter Property="BorderBrush" Value="{DynamicResource TextBrush}" />
     <Setter Property="BorderThickness" Value="2" />
   </Style>

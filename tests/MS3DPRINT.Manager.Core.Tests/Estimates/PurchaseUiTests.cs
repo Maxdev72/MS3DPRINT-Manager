@@ -89,7 +89,7 @@ public sealed partial class EstimateUiTests
             Assert.Equal("Doublon", journal.Load(DateTime.Today.Year).Lines.Single(l => l.Entry.Id == wrong.Id).Cancellation!.Reason);
             for (var i = 0; i < 800 && !list.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text?.Contains("annulé : Doublon") == true); i++) await Task.Delay(10);
             var struck = list.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Text?.Contains("annulé : Doublon") == true);
-            Assert.Equal(TextDecorations.Strikethrough, struck.TextDecorations);
+            Assert.Contains(struck.TextDecorations!, decoration => decoration.Location == TextDecorationLocation.Strikethrough);
         }
         finally { owner.Close(); }
     });

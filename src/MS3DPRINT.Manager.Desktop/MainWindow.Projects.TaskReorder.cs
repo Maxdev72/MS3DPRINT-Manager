@@ -25,7 +25,7 @@ public partial class MainWindow
     private Button CreateProjectTaskGrip(ProjectSummary project, ProjectTask task, Border sourceRow)
     {
         var root = WorkspaceRoot;
-        var handle = new Button { Content = Icons.Glyph("IconGrip", 18), Classes = { "icon-action", "task-drag-grip" }, Cursor = new Cursor(StandardCursorType.SizeAll), VerticalAlignment = VerticalAlignment.Center };
+        var handle = new Button { Content = Icons.Glyph("IconGrip", 18), Classes = { "icon-action", "task-drag-grip", "task-row-action" }, Cursor = new Cursor(StandardCursorType.SizeAll), VerticalAlignment = VerticalAlignment.Center };
         AutomationProperties.SetName(handle, "Déplacer la tâche : " + task.Title);
         ToolTip.SetTip(handle, "Glisser pour reclasser · Alt + Haut / Bas au clavier");
         TaskDrag? drag = null;

@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 
 namespace MS3DPRINT.Manager.Desktop;
@@ -17,7 +18,8 @@ public sealed partial class FileBrowserView
         Point origin = default;
         var dragging = false;
 
-        handle.PointerPressed += (_, e) =>
+        // Buttons handle the press themselves; observe it without changing their click behavior.
+        handle.AddHandler(PointerPressedEvent, (_, e) =>
         {
             press = null;
             if (dragging || !e.GetCurrentPoint(handle).Properties.IsLeftButtonPressed
@@ -25,9 +27,9 @@ public sealed partial class FileBrowserView
                 || !Rows.IsEnabled || !(FileCommandsAvailable?.Invoke() ?? true)) return;
             press = e;
             origin = e.GetPosition(handle);
-        };
+        }, RoutingStrategies.Bubble, handledEventsToo: true);
 
-        handle.PointerReleased += (_, _) => press = null;
+        handle.AddHandler(PointerReleasedEvent, (_, _) => press = null, RoutingStrategies.Bubble, handledEventsToo: true);
         handle.PointerCaptureLost += (_, _) => press = null;
         handle.DetachedFromVisualTree += (_, _) => press = null;
 

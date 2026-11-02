@@ -88,6 +88,23 @@ public sealed class RevenueJournal
         WriteUnlocked(path, new Record("correction", null, null, new RevenueCorrection(Guid.NewGuid(), current.Id, reason.Trim(), correctedAt, corrected)));
     }
 
+    public void SetPointed(IReadOnlyList<RevenueEntry> entries, bool pointed, DateTimeOffset changedAt)
+    {
+        ArgumentNullException.ThrowIfNull(entries);
+        if (entries.Count == 0) throw new ArgumentException("Sélectionnez au moins une ligne.", nameof(entries));
+        var year = entries[0].ReceivedOn.Year;
+        if (entries.Any(e => e.Id == Guid.Empty || e.ReceivedOn.Year != year) || entries.Select(e => e.Id).Distinct().Count() != entries.Count)
+            throw new ArgumentException("Le pointage doit concerner des lignes distinctes de la même année.", nameof(entries));
+        var path = PathFor(year);
+        using var mutation = ProfileMutationLock.Acquire(path);
+        var current = Load(year);
+        if (current.Errors.Count > 0) throw new InvalidOperationException("Le journal contient des lignes illisibles. Corrigez-les avant de pointer.");
+        var lines = current.Lines.ToDictionary(l => l.Entry.Id);
+        if (entries.Any(e => !lines.TryGetValue(e.Id, out var line) || line.IsCancelled || line.Entry != e))
+            throw new InvalidOperationException("Une ligne a été modifiée ou annulée. Actualisez la liste avant de pointer.");
+        WriteUnlocked(path, new Record("pointing", null, null, Pointing: new MS3DPRINT.Manager.Core.Revenues.JournalPointing(entries.Select(e => e.Id).ToArray(), pointed ? changedAt : null)));
+    }
+
     public RevenueYear Load(int year)
     {
         var path = PathFor(year);
@@ -95,6 +112,7 @@ public sealed class RevenueJournal
         var entries = new List<RevenueEntry>();
         var cancellations = new Dictionary<Guid, RevenueCancellation>();
         var corrections = new Dictionary<Guid, List<RevenueCorrection>>();
+        var pointings = new Dictionary<Guid, DateTimeOffset>();
         var errors = new List<string>();
         if (File.Exists(path))
         {
@@ -112,6 +130,16 @@ public sealed class RevenueJournal
                     {
                         if (!corrections.TryGetValue(correction.EntryId, out var history)) corrections[correction.EntryId] = history = [];
                         history.Add(correction);
+                        pointings.Remove(correction.EntryId);
+                    }
+                    else if (record?.Pointing is { EntryIds.Length: > 0 } pointing && record.Type == "pointing"
+                        && pointing.EntryIds.All(id => id != Guid.Empty))
+                    {
+                        foreach (var id in pointing.EntryIds)
+                        {
+                            if (pointing.PointedAt is { } at) pointings[id] = at;
+                            else pointings.Remove(id);
+                        }
                     }
                     else errors.Add($"Ligne {number} : type inconnu.");
                 }
@@ -121,9 +149,10 @@ public sealed class RevenueJournal
         var lines = entries.Select(original =>
             {
                 var history = corrections.GetValueOrDefault(original.Id);
-                return history is { Count: > 0 }
+                var line = history is { Count: > 0 }
                     ? new RevenueLine(history[^1].Entry, cancellations.GetValueOrDefault(original.Id), history, original)
                     : new RevenueLine(original, cancellations.GetValueOrDefault(original.Id));
+                return line with { PointedAt = !line.IsCancelled && pointings.TryGetValue(original.Id, out var at) ? at : null };
             }).OrderBy(l => l.Entry.ReceivedOn).ThenBy(l => l.Entry.RecordedAt).ToArray();
         return new(year, lines, errors);
     }
@@ -206,5 +235,6 @@ public sealed class RevenueJournal
         stream.Flush(flushToDisk: true);
     }
 
-    private sealed record Record(string Type, RevenueEntry? Entry, RevenueCancellation? Cancellation, RevenueCorrection? Correction = null);
+    private sealed record Record(string Type, RevenueEntry? Entry, RevenueCancellation? Cancellation, RevenueCorrection? Correction = null,
+        MS3DPRINT.Manager.Core.Revenues.JournalPointing? Pointing = null);
 }

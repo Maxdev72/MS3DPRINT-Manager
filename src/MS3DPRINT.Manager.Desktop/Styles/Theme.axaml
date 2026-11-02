@@ -12,20 +12,21 @@
       <SolidColorBrush x:Key="PressedBrush" Color="#234967" />
       <!-- Lines -->
       <SolidColorBrush x:Key="BorderBrush" Color="#2A4664" />
+      <SolidColorBrush x:Key="ControlBorderBrush" Color="#7F9ABA" />
       <SolidColorBrush x:Key="SubtleBorderBrush" Color="#1C334E" />
       <SolidColorBrush x:Key="OverlayScrimBrush" Color="#99060A12" />
       <StreamGeometry x:Key="IconCopy">M8 8H20V20H8Z M16 8V4H4V16H8</StreamGeometry>
       <!-- Text roles retain strong contrast on the navy surfaces. -->
       <SolidColorBrush x:Key="TextBrush" Color="#F5F9FF" />
       <SolidColorBrush x:Key="MutedTextBrush" Color="#B1C2D9" />
-      <SolidColorBrush x:Key="FaintTextBrush" Color="#91AAC8" />
+      <SolidColorBrush x:Key="FaintTextBrush" Color="#A5BBD3" />
       <!-- Accent and states -->
       <SolidColorBrush x:Key="AccentBrush" Color="#76B8FF" />
       <SolidColorBrush x:Key="BrandBlueBrush" Color="#245CFF" />
-      <SolidColorBrush x:Key="BrandBlueHoverBrush" Color="#386DFF" />
+      <SolidColorBrush x:Key="BrandBlueHoverBrush" Color="#3164F0" />
       <SolidColorBrush x:Key="AccentPressedBrush" Color="#0B3EDC" />
       <SolidColorBrush x:Key="SelectionTextBrush" Color="#3A5FA8" />
-      <SolidColorBrush x:Key="DangerBorderBrush" Color="#5A2A30" />
+      <SolidColorBrush x:Key="DangerBorderBrush" Color="#CB727B" />
       <SolidColorBrush x:Key="AccentSoftBrush" Color="#142C59" />
       <SolidColorBrush x:Key="AccentForegroundBrush" Color="#FFFFFF" />
       <SolidColorBrush x:Key="OnAccentBrush" Color="#071225" />
@@ -45,6 +46,8 @@
       <!-- Native dropdowns, including their separate popup host, share the app palette. -->
       <StaticResource x:Key="ComboBoxDropDownBackground" ResourceKey="SurfaceBrush" />
       <StaticResource x:Key="ComboBoxDropDownBorderBrush" ResourceKey="BorderBrush" />
+      <StaticResource x:Key="AutoCompleteBoxSuggestionsListBackground" ResourceKey="RaisedSurfaceBrush" />
+      <StaticResource x:Key="AutoCompleteBoxSuggestionsListBorderBrush" ResourceKey="ControlBorderBrush" />
       <StaticResource x:Key="ComboBoxBackgroundPointerOver" ResourceKey="HoverBrush" />
       <StaticResource x:Key="ComboBoxBackgroundPressed" ResourceKey="PressedBrush" />
       <StaticResource x:Key="ComboBoxBorderBrushPointerOver" ResourceKey="AccentBrush" />
@@ -75,6 +78,28 @@
       <StaticResource x:Key="CheckBoxCheckBackgroundStrokeCheckedPointerOver" ResourceKey="FocusBorderBrush" />
       <StaticResource x:Key="CheckBoxCheckBackgroundStrokeCheckedPressed" ResourceKey="AccentBrush" />
       <StaticResource x:Key="CheckBoxCheckGlyphForegroundChecked" ResourceKey="OnAccentBrush" />
+      <!-- Calendar's internal states do not inherit the window palette. -->
+      <StaticResource x:Key="CalendarViewForeground" ResourceKey="TextBrush" />
+      <StaticResource x:Key="CalendarViewBackground" ResourceKey="SurfaceBrush" />
+      <StaticResource x:Key="CalendarViewBorderBrush" ResourceKey="SubtleBorderBrush" />
+      <StaticResource x:Key="CalendarViewCalendarItemForeground" ResourceKey="TextBrush" />
+      <StaticResource x:Key="CalendarViewCalendarItemRevealBackground" ResourceKey="SurfaceBrush" />
+      <StaticResource x:Key="CalendarViewCalendarItemRevealBorderBrush" ResourceKey="SurfaceBrush" />
+      <StaticResource x:Key="CalendarViewOutOfScopeBackground" ResourceKey="SurfaceBrush" />
+      <StaticResource x:Key="CalendarViewOutOfScopeForeground" ResourceKey="FaintTextBrush" />
+      <StaticResource x:Key="CalendarViewTodayForeground" ResourceKey="OnAccentBrush" />
+      <StaticResource x:Key="CalendarViewHoverBorderBrush" ResourceKey="CyanBrush" />
+      <StaticResource x:Key="CalendarViewPressedBorderBrush" ResourceKey="AccentBrush" />
+      <StaticResource x:Key="CalendarViewSelectedBorderBrush" ResourceKey="CyanBrush" />
+      <StaticResource x:Key="CalendarViewSelectedHoverBorderBrush" ResourceKey="CyanBrush" />
+      <StaticResource x:Key="CalendarViewSelectedPressedBorderBrush" ResourceKey="AccentBrush" />
+      <StaticResource x:Key="CalendarViewNavigationButtonBackground" ResourceKey="RaisedSurfaceBrush" />
+      <StaticResource x:Key="CalendarViewNavigationButtonBorderBrush" ResourceKey="SubtleBorderBrush" />
+      <StaticResource x:Key="CalendarViewNavigationButtonBorderBrushPointerOver" ResourceKey="CyanBrush" />
+      <StaticResource x:Key="CalendarViewNavigationButtonForegroundPointerOver" ResourceKey="TextBrush" />
+      <StaticResource x:Key="CalendarViewNavigationButtonForegroundPressed" ResourceKey="TextBrush" />
+      <StaticResource x:Key="CalendarViewWeekDayForegroundDisabled" ResourceKey="FaintTextBrush" />
+      <StaticResource x:Key="CalendarViewBlackoutForeground" ResourceKey="FaintTextBrush" />
       <SolidColorBrush x:Key="NeutralSoftBrush" Color="#1D283B" />
 
       <!-- Spacing, radius and type scale -->
@@ -143,15 +168,11 @@
     <Setter Property="Background" Value="{DynamicResource CanvasBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
   </Style>
-  <Style Selector="TextBlock">
-    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
-  </Style>
-
   <!-- Buttons: secondary by default; .primary-action, .ghost and .danger are the other variants -->
   <Style Selector="Button">
     <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
     <Setter Property="Padding" Value="14,8" />
     <Setter Property="MinHeight" Value="40" />
@@ -166,13 +187,13 @@
     <Setter Property="BorderBrush" Value="{DynamicResource FocusBorderBrush}" />
     <Setter Property="BorderThickness" Value="2" />
   </Style>
-  <Style Selector="Button:disabled"><Setter Property="Opacity" Value="0.45" /></Style>
+  <Style Selector="Button:disabled"><Setter Property="Opacity" Value="0.75" /></Style>
 
   <!-- Inputs -->
   <Style Selector="TextBox">
     <Setter Property="PlaceholderForeground" Value="{DynamicResource MutedTextBrush}" />
     <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="Padding" Value="12,10" />
@@ -185,7 +206,7 @@
     <Setter Property="SelectionForegroundBrush" Value="{DynamicResource TextBrush}" />
     <Setter Property="CaretBrush" Value="{DynamicResource TextBrush}" />
   </Style>
-  <Style Selector="TextBox:disabled"><Setter Property="Opacity" Value="0.5" /></Style>
+  <Style Selector="TextBox:disabled"><Setter Property="Opacity" Value="0.75" /></Style>
   <Style Selector="TextBox:not(:disabled) /template/ TextBlock#PART_Placeholder, ComboBox:not(:disabled) /template/ TextBlock">
     <!-- Fluent halves placeholder opacity; keep the chosen text contrast on dark inputs. -->
     <Setter Property="Opacity" Value="1" />
@@ -205,7 +226,7 @@
     <Setter Property="PlaceholderForeground" Value="{DynamicResource MutedTextBrush}" />
     <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="Padding" Value="12,8" />
     <Setter Property="MinHeight" Value="42" />

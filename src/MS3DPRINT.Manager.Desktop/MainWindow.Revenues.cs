@@ -18,7 +18,7 @@ public partial class MainWindow
     private int _revenueYear = DateTime.Today.Year;
     private RevenueYear? _revenueLoaded;
 
-    private const string RevenueRowColumns = "90,1.2*,1.8*,120,110,120,64";
+    private const string RevenueRowColumns = "90,1.3*,1.7*,90,94,80,50";
 
     private async void RefreshRevenues_Click(object? sender, RoutedEventArgs e) => await LoadRevenuesAsync();
 
@@ -304,15 +304,25 @@ public partial class MainWindow
                 + (result.Waiting > 0 ? $" · {result.Waiting} recette{(result.Waiting > 1 ? "s" : "")} du téléphone à importer" : "")
                 + (result.Year.Errors.Count > 0 ? $" · {result.Year.Errors.Count} ligne{(result.Year.Errors.Count > 1 ? "s" : "")} illisible{(result.Year.Errors.Count > 1 ? "s" : "")}" : "");
             Control Warning() => CreateReadErrorState("Certaines lignes du livre sont illisibles", "Le fichier est conservé tel quel. Les autres lignes restent affichées. Après correction ou synchronisation, réessayez.", new IOException(string.Join(Environment.NewLine, result.Year.Errors)), LoadRevenuesAsync, compact: true);
-            Control Header() => result.Year.Errors.Count == 0 ? CreateCompactTableHeader(RevenueRowColumns, "DATE", "CLIENT", "LIBELLÉ", "NATURE", "MONTANT", "PIÈCE", "ACTIONS")
-                : new StackPanel { Children = { Warning(), CreateCompactTableHeader(RevenueRowColumns, "DATE", "CLIENT", "LIBELLÉ", "NATURE", "MONTANT", "PIÈCE", "ACTIONS") } };
+            Control Header() => CreateCompactTableHeader(RevenueRowColumns, "DATE", "CLIENT", "LIBELLÉ", "NATURE", "MONTANT", "PIÈCE", "ACTIONS");
             if (lines.Count == 0)
             {
                 if (result.Year.Errors.Count > 0) RevenueList.Children.Add(Warning());
                 else RevenueList.Children.Add(CreateEmptyState("IconBook", $"Aucune recette en {selectedYear}", "Enregistrez chaque paiement reçu, avec sa date d’encaissement et le numéro de facture.", "Enregistrer un encaissement", CreateRevenue_Click));
                 return;
             }
-            PagedRows.Render(RevenueList, lines.Reverse().ToArray(), line =>
+            var pointing = new JournalPointingControls(lines.Select(line => new JournalPointingItem(line.Entry.Id, line.Entry.Label, line.Entry.Amount, line.IsCancelled, line.PointedAt)).ToArray(),
+                _revenuePointingFilter, async filter => { _revenuePointingFilter = filter; await LoadRevenuesAsync(); },
+                async (ids, pointed) =>
+                {
+                    var selectedIds = ids.ToHashSet();
+                    var selected = lines.Where(line => selectedIds.Contains(line.Entry.Id)).Select(line => line.Entry).ToArray();
+                    await ChangeJournalPointingAsync(RevenueList, pointed, selected.Select(entry => entry.Label).ToArray(),
+                        () => string.Equals(root, WorkspaceRoot, StringComparison.OrdinalIgnoreCase) && _revenueYear == selectedYear && RevenuesWorkspacePanel.IsVisible,
+                        () => new RevenueJournal(root).SetPointed(selected, pointed, DateTimeOffset.Now), LoadRevenuesAsync);
+                });
+            var pointingHeader = pointing.Header(Header(), result.Year.Errors.Count > 0 ? Warning() : null);
+            PagedRows.Render(RevenueList, lines.Where(line => pointing.Includes(line.Entry.Id)).Reverse().ToArray(), line =>
             {
                 var entry = line.Entry;
                 Button? actions = null;
@@ -346,9 +356,9 @@ public partial class MainWindow
                     CreateCompactTableCell(RevenueExporter.NatureName(entry.Nature)), CreateCompactTableCell(RevenueExporter.Money(entry.Amount)), CreateCompactTableCell(entry.InvoiceNumber)
                 };
                 if (line.IsCancelled)
-                    foreach (var cell in cells) { cell.TextDecorations = TextDecorations.Strikethrough; cell.Opacity = 0.6; }
-                return CreateActionRow(RevenueRowColumns, null, actions, cells);
-            }, Header, root + "|" + selectedYear);
+                    foreach (var cell in cells) { cell.TextDecorations = new TextDecorationCollection { new TextDecoration { Location = TextDecorationLocation.Strikethrough } }; cell.Classes.Add("faint"); }
+                return pointing.Row(CreateActionRow(RevenueRowColumns, null, actions, cells), entry.Id);
+            }, () => pointingHeader, root + "|" + selectedYear + "|" + _revenuePointingFilter);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException)
         {

@@ -62,6 +62,7 @@ public sealed partial class EstimateUiTests
         var owner=await Open();owner.Show();
         try
         {
+            await owner.PreloadAsync(force: true);
             var now=DateTimeOffset.UtcNow;
             var profile=new ProjectProfile(Guid.NewGuid(),Guid.NewGuid(),"CT","CT-2026-001","Projet","Projet test",ProjectStatus.InProgress,now,null,null,null,now);
             var allDone=profile with { Tasks=[new ProjectTask(Guid.NewGuid(),"Livrer",IsCompleted:true)] };

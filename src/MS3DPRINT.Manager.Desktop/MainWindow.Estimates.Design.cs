@@ -36,13 +36,11 @@ public partial class MainWindow
         // Keep the last valid amounts readable during the short debounce; they are explicitly marked as stale.
         EstimateCalculationState.IsVisible = true;
         EstimateProfitStatus.IsVisible = false;
-        EstimateCostBreakdown.Opacity = .6;
     }
 
     private void UpdateEstimateCostDesign(EstimateInputs? input, EstimateResult? result)
     {
         EstimateCalculationState.IsVisible = false;
-        EstimateCostBreakdown.Opacity = 1;
         EstimateCostBreakdown.IsVisible = result?.V2 is not null;
         if (MotionReduced) EstimateCostStrip.Transitions = null;
         if (result?.V2 is not { } costs || input is null) return;

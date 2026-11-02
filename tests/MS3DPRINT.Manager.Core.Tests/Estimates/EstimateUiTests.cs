@@ -2455,7 +2455,7 @@ public sealed partial class EstimateUiTests : IDisposable
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public Task Project_import_batch_keeps_per_file_naming_confirmation_and_can_stop(bool stopSecond) => Run(async () =>
+    public Task Project_import_batch_reviews_names_together_and_can_cancel_before_copy(bool cancel) => Run(async () =>
     {
         new MS3DPRINT.Manager.Desktop.Dashboard.WorkspaceClientCreator().CreateProfessional(_root, "Atelier Horizon", "HORIZON");
         var client = new MS3DPRINT.Manager.Desktop.Dashboard.WorkspaceClientReader().Load(_root).Single();
@@ -2468,27 +2468,29 @@ public sealed partial class EstimateUiTests : IDisposable
         try
         {
             var pending = (Task)Invoke(owner, "ImportProjectFilesAsync", _root, project, directory, sources)!;
-            await WaitForDialog<ImportNameWindow>(owner);
-            await Task.Delay(300); Dispatcher.UIThread.RunJobs(); owner.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick();
-            var folder = new DirectoryInfo(AppContext.BaseDirectory);
-            while (!File.Exists(Path.Combine(folder.FullName, "MS3DPRINT.Manager.sln"))) folder = folder.Parent!;
-            var output = Path.Combine(folder.FullName, "outputs", "qa", CaptureRun, "import-batch"); Directory.CreateDirectory(output);
-            using (var bitmap = owner.CaptureRenderedFrame()) { Assert.NotNull(bitmap); bitmap.Save(Path.Combine(output, "naming.png"), new Avalonia.Media.Imaging.PngBitmapEncoderOptions()); }
-            DialogAction(owner, "Garder le nom d’origine");
-            await WaitForDialog<ConfirmImportSourceWindow>(owner); DialogAction(owner, "Conserver la source");
-            var second = await WaitForDialog<ImportNameWindow>(owner);
-            Assert.True(File.Exists(sources[0]));
-            if (stopSecond) second.Close(false);
+            var naming = await WaitForDialog<ImportBatchWindow>(owner);
+            var body = owner.FindControl<Border>("SidePanelBody")!;
+            Assert.Equal(2, body.GetVisualDescendants().OfType<TextBox>().Count());
+            Assert.Empty(Directory.GetFiles(directory));
+            if (cancel) naming.Close(false);
             else
             {
-                DialogAction(owner, "Importer ce fichier");
-                await WaitForDialog<ConfirmImportSourceWindow>(owner); DialogAction(owner, "Supprimer la source");
+                DialogAction(owner, "Garder tous les noms d’origine");
+                body.GetVisualDescendants().OfType<TextBox>().Last().Text = "personnalise.txt";
+                DialogAction(owner, "Importer les 2 fichiers");
+                await WaitForDialog<ConfirmImportSourcesWindow>(owner);
+                body.GetVisualDescendants().OfType<CheckBox>().Single(c => c.Tag as string == sources[0]).IsChecked = false;
+                DialogAction(owner, "Supprimer les sources sélectionnées");
             }
             await pending;
-            Assert.Equal("premier", File.ReadAllText(Path.Combine(directory, "premier.txt")));
-            Assert.Equal(stopSecond, File.Exists(sources[1]));
-            Assert.Equal(stopSecond ? 1 : 2, Directory.GetFiles(directory).Length);
-            if (!stopSecond) Assert.Equal("second", File.ReadAllText(Directory.GetFiles(directory).Single(path => Path.GetFileName(path) != "premier.txt")));
+            Assert.True(File.Exists(sources[0]));
+            Assert.Equal(cancel, File.Exists(sources[1]));
+            Assert.Equal(cancel ? 0 : 2, Directory.GetFiles(directory).Length);
+            if (!cancel)
+            {
+                Assert.Equal("premier", File.ReadAllText(Path.Combine(directory, "premier.txt")));
+                Assert.Equal("second", File.ReadAllText(Path.Combine(directory, "personnalise.txt")));
+            }
             Assert.False(Field<bool>(owner, "_importBatchActive"));
         }
         finally { owner.Close(); }
@@ -2505,11 +2507,14 @@ public sealed partial class EstimateUiTests : IDisposable
         try
         {
             var pending = (Task)Invoke(owner, "ImportWorkspaceFilesAsync", _root, directory, sources)!;
-            await WaitForDialog<ConfirmImportSourceWindow>(owner); DialogAction(owner, "Conserver la source");
+            await WaitForDialog<ImportBatchWindow>(owner); DialogAction(owner, "Importer les 2 fichiers");
+            await WaitForDialog<ConfirmImportSourcesWindow>(owner);
+            Assert.Single(owner.FindControl<Border>("SidePanelBody")!.GetVisualDescendants().OfType<CheckBox>().Where(c => c.Tag is string));
+            DialogAction(owner, "Supprimer les sources sélectionnées");
             await pending;
             Assert.Equal("existant", File.ReadAllText(Path.Combine(directory, "premier.txt")));
             Assert.Equal("second", File.ReadAllText(Path.Combine(directory, "second.txt")));
-            Assert.All(sources, source => Assert.True(File.Exists(source)));
+            Assert.True(File.Exists(sources[0])); Assert.False(File.Exists(sources[1]));
             Assert.False(Field<bool>(owner, "_importBatchActive"));
         }
         finally { owner.Close(); }
@@ -2525,19 +2530,14 @@ public sealed partial class EstimateUiTests : IDisposable
         try
         {
             var pending = (Task)Invoke(owner, "ImportWorkspaceFilesAsync", _root, directory, sources)!;
-            await WaitForDialog<ConfirmImportSourceWindow>(owner);
+            await WaitForDialog<ImportBatchWindow>(owner);
             var panel = owner.FindControl<Border>("ImportBatchPanel"); Assert.NotNull(panel); Assert.True(panel.IsVisible);
-            Assert.Contains("1 sur 2", owner.FindControl<TextBlock>("ImportBatchHeading")!.Text);
-            Assert.Contains("premier.txt", owner.FindControl<TextBlock>("ImportBatchFile")!.Text);
-            await Task.Delay(260); owner.UpdateLayout();
-            var body = owner.FindControl<Border>("SidePanelBody")!;
-            foreach (var button in body.GetVisualDescendants().OfType<Button>().Where(b => b.IsEffectivelyVisible))
+            owner.FindControl<ProgressBar>("ImportBatchProgress")!.PropertyChanged += (_, change) =>
             {
-                var x = button.TranslatePoint(default, body)!.Value.X;
-                Assert.InRange(x, 0, body.Bounds.Width - button.Bounds.Width);
-            }
-            CaptureDraftUi(owner, "import-source-with-stop");
-            DialogAction(owner, "Conserver et arrêter l’import"); await pending;
+                if (change.Property == ProgressBar.ValueProperty && owner.FindControl<ProgressBar>("ImportBatchProgress")!.Value == 1 && Field<bool>(owner, "_importBatchActive"))
+                    Click(owner, "ImportBatchStop");
+            };
+            DialogAction(owner, "Importer les 2 fichiers"); await pending;
             Assert.True(File.Exists(Path.Combine(directory, "premier.txt"))); Assert.False(File.Exists(Path.Combine(directory, "second.txt")));
             Assert.All(sources, source => Assert.True(File.Exists(source)));
             Assert.Contains("1 importé", owner.FindControl<TextBlock>("ImportBatchSummary")!.Text);
@@ -2561,15 +2561,16 @@ public sealed partial class EstimateUiTests : IDisposable
         try
         {
             var pending = (Task)Invoke(owner, "ImportWorkspaceFilesAsync", _root, directory, sources)!;
-            await WaitForDialog<ConfirmImportSourceWindow>(owner); DialogAction(owner, "Conserver la source"); await pending;
+            await WaitForDialog<ImportBatchWindow>(owner); DialogAction(owner, "Importer les 2 fichiers");
+            await WaitForDialog<ConfirmImportSourcesWindow>(owner); DialogAction(owner, "Conserver les sources"); await pending;
             var summary = owner.FindControl<TextBlock>("ImportBatchSummary"); Assert.NotNull(summary);
             Assert.Contains("1 importé", summary.Text); Assert.Contains("1 échec", summary.Text); Assert.Contains("0 non traité", summary.Text);
-            Assert.Contains("collision.txt", owner.FindControl<SelectableTextBlock>("ImportBatchErrors")!.Text);
-            Assert.True(owner.FindControl<Expander>("ImportBatchDetails")!.IsVisible);
             Assert.Equal(2d, owner.FindControl<ProgressBar>("ImportBatchProgress")!.Value);
             Assert.Equal("existant", File.ReadAllText(Path.Combine(directory, "collision.txt")));
             Assert.All(sources, source => Assert.True(File.Exists(source)));
-            owner.Width = 960; owner.FindControl<Expander>("ImportBatchDetails")!.IsExpanded = true;
+            Click(owner, "ImportBatchView"); await WaitForDialog<NotificationCenterWindow>(owner);
+            Assert.Contains(owner.FindControl<Border>("SidePanelBody")!.GetVisualDescendants().OfType<SelectableTextBlock>(), text => text.Text?.Contains("collision.txt") == true);
+            owner.Width = 960;
             await Task.Delay(180); CaptureDraftUi(owner, "import-errors-960");
         }
         finally { owner.Close(); }
@@ -2584,7 +2585,7 @@ public sealed partial class EstimateUiTests : IDisposable
         var owner = await Open(); owner.Show();
         try
         {
-            var pending = (Task)Invoke(owner, "ImportWorkspaceFilesAsync", _root, directory, sources)!;
+            var pending = (Task)Invoke(owner, "ImportWorkspaceFilesAsync", _root, directory, new[] { sources[0] })!;
             // Request stop on the UI thread before the copy's continuation can open its confirmation.
             owner.FindControl<Button>("ImportBatchStop")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Assert.True(Field<bool>(owner, "_importStopRequested"));

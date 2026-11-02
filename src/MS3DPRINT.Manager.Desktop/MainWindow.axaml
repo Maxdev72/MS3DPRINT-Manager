@@ -59,6 +59,7 @@
             </StackPanel>
           </Border>
           <StackPanel x:Name="FooterNavigation">
+            <Button x:Name="NotificationCenterButton" Classes="nav-item" Click="NotificationCenter_Click" AutomationProperties.Name="Notifications"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconHistory}" /><TextBlock Classes="nav-label" Text="Notifications" /><TextBlock x:Name="NotificationCount" Classes="nav-label" FontWeight="SemiBold" Foreground="{DynamicResource CyanBrush}" IsVisible="False" /></StackPanel></Button>
             <Button Classes="nav-item" Tag="Paramètres" Click="NavigationButton_Click" AutomationProperties.Name="Paramètres"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconSettings}" /><TextBlock Classes="nav-label" Text="Paramètres" /></StackPanel></Button>
           </StackPanel>
         </StackPanel>
@@ -358,21 +359,20 @@
     </Border>
     </Grid>
       <ProgressBar x:Name="BusyBar" Grid.Column="1" Classes="busy" IsIndeterminate="True" IsVisible="False" VerticalAlignment="Top" />
-    <Border x:Name="ImportBatchPanel" Grid.Row="1" Grid.Column="1" IsVisible="False" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="24,12">
-      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-        <StackPanel Spacing="5">
+    <Border x:Name="ImportBatchPanel" Grid.Row="1" Grid.Column="1" IsVisible="False" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="20,10">
+      <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="12">
+        <Path x:Name="ImportBatchStatusIcon" Classes="icon" Data="{StaticResource IconUpload}" Width="20" Height="20" VerticalAlignment="Top" Margin="0,4,0,0" />
+        <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
           <TextBlock x:Name="ImportBatchHeading" FontWeight="SemiBold" AutomationProperties.LiveSetting="Polite" TextWrapping="Wrap" />
-          <TextBlock x:Name="ImportBatchFile" Classes="caption" TextTrimming="CharacterEllipsis" />
-          <ProgressBar x:Name="ImportBatchProgress" Height="4" Minimum="0" Maximum="1" Value="0" AutomationProperties.Name="Fichiers traités dans cet import" />
           <TextBlock x:Name="ImportBatchSummary" Classes="caption" TextWrapping="Wrap" />
-          <Expander x:Name="ImportBatchDetails" Header="Détails des erreurs" IsVisible="False">
-            <ScrollViewer MaxHeight="100" HorizontalScrollBarVisibility="Disabled"><SelectableTextBlock x:Name="ImportBatchErrors" TextWrapping="Wrap" /></ScrollViewer>
-          </Expander>
+          <TextBlock x:Name="ImportBatchFile" Classes="caption" TextTrimming="CharacterEllipsis" />
         </StackPanel>
-        <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center">
+        <WrapPanel Grid.Column="2" Orientation="Horizontal" ItemSpacing="8" VerticalAlignment="Center">
           <Button x:Name="ImportBatchStop" Content="Arrêter après ce fichier" Classes="ghost" Click="StopImportBatch_Click" ToolTip.Tip="La copie en cours sera conservée. Les fichiers suivants ne seront pas importés." />
-          <Button x:Name="ImportBatchDismiss" Content="Fermer le bilan" Classes="ghost" IsVisible="False" Click="DismissImportBatch_Click" />
-        </StackPanel>
+          <Button x:Name="ImportBatchView" Content="Voir le bilan" Classes="ghost" IsVisible="False" Click="ViewImportBatch_Click" />
+          <Button x:Name="ImportBatchDismiss" Classes="icon-action" IsVisible="False" Click="DismissImportBatch_Click" AutomationProperties.Name="Masquer le bilan d’import" ToolTip.Tip="Masquer le bandeau · le bilan reste dans Notifications"><Path Classes="icon" Data="{StaticResource IconClose}" Width="16" Height="16" /></Button>
+        </WrapPanel>
+        <ProgressBar x:Name="ImportBatchProgress" Grid.Row="1" Grid.ColumnSpan="3" Margin="32,8,0,0" Height="3" Minimum="0" Maximum="1" Value="0" AutomationProperties.Name="Fichiers traités dans cet import" />
       </Grid>
     </Border>
     <Border x:Name="OperationsPanel" Grid.Row="2" Grid.Column="1" IsVisible="False" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="24,10">
@@ -389,6 +389,6 @@
         <Border x:Name="SidePanelBody" />
       </Border>
     </Grid>
-    <StackPanel x:Name="ToastHost" Grid.Column="1" ZIndex="200" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,112,28,0" Spacing="8" />
+    <StackPanel x:Name="ToastHost" Grid.Column="1" ZIndex="90" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,112,28,0" Spacing="8" />
   </Grid>
 </Window>

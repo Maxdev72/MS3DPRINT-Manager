@@ -58,15 +58,16 @@ public sealed partial class EstimateUiTests
             Assert.Equal(DragDropEffects.Copy, FileDrag(browser, data).DragEffects);
             foreach (var width in new[] { 960d, 1600d }) { owner.Width = width; await Task.Delay(120); CaptureDraftUi(owner, "files-drop-" + projectFolder + "-" + width); }
             FileDrag(browser, data, drop: true);
+            await WaitForDialog<ImportBatchWindow>(owner); DialogAction(owner, "Garder tous les noms d’origine");
+            DialogAction(owner, "Importer les 2 fichiers");
+            await WaitForDialog<ConfirmImportSourcesWindow>(owner);
             foreach (var path in new[] { a, b })
             {
-                await WaitForDialog<ImportNameWindow>(owner); DialogAction(owner, "Garder le nom d’origine");
-                await WaitForDialog<ConfirmImportSourceWindow>(owner);
                 Assert.True(File.Exists(Path.Combine(folder, Path.GetFileName(path)))); Assert.True(File.Exists(path));
                 Assert.Equal(DragDropEffects.None, FileDrag(browser, data).DragEffects);
                 FileDrag(browser, data, drop: true); // A second drop must not start another batch behind the confirmation.
-                DialogAction(owner, "Conserver la source");
             }
+            DialogAction(owner, "Conserver les sources");
             for (var i = 0; i < 200 && owner.FindControl<TextBlock>("ImportBatchHeading")!.Text != "Import terminé"; i++) await Task.Delay(10);
             Assert.Equal("Import terminé", owner.FindControl<TextBlock>("ImportBatchHeading")!.Text);
             Assert.Equal("a", File.ReadAllText(Path.Combine(folder, "a.txt"))); Assert.Equal("b", File.ReadAllText(Path.Combine(folder, "b.txt")));

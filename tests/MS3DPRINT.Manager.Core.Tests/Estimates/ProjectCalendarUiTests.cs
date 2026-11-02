@@ -1,5 +1,7 @@
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.Media;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -12,6 +14,40 @@ namespace MS3DPRINT.Manager.Core.Tests.Estimates;
 
 public sealed partial class EstimateUiTests
 {
+    [Fact]
+    public Task Deadline_picker_uses_the_workshop_palette_and_previews_the_date_before_saving() => Run(async () =>
+    {
+        var owner = await Open(); owner.Show();
+        try
+        {
+            var saved = (DateOnly?)null;
+            var dialog = new ProjectDeadlineWindow("Médailles personnalisées — GuécéYard 2026", DateOnly.FromDateTime(DateTime.Today), date => { saved = date; return Task.FromResult<string?>(null); });
+            var pending = dialog.ShowDialog<bool>(owner);
+            await WaitForDialog<ProjectDeadlineWindow>(owner);
+            var body = owner.FindControl<Border>("SidePanelBody")!;
+            var calendar = body.GetVisualDescendants().OfType<Calendar>().Single();
+            var today = calendar.GetVisualDescendants().OfType<CalendarDayButton>().Single(button => button.Classes.Contains(":today"));
+            var fill = today.GetVisualDescendants().OfType<Border>().Single(border => border.Name == "Root");
+            var accent = (ISolidColorBrush)Avalonia.Application.Current!.FindResource("AccentBrush")!;
+            Assert.Equal(accent.Color, Assert.IsAssignableFrom<ISolidColorBrush>(fill.Background).Color);
+            var onAccent = (ISolidColorBrush)Avalonia.Application.Current!.FindResource("OnAccentBrush")!;
+            Assert.Equal(onAccent.Color, Assert.IsAssignableFrom<ISolidColorBrush>(today.GetVisualDescendants().OfType<TextBlock>().Single().Foreground).Color);
+            calendar.GetVisualDescendants().OfType<Button>().Single(button => AutomationProperties.GetName(button) == "Période précédente").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Assert.Equal(DateTime.Today.AddMonths(-1).Month, calendar.DisplayDate.Month);
+            if (calendar.GetVisualDescendants().OfType<CalendarDayButton>().FirstOrDefault(button => button.Classes.Contains(":today")) is { } outsideToday)
+                Assert.Equal(onAccent.Color, Assert.IsAssignableFrom<ISolidColorBrush>(outsideToday.GetVisualDescendants().OfType<TextBlock>().Single().Foreground).Color);
+            calendar.GetVisualDescendants().OfType<Button>().Single(button => AutomationProperties.GetName(button) == "Période suivante").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Assert.Equal(DateTime.Today.Month, calendar.DisplayDate.Month);
+            calendar.SelectedDate = DateTime.Today.AddDays(12);
+            Assert.Null(saved);
+            Assert.Contains(body.GetVisualDescendants().OfType<TextBlock>(), text => text.Text == DateTime.Today.AddDays(12).ToString("dddd d MMMM yyyy", System.Globalization.CultureInfo.GetCultureInfo("fr-FR")));
+            foreach (var width in new[] { 960d, 1600d }) { owner.Width = width; await Task.Delay(160); CaptureDraftUi(owner, "refined-deadline-picker-" + width); }
+            DialogAction(owner, "Enregistrer l’échéance"); Assert.True(await pending);
+            Assert.Equal(DateOnly.FromDateTime(DateTime.Today.AddDays(12)), saved);
+        }
+        finally { owner.Close(); }
+    });
+
     [Fact]
     public Task Calendar_plans_moves_and_removes_the_same_deadline_without_changing_tasks() => Run(async () =>
     {
@@ -86,6 +122,8 @@ public sealed partial class EstimateUiTests
             Dispatcher.UIThread.RunJobs();owner.UpdateLayout();
             var list=owner.FindControl<StackPanel>("ProjectList")!;
             Assert.Contains(list.GetVisualDescendants().OfType<TextBlock>(),t=>t.Text=="2 échéances");
+            var todayCell = list.GetVisualDescendants().OfType<Button>().Single(b => b.Classes.Contains("project-calendar-day") && b.Tag is DateOnly date && date == today);
+            Assert.Contains(todayCell.GetVisualDescendants().OfType<TextBlock>(), text => text.Text == "Pièce vélo");
             foreach(var width in new[]{960d,1440d}){owner.Width=width;await Task.Delay(280);CaptureDraftUi(owner,"project-calendar-"+width);}
             list.GetVisualDescendants().OfType<Button>().Single(b=>AutomationProperties.GetName(b)=="Mois suivant").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Assert.Equal(today.AddMonths(1).Month,Field<DateOnly>(owner,"_projectCalendarMonth").Month);

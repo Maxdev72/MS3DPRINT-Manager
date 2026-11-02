@@ -6,6 +6,7 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Avalonia.Platform.Storage;
 using MS3DPRINT.Manager.Core.Clients;
 using MS3DPRINT.Manager.Core.Files;
@@ -49,6 +50,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        InitializeNotifications();
         InitializeShellPresentation();
         InitializeFilamentFilters();
         InitializeEstimateV2();
@@ -204,7 +206,12 @@ public partial class MainWindow : Window
     }
 
     private void Window_SizeChanged(object? sender, SizeChangedEventArgs e)
-        => UpdateCentralWorkspaceWidth(e.NewSize.Width);
+    {
+        // The side panel moves on resize; dismiss suggestions before their cached popup position becomes stale.
+        if (SidePanelBody?.Child is Control panel)
+            foreach (var search in panel.GetVisualDescendants().OfType<AutoCompleteBox>()) search.IsDropDownOpen = false;
+        UpdateCentralWorkspaceWidth(e.NewSize.Width);
+    }
 
     private double _lastWindowWidth;
 
@@ -265,24 +272,42 @@ public partial class MainWindow : Window
     /// <summary>Short feedback bubble below the search in the top-right corner; it fades away on its own.</summary>
     private void Notify(string message, bool error = false)
     {
+        var entry = AddNotification(message, "", error);
         // an identical toast already on screen is not stacked a second time
         if (ToastHost.Children.OfType<Border>().Any(existing => existing.Tag as string == message)) return;
         var icon = new Avalonia.Controls.Shapes.Path { Classes = { "icon", error ? "icon-danger" : "icon-success" }, Width = 18, Height = 18, VerticalAlignment = VerticalAlignment.Top, Margin = new Avalonia.Thickness(0, 1, 0, 0) };
         if (Avalonia.Application.Current?.TryFindResource(error ? "IconAlert" : "IconCheck", out var geometry) == true && geometry is Geometry data) icon.Data = data;
-        var text = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap, MaxWidth = 340 };
-        var close = new Button { Content = Icons.Glyph("IconClose", 14), Classes = { "icon-action" }, MinWidth = 32, MinHeight = 32, Padding = new Avalonia.Thickness(4, 0), VerticalAlignment = VerticalAlignment.Top };
+        var text = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap, MaxLines = 3, TextTrimming = TextTrimming.CharacterEllipsis, LineHeight = 20, VerticalAlignment = VerticalAlignment.Center };
+        ToolTip.SetTip(text, message);
+        var close = new Button { Content = Icons.Glyph("IconClose", 14), Classes = { "icon-action" }, MinWidth = 36, MinHeight = 36, Padding = new Avalonia.Thickness(4, 0), VerticalAlignment = VerticalAlignment.Top };
         ToolTip.SetTip(close, "Fermer");
         Avalonia.Automation.AutomationProperties.SetName(close, "Fermer la notification");
-        var layout = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 10 };
+        var layout = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), RowDefinitions = new RowDefinitions("Auto,Auto"), ColumnSpacing = 10 };
         Grid.SetColumn(text, 1); Grid.SetColumn(close, 2);
         layout.Children.Add(icon); layout.Children.Add(text); layout.Children.Add(close);
         var toast = new Border { Classes = { "toast", error ? "error" : "success" }, Child = layout, Tag = message };
-        void Dismiss() => ToastHost.Children.Remove(toast);
+        Avalonia.Automation.AutomationProperties.SetName(toast, message);
+        Avalonia.Automation.AutomationProperties.SetLiveSetting(toast, Avalonia.Automation.AutomationLiveSetting.Polite);
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(error ? 8 : 4.5) };
+        void Dismiss() { timer.Stop(); ToastHost.Children.Remove(toast); }
+        timer.Tick += (_, _) => Dismiss();
+        toast.PointerEntered += (_, _) => timer.Stop();
+        toast.PointerExited += (_, _) => { if (!toast.IsKeyboardFocusWithin) timer.Start(); };
+        toast.GotFocus += (_, _) => timer.Stop();
+        toast.LostFocus += (_, _) => Dispatcher.UIThread.Post(() => { if (ToastHost.Children.Contains(toast) && !toast.IsPointerOver && !toast.IsKeyboardFocusWithin) timer.Start(); });
+        toast.DetachedFromVisualTree += (_, _) => timer.Stop();
+        if (error || message.Length > 120)
+        {
+            var details = new Button { Content = "Détails", Classes = { "ghost" }, Padding = new Thickness(8, 2), MinHeight = 32, HorizontalAlignment = HorizontalAlignment.Left };
+            Avalonia.Automation.AutomationProperties.SetName(details, "Consulter la notification complète");
+            details.Click += async (_, _) => { if (CanShowPanel) { Dismiss(); await ShowNotificationAsync(entry); } };
+            Grid.SetColumn(details, 1); Grid.SetRow(details, 1); layout.Children.Add(details);
+        }
         close.Click += (_, _) => Dismiss();
-        ToastHost.Children.Add(toast);
+        ToastHost.Children.Insert(0, toast);
         BrandMotion.Enter(toast, MotionReduced, 18);
-        while (ToastHost.Children.Count > 4) ToastHost.Children.RemoveAt(0);
-        DispatcherTimer.RunOnce(Dismiss, TimeSpan.FromSeconds(error ? 8 : 4.5));
+        while (ToastHost.Children.Count > 2) ToastHost.Children.RemoveAt(ToastHost.Children.Count - 1);
+        timer.Start();
     }
 
     private IEnumerable<Button> NavigationButtons()

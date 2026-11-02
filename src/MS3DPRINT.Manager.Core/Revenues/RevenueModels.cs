@@ -15,6 +15,7 @@ public sealed record RevenueCorrection(Guid Id, Guid EntryId, string Reason, Dat
 /// <param name="Original">The values first recorded; null when the line was never corrected.</param>
 public sealed record RevenueLine(RevenueEntry Entry, RevenueCancellation? Cancellation, IReadOnlyList<RevenueCorrection>? Corrections = null, RevenueEntry? Original = null)
 {
+    public DateTimeOffset? PointedAt { get; init; }
     public bool IsCancelled => Cancellation is not null;
     public bool IsCorrected => Corrections is { Count: > 0 };
     public RevenueEntry FirstRecorded => Original ?? Entry;

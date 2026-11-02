@@ -5,7 +5,9 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.LogicalTree;
+using Avalonia.VisualTree;
 using Avalonia.Threading;
+using MS3DPRINT.Manager.Core.Clients;
 
 namespace MS3DPRINT.Manager.Desktop;
 
@@ -151,10 +153,47 @@ public abstract class DialogWindow : Window
 /// <summary>Small building blocks shared by the forms.</summary>
 public static class FormKit
 {
+    private static string ClientSearchLabel(ClientSummary? client)
+        => client is null ? "" : $"{client.Title()} · {client.ClientCode}";
+
+    public static ClientSummary? SelectedClient(AutoCompleteBox search)
+    {
+        var text = search.GetVisualDescendants().OfType<TextBox>().FirstOrDefault()?.Text ?? search.Text;
+        return search.SelectedItem is ClientSummary client && text == ClientSearchLabel(client) ? client : null;
+    }
+
+    public static AutoCompleteBox ClientSearch(IEnumerable<ClientSummary> clients)
+    {
+        var search = new AutoCompleteBox
+        {
+            ItemsSource = clients.ToArray(), PlaceholderText = "Rechercher un client par nom ou code…",
+            MinimumPrefixLength = 1, IsTextCompletionEnabled = false, MaxDropDownHeight = 240,
+            HorizontalAlignment = HorizontalAlignment.Stretch, Classes = { "client-search" },
+            ValueMemberBinding = new Avalonia.Data.Binding(".") { Converter = new Avalonia.Data.Converters.FuncValueConverter<ClientSummary, string>(ClientSearchLabel) },
+            ItemFilter = (query, item) => item is ClientSummary client &&
+                System.Globalization.CultureInfo.GetCultureInfo("fr-FR").CompareInfo.IndexOf(ClientSearchLabel(client), (query ?? "").Trim(), System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreNonSpace) >= 0,
+            ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<ClientSummary>((client, _) => new TextBlock { Text = ClientSearchLabel(client), TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis })
+        };
+        search.TemplateApplied += (_, e) =>
+        {
+            e.NameScope.Find<ListBox>("PART_SelectingItemsControl")?.Classes.Add("lookup-suggestions");
+            if (e.NameScope.Find<TextBox>("PART_TextBox") is { } input)
+            {
+                Avalonia.Automation.AutomationProperties.SetName(input, "Rechercher un client par nom ou code");
+                if (e.NameScope.Find<Avalonia.Controls.Primitives.Popup>("PART_Popup") is { } popup)
+                {
+                    popup.PlacementTarget = input;
+                    popup.Placement = Avalonia.Controls.PlacementMode.BottomEdgeAlignedLeft;
+                }
+            }
+        };
+        return search;
+    }
+
     /// <summary>Label above the control; an optional unit sits to its right and an optional hint below it.</summary>
     public static StackPanel Field(string label, Control input, string? unit = null, string? hint = null)
     {
-        if (input is ComboBox or TextBox) input.HorizontalAlignment = HorizontalAlignment.Stretch;
+        if (input is ComboBox or TextBox or AutoCompleteBox) input.HorizontalAlignment = HorizontalAlignment.Stretch;
         var caption = new TextBlock { Text = label, FontSize = 14, FontWeight = FontWeight.Medium, TextWrapping = TextWrapping.Wrap, Classes = { "form-label" } };
         Avalonia.Automation.AutomationProperties.SetName(input, label);
         Avalonia.Automation.AutomationProperties.SetLabeledBy(input, caption);
@@ -189,7 +228,7 @@ public static class FormKit
         return error;
     }
 
-    private sealed record ErrorLink(Control Input, string? Help, string? Status, object? Tip, EventHandler<AvaloniaPropertyChangedEventArgs> Changed);
+    private sealed record ErrorLink(Control Input, Control? Editor, string? Help, string? Status, object? Tip, EventHandler<AvaloniaPropertyChangedEventArgs> Changed);
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<TextBlock, ErrorLink> ErrorLinks = new();
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Control, TextBlock> FieldErrors = new();
 
@@ -199,12 +238,17 @@ public static class FormKit
         ClearError(error);
         var help = Avalonia.Automation.AutomationProperties.GetHelpText(input);
         var status = Avalonia.Automation.AutomationProperties.GetItemStatus(input);
-        EventHandler<AvaloniaPropertyChangedEventArgs> changed = (_, args) =>
+        var editor = input is AutoCompleteBox ? input.GetVisualDescendants().OfType<TextBox>().FirstOrDefault() : null;
+        EventHandler<AvaloniaPropertyChangedEventArgs> changed = (sender, args) =>
         {
-            if (args.Property == TextBox.TextProperty || args.Property == ComboBox.SelectedItemProperty || args.Property == Avalonia.Controls.Primitives.ToggleButton.IsCheckedProperty) ClearError(error);
+            if ((args.Property == TextBox.TextProperty && (editor is null || ReferenceEquals(sender, editor))) ||
+                (args.Property == ComboBox.SelectedItemProperty && input is not AutoCompleteBox) ||
+                (args.Property == AutoCompleteBox.SelectedItemProperty && input is AutoCompleteBox { SelectedItem: not null }) ||
+                args.Property == Avalonia.Controls.Primitives.ToggleButton.IsCheckedProperty) ClearError(error);
         };
-        ErrorLinks.Add(error, new(input, help, status, ToolTip.GetTip(input), changed));
+        ErrorLinks.Add(error, new(input, editor, help, status, ToolTip.GetTip(input), changed));
         input.PropertyChanged += changed;
+        if (editor is not null) editor.PropertyChanged += changed;
         input.Classes.Add("form-invalid"); ToolTip.SetTip(input, message);
         if (FieldErrors.TryGetValue(input, out var inline)) { inline.Text = message; inline.IsVisible = true; }
         Avalonia.Automation.AutomationProperties.SetHelpText(input, string.Join(" ", new[] { help, "Erreur : " + message }.Where(text => !string.IsNullOrWhiteSpace(text))));
@@ -224,6 +268,7 @@ public static class FormKit
         if (ErrorLinks.TryGetValue(error, out var link))
         {
             link.Input.PropertyChanged -= link.Changed;
+            if (link.Editor is not null) link.Editor.PropertyChanged -= link.Changed;
             Avalonia.Automation.AutomationProperties.SetHelpText(link.Input, link.Help);
             Avalonia.Automation.AutomationProperties.SetItemStatus(link.Input, link.Status);
             ToolTip.SetTip(link.Input, link.Tip); link.Input.Classes.Remove("form-invalid");

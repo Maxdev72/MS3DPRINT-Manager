@@ -4,6 +4,8 @@ MS3DPRINT Manager est une application Windows portable destinée à organiser
 les dossiers de MS3DPRINT. Elle est développée avec .NET 10 et Avalonia. La version
 publiée est autonome et tient dans un exécutable unique.
 
+**Pointage bancaire manuel.** Dans **Achats → Registre** ou **Recettes**, cochez **Pointé** après vérification sur votre relevé. Les cases à gauche servent à sélectionner des lignes pour **Pointer la sélection** ou **Dépointer la sélection**. La case d'en-tête sélectionne toutes les lignes du filtre, y compris sur les autres pages. Les filtres **Tous / À pointer / Pointés** et les totaux facilitent le contrôle. Dépointer demande confirmation et conserve la ligne. Corriger une écriture remet son pointage à vérifier; les lignes annulées sont exclues. Le pointage est conservé dans l'atelier, sans importer ni connecter un compte bancaire; il ne modifie pas les montants des registres ni des exports.
+
 ## Prérequis
 
 Le SDK .NET 10 est nécessaire pour compiler et exécuter l'application depuis
@@ -33,6 +35,14 @@ Si l'application a déjà enregistré des codes clients, conservez également
 registre local nécessaire pour retrouver ces codes.
 
 ## Utilisation
+
+**Choisir un client pour un projet.** Dans **Nouveau projet** ou **Déplacer le projet**, saisissez une partie du nom ou du code client puis sélectionnez une suggestion. La recherche ignore les accents et les majuscules. Les flèches parcourent les résultats ; Entrée choisit le client et Échap ferme la liste. Un texte libre ne remplace pas une sélection. Depuis une fiche client, le client reste prérempli et verrouillé.
+
+**Import groupé.** Sélectionnez ou déposez plusieurs fichiers : vérifiez tous les noms dans un seul écran, modifiez-les ou choisissez **Garder tous les noms d’origine**, puis lancez l’import en une fois. À la racine d’un projet, chaque fichier conserve son choix de destination. Après les copies, une seule confirmation propose les sources des imports réussis ; décochez celles à conserver, ou choisissez **Conserver les sources**. La suppression est définitive et exige une copie identique vérifiée. Les conflits n’écrasent aucun fichier et les sources des échecs restent en place. Arrêter l’import conserve les copies terminées et toutes les sources.
+
+**Notifications.** Le bouton **Notifications**, en bas du menu de gauche, donne accès aux 200 derniers messages de la session, même après la disparition des bulles temporaires. Filtrez les erreurs ou les non lues, marquez les messages comme lus et dépliez un bilan pour copier ses détails. Un import multiple produit un seul bilan. L’historique est remis à zéro à la fermeture du logiciel ; son effacement manuel demande confirmation.
+
+En haut à droite, deux messages au maximum s’affichent, le plus récent en premier. **Détails** ouvre directement le message complet ; le survol ou le focus clavier suspend sa disparition. Après un import, le bandeau du bas se réduit au résultat et à **Voir le bilan** ou **Voir les erreurs**. La croix masque ce bandeau sans effacer son historique.
 
 **Tarifs par quantité.** Dans l’estimateur, cliquez sur **Tarifs par quantité** à côté des ajustements du prix. Les paliers 1/5/10/20/50 pièces ont par défaut les remises 0/5/10/13/25 %. Modifiez les pourcentages pour voir les prix unitaires, totaux et marges estimées, puis **Conserver les remises** pour les retenir dans le devis et son brouillon. Enregistrez le devis pour les retrouver dans son historique. La grille part du prix commercial avant remise par pièce, ou du prix conseillé recalculé pour une pièce ; elle ne cumule pas la remise du devis. **Copier la grille** fournit les tarifs à communiquer au client. Les lots utilisent des projections de coûts : confirmez poids/durée dans le slicer ou prix du fournisseur avant de vous engager. Le prix et la quantité du devis restent ceux que vous avez saisis. Les anciens devis restent inchangés ; la fonction nécessite le moteur V2 et concerne les pièces imprimées.
 

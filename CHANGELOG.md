@@ -1,5 +1,37 @@
 # Journal des modifications
 
+## 2 novembre 2026
+
+### Pointage manuel des achats et recettes
+- Une colonne « Pointé » permet de confirmer la présence d'une ligne sur le relevé bancaire. Les filtres Tous / À pointer / Pointés affichent les lignes correspondantes et les totaux excluent les annulations.
+- La sélection à gauche permet de pointer ou dépointer plusieurs lignes, y compris sur plusieurs pages. Le retrait d'un pointage demande confirmation et conserve les écritures et leurs montants.
+- Les pointages sont conservés dans l'historique des journaux annuels. Une correction remet la ligne à pointer; une annulation l'exclut. Une ligne modifiée depuis son affichage est refusée avant l'écriture du lot.
+
+### Boutons allégés
+- Contours retirés des boutons au repos, actions à icône et boutons discrets sans fond permanent. Les champs gardent leur délimitation et le focus clavier reste visible. La liste des tâches utilise des lignes simples.
+
+## 1 novembre 2026
+
+### Recherche du client dans les projets
+- Création et déplacement de projet proposent une saisie avec suggestions, recherchées dans le nom et le code des clients enregistrés, sans distinction de casse ni d’accents. Les résultats restent sélectionnables à la souris et au clavier.
+- Une sélection existante ne reste pas valable si son libellé est modifié. Le client prérempli depuis sa fiche reste verrouillé. Entrée choisit une suggestion sans valider le formulaire ; Échap ferme d’abord la liste. Redimensionner ferme les suggestions en conservant la saisie.
+
+### Contraste des commandes et informations secondaires
+- Boutons secondaires, actions à icône, filtres et onglets inactifs délimités par un contour lisible. Les champs de saisie et sélecteurs partagent ce repère, distinct des séparateurs de listes.
+- Bleu de survol ajusté pour garder le texte blanc lisible ; libellés et icônes de suppression reprennent leur rouge. Les textes héritent de la couleur du composant au lieu d’être forcés en blanc.
+- Textes discrets éclaircis, boutons et champs désactivés moins effacés, sans double opacité sur les icônes d’outils. Les lignes annulées gardent leur texte barré et utilisent une couleur secondaire lisible ; les coûts en attente de recalcul gardent leur lisibilité et leur mention d’attente.
+
+### Lisibilité du calendrier des projets
+- Sélecteur de date harmonisé avec le thème bleu nuit : états courant, sélectionné et hors mois, contraste des nombres et flèches horizontales nommées. La date retenue est lisible avant validation ; Annuler ne modifie pas l’échéance.
+- Mois et commandes regroupés sur une ligne. Les jours avec échéance affichent le premier projet, les autres restent consultables en sélectionnant le jour. Les cellules d’une ligne restent alignées et le résumé n’affiche plus deux fois la même date.
+
+### Import groupé et centre de notifications
+- Messages en haut à droite plus compacts : deux visibles au maximum, le plus récent en premier, texte long limité à trois lignes avec accès direct au détail complet. La disparition est suspendue au survol et pendant le focus clavier. Les messages restent sous les formulaires ouverts.
+- Bandeau d’import allégé à la fin : icône de résultat, résumé et accès direct au bilan ou aux erreurs. La barre de progression et le nom du fichier disparaissent une fois le traitement terminé. La croix masque seulement le bandeau ; les détails et le résultat des sources restent dans Notifications.
+- Pour plusieurs fichiers, un écran présente tous les noms proposés et, à la racine d’un projet, les destinations propres à chaque fichier. Les noms restent modifiables ; une action conserve tous les noms d’origine. Une seule validation lance les copies. Les doublons de destination dans le lot sont signalés avant copie.
+- Après les copies, une seule confirmation permet de conserver les sources ou de supprimer les originaux sélectionnés. Seuls les imports réussis sont proposés ; chaque copie est revérifiée avant suppression. Une source modifiée ou une copie indisponible interdit sa suppression. Annuler et le focus initial conservent les sources.
+- Le menu Notifications conserve les 200 derniers messages de la session : filtres Toutes / Erreurs / Non lues, compteur, marquage global comme lu et détails copiables. Effacer l’historique demande confirmation. Les lots produisent un bilan unique avec destinations et erreurs, accessible après fermeture du bandeau.
+
 ## 30 octobre 2026
 
 ### Création des collections et glisser-déposer sortant

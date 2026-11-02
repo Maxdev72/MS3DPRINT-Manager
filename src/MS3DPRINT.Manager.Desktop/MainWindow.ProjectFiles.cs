@@ -137,7 +137,9 @@ public partial class MainWindow
     private async Task ImportProjectFilesAsync(string root, ProjectSummary project, string directory, IReadOnlyList<string> sources)
     {
         if (_importBatchActive || sources.Count == 0) return;
+        if (sources.Count > 1) { await ImportMultipleFilesAsync(root, directory, sources, project); return; }
         StartImportBatch(sources.Count);
+        _importDestination = directory;
         var navigationKey = CurrentNavigationStop?.Key;
         var importedCount = 0; var failures = 0; var stopped = false;
         try
@@ -165,6 +167,7 @@ public partial class MainWindow
                     var finalName = naming.FileName;
                     UpdateImportProgress(index + 1, sources.Count, source, "Copie en cours");
                     var imported = await Task.Run(() => new MS3DPRINT.Manager.Core.Workspace.ManagedFileService(root).Import(source, targetDirectory, finalName));
+                    _importCopiedFiles.Add(source + " → " + imported);
                     importedCount++;
                     ImportBatchProgress.Value = importedCount + failures;
                     if (!MatchesNavigationContext(root, navigationKey)) { stopped = true; break; }

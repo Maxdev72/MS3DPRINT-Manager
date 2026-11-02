@@ -16,7 +16,7 @@ public partial class MainWindow
     private bool _populatingPurchaseYears;
     private int _purchaseYear = DateTime.Today.Year;
 
-    private const string PurchaseRowColumns = "90,1.2*,1.8*,110,120,120,64";
+    private const string PurchaseRowColumns = "90,1.3*,1.7*,94,90,80,50";
 
     private async void RefreshPurchases_Click(object? sender, RoutedEventArgs e) => await LoadPurchasesAsync();
 
@@ -234,15 +234,25 @@ public partial class MainWindow
                 + (result.Waiting > 0 ? $" · {result.Waiting} saisie{(result.Waiting > 1 ? "s" : "")} du téléphone à importer" : "")
                 + (result.Year.Errors.Count > 0 ? $" · {result.Year.Errors.Count} ligne{(result.Year.Errors.Count > 1 ? "s" : "")} illisible{(result.Year.Errors.Count > 1 ? "s" : "")}" : "");
             Control Warning() => CreateReadErrorState("Certaines lignes du registre sont illisibles", "Le fichier est conservé tel quel. Les autres lignes restent affichées. Après correction ou synchronisation, réessayez.", new IOException(string.Join(Environment.NewLine, result.Year.Errors)), LoadPurchasesAsync, compact: true);
-            Control Header() => result.Year.Errors.Count == 0 ? CreateCompactTableHeader(PurchaseRowColumns, "DATE", "FOURNISSEUR", "LIBELLÉ", "MONTANT", "RÈGLEMENT", "PIÈCE", "ACTIONS")
-                : new StackPanel { Children = { Warning(), CreateCompactTableHeader(PurchaseRowColumns, "DATE", "FOURNISSEUR", "LIBELLÉ", "MONTANT", "RÈGLEMENT", "PIÈCE", "ACTIONS") } };
+            Control Header() => CreateCompactTableHeader(PurchaseRowColumns, "DATE", "FOURNISSEUR", "LIBELLÉ", "MONTANT", "RÈGLEMENT", "PIÈCE", "ACTIONS");
             if (lines.Count == 0)
             {
                 if (result.Year.Errors.Count > 0) PurchaseList.Children.Add(Warning());
                 else PurchaseList.Children.Add(CreateEmptyState("IconCart", $"Aucun achat en {selectedYear}", "Enregistrez chaque achat de matières ou de fournitures avec la facture du fournisseur.", "Enregistrer un achat", CreatePurchase_Click));
                 return;
             }
-            PagedRows.Render(PurchaseList, lines.Reverse().ToArray(), line =>
+            var pointing = new JournalPointingControls(lines.Select(line => new JournalPointingItem(line.Entry.Id, line.Entry.Label, line.Entry.Amount, line.IsCancelled, line.PointedAt)).ToArray(),
+                _purchasePointingFilter, async filter => { _purchasePointingFilter = filter; await LoadPurchasesAsync(); },
+                async (ids, pointed) =>
+                {
+                    var selectedIds = ids.ToHashSet();
+                    var selected = lines.Where(line => selectedIds.Contains(line.Entry.Id)).Select(line => line.Entry).ToArray();
+                    await ChangeJournalPointingAsync(PurchaseList, pointed, selected.Select(entry => entry.Label).ToArray(),
+                        () => string.Equals(root, WorkspaceRoot, StringComparison.OrdinalIgnoreCase) && _purchaseYear == selectedYear && PurchasesWorkspacePanel.IsVisible,
+                        () => new PurchaseJournal(root).SetPointed(selected, pointed, DateTimeOffset.Now), LoadPurchasesAsync);
+                });
+            var pointingHeader = pointing.Header(Header(), result.Year.Errors.Count > 0 ? Warning() : null);
+            PagedRows.Render(PurchaseList, lines.Where(line => pointing.Includes(line.Entry.Id)).Reverse().ToArray(), line =>
             {
                 var entry = line.Entry;
                 Button? actions = null;
@@ -276,9 +286,9 @@ public partial class MainWindow
                     CreateCompactTableCell(RevenueExporter.Money(entry.Amount)), CreateCompactTableCell(entry.PaymentMethod), CreateCompactTableCell(entry.Reference)
                 };
                 if (line.IsCancelled)
-                    foreach (var cell in cells) { cell.TextDecorations = TextDecorations.Strikethrough; cell.Opacity = 0.6; }
-                return CreateActionRow(PurchaseRowColumns, null, actions, cells);
-            }, Header, root + "|purchases|" + selectedYear);
+                    foreach (var cell in cells) { cell.TextDecorations = new TextDecorationCollection { new TextDecoration { Location = TextDecorationLocation.Strikethrough } }; cell.Classes.Add("faint"); }
+                return pointing.Row(CreateActionRow(PurchaseRowColumns, null, actions, cells), entry.Id);
+            }, () => pointingHeader, root + "|purchases|" + selectedYear + "|" + _purchasePointingFilter);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException)
         {

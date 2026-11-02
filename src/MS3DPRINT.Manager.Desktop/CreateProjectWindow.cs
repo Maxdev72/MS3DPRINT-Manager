@@ -5,23 +5,19 @@ namespace MS3DPRINT.Manager.Desktop;
 
 public sealed class CreateProjectWindow : DialogWindow
 {
-    private readonly ComboBox _clients;
+    private readonly AutoCompleteBox _clients;
     private readonly TextBox _name;
     private readonly ProjectPriorityPicker _priority = new();
     public MS3DPRINT.Manager.Core.Projects.ProjectPriority Priority => _priority.Value;
     private readonly TextBlock _error = FormKit.ErrorText();
-    public ClientSummary? Client => _clients.SelectedItem as ClientSummary;
+    public ClientSummary? Client => FormKit.SelectedClient(_clients);
     public string ProjectName => _name.Text?.Trim() ?? string.Empty;
 
     public CreateProjectWindow(IReadOnlyList<ClientSummary> clients, ClientSummary? preselected = null)
     {
         Title = "Créer un projet"; Width = 520; Height = 560; MinWidth = 400;
-        _clients = new ComboBox { ItemsSource = clients, PlaceholderText = "Choisir un client", HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch };
-        _clients.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<ClientSummary>((client, _) => new TextBlock
-        {
-            Text = client is null ? string.Empty : $"{client.Title()} · {client.ClientCode}"
-        });
-        string? hint = null;
+        _clients = FormKit.ClientSearch(clients);
+        string? hint = "Saisissez un nom ou un code, puis choisissez le client dans les résultats.";
         if (preselected is not null)
         {
             // Opened from a client sheet: the client is already known and cannot be changed here.

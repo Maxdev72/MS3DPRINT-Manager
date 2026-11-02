@@ -17,6 +17,7 @@ public sealed record PurchaseCorrection(Guid Id, Guid EntryId, string Reason, Da
 /// <param name="Original">The values first recorded; null when the line was never corrected.</param>
 public sealed record PurchaseLine(PurchaseEntry Entry, PurchaseCancellation? Cancellation, IReadOnlyList<PurchaseCorrection>? Corrections = null, PurchaseEntry? Original = null)
 {
+    public DateTimeOffset? PointedAt { get; init; }
     public bool IsCancelled => Cancellation is not null;
     public bool IsCorrected => Corrections is { Count: > 0 };
     public PurchaseEntry FirstRecorded => Original ?? Entry;
@@ -130,6 +131,23 @@ public sealed class PurchaseJournal
         WriteUnlocked(path, new Record("correction", null, null, new PurchaseCorrection(Guid.NewGuid(), current.Id, reason.Trim(), correctedAt, corrected)));
     }
 
+    public void SetPointed(IReadOnlyList<PurchaseEntry> entries, bool pointed, DateTimeOffset changedAt)
+    {
+        ArgumentNullException.ThrowIfNull(entries);
+        if (entries.Count == 0) throw new ArgumentException("Sélectionnez au moins une ligne.", nameof(entries));
+        var year = entries[0].PurchasedOn.Year;
+        if (entries.Any(e => e.Id == Guid.Empty || e.PurchasedOn.Year != year) || entries.Select(e => e.Id).Distinct().Count() != entries.Count)
+            throw new ArgumentException("Le pointage doit concerner des lignes distinctes de la même année.", nameof(entries));
+        var path = PathFor(year);
+        using var mutation = ProfileMutationLock.Acquire(path);
+        var current = Load(year);
+        if (current.Errors.Count > 0) throw new InvalidOperationException("Le journal contient des lignes illisibles. Corrigez-les avant de pointer.");
+        var lines = current.Lines.ToDictionary(l => l.Entry.Id);
+        if (entries.Any(e => !lines.TryGetValue(e.Id, out var line) || line.IsCancelled || line.Entry != e))
+            throw new InvalidOperationException("Une ligne a été modifiée ou annulée. Actualisez la liste avant de pointer.");
+        WriteUnlocked(path, new Record("pointing", null, null, Pointing: new MS3DPRINT.Manager.Core.Revenues.JournalPointing(entries.Select(e => e.Id).ToArray(), pointed ? changedAt : null)));
+    }
+
     public PurchaseYear Load(int year)
     {
         var path = PathFor(year);
@@ -137,6 +155,7 @@ public sealed class PurchaseJournal
         var entries = new List<PurchaseEntry>();
         var cancellations = new Dictionary<Guid, PurchaseCancellation>();
         var corrections = new Dictionary<Guid, List<PurchaseCorrection>>();
+        var pointings = new Dictionary<Guid, DateTimeOffset>();
         var errors = new List<string>();
         if (File.Exists(path))
         {
@@ -154,6 +173,16 @@ public sealed class PurchaseJournal
                     {
                         if (!corrections.TryGetValue(correction.EntryId, out var history)) corrections[correction.EntryId] = history = [];
                         history.Add(correction);
+                        pointings.Remove(correction.EntryId);
+                    }
+                    else if (record?.Pointing is { EntryIds.Length: > 0 } pointing && record.Type == "pointing"
+                        && pointing.EntryIds.All(id => id != Guid.Empty))
+                    {
+                        foreach (var id in pointing.EntryIds)
+                        {
+                            if (pointing.PointedAt is { } at) pointings[id] = at;
+                            else pointings.Remove(id);
+                        }
                     }
                     else errors.Add($"Ligne {number} : type inconnu.");
                 }
@@ -163,9 +192,10 @@ public sealed class PurchaseJournal
         var lines = entries.Select(original =>
             {
                 var history = corrections.GetValueOrDefault(original.Id);
-                return history is { Count: > 0 }
+                var line = history is { Count: > 0 }
                     ? new PurchaseLine(history[^1].Entry, cancellations.GetValueOrDefault(original.Id), history, original)
                     : new PurchaseLine(original, cancellations.GetValueOrDefault(original.Id));
+                return line with { PointedAt = !line.IsCancelled && pointings.TryGetValue(original.Id, out var at) ? at : null };
             }).OrderBy(l => l.Entry.PurchasedOn).ThenBy(l => l.Entry.RecordedAt).ToArray();
         return new(year, lines, errors);
     }
@@ -207,5 +237,6 @@ public sealed class PurchaseJournal
         stream.Flush(flushToDisk: true);
     }
 
-    private sealed record Record(string Type, PurchaseEntry? Entry, PurchaseCancellation? Cancellation, PurchaseCorrection? Correction = null);
+    private sealed record Record(string Type, PurchaseEntry? Entry, PurchaseCancellation? Cancellation, PurchaseCorrection? Correction = null,
+        MS3DPRINT.Manager.Core.Revenues.JournalPointing? Pointing = null);
 }

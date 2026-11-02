@@ -45,10 +45,10 @@ public sealed partial class EstimateUiTests
         {
             await OpenFileTestFolder(owner, directory);
             var pending = (Task)Invoke(owner, "ImportWorkspaceFilesAsync", _root, directory, sources)!;
-            await WaitForDialog<ImportNameWindow>(owner);
+            await WaitForDialog<ImportBatchWindow>(owner);
             var body = owner.FindControl<Border>("SidePanelBody")!;
             Assert.Contains(body.GetVisualDescendants().OfType<TextBox>(), input => input.Text == "piece__POTS_DECORATIFS.stl");
-            Assert.Contains(body.GetVisualDescendants().OfType<TextBlock>(), text => text.Text != null && text.Text.Contains("référence de la collection (POTS_DECORATIFS)"));
+            Assert.Contains(body.GetVisualDescendants().OfType<TextBlock>(), text => text.Text != null && text.Text.Contains("référence POTS_DECORATIFS"));
             Assert.Empty(Directory.GetFiles(directory));
             if (category == "02_MODELES_3D")
             {
@@ -60,23 +60,18 @@ public sealed partial class EstimateUiTests
                     Assert.InRange(x, 0, body.Bounds.Width - button.Bounds.Width);
                 }
             }
-            DialogAction(owner, "Importer ce fichier");
-            await WaitForDialog<ConfirmImportSourceWindow>(owner); DialogAction(owner, "Conserver la source");
-            await WaitForDialog<ImportNameWindow>(owner); DialogAction(owner, "Garder le nom d’origine");
-            await WaitForDialog<ConfirmImportSourceWindow>(owner); DialogAction(owner, "Conserver la source");
-            await WaitForDialog<ImportNameWindow>(owner);
+            body.GetVisualDescendants().OfType<TextBox>().Single(box => box.Text == "original__POTS_DECORATIFS.pdf").Text = "original.pdf";
             var input = body.GetVisualDescendants().OfType<TextBox>().Single(box => box.Text == "deja__POTS_DECORATIFS.stl");
             input.Text = "personnalise.stl";
-            DialogAction(owner, "Importer ce fichier");
-            await WaitForDialog<ConfirmImportSourceWindow>(owner); DialogAction(owner, "Conserver la source");
-            var last = await WaitForDialog<ImportNameWindow>(owner); last.Close(false);
+            DialogAction(owner, "Importer les 4 fichiers");
+            await WaitForDialog<ConfirmImportSourcesWindow>(owner); DialogAction(owner, "Conserver les sources");
             await pending;
             Assert.Equal("piece.stl", File.ReadAllText(Path.Combine(directory, "piece__POTS_DECORATIFS.stl")));
             Assert.Equal("original.pdf", File.ReadAllText(Path.Combine(directory, "original.pdf")));
             Assert.Equal("deja__POTS_DECORATIFS.stl", File.ReadAllText(Path.Combine(directory, "personnalise.stl")));
-            Assert.Equal(3, Directory.GetFiles(directory).Length);
+            Assert.Equal(4, Directory.GetFiles(directory).Length);
             Assert.All(sources, source => Assert.True(File.Exists(source)));
-            Assert.Contains("1 non traité", owner.FindControl<TextBlock>("ImportBatchSummary")!.Text);
+            Assert.Contains("0 non traité", owner.FindControl<TextBlock>("ImportBatchSummary")!.Text);
             Assert.False(Field<bool>(owner, "_importBatchActive"));
         }
         finally { owner.Close(); }

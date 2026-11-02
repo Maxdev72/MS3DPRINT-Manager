@@ -77,7 +77,7 @@ public partial class MainWindow
         facts.Children.Add(new TextBlock { Text = deadline, Classes = { "caption" }, VerticalAlignment = VerticalAlignment.Center });
         facts.Children.Add(new TextBlock { Text = $"{tasks.Count(t => t.IsCompleted)} / {tasks.Count} tâches", Classes = { "caption" }, VerticalAlignment = VerticalAlignment.Center });
         title.Children.Add(facts);
-        var body = new StackPanel { Spacing = 8, Margin = new Thickness(8, 8, 8, 12) };
+        var body = new StackPanel { Spacing = 4, Margin = new Thickness(8, 8, 8, 12) };
         if (project.Profile is null)
         {
             body.Children.Add(new TextBlock { Text = "Complétez la fiche de ce projet historique pour y ajouter des tâches. Ses fichiers seront conservés.", TextWrapping = TextWrapping.Wrap, Classes = { "muted" } });
@@ -130,12 +130,14 @@ public partial class MainWindow
     private Control BuildProjectTaskRow(ProjectSummary project, ProjectTask task)
     {
         var root = WorkspaceRoot;
-        var check = new CheckBox { IsChecked = task.IsCompleted, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 3, 0, 0) };
+        var check = new CheckBox { IsChecked = task.IsCompleted, VerticalAlignment = VerticalAlignment.Center };
         AutomationProperties.SetName(check, (task.IsCompleted ? "Rouvrir : " : "Terminer : ") + task.Title);
         var text = new StackPanel { Spacing = 4 };
-        text.Children.Add(new TextBlock { Text = task.Title, TextWrapping = TextWrapping.Wrap, TextDecorations = task.IsCompleted ? new TextDecorationCollection { new TextDecoration { Location = TextDecorationLocation.Strikethrough } } : null, Opacity = task.IsCompleted ? .65 : 1 });
+        var title = new TextBlock { Text = task.Title, TextWrapping = TextWrapping.Wrap, TextDecorations = task.IsCompleted ? new TextDecorationCollection { new TextDecoration { Location = TextDecorationLocation.Strikethrough } } : null };
+        if (task.IsCompleted) title.Classes.Add("faint");
+        text.Children.Add(title);
         if (!string.IsNullOrWhiteSpace(task.Notes)) text.Children.Add(new TextBlock { Text = task.Notes, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis, Classes = { "caption" } });
-        var edit = new Button { Content = text, Classes = { "ghost" }, HorizontalContentAlignment = HorizontalAlignment.Stretch, HorizontalAlignment = HorizontalAlignment.Stretch };
+        var edit = new Button { Content = text, Classes = { "task-row-action" }, HorizontalContentAlignment = HorizontalAlignment.Stretch, HorizontalAlignment = HorizontalAlignment.Stretch };
         AutomationProperties.SetName(edit, "Modifier : " + task.Title);
         edit.Click += async (_, _) =>
         {
@@ -158,9 +160,10 @@ public partial class MainWindow
             if (error is not null) Notify(error, error: true);
         };
         var menu = CreateOverflowActions(up, down, remove);
+        menu.Classes.Add("task-row-action");
         AutomationProperties.SetName(menu, "Actions de la tâche : " + task.Title);
         var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,Auto,*,Auto"), ColumnSpacing = 8, MinHeight = 48 };
-        var border = new Border { Child = row, Tag = new TaskRowIdentity(project.Profile!.Id, task.Id), Classes = { "project-task-row" }, Padding = new Thickness(0, 4) };
+        var border = new Border { Child = row, Tag = new TaskRowIdentity(project.Profile!.Id, task.Id), Classes = { "project-task-row" } };
         var grip = CreateProjectTaskGrip(project, task, border);
         Grid.SetColumn(check, 1); Grid.SetColumn(edit, 2); Grid.SetColumn(menu, 3);
         row.Children.Add(grip); row.Children.Add(check); row.Children.Add(edit); row.Children.Add(menu);
