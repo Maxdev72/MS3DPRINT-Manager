@@ -13,7 +13,8 @@ namespace MS3DPRINT.Manager.Companion;
 public sealed class MainView : UserControl
 {
     private readonly AppServices _app = AppServices.Current;
-    private readonly string[] _titles = ["Saisir", "Projets", "Activité", "Envois", "Réglages"];
+    private readonly string[] _titles = ["Saisir", "Projets", "Activité", "Envois", "Réglages", "Serveur"];
+    private readonly MS3DPRINT.Manager.Native.RemoteWorkspaceView _remote = new();
     private readonly Control[] _pages;
     private readonly EntryPage _entry = new();
     private readonly ProjectsPage _projects;
@@ -34,7 +35,7 @@ public sealed class MainView : UserControl
         Background = Pal.Canvas;
         _projects = new ProjectsPage(OpenEntryFor);
         _outbox = new OutboxPage(Confirm);
-        _pages = [_entry, _projects, new ActivityPage(), _outbox, new SettingsPage()];
+        _pages = [_entry, _projects, new ActivityPage(), _outbox, new SettingsPage(), _remote];
 
         _refresh = new Button { Content = Glyph.Icon(Glyph.Refresh, 22, Pal.Muted), Background = Brushes.Transparent, MinWidth = 48, MinHeight = 48, Padding = new Thickness(0) };
         _refresh.Click += async (_, _) => await RefreshAsync();
@@ -45,12 +46,12 @@ public sealed class MainView : UserControl
         Grid.SetColumn(titleBlock, 1); Grid.SetColumn(_refresh, 2);
 
         var nav = new Grid { Background = Pal.Sidebar };
-        string[] icons = [Glyph.Plus, Glyph.Projects, Glyph.Activity, Glyph.Upload, Glyph.Settings];
+        string[] icons = [Glyph.Plus, Glyph.Projects, Glyph.Activity, Glyph.Upload, Glyph.Settings, Glyph.Projects];
         for (var i = 0; i < _pages.Length; i++)
         {
             nav.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
             var index = i;
-            var pill = new Border { CornerRadius = new CornerRadius(16), Padding = new Thickness(20, 4), HorizontalAlignment = HorizontalAlignment.Center, Child = Glyph.Icon(icons[i], 24, Pal.Faint) };
+            var pill = new Border { CornerRadius = new CornerRadius(16), Padding = new Thickness(12, 4), HorizontalAlignment = HorizontalAlignment.Center, Child = Glyph.Icon(icons[i], 24, Pal.Faint) };
             _pills.Add(pill);
             var content = new StackPanel { Spacing = 2, HorizontalAlignment = HorizontalAlignment.Center, Children = { pill, new TextBlock { Text = _titles[i], FontSize = 11, Foreground = Pal.Faint, HorizontalAlignment = HorizontalAlignment.Center } } };
             var tab = new Button { Content = content, Background = Brushes.Transparent, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center, MinHeight = 62, Padding = new Thickness(0, 6), CornerRadius = new CornerRadius(0) };
@@ -139,6 +140,7 @@ public sealed class MainView : UserControl
 
     private async Task RefreshAsync()
     {
+        if (_current == 5) { await _remote.RefreshServerAsync(); return; }
         _refresh.IsEnabled = false;
         await _app.RefreshSnapshotAsync();
         await _app.SendPendingAsync();
@@ -148,6 +150,12 @@ public sealed class MainView : UserControl
     private void UpdateChrome()
     {
         _title.Text = _titles[_current];
+        if (_current == 5)
+        {
+            _sub.Text = "Atelier distant · clients, projets et tâches";
+            _sub.Foreground = Pal.Faint; _status.Background = Pal.Accent;
+            return;
+        }
         var snapshot = _app.Snapshot;
         _sub.Text = !_app.Exchange.IsConfigured ? "Dossier d’échange non choisi"
             : snapshot is null ? "En attente de l’état du PC"

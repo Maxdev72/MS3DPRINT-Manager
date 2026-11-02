@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" android:installLocation="auto">
+  <uses-permission android:name="android.permission.INTERNET" />
   <application android:label="MS3DPRINT Compagnon" android:allowBackup="false" android:supportsRtl="true">
     <!-- The camera app writes the photo of the receipt here; only this app can read the cache folder it points to. -->
     <provider android:name="androidx.core.content.FileProvider"

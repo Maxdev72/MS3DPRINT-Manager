@@ -21,6 +21,18 @@ namespace MS3DPRINT.Manager.Desktop;
 /// <summary>Settings page and changelog.</summary>
 public partial class MainWindow
 {
+    private Window? _remoteWorkspaceWindow;
+
+    private void OpenRemoteWorkspace()
+    {
+        if (_remoteWorkspaceWindow is { } existing) { existing.Activate(); return; }
+        var view = new MS3DPRINT.Manager.Native.RemoteWorkspaceView(confirmRemoval: label => ConfirmRemovalWindow.AskAsync(_remoteWorkspaceWindow!, label, "La tâche sera retirée du projet sur le serveur."));
+        var window = new Window { Title = "MS3DForge · Atelier distant", Width = 820, Height = 850, MinWidth = 420, MinHeight = 540, WindowStartupLocation = WindowStartupLocation.CenterOwner, Content = view };
+        _remoteWorkspaceWindow = window;
+        window.Closed += (_, _) => { view.Dispose(); _remoteWorkspaceWindow = null; };
+        window.Show(this);
+    }
+
     private async void Changelog_Click(object? sender, RoutedEventArgs e)
         => await new ChangelogWindow().ShowDialog(this);
 
@@ -138,6 +150,11 @@ public partial class MainWindow
         AddSettingsCard("atelier", BuildThresholdsSettingsCard(workspaceRoot));
         AddSettingsCard("atelier", BuildMobileSettingsCard(workspaceRoot));
         AddSettingsCard("atelier", BuildWorkshopSettingsCard(workspaceRoot));
+        var remote = new Button { Content = "Ouvrir l’atelier distant MS3DForge", MinHeight = 42 };
+        remote.Click += (_, _) => OpenRemoteWorkspace();
+        AddSettingsCard("atelier", new Border { Classes = { "card-raised" }, Padding = new Avalonia.Thickness(22, 20), Child = new StackPanel { Spacing = 10, Children = {
+            new TextBlock { Text = "Accès serveur · clients, projets et tâches", FontSize = 18 },
+            new TextBlock { Text = "Connexion HTTPS dans une fenêtre dédiée. L’atelier local reste indépendant ; aucune synchronisation ou migration implicite.", TextWrapping = TextWrapping.Wrap }, remote } } });
 
         Border Card(string title, string description, Control? headerAction, params Control[] content)
         {
