@@ -73,7 +73,7 @@ Créer un projet séparé pour le compagnon. Ne modifier aucune ressource de
    fictive, sa consultation après redémarrage du service et la déconnexion.
    Sauvegarder l'ensemble du volume avant une mise à jour.
 
-### Configuration préparée sur l'hébergement existant
+### Déploiement sur l'hébergement existant
 
 Projet `MS3DFORGE-COMPAGNON`, application `ms3dforge-compagnon`, commit candidat
 `989d30f3ba11fb7b65787c569d1d894cfda1e8aa`. Le volume propre à cette application
@@ -84,10 +84,17 @@ Son routage existant mène à `127.0.0.1:3002`. Le compagnon reprend ce port lib
 avec le mapping **`127.0.0.1:3002:8080`** ; le port reste limité à l'hôte.
 La passerelle Docker a été lue sur le serveur : **`10.0.1.1`**, seule adresse
 autorisée par `Server__TrustedProxyAddresses__0`, à l'exécution uniquement.
-Le contrôle après déploiement devra confirmer le schéma HTTPS et les accès privés.
+Déploiement réussi le 3 novembre 2026 : `https://ms3dforge.fr` répond en HTTPS,
+`/health` renvoie 200, les listes clients/projets sans session renvoient 401 et
+`/identity.sqlite` renvoie 404. Le cookie CSRF est Secure, HttpOnly et SameSite=Strict.
+Le contrôle de santé automatique Coolify reste désactivé ; ces vérifications
+sont ponctuelles. Le compte propriétaire doit encore être créé directement par
+l'utilisateur, puis sa connexion sur cet hébergement doit être validée.
 Ne pas lancer de proxy Traefik/Caddy supplémentaire sur les ports 80/443 : le
 routage et les certificats existants sont gérés par Nginx. Aucun fichier des deux
-sites commerciaux n'a été modifié pendant cette préparation.
+sites commerciaux n'a été modifié. Après déploiement, leurs conteneurs sont
+toujours actifs : site principal depuis 23 heures, boutique depuis 4 semaines
+et sa base MySQL depuis 5 semaines. Aucun de ces conteneurs n'a été redémarré.
 
 La confiance au proxy suit les mécanismes ASP.NET Core documentés par
 [Microsoft](https://learn.microsoft.com/aspnet/core/host-and-deploy/proxy-load-balancer?view=aspnetcore-10.0).
