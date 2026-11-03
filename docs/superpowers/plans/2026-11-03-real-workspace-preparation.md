@@ -42,8 +42,34 @@ Les archives réelles et rapports nominatifs sont privés, hors Git.
 
 Empreinte de la copie portable vérifiée :
 `0082812965AC2EDA92BC35E80D1E18F074A968824299DD6319B28DF772F98F82`.
-Cette copie est un instantané de préparation réalisé pendant que Manager était
-ouvert. Le transfert et la bascule sur le serveur actif ne sont pas effectués.
+Cette copie a été préparée pendant que Manager était ouvert, puis revérifiée
+après sa fermeture : aucun fichier ajouté/retiré ni contenu modifié dans le
+périmètre sauvegardé.
+
+## Transfert et état prêt à activer
+
+- [x] Chiffrer l’archive en CMS AES-256-GCM pour une clé privée restant sur le
+  serveur, transférer deux morceaux dans le dossier privé du compagnon, vérifier
+  les empreintes de chaque morceau et de leur concaténation.
+- [x] Déchiffrer côté serveur et confirmer le SHA256 de l’archive portable.
+- [x] Restaurer par la CLI du serveur déployé et obtenir un audit favorable.
+- [x] Préparer le dossier distinct
+  `/data/workspace-import-cfbc58a3123e48f989fe398896d2589f` : 14 clients, 20 projets.
+- [x] Sauvegarder l’état d’authentification, les clés, les reçus et l’atelier vide
+  pendant un bref arrêt du seul compagnon ; redémarrer à l’identique.
+  Archive hors volume : `/var/backups/ms3dforge-before-import-cfbc58a3.tar.gz`.
+  Extraction dans un dossier privé séparé et comparaison des octets réussies.
+  Cette sauvegarde d’état reste sur le même hôte ; elle n’est pas une copie
+  distante contre la perte de l’hôte. La sauvegarde métier originale est sur PC.
+- [ ] Faire valider la bascule, configurer uniquement à l’exécution
+  `Server__WorkspaceRoot=/data/workspace-import-cfbc58a3123e48f989fe398896d2589f`,
+  redéployer le même commit épinglé et vérifier la session web et les comptes.
+
+L’ancien atelier `/data/workspace` reste conservé. Retour avant toute nouvelle
+écriture distante : retirer cette surcharge de configuration et redémarrer.
+Après de nouvelles écritures, préserver et comparer les deux états avant un
+retour ; ne pas masquer des modifications récentes par une bascule aveugle.
+Le code déployé reste épinglé à `989d30f3ba11fb7b65787c569d1d894cfda1e8aa`.
 
 ## Exclusions et activation
 
