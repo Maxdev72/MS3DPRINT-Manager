@@ -46,13 +46,15 @@ Créer un projet séparé pour le compagnon. Ne modifier aucune ressource de
 1. Source Git : ce dépôt, branche `feature/ms3dforge-remote`. Contexte de build :
    racine du dépôt `sources`. Dockerfile :
    `src/MS3DPRINT.Manager.Server/Dockerfile`. Cible finale par défaut, port `8080`.
-2. Monter deux volumes persistants distincts : `/data/state` et
-   `/data/workspace`. Ils doivent être accessibles à l'utilisateur `app` (UID 1654).
+2. Monter un volume persistant neuf sur `/data`, contenant les deux dossiers
+   distincts `/data/state` et `/data/workspace`. Ils doivent être accessibles à
+   l'utilisateur `app` (UID 1654). L'image initialise leurs droits ; le montage
+   d'un volume Docker neuf a été vérifié avec cet utilisateur.
    Commencer par un atelier neuf. Aucun dossier commercial ou Nextcloud existant
    ne doit être monté.
 3. Conserver `Server__StateRoot=/data/state` et
    `Server__WorkspaceRoot=/data/workspace`. Configurer
-   `Server__TrustedProxyAddresses__0` avec **l'adresse IP exacte du proxy Coolify
+   `Server__TrustedProxyAddresses__0` avec **l'adresse IP exacte du proxy HTTPS
    vue depuis le conteneur**. D'autres IP exactes peuvent utiliser les indices 1, 2.
    Ne pas renseigner une plage réseau entière et ne pas activer
    `ASPNETCORE_FORWARDEDHEADERS_ENABLED`. Sans proxy explicitement connu, les
@@ -69,14 +71,30 @@ Créer un projet séparé pour le compagnon. Ne modifier aucune ressource de
    aucun compte par défaut et aucune inscription publique.
 6. Avant usage réel, vérifier la connexion web puis PC/Android, une création
    fictive, sa consultation après redémarrage du service et la déconnexion.
-   Sauvegarder ensemble les deux volumes avant une mise à jour.
+   Sauvegarder l'ensemble du volume avant une mise à jour.
+
+### Configuration préparée sur l'hébergement existant
+
+Projet `MS3DFORGE-COMPAGNON`, application `ms3dforge-compagnon`, commit candidat
+`989d30f3ba11fb7b65787c569d1d894cfda1e8aa`. Le volume propre à cette application
+est `6hzhtpawlwcwvggxizmfxxhk-ms3dforge-compagnon-data`, monté sur `/data`.
+
+Le serveur utilise déjà Nginx sur l'hôte avec un certificat pour `ms3dforge.fr`.
+Son routage existant mène à `127.0.0.1:3002`. Le compagnon reprend ce port libre
+avec le mapping **`127.0.0.1:3002:8080`** ; le port reste limité à l'hôte.
+La passerelle Docker a été lue sur le serveur : **`10.0.1.1`**, seule adresse
+autorisée par `Server__TrustedProxyAddresses__0`, à l'exécution uniquement.
+Le contrôle après déploiement devra confirmer le schéma HTTPS et les accès privés.
+Ne pas lancer de proxy Traefik/Caddy supplémentaire sur les ports 80/443 : le
+routage et les certificats existants sont gérés par Nginx. Aucun fichier des deux
+sites commerciaux n'a été modifié pendant cette préparation.
 
 La confiance au proxy suit les mécanismes ASP.NET Core documentés par
 [Microsoft](https://learn.microsoft.com/aspnet/core/host-and-deploy/proxy-load-balancer?view=aspnetcore-10.0).
 
 ## Vérifications de la candidate
 
-64 tests serveur réussis sous Windows et dans Docker Linux. Les 2 régressions
+1 227 tests Core et 73 tests Estimator réussis, puis 64 tests serveur réussis sous Windows et dans Docker Linux. Les 2 régressions
 JavaScript vérifient la perte du corps de réponse et la conservation du brouillon.
 Le parcours navigateur utilise un atelier et un compte fictifs : connexion,
 création client/projet, ajout et validation d'une tâche, changement d'état et de
