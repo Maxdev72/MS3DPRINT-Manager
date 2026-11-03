@@ -59,9 +59,9 @@ RefreshServerAsync() reste l’actualisation manuelle.
   partagé ; binlogs pour toutes les commandes .NET.
 - [x] Revue locale du diff : aucune donnée réelle dans Git, jetons mémoire seule,
   brouillons et reçus préservés, pas d’écriture dans l’atelier historique.
-- [ ] Publier Windows avec le profil existant, vérifier application fermée,
+- [x] Publier Windows avec le profil existant, vérifier application fermée,
   sauvegarder l’ancien binaire sous outputs/backups puis remplacer l’unique EXE.
-- [ ] Mettre à jour le guide et les limites, commit et push sur la branche.
+- [x] Mettre à jour le guide et les limites, commit et push sur la branche.
 
 ## Revue et preuves
 
@@ -80,3 +80,12 @@ concerne le PC, l’APK précédent reste conservé.
 Suite finale après revue : 1 245 tests Core réussis en Release, 0 échec
 (`outputs/sync-verification/sync-core-reviewed.trx`). Serveur : 85 réussis,
 0 échec (`sync-server-final.trx`). Publication Windows autonome réussie.
+
+Livraison Windows remplacée après fermeture normale confirmée par l’utilisateur
+et contrôle d’accès exclusif au fichier. Une seule application livrée :
+`MS3DPRINT Manager.exe` (139 350 332 octets). SHA256 publication/livraison :
+`5BA1B8C4A9496AD93A7054181FC154023AEF1A9DFDFF5231A5CE6B701E2BA6B6`.
+Version précédente vérifiée et conservée uniquement sous `outputs/backups/`.
+Binaire compilé depuis `54570e9d2c5550d48b8c6cde9592d086374fced5`.
+Aucune nouvelle instance lancée, aucun arrêt forcé, aucun contrôle de Chrome
+ou Coolify, aucune écriture dans l’atelier historique ni dans la production.
