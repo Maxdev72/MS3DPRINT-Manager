@@ -61,9 +61,9 @@ périmètre sauvegardé.
   Extraction dans un dossier privé séparé et comparaison des octets réussies.
   Cette sauvegarde d’état reste sur le même hôte ; elle n’est pas une copie
   distante contre la perte de l’hôte. La sauvegarde métier originale est sur PC.
-- [ ] Faire valider la bascule, configurer uniquement à l’exécution
-  `Server__WorkspaceRoot=/data/workspace-import-cfbc58a3123e48f989fe398896d2589f`,
-  redéployer le même commit épinglé et vérifier la session web et les comptes.
+- [x] Bascule explicitement approuvée, puis exécutée sur une copie rafraîchie
+  (voir ci-dessous), avec configuration uniquement à l’exécution et redéploiement
+  du même commit épinglé. Session propriétaire et comptes vérifiés.
 
 L’ancien atelier `/data/workspace` reste conservé. Retour avant toute nouvelle
 écriture distante : retirer cette surcharge de configuration et redémarrer.
@@ -92,3 +92,29 @@ commerciaux restent hors périmètre.
 La synchronisation PC et les modules absents du web restent à développer après
 cette reprise ; une copie importée ne doit pas être annoncée comme synchronisée.
 
+
+## Activation du 3 novembre 2026
+
+Avant l’activation, un document 3MF avait changé depuis la préparation du matin.
+Une nouvelle sauvegarde complète et une nouvelle archive portable ont donc été
+produites, les deux fiches inactives conservées à part et les contrôles serveur
+rejoués avec succès. La dernière comparaison des fichiers source avant la
+bascule n’a montré aucune différence ; Manager était fermé.
+
+SHA256 de l’archive effectivement activée :
+`83C8AA587CDCE0D6C395E238918BC99941F9EE301370BC3C961C4F17C664210C`.
+Atelier actif : `/data/workspace-import-8c087212f7b74b8dabba17718acd6492`.
+Déploiement : `cks3gr0vid93qp6fdr3twpzo`, même image du commit épinglé.
+La préparation du matin et l’ancien atelier vide restent conservés.
+
+La session propriétaire existante a survécu au redéploiement : 14 clients,
+20 projets et consultation des tâches vérifiés dans le navigateur. Contrôles
+HTTP après activation : santé 200, clients/projets anonymes 401, accès direct
+à identity.sqlite 404. Les deux sites commerciaux répondaient en HTTPS (200).
+Le contrôle final des conteneurs a été interrompu par Échap ; aucun contrôle
+supplémentaire n’est réputé effectué. Aucun changement de ces ressources
+n’a été demandé ni exécuté pendant cette activation.
+
+Cette reprise est ponctuelle. La synchronisation automatique PC et les comptes
+clients isolés avec mise en service autonome restent à développer pour rendre
+le produit utilisable par la clientèle sans manipulation de Coolify.

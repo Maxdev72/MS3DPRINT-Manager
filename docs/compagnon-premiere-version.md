@@ -26,9 +26,12 @@ Un reçu incertain nécessite un contrôle manuel ; il n'est jamais rejoué à l
 ## Limites de cette candidate
 
 - L'atelier local existant et l'atelier serveur restent distincts. Il n'y a pas
-  encore de synchronisation automatique du PC, ni de migration réelle effectuée.
-- Documents/fichiers, estimateur, devis, factures, stocks et imprimantes restent
-  dans Manager local. La parité complète est une étape ultérieure.
+  encore de synchronisation automatique du PC. L’atelier réel a été repris le
+  3 novembre 2026 : 14 clients et 20 projets, avec sauvegarde vérifiée conservée.
+- Les documents et métadonnées repris sont préservés sur le serveur. Leur
+  présence ne rend pas les modules correspondants éditables à distance :
+  fichiers, estimateur, devis, factures, stocks et imprimantes restent à porter.
+  La parité complète est une étape ultérieure.
 - La session, la dernière vue et les brouillons des interfaces distantes restent
   en mémoire. Fermer la vue ou recharger la page les perd. Résoudre un envoi
   incertain avant de fermer ; après fermeture, vérifier les données du serveur
@@ -37,6 +40,10 @@ Un reçu incertain nécessite un contrôle manuel ; il n'est jamais rejoué à l
   physique. Les tests d'interface utilisent Avalonia Headless.
 - Un seul serveur doit écrire dans un atelier. Ne jamais partager son volume avec
   un Manager local actif ou lancer deux réplicas serveur.
+
+Le service actuel possède un seul compte propriétaire et un seul atelier.
+Les comptes séparés par clientèle et leur mise en service autonome restent à
+développer ; la procédure technique ci-dessous concerne l’hébergement actuel.
 
 ## Mise en place dans Coolify
 
@@ -92,7 +99,11 @@ sont ponctuelles. L'utilisateur a confirmé le message « Propriétaire créé �
 après sa saisie directe dans Coolify. Les variables ont été exportées dans un
 processus Bash temporaire qui se termine après la commande ; elles ne sont pas
 enregistrées dans la configuration Coolify. La connexion avec ce compte sur
-cet hébergement a été confirmée dans Chrome : atelier privé visible, encore vide.
+cet hébergement a été confirmée dans Chrome. Après la reprise du 3 novembre,
+l’atelier privé affiche 14 clients et 20 projets ; les tâches d’un projet ont
+également été consultées sans modification. La configuration d’exécution pointe
+vers `/data/workspace-import-8c087212f7b74b8dabba17718acd6492`.
+La copie PC reste indépendante ; cette reprise ponctuelle ne la synchronise pas.
 Ne pas lancer de proxy Traefik/Caddy supplémentaire sur les ports 80/443 : le
 routage et les certificats existants sont gérés par Nginx. Aucun fichier des deux
 sites commerciaux n'a été modifié. Après déploiement, leurs conteneurs sont
