@@ -88,8 +88,11 @@ Déploiement réussi le 3 novembre 2026 : `https://ms3dforge.fr` répond en HTTP
 `/health` renvoie 200, les listes clients/projets sans session renvoient 401 et
 `/identity.sqlite` renvoie 404. Le cookie CSRF est Secure, HttpOnly et SameSite=Strict.
 Le contrôle de santé automatique Coolify reste désactivé ; ces vérifications
-sont ponctuelles. Le compte propriétaire doit encore être créé directement par
-l'utilisateur, puis sa connexion sur cet hébergement doit être validée.
+sont ponctuelles. L'utilisateur a confirmé le message « Propriétaire créé »
+après sa saisie directe dans Coolify. Les variables ont été exportées dans un
+processus Bash temporaire qui se termine après la commande ; elles ne sont pas
+enregistrées dans la configuration Coolify. La connexion avec ce compte sur
+cet hébergement reste à valider.
 Ne pas lancer de proxy Traefik/Caddy supplémentaire sur les ports 80/443 : le
 routage et les certificats existants sont gérés par Nginx. Aucun fichier des deux
 sites commerciaux n'a été modifié. Après déploiement, leurs conteneurs sont

@@ -142,7 +142,7 @@ la première version si le stockage sécurisé ne peut pas être vérifié à te
 ### Task 4: Livraison candidate et hébergement
 
 - [x] Tests serveur sous Windows/Linux et régression adaptée aux écrans touchés.
-- [ ] Construire l'image, vérifier la confiance explicite au proxy Coolify, préparer
+- [x] Construire l'image, vérifier la confiance explicite au proxy Coolify, préparer
   le service privé et son volume neuf. Aucun changement des projets commerciaux.
 - [x] Mettre à disposition une candidate documentée, avec limites et tests réels.
   Toute étape nécessitant authentification utilisateur, fermeture normale de
