@@ -25,17 +25,21 @@ Un reçu incertain nécessite un contrôle manuel ; il n'est jamais rejoué à l
 
 ## Limites de cette candidate
 
-- L'atelier local existant et l'atelier serveur restent distincts. Il n'y a pas
-  encore de synchronisation automatique du PC. L’atelier réel a été repris le
-  3 novembre 2026 : 14 clients et 20 projets, avec sauvegarde vérifiée conservée.
+- L'atelier local existant et l'atelier serveur restent distincts. Il n'y a
+  pas de fusion automatique avec l’atelier local historique. Dans la vue
+  distante PC, les clients/projets/tâches sont désormais actualisés toutes les
+  30 secondes après connexion et la copie de consultation persiste sur ce PC.
+  L’atelier réel a été repris le 3 novembre 2026 : 14 clients et 20 projets,
+  avec sauvegarde vérifiée conservée.
 - Les documents et métadonnées repris sont préservés sur le serveur. Leur
   présence ne rend pas les modules correspondants éditables à distance :
   fichiers, estimateur, devis, factures, stocks et imprimantes restent à porter.
   La parité complète est une étape ultérieure.
-- La session, la dernière vue et les brouillons des interfaces distantes restent
-  en mémoire. Fermer la vue ou recharger la page les perd. Résoudre un envoi
-  incertain avant de fermer ; après fermeture, vérifier les données du serveur
-  avant de saisir à nouveau une opération dont on ignore le résultat.
+- La session et les brouillons restent en mémoire : fermer la vue demande
+  une nouvelle connexion et perd les brouillons. Sur PC, la dernière copie
+  clients/projets/tâches et l’identifiant d’une commande incertaine persistent
+  séparément. Web et Android conservent leur état seulement en mémoire.
+  Ne jamais saisir à nouveau une opération dont on ignore le résultat.
 - L'APK est une candidate installable pour essai, sans validation sur téléphone
   physique. Les tests d'interface utilisent Avalonia Headless.
 - Un seul serveur doit écrire dans un atelier. Ne jamais partager son volume avec
@@ -103,7 +107,8 @@ cet hébergement a été confirmée dans Chrome. Après la reprise du 3 novembre
 l’atelier privé affiche 14 clients et 20 projets ; les tâches d’un projet ont
 également été consultées sans modification. La configuration d’exécution pointe
 vers `/data/workspace-import-8c087212f7b74b8dabba17718acd6492`.
-La copie PC reste indépendante ; cette reprise ponctuelle ne la synchronise pas.
+L’atelier PC historique reste indépendant ; la vue distante synchronise sa
+copie de consultation, sans modifier ni fusionner cet atelier historique.
 Ne pas lancer de proxy Traefik/Caddy supplémentaire sur les ports 80/443 : le
 routage et les certificats existants sont gérés par Nginx. Aucun fichier des deux
 sites commerciaux n'a été modifié. Après déploiement, leurs conteneurs sont
@@ -126,3 +131,37 @@ Le parcours local utilise un adaptateur de test limité à 127.0.0.1 devant le v
 conteneur. Cet adaptateur n'est pas livré. Les cookies de production restent
 Secure/HttpOnly et les clients natifs exigent HTTPS. Ce contrôle local ne vaut
 pas validation du certificat public ni test réel sur Android.
+
+## Synchronisation PC livrée le 3 novembre 2026
+
+Ouvrir **Paramètres → Atelier → Accès serveur**, se connecter avec le compte du
+serveur. Tant que cette fenêtre reste ouverte et la session valide, les lectures
+sont automatiques toutes les 30 secondes. Les actions continuent à utiliser les
+commandes HTTPS déjà déployées ; aucun nouveau déploiement serveur n’est requis.
+Les modifications du site apparaissent au prochain cycle. Le bouton
+**Actualiser le serveur** permet une lecture immédiate et une reprise explicite
+du brouillon après conflit. Une lecture en arrière-plan ne change pas la version
+sur laquelle un brouillon de tâche a été commencé.
+
+La copie PC est enregistrée dans
+`%LOCALAPPDATA%/MS3DPRINT Manager/remote/copy.json`, avec le serveur, le nom du
+compte et la date de lecture, sans mot de passe ni jeton. Il s’agit de données
+métier locales lisibles par le compte Windows, pas d’une sauvegarde chiffrée.
+Elle reste distincte de Nextcloud et de l’atelier local. La réouverture de la
+fenêtre permet de consulter cette dernière copie sans se connecter. Une coupure
+bloque les écritures et conserve la dernière vue ; les lectures reprennent
+automatiquement au retour du réseau si la session reste valide. Après expiration
+ou fermeture, se reconnecter avec son mot de passe.
+
+Avant un envoi sur PC, l’identifiant de commande est enregistré durablement.
+Une réponse perdue ou une fermeture pendant l’envoi conserve cet identifiant et
+bloque les nouvelles commandes jusqu’à la vérification du reçu. Aucun envoi
+n’est rejoué automatiquement. Une copie illisible ou un journal impossible à
+écrire bloque les envois ; une seconde instance ne peut pas remplacer le
+journal de la première. Un reçu absent ou encore incertain exige un contrôle
+du serveur ; il n’autorise pas à ressaisir aveuglément l’opération.
+
+**Se déconnecter** révoque la session et oublie la copie persistante ordinaire ;
+une commande incertaine reste conservée pour vérification au même compte et
+serveur. Les fichiers, factures, stocks et autres modules ne sont pas synchronisés
+par ce lot. L’exécutable livré conserve le nom `MS3DPRINT Manager.exe`.

@@ -11,7 +11,7 @@ using MS3DPRINT.Manager.Core.Remote;
 namespace MS3DPRINT.Manager.Native;
 
 /// <summary>Shared PC/Android server screen. Its snapshot, drafts and device session never touch the local workshop.</summary>
-public sealed class RemoteWorkspaceView : UserControl, IDisposable
+public sealed partial class RemoteWorkspaceView : UserControl, IDisposable
 {
     private readonly HttpClient _http;
     private readonly bool _ownsHttp;
@@ -63,7 +63,7 @@ public sealed class RemoteWorkspaceView : UserControl, IDisposable
     private bool _binding;
     private bool _disposed;
 
-    public RemoteWorkspaceView(HttpClient? http = null, Func<string, Task<bool>>? confirmRemoval = null)
+    public RemoteWorkspaceView(HttpClient? http = null, Func<string, Task<bool>>? confirmRemoval = null, RemoteWorkspaceCache? cache = null)
     {
         _ownsHttp = http is null;
         _http = http ?? new HttpClient(new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false }) { Timeout = TimeSpan.FromSeconds(30) };
@@ -93,6 +93,7 @@ public sealed class RemoteWorkspaceView : UserControl, IDisposable
         body.Children.Add(Card("Projets du client", _projects, _projectInfo, new Expander { Header = "Créer un projet", HorizontalAlignment = HorizontalAlignment.Stretch, Content = Stack(_projectName, _description, _dueDate, _priority, _createProject) }));
         body.Children.Add(Card("Tâches du projet", _taskList, _confirmation, _editing, _taskTitle, _taskNotes, _saveTask, newTask));
         Content = new ScrollViewer { Content = body, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled };
+        InitializeSynchronization(cache);
         UpdateClientFields(); UpdateEnabled();
     }
 
@@ -101,13 +102,24 @@ public sealed class RemoteWorkspaceView : UserControl, IDisposable
         if (!Uri.TryCreate((_server.Text ?? "").Trim(), UriKind.Absolute, out var uri)) throw new ArgumentException("Adresse HTTPS invalide.");
         if (_uncertainCommand is not null && uri != _uncertainServer)
             throw new ArgumentException("Reconnectez-vous au serveur de la commande incertaine pour vérifier son reçu.");
+        if (_cacheRecoveryBlocked) throw new ArgumentException("La copie locale doit être vérifiée avant la reconnexion.");
+        var account = (_name.Text ?? "").Trim().ToUpperInvariant();
+        if (_uncertainCommand is not null && account != _sessionAccount)
+            throw new ArgumentException("Reconnectez-vous au compte de la commande incertaine pour vérifier son reçu.");
         var client = new RemoteWorkspaceClient(_http, uri);
         var password = _password.Text ?? "";
         _password.Text = "";
         await client.LoginAsync((_name.Text ?? "").Trim(), password);
         _client?.ForgetSession(); _client = client;
-        _sessionServer = uri;
-        _clientSnapshot = []; _projectSnapshot = []; _project = null;
+        if (_disposed) { client.ForgetSession(); return; }
+        var sameWorkshop = uri == _sessionServer && account == _sessionAccount;
+        _sessionServer = uri; _sessionAccount = account;
+        if (_viewAttached) _synchronizationTimer.Start();
+        if (!sameWorkshop)
+        {
+            _clientSnapshot = []; _projectSnapshot = []; _project = null; _snapshotReadAt = null;
+            SaveCopy();
+        }
         BindClients(); RenderTasks();
         await RefreshAsync();
     }
@@ -117,28 +129,40 @@ public sealed class RemoteWorkspaceView : UserControl, IDisposable
     private async Task LogoutAsync()
     {
         _online = false;
+        _synchronizationTimer.Stop();
         try { if (_client is not null) await _client.LogoutAsync(); }
         finally
         {
             _client?.ForgetSession();
+            // Session revocation must still happen if removing the local copy fails.
+            if (!_disposed && _uncertainCommand is null) _cache?.Clear();
             _status.Text = _uncertainCommand is { } id
                 ? "Session fermée. La commande " + id + " reste incertaine : reconnectez-vous au même serveur pour vérifier son reçu. Les modifications restent bloquées."
                 : "Session fermée sur cet appareil. Dernière vue consultable jusqu’à la fermeture de cet écran.";
         }
     }
 
-    private async Task RefreshAsync()
+    private Task RefreshAsync() => RefreshAsync(automatic: false);
+
+    private async Task RefreshAsync(bool automatic)
     {
         var client = RequireClient();
         var clients = await client.GetClientsAsync();
         var projects = await client.GetProjectsAsync();
         var selected = SelectedProjectId;
         var detail = selected.HasValue && projects.Any(p => p.Id == selected) ? await client.GetProjectAsync(selected.Value) : null;
+        var copy = new RemoteWorkspaceCopy(_sessionServer!.AbsoluteUri, _sessionAccount!, DateTimeOffset.UtcNow, clients, projects, _uncertainCommand);
+        RemoteWorkspaceCache.Validate(copy);
+        if (_disposed) return;
+        _cache?.Save(copy);
+        // A background read must not silently make an old draft eligible to overwrite a newer version.
+        if (automatic && _project?.Id == detail?.Id && (_editingTask.HasValue || !string.IsNullOrEmpty(_taskTitle.Text) || !string.IsNullOrEmpty(_taskNotes.Text))) detail = _project;
+        _snapshotReadAt = copy.ReadAt;
         _clientSnapshot = clients; _projectSnapshot = projects; _project = detail;
         BindClients(); RenderTasks();
         _online = true;
-        _lastRead.Text = "Dernière lecture du serveur : " + DateTimeOffset.Now.ToString("dd/MM/yyyy HH:mm:ss");
-        _status.Text = _uncertainCommand is null ? "Connecté · modifications envoyées au serveur." : "Résultat encore incertain. Consultez le reçu ; aucun renvoi automatique.";
+        ShowLastRead();
+        _status.Text = _uncertainCommand is null ? "Synchronisation automatique active · modifications envoyées au serveur." : "Résultat encore incertain. Consultez le reçu ; aucun renvoi automatique.";
     }
 
     private async Task LoadSelectedProjectAsync()
@@ -157,8 +181,9 @@ public sealed class RemoteWorkspaceView : UserControl, IDisposable
     private async Task CreateClientAsync()
     {
         RequireWritable();
-        var created = await RequireClient().CreateClientAsync(new(Guid.NewGuid(), _kind.SelectedIndex == 0 ? ClientKind.Professional : ClientKind.Individual,
-            Value(_clientCode), Value(_company), Value(_firstName), Value(_lastName), Value(_address), Value(_clientNotes), new(Value(_firstName), Value(_lastName), null, Value(_phone), Value(_email))));
+        var commandId = Guid.NewGuid();
+        var created = await ExecuteCommandAsync(commandId, () => RequireClient().CreateClientAsync(new(commandId, _kind.SelectedIndex == 0 ? ClientKind.Professional : ClientKind.Individual,
+            Value(_clientCode), Value(_company), Value(_firstName), Value(_lastName), Value(_address), Value(_clientNotes), new(Value(_firstName), Value(_lastName), null, Value(_phone), Value(_email)))));
         _clientCode.Text = _company.Text = _firstName.Text = _lastName.Text = _email.Text = _phone.Text = _address.Text = _clientNotes.Text = "";
         await RefreshAsync();
         _clients.SelectedIndex = _clientSnapshot.ToList().FindIndex(c => c.Id == created.Id);
@@ -175,7 +200,8 @@ public sealed class RemoteWorkspaceView : UserControl, IDisposable
                 throw new ArgumentException("Échéance attendue : AAAA-MM-JJ.");
             due = parsed;
         }
-        var created = await RequireClient().CreateProjectAsync(new(Guid.NewGuid(), clientId, Value(_projectName), DateTime.Now.Year, due, Value(_description), (ProjectPriority)_priority.SelectedIndex));
+        var commandId = Guid.NewGuid();
+        var created = await ExecuteCommandAsync(commandId, () => RequireClient().CreateProjectAsync(new(commandId, clientId, Value(_projectName), DateTime.Now.Year, due, Value(_description), (ProjectPriority)_priority.SelectedIndex)));
         _projectName.Text = _description.Text = _dueDate.Text = "";
         await RefreshAsync();
         _projects.SelectedIndex = VisibleProjects().ToList().FindIndex(p => p.Id == created.Id);
@@ -186,9 +212,10 @@ public sealed class RemoteWorkspaceView : UserControl, IDisposable
     {
         RequireWritable();
         var p = _project ?? throw new ArgumentException("Sélectionnez un projet.");
-        _project = _editingTask is { } task
-            ? await RequireClient().EditTaskAsync(p.Id, task, new(Guid.NewGuid(), p.UpdatedAt, Value(_taskTitle), Value(_taskNotes)))
-            : await RequireClient().AddTaskAsync(p.Id, new(Guid.NewGuid(), p.UpdatedAt, Value(_taskTitle), Value(_taskNotes)));
+        var commandId = Guid.NewGuid();
+        _project = await ExecuteCommandAsync(commandId, () => _editingTask is { } task
+            ? RequireClient().EditTaskAsync(p.Id, task, new(commandId, p.UpdatedAt, Value(_taskTitle), Value(_taskNotes)))
+            : RequireClient().AddTaskAsync(p.Id, new(commandId, p.UpdatedAt, Value(_taskTitle), Value(_taskNotes))));
         RememberProject(); RenderTasks();
         _editingTask = null; _editing.Text = "Nouvelle tâche"; _taskTitle.Text = _taskNotes.Text = "";
     }
@@ -197,14 +224,15 @@ public sealed class RemoteWorkspaceView : UserControl, IDisposable
     {
         RequireWritable();
         var p = _project ?? throw new ArgumentException("Sélectionnez un projet.");
-        _project = action switch
+        var commandId = Guid.NewGuid();
+        _project = await ExecuteCommandAsync(commandId, () => action switch
         {
-            "complete" => await RequireClient().CompleteTaskAsync(p.Id, task.Id, new(Guid.NewGuid(), p.UpdatedAt, !task.IsCompleted)),
-            "up" => await RequireClient().MoveTaskAsync(p.Id, task.Id, new(Guid.NewGuid(), p.UpdatedAt, -1)),
-            "down" => await RequireClient().MoveTaskAsync(p.Id, task.Id, new(Guid.NewGuid(), p.UpdatedAt, 1)),
-            "remove" => await RequireClient().RemoveTaskAsync(p.Id, task.Id, new(Guid.NewGuid(), p.UpdatedAt, true)),
+            "complete" => RequireClient().CompleteTaskAsync(p.Id, task.Id, new(commandId, p.UpdatedAt, !task.IsCompleted)),
+            "up" => RequireClient().MoveTaskAsync(p.Id, task.Id, new(commandId, p.UpdatedAt, -1)),
+            "down" => RequireClient().MoveTaskAsync(p.Id, task.Id, new(commandId, p.UpdatedAt, 1)),
+            "remove" => RequireClient().RemoveTaskAsync(p.Id, task.Id, new(commandId, p.UpdatedAt, true)),
             _ => throw new ArgumentException("Action inconnue.")
-        };
+        });
         RememberProject(); RenderTasks();
     }
 
@@ -212,10 +240,9 @@ public sealed class RemoteWorkspaceView : UserControl, IDisposable
     {
         if (_uncertainCommand is not { } id) return;
         var receipt = await RequireClient().GetCommandReceiptAsync(id);
-        if (receipt.State == "Completed" && receipt.StatusCode is >= 200 and < 500)
+        if (receipt.CommandId == id && receipt.State == "Completed" && receipt.StatusCode is >= 200 and < 500)
         {
-            _uncertainCommand = null;
-            _uncertainServer = null;
+            CompletePendingCommand();
             await RefreshAsync();
             _status.Text = $"Commande vérifiée : résultat serveur {receipt.StatusCode}. Contrôlez la vue actualisée et votre brouillon avant toute nouvelle action.";
         }
@@ -236,6 +263,11 @@ public sealed class RemoteWorkspaceView : UserControl, IDisposable
                 _uncertainServer = _sessionServer;
             }
             _status.Text = ex.Message + (ex.Kind == RemoteFailure.Uncertain ? " Reçu : " + ex.CommandId : "");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            _online = false;
+            _status.Text = "Copie locale indisponible : " + ex.Message + (_uncertainCommand is null ? " Aucune nouvelle commande ne sera envoyée avant résolution." : " Vérifiez le reçu avant toute nouvelle commande.");
         }
         catch (ArgumentException ex) { _status.Text = ex.Message; }
         finally { _busy = false; UpdateEnabled(); }
@@ -304,18 +336,19 @@ public sealed class RemoteWorkspaceView : UserControl, IDisposable
     private Guid? SelectedClientId => (_clients.SelectedItem as ComboBoxItem)?.Tag as Guid?;
     private Guid? SelectedProjectId => (_projects.SelectedItem as ComboBoxItem)?.Tag as Guid?;
     private RemoteWorkspaceClient RequireClient() => _client ?? throw new ArgumentException("Connectez-vous au serveur.");
-    private void RequireWritable() { if (!_online || _uncertainCommand is not null || _client?.IsAuthenticated != true) throw new ArgumentException("Actualisez le serveur avant de modifier les données."); }
+    private void RequireWritable() { if (_cacheRecoveryBlocked || !_online || _uncertainCommand is not null || _client?.IsAuthenticated != true) throw new ArgumentException("Actualisez le serveur avant de modifier les données."); }
     private void RememberProject()
     {
         if (_project is not { } p) return;
         _projectSnapshot = _projectSnapshot.Select(existing => existing.Id == p.Id ? existing with { UpdatedAt = p.UpdatedAt, Tasks = p.Tasks } : existing).ToArray();
+        SaveCopy();
     }
     private void UpdateClientFields() { _company.IsVisible = _kind.SelectedIndex == 0; _firstName.IsVisible = _lastName.IsVisible = _kind.SelectedIndex == 1; }
     private void UpdateEnabled()
     {
         var authenticated = _client?.IsAuthenticated == true;
-        var writable = authenticated && _online && !_busy && _uncertainCommand is null;
-        _login.IsEnabled = !_busy && !authenticated;
+        var writable = authenticated && _online && !_busy && !_cacheRecoveryBlocked && _uncertainCommand is null;
+        _login.IsEnabled = !_busy && !_cacheRecoveryBlocked && !authenticated;
         _server.IsEnabled = !_busy && !authenticated && _uncertainCommand is null;
         _name.IsEnabled = _password.IsEnabled = !_busy && !authenticated;
         _logout.IsEnabled = !_busy && authenticated;
@@ -342,5 +375,5 @@ public sealed class RemoteWorkspaceView : UserControl, IDisposable
     private static TextBlock Text(string value, string? name = null, double size = 14) => new() { Text = value, Name = name, TextWrapping = TextWrapping.Wrap, FontSize = size };
     private static StackPanel Stack(params Control[] controls) { var stack = new StackPanel { Spacing = 10 }; foreach (var control in controls) stack.Children.Add(control); return stack; }
     private static Border Card(string title, params Control[] controls) => new() { Padding = new Thickness(14), BorderThickness = new Thickness(1), BorderBrush = Brushes.Gray, CornerRadius = new CornerRadius(10), Child = Stack([Text(title, size: 18), .. controls]) };
-    public void Dispose() { _disposed = true; _client?.ForgetSession(); if (_ownsHttp) _http.Dispose(); }
+    public void Dispose() { _disposed = true; _synchronizationTimer.Stop(); _client?.ForgetSession(); _cacheLease?.Dispose(); _cacheLease = null; if (_ownsHttp) _http.Dispose(); }
 }

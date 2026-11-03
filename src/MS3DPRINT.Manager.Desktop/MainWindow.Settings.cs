@@ -26,7 +26,9 @@ public partial class MainWindow
     private void OpenRemoteWorkspace()
     {
         if (_remoteWorkspaceWindow is { } existing) { existing.Activate(); return; }
-        var view = new MS3DPRINT.Manager.Native.RemoteWorkspaceView(confirmRemoval: label => ConfirmRemovalWindow.AskAsync(_remoteWorkspaceWindow!, label, "La tâche sera retirée du projet sur le serveur."));
+        var cache = new MS3DPRINT.Manager.Core.Remote.RemoteWorkspaceCache(Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MS3DPRINT Manager", "remote", "copy.json"));
+        var view = new MS3DPRINT.Manager.Native.RemoteWorkspaceView(cache: cache, confirmRemoval: label => ConfirmRemovalWindow.AskAsync(_remoteWorkspaceWindow!, label, "La tâche sera retirée du projet sur le serveur."));
         var window = new Window { Title = "MS3DForge · Atelier distant", Width = 820, Height = 850, MinWidth = 420, MinHeight = 540, WindowStartupLocation = WindowStartupLocation.CenterOwner, Content = view };
         _remoteWorkspaceWindow = window;
         window.Closed += (_, _) => { view.Dispose(); _remoteWorkspaceWindow = null; };
@@ -154,7 +156,7 @@ public partial class MainWindow
         remote.Click += (_, _) => OpenRemoteWorkspace();
         AddSettingsCard("atelier", new Border { Classes = { "card-raised" }, Padding = new Avalonia.Thickness(22, 20), Child = new StackPanel { Spacing = 10, Children = {
             new TextBlock { Text = "Accès serveur · clients, projets et tâches", FontSize = 18 },
-            new TextBlock { Text = "Connexion HTTPS dans une fenêtre dédiée. L’atelier local reste indépendant ; aucune synchronisation ou migration implicite.", TextWrapping = TextWrapping.Wrap }, remote } } });
+            new TextBlock { Text = "Clients, projets et tâches actualisés automatiquement toutes les 30 secondes après connexion. Dernière copie consultable hors connexion. L’atelier local historique reste indépendant.", TextWrapping = TextWrapping.Wrap }, remote } } });
 
         Border Card(string title, string description, Control? headerAction, params Control[] content)
         {

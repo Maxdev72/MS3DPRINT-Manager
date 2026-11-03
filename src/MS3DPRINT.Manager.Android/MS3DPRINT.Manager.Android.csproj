@@ -34,7 +34,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MS3DPRINT.Manager.Core\MS3DPRINT.Manager.Core.csproj" />
-    <Compile Include="..\MS3DPRINT.Manager.Desktop\Remote\RemoteWorkspaceView.cs" Link="Remote\RemoteWorkspaceView.cs" />
+    <Compile Include="..\MS3DPRINT.Manager.Desktop\Remote\RemoteWorkspaceView*.cs" Link="Remote\%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>
