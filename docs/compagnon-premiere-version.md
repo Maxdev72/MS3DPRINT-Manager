@@ -92,7 +92,7 @@ sont ponctuelles. L'utilisateur a confirmé le message « Propriétaire créé �
 après sa saisie directe dans Coolify. Les variables ont été exportées dans un
 processus Bash temporaire qui se termine après la commande ; elles ne sont pas
 enregistrées dans la configuration Coolify. La connexion avec ce compte sur
-cet hébergement reste à valider.
+cet hébergement a été confirmée dans Chrome : atelier privé visible, encore vide.
 Ne pas lancer de proxy Traefik/Caddy supplémentaire sur les ports 80/443 : le
 routage et les certificats existants sont gérés par Nginx. Aucun fichier des deux
 sites commerciaux n'a été modifié. Après déploiement, leurs conteneurs sont

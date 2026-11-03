@@ -124,7 +124,7 @@ internal static class MigrationMetadataAudit
         }
     }
 
-    private static void Walk(JsonElement value, string path, List<MigrationIssue> issues)
+    internal static void Walk(JsonElement value, string path, List<MigrationIssue> issues)
     {
         if (value.ValueKind == JsonValueKind.Object)
             foreach (var property in value.EnumerateObject())

@@ -171,6 +171,35 @@ réseau, de conversion de tous les anciens formats ni de commande d'activation.
 Un bilan favorable ne valide pas les règles comptables des modules non encore
 portés : ceux-ci restent indisponibles à la modification distante.
 
+### Préparation portable Windows vers Linux
+
+Une archive complète déjà vérifiée peut être convertie dans une nouvelle copie :
+
+```powershell
+dotnet src/MS3DPRINT.Manager.Server/bin/Debug/net10.0/MS3DPRINT.Manager.Server.dll --prepare-portable-migration C:/Temp/source.zip --sha256 EMPREINTE_SHA256
+```
+
+Cette commande conserve `source.zip` sous un nouveau dossier privé de
+`Server__StateRoot/migrations`, restaure les données, puis convertit uniquement
+les champs de chemin des schémas reconnus : fiches clients/projets/collections,
+anciennes fiches de l’historique, chemins et fiches contenus dans la corbeille,
+justificatifs des achats et factures des recettes dans les journaux JSONL.
+Les identifiants, dates, montants, champs inconnus et textes libres restent
+inchangés. La conversion porte sur une copie ; les journaux locaux ne sont
+jamais réécrits. Les chemins absolus, remontées et formats inconnus sont refusés.
+
+`transformations.json` conserve les champs modifiés et les empreintes avant/après
+de chaque fichier. `portable-report.json` indique les contrôles et anomalies.
+Une corbeille sans manifeste, des fichiers orphelins ou une collection dont le
+dossier est absent bloquent la préparation. Aucune ancienne fiche n’est retirée
+automatiquement : toute disposition particulière doit être décidée, consignée
+et préserver l’original séparément.
+
+Après conversion, `portable.zip` possède son propre manifeste et son SHA256.
+Il est restauré une seconde fois et contrôlé par le mécanisme de préparation
+existant. Le code 0 permet de revoir cette copie ; il n’active aucun atelier et
+ne constitue ni un transfert réseau ni une synchronisation du PC.
+
 ### Couverture
 
 Les tests utilisent uniquement des dossiers temporaires et des secrets générés

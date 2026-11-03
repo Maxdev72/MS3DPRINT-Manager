@@ -5,7 +5,7 @@ public partial class Program
     public static int Main(string[] args)
     {
         var createOwner = args.Contains("--create-owner", StringComparer.Ordinal);
-        var migration = args.Any(a => a is "--export-migration" or "--stage-migration");
+        var migration = args.Any(a => a is "--export-migration" or "--stage-migration" or "--prepare-portable-migration");
         if (createOwner && migration)
         {
             Console.Error.WriteLine("Exécutez la création du propriétaire et la préparation de migration séparément.");

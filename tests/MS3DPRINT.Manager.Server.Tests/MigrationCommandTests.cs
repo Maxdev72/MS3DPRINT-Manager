@@ -6,6 +6,26 @@ namespace MS3DPRINT.Manager.Server.Tests;
 public sealed class MigrationCommandTests
 {
     [Fact]
+    public void Portable_command_converts_a_private_copy_without_changing_the_configured_workspace()
+    {
+        using var host = new ServerFixture();
+        var (client, _) = MigrationTests.Seed(host.Workspace);
+        var profile = Path.Combine(host.Workspace, ".ms3dprint-manager", "clients", client.Id + ".json");
+        var json = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(profile))!;
+        json["RelativePath"] = @"01_CLIENTS\CLIENT_TEST";
+        File.WriteAllText(profile, json.ToJsonString());
+        var archive = Path.Combine(host.Root, "source.zip");
+        var hash = new Core.Storage.WorkspaceBackupService().Create(host.Workspace, archive, true).ArchiveSha256;
+        using var output = new StringWriter();
+        Assert.Equal(0, MigrationCommands.Execute(["--prepare-portable-migration", archive, "--sha256", hash], Storage(host), output));
+        var preparation = Assert.Single(Directory.GetDirectories(Path.Combine(host.State, "migrations")));
+        Assert.True(File.Exists(Path.Combine(preparation, "portable-report.json")));
+        Assert.True(File.Exists(Path.Combine(preparation, "portable.zip")));
+        Assert.Contains("Aucune activation", output.ToString());
+        Assert.Contains(@"01_CLIENTS\CLIENT_TEST", System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(profile))!["RelativePath"]!.GetValue<string>());
+    }
+
+    [Fact]
     public void Commands_prepare_in_private_state_and_leave_configured_workspace_unchanged()
     {
         using var host = new ServerFixture();
@@ -25,6 +45,7 @@ public sealed class MigrationCommandTests
     [Theory]
     [InlineData("--stage-migration")]
     [InlineData("--export-migration")]
+    [InlineData("--prepare-portable-migration")]
     [InlineData("--unknown")]
     public void Invalid_arguments_do_not_create_a_preparation(string argument)
     {
