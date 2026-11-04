@@ -61,9 +61,9 @@ DesktopApplication ; Desktop ne référence pas Windows.
 - [x] Suite Core complète + serveur + vérification coffre Windows et parcours
   Headless ; preuves stockées sous outputs/integrated-server-workspace.
 - [x] Revue globale, corriger puis vérifier uniquement les modifications finales.
-- [ ] Publier Windows, attendre fermeture normale si nécessaire, sauvegarder puis
+- [x] Publier Windows, attendre fermeture normale si nécessaire, sauvegarder puis
   remplacer l’EXE unique et comparer SHA256 ; aucun lancement supplémentaire.
-- [ ] Guide, limites, commit et push de la branche, sans déployer la production.
+- [x] Guide, limites, commit et push de la branche, sans déployer la production.
 
 ## État de validation — 4 novembre 2026
 
@@ -100,3 +100,14 @@ La revue finale ne relève plus de P1/P2. Rapport TRX local :
 L’atelier PC reste la copie la plus récente déclarée par l’utilisateur.
 Aucune migration de ses nouvelles données ni aucune modification de production
 n’est incluse dans cette livraison du parcours de connexion intégré.
+
+Livraison Windows du 4 novembre : publication PortableWinX64 réussie,
+`MS3DPRINT Manager.exe` remplacé après vérification de fermeture et accès
+exclusif. Un seul exécutable dans le dossier livré (139 447 612 octets).
+SHA256 publié/livré identique :
+`29CC14B2CA89B6DA430B958BCB9060E504F34B603B27CDD1A51121986998761B`.
+Source du binaire : `8e928a79f27cb72e93bcb362052e43140b651950`.
+L’ancienne version est sauvegardée uniquement sous outputs/backups.
+Aucun lancement réel supplémentaire, arrêt forcé ou accès de contrôle UI.
+Les nouvelles données PC n’ont pas été transférées au serveur ; le dossier
+de l’atelier, ses métadonnées et ses documents sont conservés.

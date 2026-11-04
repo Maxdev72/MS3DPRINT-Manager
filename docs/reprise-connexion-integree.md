@@ -78,3 +78,7 @@ avant une nouvelle migration vérifiée ; aucune copie serveur ancienne ne doit
 Validation finale du 4 novembre : 1 288 tests Core, 85 tests serveur,
 45 tests ciblés contrôleur/coffre ; aucun échec. Revue source acceptée.
 La suite Core contient les 11 cas ciblés de l’interface et de ses régressions.
+
+Exécutable livré le 4 novembre : source `8e928a79f27cb72e93bcb362052e43140b651950`,
+SHA256 `29CC14B2CA89B6DA430B958BCB9060E504F34B603B27CDD1A51121986998761B`.
+Les nouvelles données PC ne sont pas encore reprises sur le serveur.
