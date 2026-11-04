@@ -32,6 +32,7 @@ public partial class MainWindow
     /// <summary>Shows the 3D viewer inside the main window, over the current page, and loads a model when a path is given.</summary>
     private async void ShowModelViewer(string? path)
     {
+        if (IsServerWorkspace) { Notify("Visualiseur indisponible en mode serveur."); return; }
         DismissSearchResults();
         if (!ViewerWorkspacePanel.IsVisible)
         {
@@ -63,7 +64,7 @@ public partial class MainWindow
                     .Select(printer => new ViewerPrinter(printer.DisplayName, printer.BuildVolume)).ToList();
             });
             _modelViewer.ModelLoaded += name => PageSubtitle.Text = name;
-            _modelViewer.FileOpened += path => _ = RememberOpenedFileAsync(WorkspaceRoot, path);
+            _modelViewer.FileOpened += path => { if (!IsServerWorkspace) _ = RememberOpenedFileAsync(WorkspaceRoot, path); };
             _modelViewer.EstimateRequested += StartEstimateFromModel;
             _modelViewer.ImageCaptured += SaveViewerCapture;
             ViewerWorkspacePanel.Child = _modelViewer;

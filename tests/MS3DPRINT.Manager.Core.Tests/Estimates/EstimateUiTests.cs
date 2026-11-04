@@ -2683,7 +2683,7 @@ public sealed partial class EstimateUiTests : IDisposable
                 history.IsExpanded = true;
                 await Task.Delay(250); Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick();
                 var rail = window.FindControl<Border>("EstimatePriceRail")!;
-                Assert.True(window.FindControl<ScrollViewer>("EstimateFormScroll")!.Bounds.Height >= 160);
+                Assert.True(window.FindControl<ScrollViewer>("EstimateFormScroll")!.Bounds.Height >= 160, $"Width {width}: form height {window.FindControl<ScrollViewer>("EstimateFormScroll")!.Bounds.Height}");
                 Assert.True(history.TranslatePoint(default, window)!.Value.Y >= rail.TranslatePoint(default, window)!.Value.Y + rail.Bounds.Height);
                 Assert.True(history.Bounds.Width > rail.Bounds.Width * 2);
                 using var bitmap = window.CaptureRenderedFrame(); Assert.NotNull(bitmap);

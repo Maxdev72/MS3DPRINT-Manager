@@ -21,18 +21,10 @@ namespace MS3DPRINT.Manager.Desktop;
 /// <summary>Settings page and changelog.</summary>
 public partial class MainWindow
 {
-    private Window? _remoteWorkspaceWindow;
-
-    private void OpenRemoteWorkspace()
+    private async void OpenRemoteWorkspace()
     {
-        if (_remoteWorkspaceWindow is { } existing) { existing.Activate(); return; }
-        var cache = new MS3DPRINT.Manager.Core.Remote.RemoteWorkspaceCache(Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MS3DPRINT Manager", "remote", "copy.json"));
-        var view = new MS3DPRINT.Manager.Native.RemoteWorkspaceView(cache: cache, confirmRemoval: label => ConfirmRemovalWindow.AskAsync(_remoteWorkspaceWindow!, label, "La tâche sera retirée du projet sur le serveur."));
-        var window = new Window { Title = "MS3DForge · Atelier distant", Width = 820, Height = 850, MinWidth = 420, MinHeight = 540, WindowStartupLocation = WindowStartupLocation.CenterOwner, Content = view };
-        _remoteWorkspaceWindow = window;
-        window.Closed += (_, _) => { view.Dispose(); _remoteWorkspaceWindow = null; };
-        window.Show(this);
+        if (!IsServerWorkspace) await ChangeWorkspaceModeAsync();
+        else ServerLoginPanel.IsVisible = true;
     }
 
     private async void Changelog_Click(object? sender, RoutedEventArgs e)

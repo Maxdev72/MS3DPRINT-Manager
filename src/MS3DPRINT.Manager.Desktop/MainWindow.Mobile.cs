@@ -30,6 +30,7 @@ public partial class MainWindow
     /// <summary>Publishes the picture in the background. Quick successive requests (every list reload asks) are merged.</summary>
     private void RequestMobileSnapshot(bool force = false)
     {
+        if (IsServerWorkspace) return;
         var root = WorkspaceRoot;
         if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root)) return;
         if (!force && DateTimeOffset.Now - _mobilePublishedAt < MobilePublishMinimumGap) return;

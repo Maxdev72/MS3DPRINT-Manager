@@ -23,6 +23,7 @@ internal static class Program
         var ocr = new MS3DPRINT.Manager.Windows.WindowsOcrEngine();
         if (ocr.IsAvailable) MS3DPRINT.Manager.Core.Recognition.DocumentReader.Ocr = ocr;
         MS3DPRINT.Manager.Core.Recognition.DocumentReader.Rasterizer = new MS3DPRINT.Manager.Windows.WindowsPdfRasterizer();
+        DesktopApplication.RemoteSessionStoreFactory = () => new MS3DPRINT.Manager.Windows.Remote.WindowsRemoteSessionStore();
         DesktopApplication.ReduceMotion = !ClientAreaAnimationsEnabled();
         DesktopApplication.BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }

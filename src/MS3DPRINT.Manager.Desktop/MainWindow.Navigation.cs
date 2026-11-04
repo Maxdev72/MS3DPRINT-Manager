@@ -38,7 +38,7 @@ public partial class MainWindow
         var dashboard = destination == "Accueil";
         DashboardStats.IsVisible = dashboard;
         DashboardContent.IsVisible = dashboard;
-        if (dashboard) _ = LoadRecentFilesAsync();
+        if (dashboard && !IsServerWorkspace) _ = LoadRecentFilesAsync();
         ProjectsWorkspacePanel.IsVisible = destination == "Projets";
         ClientsWorkspacePanel.IsVisible = destination == "Clients";
         CollectionsWorkspacePanel.IsVisible = destination == "Collections";
@@ -124,6 +124,7 @@ public partial class MainWindow
 
     private async Task NavigateToWorkspaceAsync(string destination)
     {
+        if (IsServerWorkspace) { await NavigateServerAsync(destination); return; }
         if (!await EnsureWorkspaceAvailableAsync()) return;
         ShowWorkspace(destination);
         PageTitle.Text = destination;
@@ -184,6 +185,7 @@ public partial class MainWindow
 
         if (e.Key == Key.K)
         {
+            if (IsServerWorkspace) return;
             SearchBox.Focus();
             SearchBox.SelectAll();
             e.Handled = true;

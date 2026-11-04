@@ -22,7 +22,7 @@ public partial class MainWindow
     private NavigationStop? _viewerHistoryParent;
     private NavigationStop? CurrentNavigationStop => _navigationPosition >= 0 ? _navigationHistory[_navigationPosition] : null;
     private bool MatchesNavigationContext(string root, string? key)
-        => string.Equals(root, WorkspaceRoot, StringComparison.OrdinalIgnoreCase) && CurrentNavigationStop?.Key == key;
+        => !IsServerWorkspace && string.Equals(root, WorkspaceRoot, StringComparison.OrdinalIgnoreCase) && CurrentNavigationStop?.Key == key;
 
     private void InitializeNavigationHistory()
     {
@@ -33,7 +33,7 @@ public partial class MainWindow
 
     private void EnsureNavigationWorkspace()
     {
-        var root = WorkspaceRoot;
+        var root = IsServerWorkspace ? "server:" + _serverConnection?.Server + "|" + _serverConnection?.Account : WorkspaceRoot;
         if (string.Equals(root, _navigationWorkspaceRoot, StringComparison.OrdinalIgnoreCase)) return;
         _navigationWorkspaceRoot = root;
         _navigationHistory.Clear();

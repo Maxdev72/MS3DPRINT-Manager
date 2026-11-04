@@ -54,11 +54,12 @@
               <Ellipse Width="8" Height="8" Fill="{DynamicResource SuccessBrush}" VerticalAlignment="Center" />
               <StackPanel Classes="nav-label" Spacing="1">
                 <TextBlock x:Name="WorkspaceNameText" Text="Mon atelier" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="148" />
-                <TextBlock Text="Espace de travail local" Classes="caption" />
+                <TextBlock x:Name="WorkspaceSourceText" Text="Espace de travail local" Classes="caption" TextWrapping="Wrap" MaxWidth="148" />
               </StackPanel>
             </StackPanel>
           </Border>
           <StackPanel x:Name="FooterNavigation">
+            <Button x:Name="LocalServerModeButton" Classes="nav-item" Click="WorkspaceMode_Click" IsVisible="False" AutomationProperties.Name="Atelier serveur" ToolTip.Tip="Ouvrir l’atelier serveur indépendant"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconProjects}" /><TextBlock Classes="nav-label" Text="Atelier serveur" /></StackPanel></Button>
             <Button x:Name="NotificationCenterButton" Classes="nav-item" Click="NotificationCenter_Click" AutomationProperties.Name="Notifications"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconHistory}" /><TextBlock Classes="nav-label" Text="Notifications" /><TextBlock x:Name="NotificationCount" Classes="nav-label" FontWeight="SemiBold" Foreground="{DynamicResource CyanBrush}" IsVisible="False" /></StackPanel></Button>
             <Button Classes="nav-item" Tag="Paramètres" Click="NavigationButton_Click" AutomationProperties.Name="Paramètres"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconSettings}" /><TextBlock Classes="nav-label" Text="Paramètres" /></StackPanel></Button>
           </StackPanel>
@@ -66,7 +67,7 @@
       </Grid>
     </Border>
     <Grid x:Name="CentralWorkspace" Grid.Column="1" Margin="34,28" Width="1400" MaxWidth="1400" HorizontalAlignment="Center" RowDefinitions="Auto,Auto,*" RowSpacing="24">
-      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20">
+      <Grid x:Name="WorkspaceHeader" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="20" RowSpacing="14">
         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14" VerticalAlignment="Center">
           <Border Classes="module-mark" VerticalAlignment="Center"><Path x:Name="PageIcon" Classes="icon" Data="{StaticResource IconHome}" HorizontalAlignment="Center" /></Border>
         <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
@@ -83,6 +84,26 @@
             <Button x:Name="ClearGlobalSearchButton" Grid.Column="2" Classes="tool" IsVisible="False" Click="ClearGlobalSearch_Click" Padding="4" MinWidth="24" MinHeight="24" AutomationProperties.Name="Effacer la recherche" ToolTip.Tip="Effacer la recherche"><Path Classes="icon" Data="{StaticResource IconClose}" Width="14" Height="14" /></Button>
           </Grid>
         </Border>
+        <StackPanel x:Name="ServerConnectionBar" Grid.Row="1" Grid.ColumnSpan="2" Spacing="10">
+          <WrapPanel ItemSpacing="10" LineSpacing="8">
+            <TextBlock x:Name="ServerConnectionStatus" Text="Atelier serveur · connexion requise" VerticalAlignment="Center" Classes="caption" TextWrapping="Wrap" />
+            <Button x:Name="ServerConnectionButton" Content="Connexion" Click="ServerConnection_Click" Classes="ghost" />
+            <Button x:Name="ServerRefreshButton" Content="Actualiser" Click="ServerRefresh_Click" Classes="ghost" />
+            <Button x:Name="ServerReceiptButton" Content="Vérifier le reçu" Click="ServerReceipt_Click" IsVisible="False" />
+            <Button x:Name="ServerLogoutButton" Content="Déconnexion" Click="ServerLogout_Click" Classes="ghost" />
+            <Button x:Name="WorkspaceModeButton" Content="Atelier local" Click="WorkspaceMode_Click" Classes="ghost" />
+          </WrapPanel>
+          <StackPanel x:Name="ServerLoginPanel" Spacing="10">
+            <TextBlock Text="Connectez-vous à votre atelier serveur. La copie reste consultable hors connexion." Classes="muted" TextWrapping="Wrap" />
+            <WrapPanel ItemSpacing="12" LineSpacing="10">
+              <StackPanel Spacing="5"><TextBlock Text="Serveur HTTPS" Classes="caption" /><TextBox x:Name="ServerAddress" Text="https://ms3dforge.fr" Width="250" AutomationProperties.Name="Serveur HTTPS" /></StackPanel>
+              <StackPanel Spacing="5"><TextBlock Text="Compte" Classes="caption" /><TextBox x:Name="ServerAccount" Width="180" AutomationProperties.Name="Compte serveur" /></StackPanel>
+              <StackPanel Spacing="5"><TextBlock Text="Mot de passe" Classes="caption" /><TextBox x:Name="ServerPassword" PasswordChar="●" Width="180" AutomationProperties.Name="Mot de passe" /></StackPanel>
+              <Button x:Name="ServerLoginButton" Content="Se connecter" Classes="primary-action" Click="ServerLogin_Click" VerticalAlignment="Bottom" />
+            </WrapPanel>
+            <CheckBox x:Name="ServerRemember" Content="Mémoriser la connexion sur cet appareil (8 heures maximum)" IsChecked="True" />
+          </StackPanel>
+        </StackPanel>
       </Grid>
       <Border x:Name="DashboardStats" Grid.Row="1" Classes="workbench-banner">
         <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="22" ColumnSpacing="22">
@@ -98,8 +119,8 @@
             </StackPanel>
           </Grid>
           <StackPanel Grid.Column="1" Spacing="10" Width="212" VerticalAlignment="Center">
-            <Button Classes="primary-action" Click="CreateProject_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10"><Path Classes="icon" Data="{StaticResource IconPlus}" /><TextBlock Grid.Column="1" Text="Nouveau projet" /><Path Grid.Column="2" Classes="icon action-arrow" Data="{StaticResource IconArrowRight}" /></Grid></Button>
-            <Button Click="DashboardEstimate_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"><StackPanel Orientation="Horizontal" Spacing="10"><Path Classes="icon" Data="{StaticResource IconEstimates}" /><TextBlock Text="Préparer un devis" /></StackPanel></Button>
+            <Button x:Name="DashboardNewProject" Classes="primary-action" Click="CreateProject_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10"><Path Classes="icon" Data="{StaticResource IconPlus}" /><TextBlock Grid.Column="1" Text="Nouveau projet" /><Path Grid.Column="2" Classes="icon action-arrow" Data="{StaticResource IconArrowRight}" /></Grid></Button>
+            <Button x:Name="DashboardNewEstimate" Click="DashboardEstimate_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"><StackPanel Orientation="Horizontal" Spacing="10"><Path Classes="icon" Data="{StaticResource IconEstimates}" /><TextBlock Text="Préparer un devis" /></StackPanel></Button>
           </StackPanel>
           <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="*,*,*" ColumnSpacing="12">
             <Button Classes="dashboard-stage" Tag="" Click="DashboardStage_Click"><Grid ColumnDefinitions="Auto,*" ColumnSpacing="14"><TextBlock x:Name="ProjectCountText" Text="—" Classes="metric brand-heading" /><StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center"><TextBlock Text="Projets" FontWeight="SemiBold" /><TextBlock Text="Ouvrir tous les dossiers" Classes="caption" TextWrapping="Wrap" /></StackPanel></Grid></Button>
@@ -129,8 +150,8 @@
             <StackPanel x:Name="RecentFilesList" Spacing="6" />
             <Border Height="1" Background="{DynamicResource SubtleBorderBrush}" Margin="0,4" />
             <TextBlock Text="Accès atelier" Classes="card-title" />
-            <Button Click="DashboardCreateClient_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"><StackPanel Orientation="Horizontal" Spacing="10"><Path Classes="icon icon-sm" Data="{StaticResource IconClients}" /><TextBlock Text="Nouveau client" /></StackPanel></Button>
-            <Button Click="OpenThreeDViewer_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"><StackPanel Orientation="Horizontal" Spacing="10"><Path Classes="icon icon-sm" Data="{StaticResource IconCube}" /><TextBlock Text="Ouvrir le visualiseur 3D" /></StackPanel></Button>
+            <Button x:Name="DashboardNewClient" Click="DashboardCreateClient_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"><StackPanel Orientation="Horizontal" Spacing="10"><Path Classes="icon icon-sm" Data="{StaticResource IconClients}" /><TextBlock Text="Nouveau client" /></StackPanel></Button>
+            <Button x:Name="DashboardViewer" Click="OpenThreeDViewer_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"><StackPanel Orientation="Horizontal" Spacing="10"><Path Classes="icon icon-sm" Data="{StaticResource IconCube}" /><TextBlock Text="Ouvrir le visualiseur 3D" /></StackPanel></Button>
           </StackPanel>
           </ScrollViewer>
         </Border>

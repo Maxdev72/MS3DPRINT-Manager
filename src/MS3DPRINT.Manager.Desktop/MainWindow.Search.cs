@@ -114,6 +114,7 @@ public partial class MainWindow
 
     private async void SearchBox_TextChanged(object? sender, TextChangedEventArgs e)
     {
+        if (IsServerWorkspace) return;
         if (SearchBox is null || SearchResultsPanel is null) return;
         _searchIndex = -1;
         var query = SearchBox.Text?.Trim() ?? string.Empty;
@@ -173,6 +174,7 @@ public partial class MainWindow
 
     private async void SearchResult_Click(object? sender, RoutedEventArgs e)
     {
+        if (IsServerWorkspace) return;
         if (sender is not Button { Tag: MS3DPRINT.Manager.Core.Search.GlobalSearchResult result }) return;
         DismissSearchResults();
         SearchBox.Text = string.Empty;

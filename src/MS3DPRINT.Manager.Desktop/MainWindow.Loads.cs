@@ -13,7 +13,7 @@ public partial class MainWindow
     }
 
     private bool IsWorkspaceLoadCurrent(WorkspaceLoad load)
-        => _workspaceLoadVersions.GetValueOrDefault(load.Surface) == load.Version
+        => !IsServerWorkspace && !_serverClosed && _workspaceLoadVersions.GetValueOrDefault(load.Surface) == load.Version
             && string.Equals(load.Root, WorkspaceRoot, StringComparison.OrdinalIgnoreCase)
             && (!load.TrackNavigation || CurrentNavigationStop?.Key == load.NavigationKey);
 }

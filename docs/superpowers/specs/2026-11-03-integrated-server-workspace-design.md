@@ -64,3 +64,19 @@ Tests de connexion restaurée/révoquée, stockage secret, journal avant envoi,
 fermeture/reprise, panne, conflit, séparation serveur/local et navigation réelle
 Headless. Publication Windows en un seul « MS3DPRINT Manager.exe », sauvegarde
 précédente sous outputs/backups. Aucun nouveau compte ou déploiement public.
+
+## Priorité de reprise — précision utilisateur du 4 novembre
+
+L’utilisateur confirme que les données PC (clients, projets, tâches et fichiers)
+sont plus récentes que la copie serveur. Au premier lancement, en l’absence
+d’un choix de mode explicite enregistré, un atelier local contenant des données
+doit donc rester ouvert en mode local. Le serveur ne doit pas être présenté
+comme une migration récente de ces données. Un PC sans atelier existant garde
+la connexion serveur au démarrage. La détection locale est bornée, en lecture
+seule et faite avant l’activation du mode, sans explorer le dépôt de développement.
+
+La connexion intégrée reste disponible par un choix explicite. Un avertissement
+précise que l’ouverture du serveur ne transfère pas les données du PC et que
+sa copie peut être antérieure. Aucun remplacement ou import aveugle n’est permis.
+Une migration ultérieure doit sauvegarder, comparer et vérifier la reprise des
+évolutions PC avant de faire du serveur la référence opérationnelle.

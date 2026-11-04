@@ -24,6 +24,7 @@ public partial class MainWindow
 
     private async void CreateClient_Click(object? sender, RoutedEventArgs e)
     {
+        if (IsServerWorkspace) { await EditServerClientAsync(null); return; }
         var root = WorkspaceRoot;
         var usedCodes = await Task.Run(() => new WorkspaceClientCreator().UsedCodes(root));
         var dialog = new CreateClientWindow(usedCodes: usedCodes);
@@ -59,6 +60,7 @@ public partial class MainWindow
 
     private async Task LoadClientsAsync()
     {
+        if (IsServerWorkspace) { _serverClientDetail = null; RenderServerClients(); return; }
         RememberWorkspace("Clients");
         var workspaceRoot = WorkspaceRoot;
         var load = StartWorkspaceLoad("clients", workspaceRoot);
@@ -94,6 +96,7 @@ public partial class MainWindow
 
     private void RenderClients()
     {
+        if (IsServerWorkspace) { RenderServerClients(); return; }
         if (!_clientListMode || _clientCatalogUnavailable) return;
         ClientList.Children.Clear();
         var text = ClientFilterBox.Text?.Trim() ?? string.Empty;

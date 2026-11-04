@@ -188,7 +188,7 @@ public partial class MainWindow
         return error is null;
     }
 
-    private bool ProjectTaskContextCurrent(string root) => IsVisible && ProjectsWorkspacePanel.IsVisible && _projectListMode && _projectTrackingView && string.Equals(root, WorkspaceRoot, StringComparison.OrdinalIgnoreCase);
+    private bool ProjectTaskContextCurrent(string root) => !IsServerWorkspace && IsVisible && ProjectsWorkspacePanel.IsVisible && _projectListMode && _projectTrackingView && string.Equals(root, WorkspaceRoot, StringComparison.OrdinalIgnoreCase);
 
     private async Task<string?> SaveProjectTaskAsync(string root, ProjectSummary project, Func<ProjectProfileStore, ProjectProfile, ProjectProfile> change, Action? onSaved = null)
     {

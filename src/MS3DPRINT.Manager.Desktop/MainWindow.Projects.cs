@@ -42,6 +42,7 @@ public partial class MainWindow
 
     private async void CreateProject_Click(object? sender, RoutedEventArgs e)
     {
+        if (IsServerWorkspace) { await EditServerProjectAsync(null); return; }
         var root = WorkspaceRoot;
         var clients = await Task.Run(() => new WorkspaceClientReader().Load(root));
         var dialog = new CreateProjectWindow(clients);
@@ -105,6 +106,7 @@ public partial class MainWindow
 
     private async Task LoadProjectsAsync()
     {
+        if (IsServerWorkspace) { _serverProjectDetail = null; RenderServerProjects(); return; }
         RememberWorkspace("Projets");
         var workspaceRoot = WorkspaceRoot;
         var load = StartWorkspaceLoad("projects", workspaceRoot);
@@ -150,6 +152,7 @@ public partial class MainWindow
 
     private void RenderProjects()
     {
+        if (IsServerWorkspace) { RenderServerProjects(); return; }
         if (!_projectListMode || _projectCatalogUnavailable) return;
         ProjectListViewButton.Classes.Set("selected", !_projectTrackingView && !_projectCalendarView);
         ProjectTrackingViewButton.Classes.Set("selected", _projectTrackingView);

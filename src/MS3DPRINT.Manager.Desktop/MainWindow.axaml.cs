@@ -25,7 +25,7 @@ public partial class MainWindow : Window
     private readonly MS3DPRINT.Manager.Core.Storage.WorkspaceLocation _workspaceLocation = new();
 
     /// <summary>The workspace in use: the environment override, else the folder chosen in the settings, else the default.</summary>
-    private string WorkspaceRoot => _workspaceLocation.Resolve();
+    private string WorkspaceRoot => IsServerWorkspace ? throw new InvalidOperationException("L’atelier local est inaccessible en mode serveur.") : _workspaceLocation.Resolve();
 
     private CancellationTokenSource? _searchCancellation;
 
@@ -47,8 +47,19 @@ public partial class MainWindow : Window
 
     private readonly WindowPlacementStore _placement = new(Environment.GetEnvironmentVariable("MS3DPRINT_WINDOW_FILE"));
 
-    public MainWindow()
+    public MainWindow() : this(null, null, null, null, useHostDefaults: true) { }
+
+    public MainWindow(HttpClient http, MS3DPRINT.Manager.Core.Remote.RemoteWorkspaceCache cache, string modePreferencePath)
+        : this(http, cache, modePreferencePath, null, useHostDefaults: false) { }
+
+    public MainWindow(HttpClient http, MS3DPRINT.Manager.Core.Remote.RemoteWorkspaceCache cache, string modePreferencePath,
+        MS3DPRINT.Manager.Core.Remote.IRemoteSessionStore sessions)
+        : this(http, cache, modePreferencePath, sessions, useHostDefaults: false) { }
+
+    private MainWindow(HttpClient? http, MS3DPRINT.Manager.Core.Remote.RemoteWorkspaceCache? cache, string? modePreferencePath,
+        MS3DPRINT.Manager.Core.Remote.IRemoteSessionStore? sessions, bool useHostDefaults)
     {
+        ConfigureWorkspaceMode(http, cache, modePreferencePath, sessions, useHostDefaults);
         InitializeComponent();
         InitializeNotifications();
         InitializeShellPresentation();
@@ -56,6 +67,7 @@ public partial class MainWindow : Window
         InitializeEstimateV2();
         InitializeEstimateDrafts();
         InitializeNavigationHistory();
+        InitializeServerWorkspace();
         MS3DPRINT.Estimator.Parallelism.Apply(new PerformanceSettings().Load());
         if (DesktopApplication.ReduceMotion) Classes.Add("reduce-motion");
         if (_placement.Load() is { } saved)
@@ -78,7 +90,7 @@ public partial class MainWindow : Window
         }
         PositionChanged += (_, e) => { if (WindowState == WindowState.Normal) _normalPosition = e.Point; };
         Closing += (_, _) => SaveWindowPreferences();
-        Closed += (_, _) => { CancelFileRead(); _searchCancellation?.Cancel(); _searchCancellation?.Dispose(); _searchCancellation = null; };
+        Closed += (_, _) => { DisposeServerWorkspace(); _mobilePublishTimer?.Stop(); CancelFileRead(); _searchCancellation?.Cancel(); _searchCancellation?.Dispose(); _searchCancellation = null; };
     }
 
     private PixelPoint? _normalPosition;
@@ -113,6 +125,7 @@ public partial class MainWindow : Window
     private async void Window_Opened(object? sender, EventArgs e)
     {
         EnsureOnScreen();
+        if (IsServerWorkspace) { await PreloadAsync(); return; }
         UpdateCentralWorkspaceWidth(Bounds.Width);
         var shortcut = 1;
         // Ctrl+1 to Ctrl+9, then Ctrl+0 for the tenth page
@@ -175,6 +188,7 @@ public partial class MainWindow : Window
     /// <summary>Reads the dashboard data once, so a splash screen can wait for it before showing the window.</summary>
     public async Task PreloadAsync(bool force = false)
     {
+        if (IsServerWorkspace) { await PreloadServerAsync(); return; }
         var workspaceRoot = WorkspaceRoot;
         if (!Directory.Exists(workspaceRoot)) { _preloaded = false; return; }
         if (_preloaded && !force && _preloadedRoot == workspaceRoot) return;

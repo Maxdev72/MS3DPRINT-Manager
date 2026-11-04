@@ -31,6 +31,7 @@ public partial class MainWindow
 
     private void RefreshWorkspaceIdentity()
     {
+        if (IsServerWorkspace) { WorkspaceNameText.Text = "Atelier serveur"; ToolTip.SetTip(WorkspaceNameText, _serverConnection?.Server?.AbsoluteUri ?? "https://ms3dforge.fr"); return; }
         var root = WorkspaceRoot;
         WorkspaceNameText.Text = new DirectoryInfo(root).Name;
         ToolTip.SetTip(WorkspaceNameText, root);

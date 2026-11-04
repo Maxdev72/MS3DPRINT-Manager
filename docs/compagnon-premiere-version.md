@@ -1,6 +1,7 @@
 # Première version du compagnon MS3DForge
 
-Candidate du 2 novembre 2026, branche `feature/ms3dforge-remote`.
+Première candidate du 2 novembre 2026, mise à jour PC du 4 novembre 2026,
+branche `feature/ms3dforge-remote`.
 
 ## Fonctions disponibles
 
@@ -10,12 +11,16 @@ et modifier les clients, créer les projets, modifier leur état, échéance, pr
 et notes, puis ajouter, modifier, terminer, déplacer et retirer leurs tâches.
 La référence des nouveaux projets est attribuée par les règles de Manager.
 
-Sur PC : **Paramètres → Atelier → Accès serveur**. Sur Android : onglet
-**Serveur**. Ces deux écrans permettent la connexion, la consultation des fiches,
-la création de clients/projets et la gestion des tâches. La modification des
-coordonnées clients et des champs projet est disponible sur le web dans cette
-candidate. L'adresse à saisir est la racine HTTPS du serveur, par exemple
-`https://ms3dforge.fr`, une fois le déploiement effectué.
+Sur PC, la connexion est intégrée à la fenêtre principale et les pages habituelles
+**Accueil**, **Clients** et **Projets** utilisent l’atelier serveur. Les formulaires
+natifs permettent de créer et modifier les champs clients/projets exposés par
+l’API, puis de gérer les tâches. Les champs non pris en charge restent en
+consultation seule. Le bouton **Atelier local** donne un accès explicite à
+l’atelier historique indépendant. Voir le [guide de connexion intégrée](connexion-integree-manager.md).
+
+Sur Android, l’APK précédent conserve son onglet **Serveur** avec consultation,
+création clients/projets et gestion des tâches. Aucun nouvel APK n’est livré
+par l’intégration PC du 4 novembre. L’adresse reste `https://ms3dforge.fr`.
 
 Les modifications nécessitent une connexion. Une version périmée est refusée
 sans écraser la version serveur. Après un envoi dont le résultat est inconnu,
@@ -26,8 +31,8 @@ Un reçu incertain nécessite un contrôle manuel ; il n'est jamais rejoué à l
 ## Limites de cette candidate
 
 - L'atelier local existant et l'atelier serveur restent distincts. Il n'y a
-  pas de fusion automatique avec l’atelier local historique. Dans la vue
-  distante PC, les clients/projets/tâches sont désormais actualisés toutes les
+  pas de fusion automatique avec l’atelier local historique. Dans le mode
+  serveur PC, les clients/projets/tâches sont désormais actualisés toutes les
   30 secondes après connexion et la copie de consultation persiste sur ce PC.
   L’atelier réel a été repris le 3 novembre 2026 : 14 clients et 20 projets,
   avec sauvegarde vérifiée conservée.
@@ -35,11 +40,11 @@ Un reçu incertain nécessite un contrôle manuel ; il n'est jamais rejoué à l
   présence ne rend pas les modules correspondants éditables à distance :
   fichiers, estimateur, devis, factures, stocks et imprimantes restent à porter.
   La parité complète est une étape ultérieure.
-- La session et les brouillons restent en mémoire : fermer la vue demande
-  une nouvelle connexion et perd les brouillons. Sur PC, la dernière copie
+- Les brouillons de formulaire restent en mémoire. La dernière copie
   clients/projets/tâches et l’identifiant d’une commande incertaine persistent
-  séparément. Web et Android conservent leur état seulement en mémoire.
-  Ne jamais saisir à nouveau une opération dont on ignore le résultat.
+  séparément sur PC. La session PC peut être mémorisée dans le coffre Windows
+  pendant sa validité de huit heures au maximum ; aucun mot de passe n’est
+  enregistré. Ne jamais ressaisir une opération dont on ignore le résultat.
 - L'APK est une candidate installable pour essai, sans validation sur téléphone
   physique. Les tests d'interface utilisent Avalonia Headless.
 - Un seul serveur doit écrire dans un atelier. Ne jamais partager son volume avec
@@ -132,36 +137,33 @@ conteneur. Cet adaptateur n'est pas livré. Les cookies de production restent
 Secure/HttpOnly et les clients natifs exigent HTTPS. Ce contrôle local ne vaut
 pas validation du certificat public ni test réel sur Android.
 
-## Synchronisation PC livrée le 3 novembre 2026
+## Intégration PC du 4 novembre 2026
 
-Ouvrir **Paramètres → Atelier → Accès serveur**, se connecter avec le compte du
-serveur. Tant que cette fenêtre reste ouverte et la session valide, les lectures
-sont automatiques toutes les 30 secondes. Les actions continuent à utiliser les
-commandes HTTPS déjà déployées ; aucun nouveau déploiement serveur n’est requis.
-Les modifications du site apparaissent au prochain cycle. Le bouton
-**Actualiser le serveur** permet une lecture immédiate et une reprise explicite
-du brouillon après conflit. Une lecture en arrière-plan ne change pas la version
-sur laquelle un brouillon de tâche a été commencé.
+La connexion et les données distantes se trouvent désormais dans la fenêtre
+principale. Sur un PC disposant déjà de données et sans mode explicitement
+choisi auparavant, le premier lancement conserve l’atelier local : ses données
+sont actuellement plus récentes que la copie serveur. Ouvrir le mode serveur
+ne les importe pas ; leur reprise doit être comparée et vérifiée séparément. L’ancien accès par fenêtre d’atelier séparée est remplacé.
+Les listes, fiches et formulaires restent natifs ; aucun navigateur n’est
+nécessaire. Le bandeau affiche le serveur, le compte et l’état de connexion.
+Les modules non raccordés sont désactivés dans ce mode.
 
-La copie PC est enregistrée dans
-`%LOCALAPPDATA%/MS3DPRINT Manager/remote/copy.json`, avec le serveur, le nom du
-compte et la date de lecture, sans mot de passe ni jeton. Il s’agit de données
-métier locales lisibles par le compte Windows, pas d’une sauvegarde chiffrée.
-Elle reste distincte de Nextcloud et de l’atelier local. La réouverture de la
-fenêtre permet de consulter cette dernière copie sans se connecter. Une coupure
-bloque les écritures et conserve la dernière vue ; les lectures reprennent
-automatiquement au retour du réseau si la session reste valide. Après expiration
-ou fermeture, se reconnecter avec son mot de passe.
+La copie, le journal avant envoi et les lectures périodiques du lot du
+3 novembre sont réutilisés par un contrôleur commun. La session restaurée
+est vérifiée auprès du serveur ; une révocation ou expiration demande une
+reconnexion. Une erreur du coffre n’empêche pas l’ouverture de la fenêtre.
 
-Avant un envoi sur PC, l’identifiant de commande est enregistré durablement.
-Une réponse perdue ou une fermeture pendant l’envoi conserve cet identifiant et
-bloque les nouvelles commandes jusqu’à la vérification du reçu. Aucun envoi
-n’est rejoué automatiquement. Une copie illisible ou un journal impossible à
-écrire bloque les envois ; une seconde instance ne peut pas remplacer le
-journal de la première. Un reçu absent ou encore incertain exige un contrôle
-du serveur ; il n’autorise pas à ressaisir aveuglément l’opération.
+La reprise explicite d’un formulaire vérifie son reçu avant tout nouvel envoi.
+Un reçu terminé avec succès confirme l’enregistrement ; un conflit conserve
+les champs et la nouvelle version n’est adoptée qu’après cette reprise.
+Le passage entre ateliers refuse les opérations encore actives et les
+anciennes réponses asynchrones ne remplacent pas le nouvel affichage.
 
-**Se déconnecter** révoque la session et oublie la copie persistante ordinaire ;
-une commande incertaine reste conservée pour vérification au même compte et
-serveur. Les fichiers, factures, stocks et autres modules ne sont pas synchronisés
-par ce lot. L’exécutable livré conserve le nom `MS3DPRINT Manager.exe`.
+La copie reste dans `%LOCALAPPDATA%/MS3DPRINT Manager/remote/copy.json`,
+sans mot de passe ni jeton. Elle contient des données métier locales lisibles
+par le compte Windows ; ce n’est pas une sauvegarde chiffrée. Les sessions
+mémorisées utilisent le gestionnaire d’identifiants Windows.
+
+Cette évolution réutilise l’API de production existante et ne nécessite pas
+de redéploiement du serveur. Les deux sites commerciaux restent hors périmètre.
+Le [guide détaillé](connexion-integree-manager.md) décrit le parcours et les limites.
