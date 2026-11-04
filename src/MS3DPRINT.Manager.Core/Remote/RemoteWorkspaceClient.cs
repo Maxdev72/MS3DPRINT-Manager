@@ -21,6 +21,7 @@ public sealed class RemoteWorkspaceClient
     private readonly HttpClient _http;
     private readonly Uri _server;
     private string? _token;
+    private string? _account;
     private DateTimeOffset _expiresAt;
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
@@ -43,8 +44,27 @@ public sealed class RemoteWorkspaceClient
         var session = await SendAsync<LoginResponse>(HttpMethod.Post, "auth/login", new { name, password }, cancellationToken: cancellationToken, authenticated: false);
         if (string.IsNullOrWhiteSpace(session.AccessToken) || session.ExpiresIn <= 0 || session.ExpiresIn > 31536000)
             throw new RemoteWorkspaceException(RemoteFailure.InvalidResponse, "Réponse de connexion invalide. Mettez l’application à jour si nécessaire.");
+        _account = name.Trim();
         _token = session.AccessToken;
         _expiresAt = DateTimeOffset.UtcNow.AddSeconds(session.ExpiresIn);
+    }
+
+    public RemoteDeviceSession CaptureSession(string account)
+    {
+        if (!string.Equals(account.Trim(), _account, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Le compte ne correspond pas à la session active.", nameof(account));
+        if (!IsAuthenticated || _expiresAt > DateTimeOffset.UtcNow.AddHours(8))
+            throw new RemoteWorkspaceException(RemoteFailure.Unauthorized, "Session native invalide ou expirée.");
+        return new RemoteDeviceSession(_server.AbsoluteUri, account, _token!, _expiresAt);
+    }
+
+    public void RestoreSession(RemoteDeviceSession session)
+    {
+        ForgetSession();
+        if (new Uri(session.Server) != _server || session.ExpiresAt <= DateTimeOffset.UtcNow
+            || session.ExpiresAt > DateTimeOffset.UtcNow.AddHours(8))
+            throw new RemoteWorkspaceException(RemoteFailure.Unauthorized, "Session native invalide ou expirée.");
+        _account = session.Account.Trim(); _token = session.AccessToken; _expiresAt = session.ExpiresAt;
     }
 
     public async Task LogoutAsync(CancellationToken cancellationToken = default)
@@ -53,7 +73,7 @@ public sealed class RemoteWorkspaceClient
         finally { ForgetSession(); }
     }
 
-    public void ForgetSession() { _token = null; _expiresAt = default; }
+    public void ForgetSession() { _token = null; _account = null; _expiresAt = default; }
     public Task<IReadOnlyList<ClientResponse>> GetClientsAsync(CancellationToken cancellationToken = default)
         => SendAsync<IReadOnlyList<ClientResponse>>(HttpMethod.Get, "clients", cancellationToken: cancellationToken);
     public Task<IReadOnlyList<ProjectResponse>> GetProjectsAsync(CancellationToken cancellationToken = default)
