@@ -9,6 +9,7 @@ public static class WorkspaceEndpoints
     {
         var group = app.MapGroup("/api/v1").RequireAuthorization();
         ProtectMutations(group);
+        group.MapWorkspaceIdentity();
         MapRoutes(group);
     }
 

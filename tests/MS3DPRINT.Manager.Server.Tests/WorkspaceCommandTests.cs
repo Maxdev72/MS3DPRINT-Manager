@@ -342,6 +342,6 @@ public sealed class WorkspaceCommandTests
         commandId = Guid.NewGuid(), expectedUpdatedAt = version, kind = "Professional", companyName = "Atelier changé", firstName = (string?)null, lastName = (string?)null, address = "Rue", notes = "Note",
         contact = new { firstName = "Marie", lastName = "Dupont", role = "Atelier", phone = "01", email = "contact@example.test", mobile = "06" }
     };
-    private static ClientTestInput ClientInput() => new(Guid.NewGuid(), "Professional", "AE", "Atelier Étoile", new { firstName = "Marie", lastName = "Dupont", role = "Atelier", phone = "01", email = "contact@example.test", mobile = "06" });
-    private sealed record ClientTestInput(Guid commandId, string kind, string clientCode, string companyName, object contact);
+    internal static ClientTestInput ClientInput() => new(Guid.NewGuid(), "Professional", "AE", "Atelier Étoile", new { firstName = "Marie", lastName = "Dupont", role = "Atelier", phone = "01", email = "contact@example.test", mobile = "06" });
+    internal sealed record ClientTestInput(Guid commandId, string kind, string clientCode, string companyName, object contact);
 }

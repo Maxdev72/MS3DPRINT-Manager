@@ -74,6 +74,10 @@ public sealed partial class RemoteWorkspaceClient
     }
 
     public void ForgetSession() { _token = null; _account = null; _expiresAt = default; }
+    public Task<WorkspaceDescriptor> GetWorkspaceAsync(CancellationToken cancellationToken = default)
+        => SendAsync<WorkspaceDescriptor>(HttpMethod.Get, "workspace", cancellationToken: cancellationToken);
+    public Task<WorkspaceCapabilities> GetWorkspaceCapabilitiesAsync(CancellationToken cancellationToken = default)
+        => SendAsync<WorkspaceCapabilities>(HttpMethod.Get, "workspace/capabilities", cancellationToken: cancellationToken);
     public Task<IReadOnlyList<ClientResponse>> GetClientsAsync(CancellationToken cancellationToken = default)
         => SendAsync<IReadOnlyList<ClientResponse>>(HttpMethod.Get, "clients", cancellationToken: cancellationToken);
     public Task<IReadOnlyList<ProjectResponse>> GetProjectsAsync(CancellationToken cancellationToken = default)

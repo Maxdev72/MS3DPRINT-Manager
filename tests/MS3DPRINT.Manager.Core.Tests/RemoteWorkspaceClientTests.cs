@@ -134,6 +134,30 @@ public sealed class RemoteWorkspaceClientTests
         Assert.False(client.IsAuthenticated);
     }
 
+    [Fact]
+    public async Task Workspace_identity_and_capabilities_are_read_from_the_authenticated_routes()
+    {
+        var handler = new Handler(_ => Task.FromResult(Json(new { accessToken = "token", expiresIn = 3600 })));
+        var client = New(handler); await client.LoginAsync("owner", "secret");
+        var id = Guid.NewGuid(); var paths = new List<string>();
+        handler.Respond = request =>
+        {
+            paths.Add(request.RequestUri!.AbsolutePath);
+            Assert.Equal("Bearer", request.Headers.Authorization?.Scheme);
+            return Task.FromResult(request.RequestUri.AbsolutePath.EndsWith("/capabilities")
+                ? Json(new { schemaVersion = 1, modules = new[] { "clients" }, documentProtocol = (string?)null })
+                : Json(new { workspaceId = id, accountId = "acc", name = "Atelier", schemaVersion = 1, revision = 4, documents = (object?)null }));
+        };
+
+        var workspace = await client.GetWorkspaceAsync();
+        var capabilities = await client.GetWorkspaceCapabilitiesAsync();
+
+        Assert.Equal(id, workspace.WorkspaceId);
+        Assert.Equal(4, workspace.Revision);
+        Assert.Equal(["clients"], capabilities.Modules);
+        Assert.Equal(["/api/v1/workspace", "/api/v1/workspace/capabilities"], paths);
+    }
+
     private static RemoteWorkspaceClient New(Handler handler) => new(new HttpClient(handler), new Uri("https://example.com/"));
     private static HttpResponseMessage Json(object value) => new(HttpStatusCode.OK) { Content = JsonContent.Create(value) };
     private sealed class Handler(Func<HttpRequestMessage, Task<HttpResponseMessage>> respond) : HttpMessageHandler

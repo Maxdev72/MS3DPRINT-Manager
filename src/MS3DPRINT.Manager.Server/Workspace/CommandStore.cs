@@ -29,9 +29,24 @@ public sealed class CommandStore
                 command_id TEXT PRIMARY KEY, request_hash TEXT NOT NULL,
                 state TEXT NOT NULL CHECK(state IN ('Pending','Completed')),
                 status_code INTEGER, content TEXT);
+            CREATE TABLE IF NOT EXISTS revision (id INTEGER PRIMARY KEY CHECK(id=1), value INTEGER NOT NULL);
+            INSERT OR IGNORE INTO revision VALUES(1, 0);
+            UPDATE revision SET value = value + 1;
             """;
+        // Bumped at each start: a migration recovery or an offline change while stopped is never assumed already known.
         command.ExecuteNonQuery();
     }
+
+    /// <summary>Revision of acknowledged changes; unverified while any command result is uncertain.</summary>
+    public WorkspaceRevisionResponse Revision() => Read(() =>
+    {
+        using var connection = Open();
+        using var query = connection.CreateCommand();
+        query.CommandText = "SELECT value, NOT EXISTS(SELECT 1 FROM commands WHERE state='Pending') FROM revision WHERE id=1";
+        using var row = query.ExecuteReader();
+        row.Read();
+        return new WorkspaceRevisionResponse(row.GetInt64(0), row.GetInt64(1) != 0);
+    });
 
     public T Read<T>(Func<T> read)
     {
@@ -113,12 +128,18 @@ public sealed class CommandStore
     private void Complete(Guid id, int statusCode, string content)
     {
         using var connection = Open();
+        using var transaction = connection.BeginTransaction();
         using var update = connection.CreateCommand();
-        update.CommandText = "UPDATE commands SET state='Completed',status_code=$status,content=$content WHERE command_id=$id";
+        update.Transaction = transaction;
+        update.CommandText = """
+            UPDATE commands SET state='Completed',status_code=$status,content=$content WHERE command_id=$id;
+            UPDATE revision SET value = value + 1 WHERE $status BETWEEN 200 AND 299;
+            """;
         update.Parameters.AddWithValue("$id", id.ToString());
         update.Parameters.AddWithValue("$status", statusCode);
         update.Parameters.AddWithValue("$content", content);
         update.ExecuteNonQuery();
+        transaction.Commit();
     }
 
     private SqliteConnection Open()

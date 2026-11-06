@@ -30,6 +30,7 @@ public static class ServerApplication
         builder.Services.AddSingleton<SessionStore>();
         builder.Services.AddSingleton<WorkspaceReader>();
         builder.Services.AddSingleton<CommandStore>();
+        builder.Services.AddSingleton<WorkspaceRegistry>();
         builder.Services.AddSingleton<WorkspaceMigrationStore>();
         builder.Services.AddSingleton<WorkspaceCommands>();
         builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter(allowIntegerValues: false)));
