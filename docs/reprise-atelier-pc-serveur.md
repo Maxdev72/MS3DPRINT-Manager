@@ -44,3 +44,5 @@ et refaire une comparaison ; ne pas supprimer un journal incertain pour forcer u
   utilise le compte propriétaire existant, sans inscription publique.
 - Le serveur en production doit être mis à jour séparément avant de proposer cette fonction.
   La publication du logiciel PC seule ne modifie pas le site.
+
+Mise à jour du 6 novembre 2026 : le compagnon ms3dforge.fr dispose maintenant de l’API de reprise. L’étape de mise à jour serveur indiquée ci-dessus est réalisée pour cet hébergement ; le transfert réel attend vos choix et votre confirmation dans Manager.

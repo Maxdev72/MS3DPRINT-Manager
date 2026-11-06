@@ -42,3 +42,23 @@ Preuves : docker-image.log, docker-runtime-health.log et docker-verify-offline.l
 
 La version Linux est également reconstruite, ses 8 tests repassent et sa fenêtre native
 s’ouvre sous Ubuntu avec un atelier fictif. L’archive remplace la précédente dans outputs/.
+
+## Mise à jour du compagnon en production
+
+Le 6 novembre 2026, après accord de reprise de l’utilisateur, Coolify a déployé la version
+29eb80feaa69d1bd6592c7c54b97c1548e946de9 du compagnon. Le déploiement est marqué Success.
+Le volume persistant existant et le chemin d’atelier sont conservés. Une sauvegarde locale
+complète du volume a réussi avant la mise à jour, avec arrêt temporaire du seul compagnon
+pendant l’archive puis redémarrage. La sauvegarde planifiée créée pour cette opération reste
+désactivée ; aucune récurrence n’a été laissée active.
+
+Contrôles après mise à jour : santé HTTPS 200 ; nouvelle route de capacités de reprise 401
+sans session ; clients 401 sans session. Les deux sites commerciaux répondent en HTTPS 200 ;
+aucune modification de leurs ressources n’a été effectuée. Les contrôles publics confirment
+la présence et la protection de l’API ; le parcours authentifié sur les données réelles reste
+à effectuer depuis Manager par le propriétaire. Aucune nouvelle reprise métier n’a été lancée.
+
+Le reçu opérationnel détaillé de sauvegarde et déploiement reste hors Git dans
+outputs/guided-workspace-reconciliation/production-update.json. La partie développement
+ci-dessus décrit l’état avant ce déploiement ; les limites Docker et tests locaux y restent
+les preuves de préparation de cette même version.

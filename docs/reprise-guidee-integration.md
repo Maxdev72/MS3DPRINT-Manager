@@ -21,8 +21,10 @@ Guide : docs/reprise-atelier-pc-serveur.md. Branche feature/ms3dforge-remote.
 
 ## Préparer la mise à jour sans toucher la production
 
-Le serveur documenté en production reste sur 989d30f3ba11fb7b65787c569d1d894cfda1e8aa.
-Cette livraison de code n’est ni un déploiement, ni une nouvelle migration réelle.
+Avant la mise à jour du 6 novembre, le serveur utilisait 989d30f3ba11fb7b65787c569d1d894cfda1e8aa.
+Le compagnon utilise maintenant 29eb80feaa69d1bd6592c7c54b97c1548e946de9, après sauvegarde
+cohérente du volume et déploiement Coolify réussi. Le volume et la racine de l’atelier existant
+sont conservés. Aucun atelier PC réel n’a encore été transféré par ce nouvel assistant.
 Les projets MS3DPRINT-FR et MS3DPRINT-SHOP restent hors périmètre.
 
 L’image candidate utilise le Dockerfile existant src/MS3DPRINT.Manager.Server/Dockerfile,
@@ -60,4 +62,4 @@ Linux passent par Ubuntu sous WSL ; une image Docker n’est pas réputée const
 preuve de build distincte. Les tests du serveur Linux ne remplacent pas le test de son proxy
 et de son volume réel lors de la future mise à jour.
 
-Validation finale : image locale ms3dforge-compagnon:29eb80f construite, démarrage sous app vérifié, stage de vérification Docker 124 tests réussis via cache hors ligne. Voir docs/reprise-guidee-validation.md. Aucun déploiement en production réalisé.
+Validation finale : image locale ms3dforge-compagnon:29eb80f construite, démarrage sous app vérifié, stage de vérification Docker 124 tests réussis via cache hors ligne. Voir docs/reprise-guidee-validation.md. Déploiement du compagnon réalisé ensuite le 6 novembre ; voir la validation actualisée.
