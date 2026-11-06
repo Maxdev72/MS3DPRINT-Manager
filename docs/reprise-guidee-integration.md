@@ -59,3 +59,5 @@ Le moteur Docker local est indisponible au début de cette session. La compilati
 Linux passent par Ubuntu sous WSL ; une image Docker n’est pas réputée construite sans
 preuve de build distincte. Les tests du serveur Linux ne remplacent pas le test de son proxy
 et de son volume réel lors de la future mise à jour.
+
+Validation finale : image locale ms3dforge-compagnon:29eb80f construite, démarrage sous app vérifié, stage de vérification Docker 124 tests réussis via cache hors ligne. Voir docs/reprise-guidee-validation.md. Aucun déploiement en production réalisé.

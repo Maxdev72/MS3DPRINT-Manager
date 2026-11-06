@@ -141,10 +141,10 @@ MainWindow.Remote.cs/Settings.cs pour points d’entrée ; tests dédiés Headle
 
 ### Task 4: Intégration et livraison vérifiée
 
-- [ ] Core + serveur complets, contrôles Linux, Headless, revue transversale et fixes.
-- [ ] Préparer image serveur candidate et guide de mise à jour : production actuellement
+- [x] Core + serveur complets, contrôles Linux, Headless, revue transversale et fixes.
+- [x] Préparer image serveur candidate et guide de mise à jour : production actuellement
   épinglée à989d30f ne prend pas cette API. Ne pas annoncer déploiement/import effectués.
-- [ ] PublierWindows, vérifier application fermée ; backupEXE sous outputs/backups,
+- [x] PublierWindows, vérifier application fermée ; backupEXE sous outputs/backups,
   remplacer unique MS3DPRINT Manager.exe et comparerSHA256. Aucune instance supplémentaire.
-- [ ] Docsduparcours, commit/pushbranche, rapport des preuves/limites et prochaine action
+- [x] Docsduparcours, commit/pushbranche, rapport des preuves/limites et prochaine action
   concrète pour mettreàjourleserveur sanspriseenmainduPC.

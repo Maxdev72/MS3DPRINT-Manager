@@ -26,6 +26,19 @@ Aucun atelier réel n’a été transféré ou activé. Aucun service Coolify n�
 public conserve sa version précédente tant qu’une mise à jour explicite n’a pas été réalisée.
 Les sites commerciaux restent hors périmètre. L’APK Android n’est pas remplacé.
 
-La publication compilée ne vaut pas installation : le remplacement de l’exécutable utilisateur
-attend la fermeture normale du logiciel. Le reçu local de livraison, quand le remplacement
-est effectué, est conservé sous outputs/guided-workspace-reconciliation/delivery.json.
+L’exécutable utilisateur unique MS3DPRINT Manager.exe a été remplacé après fermeture
+normale. La version précédente reste dans outputs/backups/. SHA256 publié/livré identique :
+178547A1B0BF9E4331081A69AA7615BDD7AFEADB778214962A689420940B6F62.
+Reçu : outputs/guided-workspace-reconciliation/delivery.json. Source métier : 29eb80f.
+
+L’image locale ms3dforge-compagnon:29eb80f est construite :
+sha256:47590219e884f52aa48d88af004024c6e29e6705aae1483e1e52eb0476b7c42c.
+Son démarrage sous l’utilisateur app a répondu santé HTTP200, sans publication d’un port
+sur l’hôte, puis le conteneur de test éphémère a été arrêté. Le stage de vérification passe
+ses 124 tests dans Docker. La restauration réseau de ce stage échouait initialement sur
+la chaîne de certificats NuGet du moteur local ; le cache local des paquets vérifiés a été
+fourni dans un contexte de build séparé, hors Git. La validation TLS n’a pas été désactivée.
+Preuves : docker-image.log, docker-runtime-health.log et docker-verify-offline.log.
+
+La version Linux est également reconstruite, ses 8 tests repassent et sa fenêtre native
+s’ouvre sous Ubuntu avec un atelier fictif. L’archive remplace la précédente dans outputs/.
