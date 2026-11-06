@@ -117,3 +117,10 @@ facilite la reprise initiale puis le travail sur le serveur pour clients, projet
 elle ne synchronise pas encore en continu les fichiers modifiés séparément sur le disque.
 Preuves : simple-sync-full-final.log, simple-sync-linux-tests.log, simple-sync-publish.log
 et leurs journaux de compilation dans outputs/guided-workspace-reconciliation/.
+
+Après confirmation de fermeture normale par l’utilisateur, l’exécutable utilisateur unique
+MS3DPRINT Manager.exe a été remplacé par le candidat simplifié. L’empreinte publiée et
+livrée est identique : C696BBED6CAA801B8189E96E1998B92A02D7959B4E7948CDB3B5761C597A926A.
+La version précédente est sauvegardée uniquement dans outputs/backups/. Le reçu
+simple-sync-delivery.json indique maintenant windowsReplaced=true. Aucun atelier réel
+n’a été modifié ni transféré pendant ce remplacement ; Manager n’a pas été relancé.
