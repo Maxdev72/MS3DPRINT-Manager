@@ -9,6 +9,9 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        // Before any settings store is created: bring the preferences once kept next to the executable into the profile.
+        try { MS3DPRINT.Manager.Core.Storage.LegacySettingsMigration.Run(MS3DPRINT.Manager.Core.Storage.ApplicationPaths.LegacyDataDirectory, MS3DPRINT.Manager.Core.Storage.ApplicationPaths.DataDirectory); }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { ErrorLog.Write(exception); }
         DesktopPreviewLauncher.OpenDocument = path =>
         {
             var preview = new DocumentPreviewWindow(path);
