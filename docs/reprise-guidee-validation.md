@@ -62,3 +62,25 @@ Le reçu opérationnel détaillé de sauvegarde et déploiement reste hors Git d
 outputs/guided-workspace-reconciliation/production-update.json. La partie développement
 ci-dessus décrit l’état avant ce déploiement ; les limites Docker et tests locaux y restent
 les preuves de préparation de cette même version.
+
+## Correctif des anciens chemins Windows
+
+Le 6 novembre 2026, un ancien chemin de collection utilisant une barre oblique inverse
+provoquait « Chemin invalide dans la sauvegarde » dès la capture préalable. La capture
+signale maintenant cette fiche comme bloquante sans empêcher sa sauvegarde brute.
+La préparation portable conserve ses contrôles : un dossier manquant exige toujours
+un choix explicite de mise en annexe, et les octets de la fiche source sont préservés.
+
+Le test reproduisant le blocage a échoué avant le correctif puis passe après correction.
+Validation : 125 tests serveur sous Windows, 125 sous Ubuntu, 26 tests natifs ciblés,
+et publication Windows réussie. Journaux locaux : legacy-path-green.log,
+linux-server-tests.log, legacy-native.log et legacy-path-publish.log dans
+outputs/guided-workspace-reconciliation/.
+
+Après fermeture normale de Manager, remplacement de l’exécutable utilisateur unique,
+avec sauvegarde de la version précédente dans outputs/backups/. SHA256 publié/livré :
+B718C4EC33E1641DD88DD6564175462ED067299E3B1D7F749B74AD989419E1DE.
+Reçu : outputs/guided-workspace-reconciliation/legacy-path-fix-delivery.json.
+Aucune donnée métier réelle modifiée ni importée pendant ce correctif. Le serveur
+reste sur son déploiement précédent ; aucun redéploiement nécessaire pour ce blocage
+de préparation sur le PC. Le binaire Linux livré précédemment reste inchangé.

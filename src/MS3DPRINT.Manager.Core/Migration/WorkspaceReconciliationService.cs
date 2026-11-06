@@ -178,7 +178,13 @@ public sealed class WorkspaceReconciliationService
             foreach (var profile in profiles)
             {
                 var path = ".ms3dprint-manager/collections/" + profile.Id + ".json";
-                WorkspaceBackupService.ValidateRelative(profile.RelativePath);
+                try { WorkspaceBackupService.ValidateRelative(profile.RelativePath); }
+                catch (InvalidDataException)
+                {
+                    // Raw PC metadata is captured before portable preparation; reject activation, not its backup.
+                    issues.Add(new("InvalidCollectionPath", path, "Le chemin de cette fiche doit être vérifié dans la préparation portable avant toute activation."));
+                    continue;
+                }
                 if (profile.CreatedAt == default || profile.UpdatedAt == default || !paths.Add(profile.RelativePath))
                     issues.Add(new("InvalidCollection", path, "La fiche de collection possède une version ou un dossier invalide ou dupliqué."));
                 if (!Directory.Exists(Path.Combine(root, profile.RelativePath)))

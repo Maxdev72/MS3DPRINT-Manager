@@ -6,6 +6,33 @@ using MS3DPRINT.Manager.Core.Collections;
 namespace MS3DPRINT.Manager.Server.Tests;
 public sealed class PortableMissingCollectionTests
 {
+    [Fact]
+    public void Legacy_windows_collection_path_can_be_backed_up_before_explicit_portable_preparation()
+    {
+        var root = Directory.CreateTempSubdirectory("legacy-collection-migration-").FullName;
+        try
+        {
+            var workspace = Directory.CreateDirectory(Path.Combine(root, "pc")).FullName;
+            var profiles = Directory.CreateDirectory(Path.Combine(workspace, ".ms3dprint-manager", "collections")).FullName;
+            Directory.CreateDirectory(Path.Combine(workspace, "02_MODELES_3D"));
+            File.WriteAllText(Path.Combine(workspace, "02_MODELES_3D", "keep.txt"), "document");
+            var id = Guid.NewGuid();
+            var profile = new CollectionProfile(id, "02_MODELES_3D", @"02_MODELES_3D\Missing", "Missing", null, null, null, null, null, null, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+            var bytes = JsonSerializer.SerializeToUtf8Bytes(profile);
+            var original = Path.Combine(profiles, id + ".json"); File.WriteAllBytes(original, bytes);
+            var snapshot = new WorkspaceReconciliationService().Capture(workspace);
+            Assert.Contains(snapshot.Issues, issue => issue.Blocking && issue.Path.Contains(id.ToString(), StringComparison.Ordinal));
+            using var migration = GuidedWorkspaceMigration.Create(new Uri("https://example.test"), "owner", workspace, Path.Combine(root, "private"));
+            var blocked = migration.Prepare(new HashSet<Guid>());
+            Assert.False(blocked.Succeeded);
+            Assert.Contains(blocked.Issues, issue => issue.Code == "MissingCollectionFolder");
+            var prepared = migration.Prepare(new HashSet<Guid> { id });
+            Assert.True(prepared.Succeeded, JsonSerializer.Serialize(prepared.Issues));
+            Assert.Equal(bytes, File.ReadAllBytes(original));
+            Assert.Equal(bytes, File.ReadAllBytes(Path.Combine(migration.Journal.Directory, migration.Journal.PreparationName!, "inactive-collections", id + ".json")));
+        }
+        finally { Directory.Delete(root, true); }
+    }
     [Fact] public void MissingCollectionRequiresExplicitValidatedAnnexAndPreservesOriginalBytes()
     {
         var root=Path.Combine(Path.GetTempPath(),"annex-"+Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root);
