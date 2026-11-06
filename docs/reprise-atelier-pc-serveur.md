@@ -51,3 +51,11 @@ et refaire une comparaison ; ne pas supprimer un journal incertain pour forcer u
   La publication du logiciel PC seule ne modifie pas le site.
 
 Mise à jour du 6 novembre 2026 : le compagnon ms3dforge.fr dispose maintenant de l’API de reprise. L’étape de mise à jour serveur indiquée ci-dessus est réalisée pour cet hébergement ; le transfert réel attend vos choix et votre confirmation dans Manager.
+
+Les anciens dossiers projet présents uniquement sur le serveur peuvent être conservés
+avec leurs fichiers sans inventer une fiche projet, un statut ou des tâches. Le bilan les
+signale comme dossiers historiques. Cette exception ne s’applique pas à une fiche client
+manquante ou corrompue, ni aux projets PC sans fiche : ces anomalies restent bloquantes.
+Une ancienne comparaison bloquée uniquement sur ces dossiers serveur peut être revue
+après mise à jour, sans renvoyer l’archive. Une modification des sources ou une activation
+déjà engagée interdit cette reprise et conserve les protections habituelles.

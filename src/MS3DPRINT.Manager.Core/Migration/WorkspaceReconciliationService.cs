@@ -36,9 +36,23 @@ public sealed class WorkspaceReconciliationService
         var directories = pc.Directories.Union(server.Directories, StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray();
         ValidateTree(files.Select(f => f.Path), directories);
         var plan = new WorkspaceReconciliationPlan(pc.Fingerprint, server.Fingerprint, "", Array.AsReadOnly(files),
-            Array.AsReadOnly(directories), Array.AsReadOnly(pc.Issues.Concat(server.Issues).Distinct().ToArray()));
+            Array.AsReadOnly(directories), Array.AsReadOnly(pc.Issues.Concat(server.Issues.Select(i =>
+                i.Code == "ProjectProfileMissing" && server.Directories.Contains(i.Path, StringComparer.Ordinal) ? HistoricalFolder(i) : i)).Distinct().ToArray()));
         return plan with { PlanHash = PlanHash(plan) };
     }
+
+    // Only reviewed server folders may remain documents without inventing business metadata.
+    public WorkspaceSnapshot CaptureForReconciliation(string root, WorkspaceReconciliationPlan plan)
+    {
+        ValidatePlan(plan);
+        var folders = plan.Issues.Where(i => i.Code == "PreservedProjectFolder" && !i.Blocking)
+            .Select(i => i.Path).ToHashSet(StringComparer.Ordinal);
+        var snapshot = Capture(root);
+        return snapshot with { Issues = snapshot.Issues.Select(i => i.Code == "ProjectProfileMissing" && folders.Contains(i.Path)
+            ? HistoricalFolder(i) : i).ToArray() };
+    }
+    private static MigrationIssue HistoricalFolder(MigrationIssue issue) => new("PreservedProjectFolder", issue.Path,
+        "Dossier historique conservé avec tous ses fichiers, sans créer de fiche projet ni de tâches.", false);
 
     public string ReviewHash(WorkspaceReconciliationPlan plan, IReadOnlyList<WorkspaceReconciliationChoice> choices)
     {
@@ -89,7 +103,7 @@ public sealed class WorkspaceReconciliationService
         }
         if (Compare(Capture(pcRoot), Capture(serverRoot)).PlanHash != plan.PlanHash)
             throw new InvalidDataException("Une source a changé pendant la préparation.");
-        var snapshot = Capture(newRoot);
+        var snapshot = CaptureForReconciliation(newRoot, plan);
         if (snapshot.Files.Count != expected.Count || !snapshot.Directories.SequenceEqual(plan.Directories)
             || snapshot.Files.Any(f => !expected.TryGetValue(f.Path, out var match) || f.Bytes != match.Bytes || !f.Sha256.Equals(match.Hash, StringComparison.OrdinalIgnoreCase)))
             throw new InvalidDataException("L’empreinte de la candidate diffère du contenu choisi.");

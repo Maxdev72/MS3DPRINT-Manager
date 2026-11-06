@@ -132,6 +132,9 @@ public sealed class GuidedWorkspaceMigration : IDisposable
             ThrowIfDisposed();
             status = await client.PrepareMigrationAsync(status.OperationId, token);
         }
+        else if (status.Phase == WorkspaceMigrationPhase.Blocked && status.Receipt is null && status.Plan is not null
+            && status.Issues.Count > 0 && status.Issues.All(i => i.Code == "ProjectProfileMissing"))
+            status = await client.PrepareMigrationAsync(status.OperationId, token);
         ThrowIfDisposed(); ValidateStatus(status);
         return status;
     }

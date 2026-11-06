@@ -112,6 +112,20 @@ public sealed class WorkspaceMigrationStore(ServerStorage storage, CommandStore 
     {
         var status = Load<WorkspaceMigrationStatus>(State(id));
         if (status.Phase == WorkspaceMigrationPhase.Prepared) return Results.Ok(status);
+        if (status.Phase == WorkspaceMigrationPhase.Blocked && status.Receipt is null && status.Plan is not null
+            && status.Issues.Count > 0 && status.Issues.All(i => i.Code == "ProjectProfileMissing")
+            && !File.Exists(Path.Combine(Operation(id), "swap.json")))
+            return commands.Read(() =>
+            {
+                if (commands.HasPending()) return Block(status, [new("PendingCommands", "", "Une commande métier a un résultat incertain.")]);
+                var pc = _reconciliation.Capture(Path.Combine(Operation(id), "stage", "workspace"));
+                var before = _reconciliation.Capture(Path.Combine(Operation(id), "server"));
+                if (pc.Fingerprint != status.Plan.PcFingerprint || before.Fingerprint != status.Plan.ServerFingerprint
+                    || _reconciliation.Capture(storage.WorkspaceRoot).Fingerprint != before.Fingerprint)
+                    return Block(status, [new("ServerChanged", "", "Les données ont changé depuis cette comparaison. Préparez une nouvelle reprise.")]);
+                var plan = _reconciliation.Compare(pc, before);
+                return Review(status, plan);
+            });
         if (status.Phase != WorkspaceMigrationPhase.Uploaded) return Results.Conflict();
         var directory = Operation(id);
         status = status with { Phase = WorkspaceMigrationPhase.Preparing }; Save(State(id), status);
@@ -136,16 +150,20 @@ public sealed class WorkspaceMigrationStore(ServerStorage storage, CommandStore 
                 CopyTree(storage.WorkspaceRoot, snapshot);
                 if (_reconciliation.Capture(snapshot).Fingerprint != before.Fingerprint || _reconciliation.Capture(storage.WorkspaceRoot).Fingerprint != before.Fingerprint) throw new InvalidDataException();
                 var plan = _reconciliation.Compare(_reconciliation.Capture(Path.Combine(directory, "stage", "workspace")), before);
-                status = status with { Plan = plan, Phase = WorkspaceMigrationPhase.Prepared, Issues = plan.Issues };
-                if (plan.Issues.Any(i => i.Blocking)) return Block(status, plan.Issues);
-                var conflicts = plan.Files.Where(f => f.Kind == WorkspaceDifferenceKind.Conflict).Select(f => new WorkspaceReconciliationChoice(f.Path, WorkspaceConflictChoice.Pc)).ToArray();
-                if (conflicts.Length > MaxChoices || JsonSerializer.SerializeToUtf8Bytes(conflicts, CommandStore.Json).Length > ChoicesBodyBytes)
-                    return Block(status, [new("TooManyConflicts", "", "Le bilan dépasse la limite de choix de cette version. Aucune activation n’est possible.")]);
-                return Candidate(status, []);
+                return Review(status, plan);
             });
         }
         catch (Exception e) when (e is IOException or InvalidDataException or InvalidOperationException or JsonException or ArgumentException)
         { return Block(status, [new("PreparationFailed", "", "La préparation n’a pas abouti. Conservez les sauvegardes et recommencez une nouvelle reprise.")]); }
+    }
+    private IResult Review(WorkspaceMigrationStatus status, WorkspaceReconciliationPlan plan)
+    {
+        status = status with { Plan = plan, Phase = WorkspaceMigrationPhase.Prepared, Issues = plan.Issues };
+        if (plan.Issues.Any(i => i.Blocking)) return Block(status, plan.Issues);
+        var conflicts = plan.Files.Where(f => f.Kind == WorkspaceDifferenceKind.Conflict).Select(f => new WorkspaceReconciliationChoice(f.Path, WorkspaceConflictChoice.Pc)).ToArray();
+        if (conflicts.Length > MaxChoices || JsonSerializer.SerializeToUtf8Bytes(conflicts, CommandStore.Json).Length > ChoicesBodyBytes)
+            return Block(status, [new("TooManyConflicts", "", "Le bilan dépasse la limite de choix de cette version. Aucune activation n’est possible.")]);
+        return Candidate(status, []);
     }
     private IResult Block(WorkspaceMigrationStatus status, IReadOnlyList<MigrationIssue> issues)
     {
@@ -188,9 +206,9 @@ public sealed class WorkspaceMigrationStore(ServerStorage storage, CommandStore 
         if (commands.HasPending()) return RejectBeforeActivation("PendingCommands", "Une commande métier a un résultat incertain. Cette reprise n’a pas été activée.");
         var candidate = Path.Combine(Transaction(storage.WorkspaceRoot, id), "candidate");
         var backup = Path.Combine(Operation(id), "server");
-        var current = _reconciliation.Capture(storage.WorkspaceRoot);
-        var candidateSnapshot = _reconciliation.Capture(candidate);
-        var backupSnapshot = _reconciliation.Capture(backup);
+        var current = _reconciliation.CaptureForReconciliation(storage.WorkspaceRoot, status.Plan);
+        var candidateSnapshot = _reconciliation.CaptureForReconciliation(candidate, status.Plan);
+        var backupSnapshot = _reconciliation.CaptureForReconciliation(backup, status.Plan);
         if (current.Issues.Any(i => i.Blocking) || backupSnapshot.Issues.Any(i => i.Blocking)
             || current.Fingerprint != status.Plan.ServerFingerprint || backupSnapshot.Fingerprint != current.Fingerprint
             || candidateSnapshot.Fingerprint != status.CandidateFingerprint || candidateSnapshot.Issues.Any(i => i.Blocking))
@@ -300,12 +318,12 @@ public sealed class WorkspaceMigrationStore(ServerStorage storage, CommandStore 
         var old = Path.Combine(transaction, "old"); var candidate = Path.Combine(transaction, "candidate");
         CheckExisting(workspace); CheckExisting(old); CheckExisting(candidate);
         var service = new WorkspaceReconciliationService();
-        bool Matches(string path, string hash) => Directory.Exists(path) && service.Capture(path) is var snapshot && snapshot.Fingerprint == hash && !snapshot.Issues.Any(i => i.Blocking);
         var statePath = Path.Combine(operation, "state.json"); var state = Load<WorkspaceMigrationStatus>(statePath);
         if (state.OperationId != journal.OperationId || state.ReviewHash != journal.ReviewHash || state.CandidateFingerprint != journal.Receipt.Fingerprint
             || state.Plan?.ServerFingerprint != journal.Receipt.ServerBeforeFingerprint || state.Plan.PcFingerprint != journal.Receipt.PcFingerprint
             || service.ReviewHash(state.Plan, state.Choices) != journal.ReviewHash
             || state.Phase is not (WorkspaceMigrationPhase.Prepared or WorkspaceMigrationPhase.Applying or WorkspaceMigrationPhase.Applied or WorkspaceMigrationPhase.Blocked)) throw new InvalidDataException();
+        bool Matches(string path, string hash) => Directory.Exists(path) && service.CaptureForReconciliation(path, state.Plan) is var snapshot && snapshot.Fingerprint == hash && !snapshot.Issues.Any(i => i.Blocking);
         if (state.Phase == WorkspaceMigrationPhase.Applied && state.Receipt == journal.Receipt && Directory.Exists(workspace)
             && !Directory.Exists(candidate) && Matches(old, journal.Receipt.ServerBeforeFingerprint))
         {

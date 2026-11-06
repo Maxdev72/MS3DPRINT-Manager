@@ -90,9 +90,10 @@ public sealed class GuidedWorkspaceMigrationUiTests
         finally { Environment.SetEnvironmentVariable("MS3DPRINT_WORKSPACE", previous); Environment.SetEnvironmentVariable("MS3DPRINT_WINDOW_FILE", previousWindow); Directory.Delete(temporary, true); }
     }
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Native_review_requires_explicit_choices_locks_final_selection_and_keeps_Enter_safe(bool chooseAllPc)
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task Native_review_requires_explicit_choices_locks_final_selection_and_keeps_Enter_safe(bool chooseAllPc, bool blockedPreparation)
     {
         var temporary = Path.Combine(Path.GetTempPath(), "migration-ui-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(temporary);
         var previous = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE"); var previousWindow = Environment.GetEnvironmentVariable("MS3DPRINT_WINDOW_FILE");
@@ -106,7 +107,7 @@ public sealed class GuidedWorkspaceMigrationUiTests
         {
             await session.Dispatch(async () =>
             {
-                var handler = new Server(plan); var window = new MainWindow(new HttpClient(handler), new RemoteWorkspaceCache(Path.Combine(temporary, "cache.json")), mode); window.Show();
+                var handler = new Server(plan, blockPreparation: blockedPreparation); var window = new MainWindow(new HttpClient(handler), new RemoteWorkspaceCache(Path.Combine(temporary, "cache.json")), mode); window.Show();
                 var migrationFlag = typeof(MainWindow).GetField("_migrationOpen", BindingFlags.NonPublic | BindingFlags.Instance)!;
                 migrationFlag.SetValue(window, true);
                 typeof(MainWindow).GetMethod("RequestMobileSnapshot", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(window, [true]);
@@ -122,6 +123,13 @@ public sealed class GuidedWorkspaceMigrationUiTests
                     Find<TextBox>(window, "MigrationAccount").Text = "owner"; Find<TextBox>(window, "MigrationPassword").Text = "fake password";
                     var enter = new KeyEventArgs { Key = Key.Enter }; typeof(DialogWindow).GetMethod("HandleKey", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(dialog, [enter]); Assert.Equal(0, handler.Logins);
                     await Next(dialog); Assert.Equal(1, handler.Logins); Assert.Equal("", ((TextBox)type.GetField("_password", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(dialog)!).Text);
+                    if (blockedPreparation)
+                    {
+                        Assert.DoesNotContain(window.GetLogicalDescendants().OfType<Button>(), b => b.Name == "MigrationUsePcForAll");
+                        Assert.Contains("mise à jour", Find<TextBlock>(window, "MigrationStatus").Text);
+                        Assert.Equal(0, handler.ChoiceSaves); Assert.Equal(0, handler.Applies);
+                        return true;
+                    }
                     var choices = window.GetLogicalDescendants().OfType<ComboBox>().Where(c => c.ItemsSource is string[] strings && strings.Contains("Conserver PC")).ToArray();
                     var choice = Assert.Single(choices); Assert.Equal(0, choice.SelectedIndex);
                     Assert.Equal(0, handler.Applies);
@@ -163,7 +171,7 @@ public sealed class GuidedWorkspaceMigrationUiTests
     }
     private static T Find<T>(Control root, string name) where T : Control => root.GetLogicalDescendants().OfType<T>().Single(c => c.Name == name);
     private static async Task Next(DialogWindow dialog) => await (Task)dialog.GetType().GetMethod("AdvanceAsync", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(dialog, null)!;
-    private sealed class Server(WorkspaceReconciliationPlan plan, bool completeApply = false, Action? afterApply = null) : HttpMessageHandler
+    private sealed class Server(WorkspaceReconciliationPlan plan, bool completeApply = false, Action? afterApply = null, bool blockPreparation = false) : HttpMessageHandler
     {
         public int Logins, ChoiceSaves, Applies, StatusReads; private WorkspaceMigrationStatus? _status;
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
@@ -173,7 +181,8 @@ public sealed class GuidedWorkspaceMigrationUiTests
             if (path.EndsWith("capabilities")) return Response(new WorkspaceMigrationCapabilities(1, 524288, 4294967296));
             if (path.EndsWith("/operations")) { var command = (await request.Content!.ReadFromJsonAsync<StartWorkspaceMigration>(token))!; _status = new(command.CommandId, WorkspaceMigrationPhase.Uploading, command.Bytes, command.Sha256, 524288, [], null, [], null, null, null, []); return Response(_status); }
             if (path.Contains("/parts/")) { _status = _status! with { Phase = WorkspaceMigrationPhase.Uploaded, ReceivedParts = [0] }; return Response(_status); }
-            if (path.EndsWith("/prepare")) { _status = _status! with { Phase = WorkspaceMigrationPhase.Prepared, Plan = plan }; return Response(_status); }
+            if (path.EndsWith("/prepare")) { _status = _status! with { Phase = blockPreparation ? WorkspaceMigrationPhase.Blocked : WorkspaceMigrationPhase.Prepared, Plan = plan,
+                Issues = blockPreparation ? [new("ProjectProfileMissing", "01_CLIENTS/Example/CT-2026-001_Historical", "Ce dossier projet n’a pas de fiche.")] : [] }; return Response(_status); }
             if (path.EndsWith("/choices")) { ChoiceSaves++; var choices = (await request.Content!.ReadFromJsonAsync<WorkspaceReconciliationChoice[]>(Wire, token))!; _status = _status! with { Choices = choices, CandidateFingerprint = plan.PcFingerprint, ReviewHash = new WorkspaceReconciliationService().ReviewHash(plan, choices) }; return Response(_status); }
             if (path.EndsWith("/apply"))
             {

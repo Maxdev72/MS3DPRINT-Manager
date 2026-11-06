@@ -80,3 +80,21 @@ la session au mode serveur existant sans nouvelle connexion. Un reçu incertain 
 consultable par GET uniquement ; une source modifiée empêche la bascule automatique.
 L’API de reprise et le serveur déployé ne changent pas. Le premier envoi simplifié ne
 constitue pas une synchronisation bidirectionnelle continue des fichiers locaux.
+
+## Dossiers historiques serveur sans fiche
+
+Compare transforme uniquement les anomalies ProjectProfileMissing de l’instantané serveur,
+pour un dossier effectivement inventorié, en informations PreservedProjectFolder liées
+au plan. Capture et les audits d’export/préparation PC restent stricts. CaptureForReconciliation
+n’accepte que les dossiers explicitement signalés par ce plan validé ; toutes les autres
+anomalies, les empreintes et les contrôles de chemins restent vérifiés. Cette politique est
+appliquée à la candidate, aux ancres avant activation et à la récupération de bascule.
+Les fichiers sont conservés octet pour octet ; aucune métadonnée projet n’est fabriquée.
+
+Prepare peut réexaminer une ancienne opération bloquée uniquement par ProjectProfileMissing,
+sans reçu et sans journal de bascule. Les empreintes du PC préparé, du serveur actif et de
+sa sauvegarde doivent encore correspondre. Le verrou métier, les commandes Pending et les
+limites de choix sont vérifiés comme pour une première préparation. Le client redemande
+uniquement cette préparation ; il ne renvoie ni les morceaux ni une activation incertaine.
+Le panneau n’affiche plus les choix de versions pour une préparation bloquée et montre
+les noms des éléments concernés. Les dossiers historiques apparaissent aussi au bilan final.

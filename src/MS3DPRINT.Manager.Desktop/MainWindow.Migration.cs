@@ -90,6 +90,7 @@ public partial class MainWindow
                 _migration?.Dispose(); _migration = null; _client?.ForgetSession(); _client = null; _startNew = true;
                 _step = 0; _remote = null; _finalSourceVerified = false; _newPreparation.IsVisible = false; _choices.Clear(); _inactiveCollections.Clear();
                 _address.IsEnabled = _account.IsEnabled = _password.IsEnabled = true;
+                _next.IsVisible = true;
                 _body.Children.Clear(); _body.Children.Add(Text("Serveur HTTPS")); _body.Children.Add(_address);
                 _body.Children.Add(Text("Compte")); _body.Children.Add(_account); _body.Children.Add(Text("Mot de passe")); _body.Children.Add(_password);
                 _status.Text = "L’ancienne préparation reste conservée. Reconnectez-vous pour sauvegarder l’état actuel du PC dans une nouvelle reprise.";
@@ -202,8 +203,20 @@ public partial class MainWindow
         private void RenderReview()
         {
             _body.Children.Clear(); _choices.Clear();
-            if (_remote?.Plan is not { } plan) { _status.Text = "Comparaison indisponible : " + string.Join("\n", _remote?.Issues.Select(i => i.Message) ?? []); return; }
-            foreach (var issue in _remote.Issues) _body.Children.Add(Text(issue.Message));
+            _next.IsVisible = true;
+            if (_remote?.Phase != WorkspaceMigrationPhase.Prepared || _remote.Plan is not { } plan)
+            {
+                foreach (var issue in _remote?.Issues ?? []) _body.Children.Add(Text(Path.GetFileName(issue.Path) + " · " + issue.Message));
+                var legacy = _remote is { Phase: WorkspaceMigrationPhase.Blocked, Receipt: null, Plan: not null }
+                    && _remote.Issues.Count > 0 && _remote.Issues.All(i => i.Code == "ProjectProfileMissing");
+                _status.Text = legacy ? "Le compagnon serveur doit être mis à jour pour conserver ces dossiers historiques. Votre copie est déjà envoyée ; elle sera réutilisée après la mise à jour."
+                    : "La comparaison est bloquée. Aucune activation effectuée. Conservez cette reprise et préparez une nouvelle comparaison après correction du problème indiqué.";
+                _step = 2; _next.Content = "Réessayer après mise à jour"; _next.IsVisible = legacy;
+                _newPreparation.IsVisible = CanStartNewPreparation; if (_newPreparation.IsVisible) _body.Children.Add(_newPreparation);
+                return;
+            }
+            foreach (var issue in _remote.Issues.Where(i => i.Code != "PreservedProjectFolder")) _body.Children.Add(Text(Path.GetFileName(issue.Path) + " · " + issue.Message));
+            AddHistoricalFolders(plan);
             _body.Children.Add(Text(Summary(plan)));
             var conflicts = plan.Files.Where(f => f.Kind == WorkspaceDifferenceKind.Conflict).ToArray();
             if (conflicts.Length > 0)
@@ -242,6 +255,7 @@ public partial class MainWindow
             foreach (var choice in _choices) choice.Choice.IsEnabled = false;
             _body.Children.Clear();
             _body.Children.Add(Text(Summary(_remote.Plan!)));
+            AddHistoricalFolders(_remote.Plan!);
             if (selected.Length > 0)
             {
                 _body.Children.Add(Text($"Versions retenues : {selected.Count(c => c.Choice == WorkspaceConflictChoice.Pc)} du PC · {selected.Count(c => c.Choice == WorkspaceConflictChoice.Server)} du serveur."));
@@ -261,6 +275,13 @@ public partial class MainWindow
             _step = 4; _next.Content = "Confirmer la synchronisation"; _cancel.Focus();
         }
         private static string Summary(WorkspaceReconciliationPlan plan) => $"Fichiers à ajouter : {plan.Files.Count(f => f.Kind == WorkspaceDifferenceKind.PcOnly):N0}\nConservés du serveur : {plan.Files.Count(f => f.Kind == WorkspaceDifferenceKind.ServerOnly):N0}\nVersions différentes : {plan.Files.Count(f => f.Kind == WorkspaceDifferenceKind.Conflict):N0}";
+        private void AddHistoricalFolders(WorkspaceReconciliationPlan plan)
+        {
+            var folders = plan.Issues.Where(i => i.Code == "PreservedProjectFolder" && !i.Blocking).ToArray();
+            if (folders.Length == 0) return;
+            _body.Children.Add(Text($"{folders.Length} dossier(s) historique(s) conservé(s) avec tous leurs fichiers. Aucune fiche projet ni tâche ne sera inventée."));
+            _body.Children.Add(Details("Voir les dossiers conservés", folders.Select(i => i.Path)));
+        }
         private static Expander Details(string title, IEnumerable<string> lines) => new()
         {
             Header = title, HorizontalAlignment = HorizontalAlignment.Stretch,

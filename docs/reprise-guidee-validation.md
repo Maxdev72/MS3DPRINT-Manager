@@ -124,3 +124,25 @@ livrée est identique : C696BBED6CAA801B8189E96E1998B92A02D7959B4E7948CDB3B5761C
 La version précédente est sauvegardée uniquement dans outputs/backups/. Le reçu
 simple-sync-delivery.json indique maintenant windowsReplaced=true. Aucun atelier réel
 n’a été modifié ni transféré pendant ce remplacement ; Manager n’a pas été relancé.
+
+## Dossiers historiques bloquant la comparaison — 6 novembre 2026
+
+Un atelier serveur peut contenir des dossiers projet qui n’ont jamais eu de fiche.
+L’ancienne comparaison les bloquait et le panneau proposait malgré tout des choix de
+versions impossibles à enregistrer. Le correctif conserve ces seuls dossiers serveur
+comme documents historiques explicitement signalés au bilan, sans création de fiches.
+Les autres validations métier et les protections de bascule sont conservées.
+
+Tests de reproduction rouges puis verts : préparation serveur refusée sur un dossier
+historique ; choix encore affichés à tort pour une opération bloquée. Validation finale :
+1 303 tests Core Windows, 130 tests serveur Windows, 130 tests serveur Ubuntu. Les tests
+incluent la reprise sans renvoi des morceaux, la dérive des sources, un journal de bascule
+existant et d’autres anomalies mêlées. L’audit brut reste bloquant pour un projet sans fiche.
+Les archives et ateliers de tests sont fictifs. Publication Windows réussie, SHA256 :
+FB813B9F2B59727DAEEC363AE53613DDF7E85C97C0B56010B2D08C66544B470C.
+
+Le code est préparé pour une mise à jour du seul compagnon. Son déploiement et le
+remplacement de l’exécutable utilisateur seront consignés après vérification effective.
+Aucune activation de l’atelier réel n’est effectuée par ce correctif.
+Preuves locales : historical-core-full.log, historical-server-final.log,
+historical-ui-green.log, linux-server-tests.log et historical-publish.log.

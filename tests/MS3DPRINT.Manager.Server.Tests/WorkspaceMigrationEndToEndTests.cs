@@ -3,12 +3,81 @@ using System.Security.Cryptography;
 using MS3DPRINT.Manager.Core.Migration;
 using MS3DPRINT.Manager.Core.Remote;
 using MS3DPRINT.Manager.Core.Storage;
+using MS3DPRINT.Manager.Core.Clients;
+using MS3DPRINT.Manager.Core.Projects;
+using MS3DPRINT.Manager.Core.Workspace;
+using MS3DPRINT.Manager.Server.Workspace;
+using System.Text.Json;
 
 namespace MS3DPRINT.Manager.Server.Tests;
 
 /// <summary>Exercises the native transport against the real authenticated server pipeline.</summary>
 public sealed class WorkspaceMigrationEndToEndTests
 {
+    [Theory]
+    [InlineData("fresh")]
+    [InlineData("old")]
+    [InlineData("drift")]
+    [InlineData("swap")]
+    [InlineData("other")]
+    public async Task Server_historical_project_folder_keeps_its_documents_without_inventing_a_profile_and_resumes_old_upload(string scenario)
+    {
+        using var host = new ServerFixture(); host.CreateOwner();
+        var local = Directory.CreateTempSubdirectory("historical-folder-e2e-").FullName;
+        try
+        {
+            var now = DateTimeOffset.UtcNow;
+            var paths = new WorkspaceMetadataPaths(host.Workspace);
+            var owner = new ClientProfile(Guid.NewGuid(), ClientKind.Professional, "CLIENT_TEST", "CT", "Client test", null, null, null, null, new(null, null, null, null, null), now, now, RelativePath: "01_CLIENTS/CLIENT_TEST");
+            new ClientProfileStore(paths).Create(owner);
+            var relative = "01_CLIENTS/CLIENT_TEST/CT-2026-001_HISTORICAL";
+            Directory.CreateDirectory(Path.Combine(host.Workspace, relative));
+            File.WriteAllText(Path.Combine(host.Workspace, relative, "keep.txt"), "historical document");
+            var pc = Directory.CreateDirectory(Path.Combine(local, "pc")).FullName; Write(pc, "pc.txt", "latest PC");
+            var service = new WorkspaceReconciliationService(); var before = service.Capture(host.Workspace).Fingerprint;
+            Assert.Contains(service.Capture(host.Workspace).Issues, i => i.Code == "ProjectProfileMissing" && i.Blocking);
+            using var handler = new LostApplyResponseHandler(host.Server.CreateHandler(), false);
+            using var http = new HttpClient(handler) { BaseAddress = new Uri("https://localhost") };
+            var client = new RemoteWorkspaceClient(http, http.BaseAddress); await client.LoginAsync("owner", host.Password);
+            using var migration = GuidedWorkspaceMigration.Create(http.BaseAddress, "owner", pc, Path.Combine(local, "private"));
+            Assert.True(migration.Prepare(new HashSet<Guid>()).Succeeded);
+            var status = await migration.TransferAsync(client, null, CancellationToken.None);
+            Assert.Equal(WorkspaceMigrationPhase.Prepared, status.Phase);
+            Assert.Contains(status.Issues, i => i.Code == "PreservedProjectFolder" && !i.Blocking && i.Path == relative);
+            if (scenario != "fresh")
+            {
+                var old = status with { Phase = WorkspaceMigrationPhase.Blocked, CandidateFingerprint = null, ReviewHash = null,
+                    Issues = [new("ProjectProfileMissing", relative, "Old validation blocks this historical folder.")] };
+                var state = Path.Combine(host.State, "workspace-migrations", status.OperationId.ToString("N"), "state.json");
+                File.WriteAllBytes(state, JsonSerializer.SerializeToUtf8Bytes(old, CommandStore.Json));
+                if (scenario == "drift") Write(host.Workspace, "late.txt", "later server change");
+                if (scenario == "swap") File.WriteAllText(Path.Combine(Path.GetDirectoryName(state)!, "swap.json"), "{}");
+                if (scenario == "other") File.WriteAllBytes(state, JsonSerializer.SerializeToUtf8Bytes(old with { Issues = [.. old.Issues, new("MissingClient", "", "Client missing.")] }, CommandStore.Json));
+                var parts = handler.PartCalls;
+                if (scenario == "swap")
+                {
+                    await Assert.ThrowsAsync<RemoteWorkspaceException>(() => migration.TransferAsync(client, null, CancellationToken.None));
+                    Assert.Equal(parts, handler.PartCalls); Assert.Equal(0, handler.ApplyCalls); Assert.True(migration.SourceStable()); return;
+                }
+                status = await migration.TransferAsync(client, null, CancellationToken.None);
+                if (scenario is "drift" or "other")
+                {
+                    Assert.Equal(WorkspaceMigrationPhase.Blocked, status.Phase); Assert.Equal(parts, handler.PartCalls);
+                    Assert.Equal(0, handler.ApplyCalls); Assert.True(migration.SourceStable()); return;
+                }
+                Assert.Equal(WorkspaceMigrationPhase.Prepared, status.Phase); Assert.Equal(parts, handler.PartCalls);
+            }
+            Assert.Equal(before, service.Capture(host.Workspace).Fingerprint); Assert.Equal(0, handler.ApplyCalls);
+            Assert.Empty(new ProjectProfileStore(paths).LoadAll());
+            status = await migration.ApplyAsync(client, status, CancellationToken.None);
+            Assert.Equal(WorkspaceMigrationPhase.Applied, status.Phase); Assert.Equal(1, handler.ApplyCalls);
+            Assert.Equal("historical document", File.ReadAllText(Path.Combine(host.Workspace, relative, "keep.txt")));
+            Assert.Equal("latest PC", Read(host.Workspace, "pc.txt")); Assert.True(migration.SourceStable());
+            Assert.Empty(new ProjectProfileStore(paths).LoadAll());
+            Assert.Contains(service.Capture(host.Workspace).Issues, i => i.Code == "ProjectProfileMissing" && i.Blocking);
+        }
+        finally { Directory.Delete(local, true); }
+    }
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -182,10 +251,12 @@ public sealed class WorkspaceMigrationEndToEndTests
     private sealed class LostApplyResponseHandler(HttpMessageHandler inner, bool loseResponse) : DelegatingHandler(inner)
     {
         public int ApplyCalls { get; private set; }
+        public int PartCalls { get; private set; }
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var apply = request.RequestUri!.AbsolutePath.EndsWith("/apply", StringComparison.Ordinal);
             if (apply) ApplyCalls++;
+            if (request.RequestUri.AbsolutePath.Contains("/parts/")) PartCalls++;
             var response = await base.SendAsync(request, cancellationToken);
             if (apply && loseResponse && response.IsSuccessStatusCode)
             {
