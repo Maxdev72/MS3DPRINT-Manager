@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.DependencyInjection;
 using MS3DPRINT.Manager.Core.Remote;
 
 namespace MS3DPRINT.Manager.Server.Tests;
@@ -105,6 +106,36 @@ public sealed class WorkspaceIdentityApiTests
         Assert.Equal(before!.Revision, revision.Revision);
         var receipt = await owner.GetFromJsonAsync<CommandReceiptResponse>("/api/v1/commands/" + id);
         Assert.Equal("Uncertain", receipt!.State);
+    }
+
+    [Fact]
+    public async Task An_uncertain_command_suspends_writes_until_the_administrator_resolves_it()
+    {
+        using var host = new ServerFixture();
+        using var owner = await host.AuthenticatedClient();
+        _ = await owner.GetStringAsync("/api/v1/workspace/revision"); // creates the receipts database
+        var id = Guid.NewGuid();
+        using (var db = new SqliteConnection("Data Source=" + Path.Combine(host.State, "commands.sqlite") + ";Pooling=False"))
+        {
+            db.Open();
+            using var insert = db.CreateCommand();
+            insert.CommandText = "INSERT INTO commands(command_id,request_hash,state) VALUES($id,'cut','Pending')";
+            insert.Parameters.AddWithValue("$id", id.ToString());
+            insert.ExecuteNonQuery();
+        }
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, (await owner.PostAsJsonAsync("/api/v1/clients", WorkspaceCommandTests.ClientInput())).StatusCode);
+        Assert.Equal("[]", await owner.GetStringAsync("/api/v1/clients"));
+
+        var commands = host.Services.GetRequiredService<MS3DPRINT.Manager.Server.Workspace.CommandStore>();
+        Assert.Equal([id], commands.UncertainCommands());
+        Assert.True(commands.ResolveUncertain(id));
+        Assert.False(commands.ResolveUncertain(id));
+
+        var receipt = await owner.GetFromJsonAsync<CommandReceiptResponse>("/api/v1/commands/" + id);
+        Assert.Equal(("Completed", 409), (receipt!.State, receipt.StatusCode));
+        Assert.True((await owner.GetFromJsonAsync<WorkspaceRevisionResponse>("/api/v1/workspace/revision"))!.Verified);
+        Assert.Equal(HttpStatusCode.Created, (await owner.PostAsJsonAsync("/api/v1/clients", WorkspaceCommandTests.ClientInput())).StatusCode);
     }
 
     [Fact]

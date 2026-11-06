@@ -59,13 +59,45 @@ public sealed class CommandStore
 
     internal void BlockUntilRecovery() { lock (_gate) _blockedUntilRecovery = true; }
 
-    public bool HasPending() => Read(() =>
+    internal const string UncertainMessage = "Une modification précédente a un résultat incertain. Les écritures sont suspendues jusqu’à sa vérification par l’administrateur.";
+
+    public bool HasPending() => Read(AnyPending);
+
+    private bool AnyPending()
     {
         using var connection = Open();
         using var query = connection.CreateCommand();
         query.CommandText = "SELECT EXISTS(SELECT 1 FROM commands WHERE state='Pending')";
         return (long)query.ExecuteScalar()! != 0;
-    });
+    }
+
+    /// <summary>
+    /// Administrator action after checking the records by hand: closes one uncertain command as a recorded conflict,
+    /// so its client refreshes instead of replaying it, and writes resume. Returns false when it was not Pending.
+    /// </summary>
+    public bool ResolveUncertain(Guid id)
+    {
+        lock (_gate)
+        {
+            using var connection = Open();
+            using var update = connection.CreateCommand();
+            update.CommandText = "UPDATE commands SET state='Completed',status_code=409,content=$content WHERE command_id=$id AND state='Pending'";
+            update.Parameters.AddWithValue("$id", id.ToString());
+            update.Parameters.AddWithValue("$content", JsonSerializer.Serialize(new { error = "Résultat vérifié par l’administrateur. Actualisez avant toute nouvelle modification." }, Json));
+            return update.ExecuteNonQuery() == 1;
+        }
+    }
+
+    public IReadOnlyList<Guid> UncertainCommands()
+    {
+        using var connection = Open();
+        using var query = connection.CreateCommand();
+        query.CommandText = "SELECT command_id FROM commands WHERE state='Pending' ORDER BY command_id";
+        using var row = query.ExecuteReader();
+        var ids = new List<Guid>();
+        while (row.Read()) ids.Add(Guid.Parse(row.GetString(0)));
+        return ids;
+    }
 
     public CommandReceiptResponse? Receipt(Guid id) => Read(() =>
     {
@@ -91,6 +123,8 @@ public sealed class CommandStore
                         ? "Cet identifiant désigne une autre commande." : "Résultat incertain. Vérifiez les données avant toute nouvelle action." });
                 return Results.Content(stored.Content!, "application/json", statusCode: stored.StatusCode);
             }
+            // An uncertain result may have changed the records: no new write until an administrator has checked it.
+            if (AnyPending()) return Results.Json(new { error = UncertainMessage }, Json, statusCode: 503);
             InsertPending(id, hash);
             CommandResult result;
             try { result = operation(); }
