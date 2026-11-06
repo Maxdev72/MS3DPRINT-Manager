@@ -42,4 +42,3 @@ public sealed class LinuxStorageTests
         finally { Directory.Delete(root); if (File.Exists(settings)) File.Delete(settings); }
     }
 }
-
