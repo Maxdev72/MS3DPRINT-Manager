@@ -63,6 +63,12 @@ public sealed class RemoteWorkspaceCache(string path)
 
     public void Clear() { WorkspacePathSafety.EnsureNoLinks(_path); File.Delete(_path); }
 
+    // Offline reading needs a successful sign-in on this device; an explicit sign-out removes it even if the copy stays.
+    private string OfflinePath => _path + ".offline";
+    public bool IsOfflineAuthorized => File.Exists(OfflinePath);
+    public void GrantOffline() { WorkspacePathSafety.EnsureNoLinks(OfflinePath); File.WriteAllText(OfflinePath, DateTimeOffset.UtcNow.ToString("O")); }
+    public void RevokeOffline() { WorkspacePathSafety.EnsureNoLinks(OfflinePath); File.Delete(OfflinePath); }
+
     public static void Validate(RemoteWorkspaceCopy copy)
     {
         if (!Uri.TryCreate(copy.Server, UriKind.Absolute, out var server) || server.Scheme != "https"

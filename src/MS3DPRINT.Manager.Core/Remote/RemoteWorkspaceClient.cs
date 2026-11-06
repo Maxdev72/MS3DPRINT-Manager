@@ -78,6 +78,8 @@ public sealed partial class RemoteWorkspaceClient
         => SendAsync<WorkspaceDescriptor>(HttpMethod.Get, "workspace", cancellationToken: cancellationToken);
     public Task<WorkspaceCapabilities> GetWorkspaceCapabilitiesAsync(CancellationToken cancellationToken = default)
         => SendAsync<WorkspaceCapabilities>(HttpMethod.Get, "workspace/capabilities", cancellationToken: cancellationToken);
+    public Task<WorkspaceRevisionResponse> GetWorkspaceRevisionAsync(CancellationToken cancellationToken = default)
+        => SendAsync<WorkspaceRevisionResponse>(HttpMethod.Get, "workspace/revision", cancellationToken: cancellationToken);
     public Task<IReadOnlyList<ClientResponse>> GetClientsAsync(CancellationToken cancellationToken = default)
         => SendAsync<IReadOnlyList<ClientResponse>>(HttpMethod.Get, "clients", cancellationToken: cancellationToken);
     public Task<IReadOnlyList<ProjectResponse>> GetProjectsAsync(CancellationToken cancellationToken = default)

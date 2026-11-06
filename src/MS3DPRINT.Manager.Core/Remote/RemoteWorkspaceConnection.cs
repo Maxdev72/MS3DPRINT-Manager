@@ -18,6 +18,9 @@ public sealed class RemoteWorkspaceConnection : IDisposable
     public bool CanWrite => IsAuthenticated && IsOnline && _cacheHealthy && Copy is { PendingCommand: null };
     public string? Account { get; private set; }
     public Uri? Server { get; private set; }
+    /// <summary>Null while the server predates workspace identity, or before the first successful read.</summary>
+    public WorkspaceDescriptor? Workspace { get; private set; }
+    public WorkspaceRevisionResponse? Revision { get; private set; }
 
     public RemoteWorkspaceConnection(HttpClient http, RemoteWorkspaceCache cache, IRemoteSessionStore? sessions = null)
     {
@@ -26,6 +29,8 @@ public sealed class RemoteWorkspaceConnection : IDisposable
         {
             Copy = cache.Load();
             if (Copy is { } copy) { Account = copy.Account; Server = new Uri(copy.Server); }
+            // After an explicit sign-out the copy is not shown again before a new sign-in. A pending receipt stays visible.
+            if (Copy is { PendingCommand: null } && !cache.IsOfflineAuthorized) Copy = null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {
@@ -103,11 +108,20 @@ public sealed class RemoteWorkspaceConnection : IDisposable
         var client = RequireClient();
         var clients = await client.GetClientsAsync(token).ConfigureAwait(false);
         var projects = await client.GetProjectsAsync(token).ConfigureAwait(false);
+        var (workspace, revision) = await ReadIdentityAsync(client, token).ConfigureAwait(false);
         var copy = new RemoteWorkspaceCopy(Server!.AbsoluteUri, Account!, DateTimeOffset.UtcNow, clients, projects, Copy?.PendingCommand);
         lock (_state)
         {
-            ThrowIfDisposed(); Save(copy); IsOnline = true;
+            ThrowIfDisposed(); Save(copy); IsOnline = true; Workspace = workspace; Revision = revision;
+            _cache.GrantOffline();
         }
+    }
+
+    private static async Task<(WorkspaceDescriptor?, WorkspaceRevisionResponse?)> ReadIdentityAsync(RemoteWorkspaceClient client, CancellationToken token)
+    {
+        try { return (await client.GetWorkspaceAsync(token).ConfigureAwait(false), await client.GetWorkspaceRevisionAsync(token).ConfigureAwait(false)); }
+        // A server without these routes still serves clients and projects; the workspace is then shown as not identified.
+        catch (RemoteWorkspaceException ex) when (ex.Kind is RemoteFailure.Rejected or RemoteFailure.InvalidResponse) { return (null, null); }
     }
 
     public Task<T> ReadAsync<T>(Func<RemoteWorkspaceClient, Task<T>> read, CancellationToken cancellationToken = default) => RunAsync(async _ =>
@@ -152,10 +166,11 @@ public sealed class RemoteWorkspaceConnection : IDisposable
         {
             lock (_state)
             {
-                _client?.ForgetSession(); IsOnline = false;
+                _client?.ForgetSession(); IsOnline = false; Workspace = null; Revision = null;
                 if (!_disposed)
                 {
                     _sessions?.Clear();
+                    _cache.RevokeOffline();
                     if (revoked && _cacheHealthy && Copy is { PendingCommand: null }) { _cache.Clear(); Copy = null; }
                 }
             }

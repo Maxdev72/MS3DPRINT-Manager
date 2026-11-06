@@ -134,12 +134,34 @@ public partial class MainWindow
             ToolTip.SetTip(button, IsServerWorkspace && button.Tag is string name && name is not ("Accueil" or "Clients" or "Projets") ? name + " · indisponible en mode serveur" : button.Tag);
         }
         ServerConnectionStatus.Text = !IsServerWorkspace ? "Atelier local indépendant · aucune synchronisation serveur" :
+            (connection?.Workspace?.Name is { } workspaceName ? workspaceName + " · " : "") +
             (connection?.Server?.Host ?? "ms3dforge.fr") + " · " + (connection?.Account ?? "connexion requise") + " · " +
-            (connection?.IsOnline == true ? "connecté" : "hors connexion · consultation seule") +
+            StartupLabel(connection) +
             (connection?.Copy?.ReadAt is { } read ? " · dernière lecture " + read.ToLocalTime().ToString("dd/MM HH:mm") : "") +
             (connection?.Copy?.PendingCommand is { } pending ? " · résultat incertain : vérifier le reçu " + pending : "");
         RefreshWorkspaceIdentity();
         UpdateServerControls();
+    }
+
+    /// <summary>Data and documents are reported separately; documents stay « non associés » until Nextcloud is bound.</summary>
+    public static string StartupLabel(RemoteWorkspaceConnection? connection)
+    {
+        var state = WorkspaceStartupPolicy.Resolve(new(
+            HasAuthenticatedSession: connection?.IsAuthenticated == true,
+            NetworkAvailable: connection?.IsOnline == true,
+            HasVerifiedCopy: connection?.Copy is not null,
+            WorkspaceSelected: connection?.Workspace is not null,
+            DocumentsBound: false,
+            LocalMirrorComplete: false,
+            RecoveryRequired: connection?.Copy?.PendingCommand is not null));
+        return state switch
+        {
+            WorkspaceStartupState.RecoveryRequired => "à vérifier",
+            WorkspaceStartupState.ReadyOfflineReadOnly => "hors connexion · consultation seule",
+            WorkspaceStartupState.NeedsSignIn => connection?.Copy is null ? "connexion requise" : "hors connexion · consultation seule",
+            WorkspaceStartupState.NeedsWorkspaceSelection => "connecté · atelier non identifié (serveur à mettre à jour)",
+            _ => "connecté · " + (connection?.Revision?.Verified == true ? "données à jour" : "données à vérifier") + " · documents Nextcloud non associés"
+        };
     }
 
     private Task LoginServerAsync()

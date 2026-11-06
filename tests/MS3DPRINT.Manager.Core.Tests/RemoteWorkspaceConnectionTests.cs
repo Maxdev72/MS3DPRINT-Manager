@@ -106,6 +106,65 @@ public sealed class RemoteWorkspaceConnectionTests : IDisposable
         Assert.Null(_store.Session); Assert.False(connection.IsAuthenticated); Assert.NotNull(Cache.Load());
     }
 
+    [Fact]
+    public async Task After_an_explicit_sign_out_the_kept_copy_is_not_shown_offline_before_a_new_sign_in()
+    {
+        using (var connection = New())
+        {
+            await connection.LoginAsync(Server, "owner", "password", true);
+            _handler.Respond = _ => throw new HttpRequestException();
+            await Assert.ThrowsAsync<RemoteWorkspaceException>(() => connection.LogoutAsync());
+        }
+        Assert.NotNull(Cache.Load());
+        using (var offline = New())
+        {
+            Assert.Null(offline.Copy);
+            Assert.Equal("connexion requise", MS3DPRINT.Manager.Desktop.MainWindow.StartupLabel(offline));
+        }
+
+        _handler.Respond = new Handler().Respond;
+        using (var again = New()) await again.LoginAsync(Server, "owner", "password", false);
+        using var reopened = New();
+        Assert.NotNull(reopened.Copy);
+        Assert.Equal("hors connexion · consultation seule", MS3DPRINT.Manager.Desktop.MainWindow.StartupLabel(reopened));
+    }
+
+    [Fact]
+    public async Task The_workspace_identity_and_verified_revision_are_read_with_the_data()
+    {
+        var id = Guid.NewGuid();
+        _handler.Respond = request => request.RequestUri!.AbsolutePath switch
+        {
+            var p when p.EndsWith("auth/login") => Json(new { accessToken = "token", expiresIn = 28800 }),
+            var p when p.EndsWith("workspace") => Json(new { workspaceId = id, accountId = "acc", name = "Atelier MS3D", schemaVersion = 1, revision = 7, documents = (object?)null }),
+            var p when p.EndsWith("workspace/revision") => Json(new { revision = 7, verified = true }),
+            _ => Json(Array.Empty<object>())
+        };
+        using var connection = New();
+        await connection.LoginAsync(Server, "owner", "password", false);
+
+        Assert.Equal(id, connection.Workspace!.WorkspaceId);
+        Assert.True(connection.Revision!.Verified);
+        Assert.Equal("connecté · données à jour · documents Nextcloud non associés", MS3DPRINT.Manager.Desktop.MainWindow.StartupLabel(connection));
+    }
+
+    [Fact]
+    public async Task A_server_without_workspace_identity_still_serves_its_data()
+    {
+        _handler.Respond = request => request.RequestUri!.AbsolutePath switch
+        {
+            var p when p.EndsWith("auth/login") => Json(new { accessToken = "token", expiresIn = 28800 }),
+            var p when p.Contains("/workspace") => new(HttpStatusCode.NotFound),
+            _ => Json(Array.Empty<object>())
+        };
+        using var connection = New();
+        await connection.LoginAsync(Server, "owner", "password", false);
+
+        Assert.True(connection.CanWrite);
+        Assert.Null(connection.Workspace);
+        Assert.Contains("atelier non identifié", MS3DPRINT.Manager.Desktop.MainWindow.StartupLabel(connection));
+    }
+
     [Theory]
     [InlineData("https://other.test/", "owner")]
     [InlineData("https://example.test/", "other")]
