@@ -146,3 +146,24 @@ remplacement de l’exécutable utilisateur seront consignés après vérificati
 Aucune activation de l’atelier réel n’est effectuée par ce correctif.
 Preuves locales : historical-core-full.log, historical-server-final.log,
 historical-ui-green.log, linux-server-tests.log et historical-publish.log.
+
+Le correctif 137cba9923840f8e558443164ee315a874514435 est maintenant déployé sur le seul
+compagnon : déploiement Coolify pdfpytfnjfw1csohlrvtlgag marqué Success, en 27 secondes.
+Avant la mise à jour, une nouvelle sauvegarde complète du volume a réussi (disponibilité
+locale, 3,83 Go), avec arrêt temporaire du compagnon pendant l’archive puis redémarrage.
+Le planning reste désactivé. Le volume, la racine d’atelier et les accès existants sont conservés.
+Le reçu opérationnel privé historical-folders-delivery.json consigne le chemin de l’archive.
+
+L’exécutable Windows utilisateur a été remplacé après fermeture de Manager. Le SHA256
+publié/livré est identique à celui indiqué ci-dessus. La version précédente est uniquement
+dans outputs/backups/. L’archive Linux est reconstruite, ses 8 tests passent et son binaire
+porte SHA256 DB042464DDAF5061FA4C1835466975245EA0DB3453C7654FC5CABA57C2351572.
+L’image locale ms3dforge-compagnon:137cba9 est construite avec le Dockerfile de production.
+Une vérification Docker additionnelle a été interrompue pendant la copie du cache NuGet
+local volumineux, avant ses tests ; elle n’est pas comptée comme une validation réussie.
+Les 130 tests du serveur passent effectivement sous Windows et Ubuntu, séparément.
+
+Contrôles de production : santé HTTPS 200, capacités de reprise et clients 401 sans session.
+Les deux sites commerciaux répondent 200 en HTTPS et aucune de leurs ressources n’a été
+modifiée. Aucun atelier réel n’a été activé par l’agent ; le propriétaire doit rouvrir Manager
+pour reprendre sa comparaison déjà envoyée, choisir ses versions et confirmer le bilan.
