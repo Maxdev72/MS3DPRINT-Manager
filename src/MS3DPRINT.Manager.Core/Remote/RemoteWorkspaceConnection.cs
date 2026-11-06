@@ -59,6 +59,23 @@ public sealed class RemoteWorkspaceConnection : IDisposable
         await RefreshCoreAsync(token).ConfigureAwait(false);
     }, cancellationToken);
 
+    public Task ConnectSessionAsync(RemoteDeviceSession session, CancellationToken cancellationToken = default)
+        => RunAsync(async token =>
+        {
+            if (!_cacheHealthy || Copy is { PendingCommand: not null } copy && !SameIdentity(session.Server, session.Account, copy))
+                throw new InvalidOperationException("Vérifiez le reçu de la commande avant de changer de compte ou de serveur.");
+            var client = new RemoteWorkspaceClient(_http, new Uri(session.Server));
+            client.RestoreSession(session);
+            lock (_state)
+            {
+                ThrowIfDisposed();
+                if (Copy is { } current && !SameIdentity(session.Server, session.Account, current)) Copy = null;
+                _client?.ForgetSession(); _client = client; Account = session.Account; Server = new Uri(session.Server); IsOnline = false;
+                _sessions?.Clear();
+            }
+            await RefreshCoreAsync(token).ConfigureAwait(false);
+        }, cancellationToken);
+
     public Task LoginAsync(Uri server, string account, string password, bool remember, CancellationToken cancellationToken = default)
         => RunAsync(async token =>
         {
@@ -212,4 +229,3 @@ public sealed class RemoteWorkspaceConnection : IDisposable
         _lifetime.Cancel();
     }
 }
-

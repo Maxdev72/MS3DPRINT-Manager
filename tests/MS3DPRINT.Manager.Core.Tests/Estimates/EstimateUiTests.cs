@@ -54,7 +54,7 @@ public sealed partial class EstimateUiTests : IDisposable
             await (Task)Invoke(owner, "LoadSettingsAsync")!;
             Text(owner, "SettingsSearchBox", "sauvegarde");
             var visible = owner.FindControl<StackPanel>("StorageList")!.Children.Where(c => c.IsVisible).ToArray();
-            Assert.Single(visible);
+            Assert.Equal(2, visible.Length);
             Assert.Contains(visible[0].GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "Sauvegarde et restauration");
             var archive = Path.Combine(exports, "backup.zip");
             Assert.True(await (Task<bool>)Invoke(owner, "SaveWorkspaceBackupAsync", _root, archive, false)!);
@@ -1790,7 +1790,7 @@ public sealed partial class EstimateUiTests : IDisposable
             Assert.All(cards.Where(c => c.IsVisible), c => Assert.Equal("atelier", Assert.IsType<Border>(c).Tag));
             var storage = categories.Children.OfType<Button>().Single(b => b.Tag as string == "storage");
             storage.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            Assert.Equal(3, cards.Count(c => c.IsVisible));
+            Assert.Equal(4, cards.Count(c => c.IsVisible));
             Assert.All(cards.Where(c => c.IsVisible), c => Assert.Equal("storage", Assert.IsType<Border>(c).Tag));
             window.Width = 1360; window.Height = 620; window.Show(); window.UpdateLayout();
             var scroll = window.FindControl<ScrollViewer>("SettingsScroll");
@@ -1824,7 +1824,7 @@ public sealed partial class EstimateUiTests : IDisposable
             Click(owner, "ClearSettingsSearchButton");
             Dispatcher.UIThread.RunJobs();
             Assert.False(owner.FindControl<Control>("SettingsEmptyState")!.IsVisible);
-            Assert.Equal(3, cards.Count(c => c.IsVisible));
+            Assert.Equal(4, cards.Count(c => c.IsVisible));
             Assert.All(cards.Where(c => c.IsVisible), c => Assert.Equal("storage", ((Border)c).Tag));
             Assert.Equal(cards, owner.FindControl<StackPanel>("StorageList")!.Children.ToArray());
             Text(owner, "SettingsSearchBox", "stockage");

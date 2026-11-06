@@ -8,7 +8,11 @@ public static class WorkspaceEndpoints
     public static void MapWorkspace(this WebApplication app)
     {
         var group = app.MapGroup("/api/v1").RequireAuthorization();
-        group.AddEndpointFilter(async (context, next) =>
+        ProtectMutations(group);
+        MapRoutes(group);
+    }
+
+    internal static void ProtectMutations(RouteGroupBuilder group) => group.AddEndpointFilter(async (context, next) =>
         {
             var http = context.HttpContext;
             if (HttpMethods.IsPost(http.Request.Method) || HttpMethods.IsPut(http.Request.Method))
@@ -19,8 +23,12 @@ public static class WorkspaceEndpoints
                     catch (AntiforgeryValidationException) { return Results.BadRequest(); }
                 }
             }
-            return await next(context);
+            try { return await next(context); }
+            catch (WorkspaceUnavailableException) { return Results.StatusCode(503); }
         });
+
+    private static void MapRoutes(RouteGroupBuilder group)
+    {
         group.MapGet("/clients", (CommandStore receipts, WorkspaceReader reader) => receipts.Read(() => Results.Ok(reader.ReadClients())));
         group.MapGet("/projects", (CommandStore receipts, WorkspaceReader reader) => receipts.Read(() => Results.Ok(reader.ReadProjects())));
         group.MapGet("/clients/{id:guid}", (Guid id, CommandStore receipts, WorkspaceCommands commands) => Detail(receipts, () => commands.Client(id)));

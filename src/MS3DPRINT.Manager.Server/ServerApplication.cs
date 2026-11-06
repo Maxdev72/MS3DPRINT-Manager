@@ -7,6 +7,7 @@ using System.Net;
 using System.Threading.RateLimiting;
 using MS3DPRINT.Manager.Server.Authentication;
 using MS3DPRINT.Manager.Server.Workspace;
+using MS3DPRINT.Manager.Server.Migration;
 
 namespace MS3DPRINT.Manager.Server;
 
@@ -29,6 +30,7 @@ public static class ServerApplication
         builder.Services.AddSingleton<SessionStore>();
         builder.Services.AddSingleton<WorkspaceReader>();
         builder.Services.AddSingleton<CommandStore>();
+        builder.Services.AddSingleton<WorkspaceMigrationStore>();
         builder.Services.AddSingleton<WorkspaceCommands>();
         builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter(allowIntegerValues: false)));
         builder.Services.AddDataProtection().SetApplicationName("MS3DFORGE.Server");
@@ -75,11 +77,21 @@ public static class ServerApplication
         app.UseAuthentication();
         app.UseAuthorization();
         app.UseRateLimiter();
+        app.Use(async (context, next) =>
+        {
+            // Set route-specific limits before JSON binding reads the body; business routes keep 8192.
+            var bytes = context.GetEndpoint()?.Metadata.GetMetadata<MigrationBodyLimit>()?.Bytes ?? 8192;
+            var limit = context.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>();
+            if (limit is { IsReadOnly: false }) limit.MaxRequestBodySize = bytes;
+            if (context.Request.ContentLength > bytes) { context.Response.StatusCode = 413; return; }
+            await next(context);
+        });
         app.UseDefaultFiles();
         app.UseStaticFiles();
         app.MapAuthentication();
         app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
         app.MapWorkspace();
+        app.MapWorkspaceMigrations();
 
         return app;
     }

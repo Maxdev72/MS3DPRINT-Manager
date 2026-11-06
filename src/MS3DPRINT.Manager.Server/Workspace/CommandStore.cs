@@ -17,6 +17,7 @@ public sealed class CommandStore
     };
     private readonly object _gate = new();
     private readonly string _path;
+    private bool _blockedUntilRecovery;
 
     public CommandStore(ServerStorage storage)
     {
@@ -32,7 +33,24 @@ public sealed class CommandStore
         command.ExecuteNonQuery();
     }
 
-    public T Read<T>(Func<T> read) { lock (_gate) return read(); }
+    public T Read<T>(Func<T> read)
+    {
+        lock (_gate)
+        {
+            if (_blockedUntilRecovery) throw new WorkspaceUnavailableException();
+            return read();
+        }
+    }
+
+    internal void BlockUntilRecovery() { lock (_gate) _blockedUntilRecovery = true; }
+
+    public bool HasPending() => Read(() =>
+    {
+        using var connection = Open();
+        using var query = connection.CreateCommand();
+        query.CommandText = "SELECT EXISTS(SELECT 1 FROM commands WHERE state='Pending')";
+        return (long)query.ExecuteScalar()! != 0;
+    });
 
     public CommandReceiptResponse? Receipt(Guid id) => Read(() =>
     {
@@ -49,6 +67,7 @@ public sealed class CommandStore
             request.Method + "\n" + request.Path.Value + "\n" + JsonSerializer.Serialize(input, Json))));
         lock (_gate)
         {
+            if (_blockedUntilRecovery) return Results.StatusCode(503);
             var stored = Find(id);
             if (stored is not null)
             {
@@ -121,3 +140,7 @@ public sealed class CommandStore
 }
 
 public sealed record CommandResult(int StatusCode, object Content);
+public sealed class WorkspaceUnavailableException : InvalidOperationException
+{
+    public WorkspaceUnavailableException() : base("L’atelier attend une récupération vérifiée avant toute opération métier.") { }
+}

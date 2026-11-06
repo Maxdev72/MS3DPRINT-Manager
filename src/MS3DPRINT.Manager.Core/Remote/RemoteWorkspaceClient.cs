@@ -16,7 +16,7 @@ public sealed class RemoteWorkspaceException(RemoteFailure kind, string message,
 }
 
 /// <summary>A device session kept only in memory. No mutation is retried, including after a lost response.</summary>
-public sealed class RemoteWorkspaceClient
+public sealed partial class RemoteWorkspaceClient
 {
     private readonly HttpClient _http;
     private readonly Uri _server;

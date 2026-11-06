@@ -48,6 +48,10 @@ La déconnexion oublie la session sur cet appareil, même si le serveur ne répo
 pas ; une commande en attente reste conservée pour vérification.
 
 Cette intégration concerne l’exécutable PC `MS3DPRINT Manager.exe`. Elle réutilise
-les API déjà déployées et ne nécessite pas un nouveau déploiement Coolify.
+les API déjà déployées pour la connexion habituelle. Le nouvel assistant de reprise
+des données PC exige une mise à jour séparée du serveur : voir
+[le guide de reprise](reprise-atelier-pc-serveur.md).
 La création autonome de comptes clients avec ateliers isolés reste un chantier
 séparé. L’application Android précédente n’est pas remplacée par ce lot.
+
+Sous Ubuntu et Linux Mint, la connexion mémorisée utilise le trousseau Secret Service du bureau ; voir [la notice Linux](linux.md).

@@ -22,7 +22,12 @@ public sealed class PortableWorkspaceMigrationService
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
 
     public PortableMigrationReport Prepare(string archivePath, string preparationDirectory, string expectedArchiveSha256)
+        => Prepare(archivePath, preparationDirectory, expectedArchiveSha256, new HashSet<Guid>());
+
+    public PortableMigrationReport Prepare(string archivePath, string preparationDirectory, string expectedArchiveSha256,
+        IReadOnlySet<Guid> inactiveMissingCollections)
     {
+        ArgumentNullException.ThrowIfNull(inactiveMissingCollections);
         preparationDirectory = Path.GetFullPath(preparationDirectory);
         using var mutation = ProfileMutationLock.Acquire(preparationDirectory);
         WorkspacePathSafety.EnsureNoLinks(preparationDirectory);
@@ -49,15 +54,12 @@ public sealed class PortableWorkspaceMigrationService
             if (!backup.Inspect(raw).IncludesDocuments) throw new InvalidDataException();
             var workspace = Path.Combine(preparationDirectory, "workspace");
             backup.Restore(raw, workspace, sourceHash);
+            AnnexMissingCollections(workspace, preparationDirectory, inactiveMissingCollections);
             ConvertMetadata(workspace, changes, preparationDirectory);
             var inventory = MigrationInventory.Capture(workspace);
             issues.AddRange(inventory.Issues);
             issues.AddRange(MigrationMetadataAudit.Audit(workspace, inventory));
-            // Validate collection schemas and folders as well: the original audit covers clients/projects only.
-            foreach (var profile in new CollectionProfileStore(workspace).LoadAll())
-                if (!Directory.Exists(Path.Combine(workspace, profile.RelativePath)))
-                    issues.Add(new("MissingCollectionFolder", ".ms3dprint-manager/collections/" + profile.Id + ".json",
-                        "Le dossier de cette fiche de collection est absent. Une décision de reprise est nécessaire."));
+            issues.AddRange(WorkspaceReconciliationService.AuditCollections(workspace));
             if (!issues.Any(i => i.Blocking))
             {
                 var portable = Path.Combine(preparationDirectory, "portable.zip");
@@ -75,6 +77,38 @@ public sealed class PortableWorkspaceMigrationService
         var report = new PortableMigrationReport(1, !issues.Any(i => i.Blocking), sourceHash, portableHash, changes, issues);
         Save(Path.Combine(preparationDirectory, "portable-report.json"), report);
         return report;
+    }
+
+    private static void AnnexMissingCollections(string workspace, string preparation, IReadOnlySet<Guid> selected)
+    {
+        var entries = new List<(Guid Id, string Path, byte[] Bytes, string Sha256)>();
+        foreach (var id in selected.Order())
+        {
+            if (id == Guid.Empty) throw new InvalidDataException();
+            var relative = ".ms3dprint-manager/collections/" + id + ".json";
+            var file = Path.Combine(workspace, relative);
+            WorkspacePathSafety.EnsureNoLinks(file);
+            if (!File.Exists(file) || new FileInfo(file).Length > 16 * 1024 * 1024) throw new InvalidDataException();
+            var bytes = File.ReadAllBytes(file);
+            var json = JsonNode.Parse(bytes) as JsonObject ?? throw new InvalidDataException();
+            var category = ProfileCategory(json, "collections", id.ToString());
+            var path = Normalize(json["RelativePath"]?.GetValue<string>() ?? throw new InvalidDataException(), category);
+            var target = Path.Combine(workspace, path);
+            WorkspacePathSafety.EnsureNoLinks(target);
+            if (Directory.Exists(target) || File.Exists(target)) throw new InvalidDataException("Seules les collections réellement sans dossier peuvent être mises en annexe.");
+            entries.Add((id, relative, bytes, Hash(bytes)));
+        }
+        if (entries.Count == 0) return;
+        var annex = Path.Combine(preparation, "inactive-collections");
+        Directory.CreateDirectory(annex);
+        foreach (var entry in entries)
+        {
+            var output = Path.Combine(annex, entry.Id + ".json");
+            Write(output, entry.Bytes);
+            if (Hash(File.ReadAllBytes(output)) != entry.Sha256) throw new InvalidDataException();
+        }
+        Save(Path.Combine(annex, "manifest.json"), entries.Select(e => new { e.Id, e.Path, e.Sha256, Bytes = e.Bytes.Length }).ToArray());
+        foreach (var entry in entries) File.Delete(Path.Combine(workspace, entry.Path));
     }
 
     private static void ConvertMetadata(string workspace, List<MigrationTransformation> changes, string preparation)

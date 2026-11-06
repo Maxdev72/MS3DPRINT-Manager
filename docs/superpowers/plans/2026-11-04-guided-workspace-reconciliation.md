@@ -69,18 +69,18 @@ Version1, ChunkBytes=524288, MaxArchiveBytes=4294967296.
 Files : Core/Migration/WorkspaceReconciliation*.cs, PortableWorkspaceMigrationService.cs,
 tests Core/Migration ou Server.Tests/ReconciliationTests.cs selon portabilité.
 
-- [ ] RED : même contenu/dates différentes => Same ; fichiers PC seuls ajoutés ;
+- [x] RED : même contenu/dates différentes => Same ; fichiers PC seuls ajoutés ;
   serveur seuls conservés ; conflit refuse une candidate sans choix ; choix explicite
   conserve les octets sélectionnés. Snapshot cible changé => refus.
-- [ ] Réutiliser MigrationInventory, ValidateRelative et audits ; empreinte canonique
+- [x] Réutiliser MigrationInventory, ValidateRelative et audits ; empreinte canonique
   sur chemins/tailles/SHA/dossiers ; collision de casse/fichier-dossier bloquante.
-- [ ] Candidate neuve, copie et hash contrôlés, audit complet clients/projets/collections.
+- [x] Candidate neuve, copie et hash contrôlés, audit complet clients/projets/collections.
   Renouveler seulement UpdatedAt des clients/projets importés différents ; conserver
   dates originales dans le journal de transformations. Conserver inconnus/documents.
-- [ ] Ajouter surcharge Prepare(..., IReadOnlySet<Guid> inactiveMissingCollections).
+- [x] Ajouter surcharge Prepare(..., IReadOnlySet<Guid> inactiveMissingCollections).
   Accepter uniquement collections réellement sans dossier, copier octets/hash en
   annexe privée, retirer de la copie uniquement ; aucune exclusion par défaut.
-- [ ] GREEN : tests corruption/identifiants/liens/annexe/retour sans modification source.
+- [x] GREEN : tests corruption/identifiants/liens/annexe/retour sans modification source.
   Rapport détaillé et revue. Ne pas éditer serveur/desktop/Remote contrats de tâche2.
 
 Exemple de contrat de test :
@@ -96,20 +96,20 @@ Files : Core/Remote/WorkspaceMigrationContracts.cs, Server/Migration/*,
 ServerApplication.cs, ServerStorage.cs, CommandStore.cs, WorkspaceEndpoints.cs
 pour partage antiforgery ; tests Server.Tests/WorkspaceMigrationApiTests.cs et recovery.
 
-- [ ] RED authentification/CSRF/HTTPS/limites, morceaux idempotents et hash global,
+- [x] RED authentification/CSRF/HTTPS/limites, morceaux idempotents et hash global,
   chemins absents des réponses et état privé ; ancienne API non changée.
-- [ ] Opérations atomiques privées par GUID, taille/hash bornés ; corps brut512Kio.
+- [x] Opérations atomiques privées par GUID, taille/hash bornés ; corps brut512Kio.
   Ne pas relever globalement la limite8192. Réception jamais dans l’atelier actif.
-- [ ] Préparer Stage vérifié puis instantané serveur cohérent sous CommandStore.Read,
+- [x] Préparer Stage vérifié puis instantané serveur cohérent sous CommandStore.Read,
   sauvegarde complète vérifiée ; Compare et décisions versionnées. Candidate reconstruite
   après choix ; pas de candidate favorable si audits échouent.
-- [ ] Apply confirmé et ReviewHash exact : verrou métier, refus de Pending métier,
+- [x] Apply confirmé et ReviewHash exact : verrou métier, refus de Pending métier,
   revalidation serveur/candidate, journal flush, déplacement ancienroot vers backup
   conservé puis candidate vers racine stable. Après début de bascule, finir ou restaurer
   même si RequestAborted. Reçu appliqué idempotent ; autre commande/plan refusé.
-- [ ] Récupération avant ServerStorage.Directory.Exists au redémarrage. Chemins journal
+- [x] Récupération avant ServerStorage.Directory.Exists au redémarrage. Chemins journal
   strictement dérivés de configuration + GUID, liens refusés, ambiguïté => failclosed.
-- [ ] GREEN Windows et Linux : simuler états avant/après chaque déplacement, perte réponse,
+- [x] GREEN Windows et Linux : simuler états avant/après chaque déplacement, perte réponse,
   nouvelle modification pendant revue, ancienne version d’édition refusée après reprise.
   Sauvegardes/identités/auth/commandes intactes. Rapport et revue.
 
@@ -120,23 +120,23 @@ Core/Migration/GuidedWorkspaceMigration*.cs pour préparation/journal local si u
 Desktop/MainWindow.Migration.cs, vue dédiée native du panneau latéral,
 MainWindow.Remote.cs/Settings.cs pour points d’entrée ; tests dédiés Headless et clientHTTP.
 
-- [ ] RED ancien serveur404 capabilities => message mise à jour sans transfert ;
+- [x] RED ancien serveur404 capabilities => message mise à jour sans transfert ;
   authentification nativeHTTPS, annulation et reprise au même compte/serveur.
-- [ ] Sauvegarde originale vérifiée hors source, préparation portable et bilan des
+- [x] Sauvegarde originale vérifiée hors source, préparation portable et bilan des
   anomalies ; choix explicite d’annexe des collections manquantes via surcharge tâche1.
   Stabilité PC avant/après export et avant demande Apply, jamais réécrire le PC.
-- [ ] Transfert stream/morceaux et octets réels, pas pourcentage fictif ; aucune archive
+- [x] Transfert stream/morceaux et octets réels, pas pourcentage fictif ; aucune archive
   complète en mémoire. Client dédié sans timeout20s global du tableau de bord, avec
   annulation et limites explicites. Pas de secret dans journal local ni URL.
-- [ ] Comparaison lisible nom/type/chemin/dates/tailles/empreintes ; choix complet PC ou
+- [x] Comparaison lisible nom/type/chemin/dates/tailles/empreintes ; choix complet PC ou
   serveur par conflit, serveur-seul conservé. Garder erreurs et choix visibles.
-- [ ] Confirmation finale Annuler focus/Entrée sûr ; journal local avant Apply. Réponse
+- [x] Confirmation finale Annuler focus/Entrée sûr ; journal local avant Apply. Réponse
   perdue => GET status uniquement, jamais nouveau Apply. Après Applied contrôlerreçu
   et source PC ; proposer mode connecté explicitement si source restée stable.
-- [ ] Bloquer changements de mode/opérations locales pendant instantané et activation ;
+- [x] Bloquer changements de mode/opérations locales pendant instantané et activation ;
   annuler/fermer laisse sauvegardes et opération reprenable. Vérifier que fichiers réels,
   autres ateliers et compte différent ne peuvent être engagés par un ancien callback.
-- [ ] GREEN parcours réel sur données fictives + Headless1400/960 captures bornées,
+- [x] GREEN parcours réel sur données fictives + Headless1400/960 captures bornées,
   réutiliser styles PRODUCT/DESIGN. Rapport et revue.
 
 ### Task 4: Intégration et livraison vérifiée

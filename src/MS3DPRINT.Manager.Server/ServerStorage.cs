@@ -16,6 +16,7 @@ public sealed class ServerStorage
             throw new InvalidOperationException("Les dossiers d’état du serveur et d’atelier doivent être distincts et non imbriqués.");
         WorkspacePathSafety.EnsureNoLinks(StateRoot);
         WorkspacePathSafety.EnsureNoLinks(WorkspaceRoot);
+        Migration.WorkspaceMigrationStore.Recover(WorkspaceRoot, StateRoot);
         if (!Directory.Exists(WorkspaceRoot)) throw new InvalidOperationException("Le dossier d’atelier configuré doit déjà exister.");
         Directory.CreateDirectory(StateRoot);
     }

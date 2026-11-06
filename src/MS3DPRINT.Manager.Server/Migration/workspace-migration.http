@@ -1,0 +1,50 @@
+@baseUrl = https://localhost:5001
+@token = replace-with-native-owner-token
+@operation = 11111111-1111-1111-1111-111111111111
+@archiveSha256 = replace-with-64-hex-characters
+@reviewHash = replace-with-reviewed-hash
+
+### Private capabilities; all requests require HTTPS and owner authentication.
+GET {{baseUrl}}/api/v1/workspace-migrations/capabilities
+Authorization: Bearer {{token}}
+
+### Start or resume exactly the same archive identity.
+POST {{baseUrl}}/api/v1/workspace-migrations/operations
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"commandId":"{{operation}}","bytes":3,"sha256":"{{archiveSha256}}"}
+
+### Raw part, maximum 524288 bytes. Replace abc and hash with real archive bytes.
+PUT {{baseUrl}}/api/v1/workspace-migrations/operations/{{operation}}/parts/0
+Authorization: Bearer {{token}}
+Content-Type: application/octet-stream
+X-MS3DFORGE-SHA256: {{archiveSha256}}
+
+abc
+
+### Verify archive, copy the server backup, compare, and prepare a candidate.
+POST {{baseUrl}}/api/v1/workspace-migrations/operations/{{operation}}/prepare
+Authorization: Bearer {{token}}
+
+### Submit the complete explicit conflict choices, maximum 10000 and 4 MiB JSON.
+PUT {{baseUrl}}/api/v1/workspace-migrations/operations/{{operation}}/choices
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+[{"path":"02_MODELES_3D/model.3mf","choice":"Pc"}]
+
+### Inspect status after any uncertain activation response; do not issue another Apply.
+GET {{baseUrl}}/api/v1/workspace-migrations/operations/{{operation}}
+Authorization: Bearer {{token}}
+
+### Explicitly activate only the verified reviewed candidate.
+POST {{baseUrl}}/api/v1/workspace-migrations/operations/{{operation}}/apply
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"commandId":"22222222-2222-2222-2222-222222222222","reviewHash":"{{reviewHash}}","confirmed":true}
+
+### Missing operations return 404. Cookie mutations additionally require X-CSRF-TOKEN.
+GET {{baseUrl}}/api/v1/workspace-migrations/operations/33333333-3333-3333-3333-333333333333
+Authorization: Bearer {{token}}

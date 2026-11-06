@@ -186,16 +186,28 @@ public partial class MainWindow
     }
 
     private async void WorkspaceMode_Click(object? sender, RoutedEventArgs e) => await ChangeWorkspaceModeAsync();
-    private async Task ChangeWorkspaceModeAsync()
+    private Task ChangeWorkspaceModeAsync() => ChangeWorkspaceModeCoreAsync(null);
+    private async Task ChangeWorkspaceModeCoreAsync(RemoteDeviceSession? migrationSession)
     {
-        bool OperationInProgress() => _serverBusy || _serverFormOpen || _projectTaskBusy || _panel is not null || _mobilePublishing != 0 || _estimateDraftAutoSaving || _busy != 0;
+        bool OperationInProgress() => _migrationOpen || _serverBusy || _serverFormOpen || _projectTaskBusy || _panel is not null || _mobilePublishing != 0 || _estimateDraftAutoSaving || _busy != 0;
         if (OperationInProgress())
         { Notify("Terminez l’opération ou fermez le formulaire avant de changer d’atelier."); return; }
         if (!IsServerWorkspace && !FlushEstimateDraft()) return;
         var server = !IsServerWorkspace;
-        if (server && WorkspaceStartupMode.HasLocalBusinessData(_workspaceLocation.Resolve()) && !await new ServerSwitchNotice().ShowDialog<bool>(this)) return;
+        if (server && migrationSession is null && WorkspaceStartupMode.HasLocalBusinessData(_workspaceLocation.Resolve()) && !await new ServerSwitchNotice().ShowDialog<bool>(this)) return;
         if (OperationInProgress())
         { Notify("Terminez l’opération ou fermez le formulaire avant de changer d’atelier."); return; }
+        if (migrationSession is not null)
+        {
+            try
+            {
+                if (_serverCache.Load() is { PendingCommand: not null } pending
+                    && (new Uri(pending.Server) != new Uri(migrationSession.Server) || !pending.Account.Equals(migrationSession.Account, StringComparison.OrdinalIgnoreCase)))
+                { Notify("Vérifiez le reçu de la commande de l’autre compte avant d’ouvrir cet atelier serveur.", true); return; }
+            }
+            catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
+            { Notify("Le journal serveur doit être vérifié avant de changer de mode : " + ex.Message, true); return; }
+        }
         try { Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(_workspaceModePath))!); File.WriteAllText(_workspaceModePath, server ? "server" : "local"); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Notify("Choix du mode non enregistré : " + ex.Message, true); return; }
         _serverGeneration++;
@@ -210,7 +222,16 @@ public partial class MainWindow
         IsServerWorkspace = server;
         _serverPage = "Accueil"; _serverClientDetail = null; _serverProjectDetail = null; _serverPreloadTask = null;
         _preloaded = false;
-        if (server) OpenServerConnection();
+        if (server)
+        {
+            OpenServerConnection();
+            if (migrationSession is not null && _serverConnection is { } connection)
+            {
+                ServerAddress.Text = migrationSession.Server; ServerAccount.Text = migrationSession.Account;
+                await RunServerAsync(c => c.ConnectSessionAsync(migrationSession));
+                _serverPreloadTask = Task.CompletedTask;
+            }
+        }
         UpdateServerChrome(); ShowWorkspace("Accueil");
         PageTitle.Text = server ? "Accueil" : "Votre atelier";
         await PreloadAsync(force: true);
@@ -232,5 +253,5 @@ public partial class MainWindow
     }
 
     private void DisposeServerWorkspace()
-    { _serverClosed = true; _serverGeneration++; _serverTimer.Stop(); _serverConnection?.Dispose(); _serverConnection = null; }
+    { if (_panel is GuidedMigrationPanel migration) migration.Close(false); _serverClosed = true; _serverGeneration++; _serverTimer.Stop(); _serverConnection?.Dispose(); _serverConnection = null; }
 }

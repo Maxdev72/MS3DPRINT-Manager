@@ -186,6 +186,7 @@ public partial class MainWindow
         var backupStatus = await Task.Run(() => LoadBackupStatus(workspaceRoot));
         if (!IsWorkspaceLoadCurrent(load)) return;
         AddSettingsCard("storage", BuildBackupSettingsCard(workspaceRoot, backupStatus));
+        AddSettingsCard("storage", BuildMigrationSettingsCard());
 
         // ---- project template: folders created in each new project
         var template = new ProjectTemplateStore(new WorkspaceMetadataPaths(workspaceRoot)).Load();
