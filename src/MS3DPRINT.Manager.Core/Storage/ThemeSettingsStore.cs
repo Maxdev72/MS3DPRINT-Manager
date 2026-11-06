@@ -9,7 +9,7 @@ public sealed class ThemeSettingsStore
 
     public ThemeSettingsStore(string? dataDirectory = null)
     {
-        _dataDirectory = Path.GetFullPath(dataDirectory ?? Path.Combine(AppContext.BaseDirectory, "data"));
+        _dataDirectory = Path.GetFullPath(dataDirectory ?? MS3DPRINT.Manager.Core.Storage.ApplicationPaths.DataDirectory);
         _path = Path.Combine(_dataDirectory, "settings.json");
     }
 

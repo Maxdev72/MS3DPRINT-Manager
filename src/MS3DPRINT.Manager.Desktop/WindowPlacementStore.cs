@@ -11,7 +11,7 @@ public sealed record WindowPlacement(double Width, double Height, bool Maximized
 public sealed class WindowPlacementStore(string? path = null)
 {
     private readonly string _path = path ?? Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MS3DPRINT Manager", "window.json");
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify), "MS3DPRINT Manager", "window.json");
 
     public WindowPlacement? Load()
     {

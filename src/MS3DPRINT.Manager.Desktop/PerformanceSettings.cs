@@ -13,7 +13,7 @@ public sealed class PerformanceSettings
 
     public PerformanceSettings(string? dataDirectory = null)
     {
-        _directory = Path.GetFullPath(dataDirectory ?? Path.Combine(AppContext.BaseDirectory, "data"));
+        _directory = Path.GetFullPath(dataDirectory ?? MS3DPRINT.Manager.Core.Storage.ApplicationPaths.DataDirectory);
         _path = Path.Combine(_directory, "performance.json");
     }
 

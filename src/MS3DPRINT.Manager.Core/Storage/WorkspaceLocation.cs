@@ -9,7 +9,9 @@ namespace MS3DPRINT.Manager.Core.Storage;
 public sealed class WorkspaceLocation
 {
     public const string EnvironmentVariable = "MS3DPRINT_WORKSPACE";
-    public const string DefaultRoot = @"C:\MS3DPRINT\Nextcloud\MS3DPRINT";
+    public static string DefaultRoot => OperatingSystem.IsLinux()
+        ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "MS3DPRINT")
+        : @"C:\MS3DPRINT\Nextcloud\MS3DPRINT";
 
     private sealed record Stored(string? Root);
 
@@ -18,7 +20,7 @@ public sealed class WorkspaceLocation
 
     public WorkspaceLocation(string? dataDirectory = null)
     {
-        _dataDirectory = Path.GetFullPath(dataDirectory ?? Path.Combine(AppContext.BaseDirectory, "data"));
+        _dataDirectory = Path.GetFullPath(dataDirectory ?? ApplicationPaths.DataDirectory);
         _path = Path.Combine(_dataDirectory, "workspace.json");
     }
 

@@ -40,7 +40,7 @@ public sealed partial class SyncFolderDetector
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { }
         return new SyncFolderDetector(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), drives);
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify), drives);
     }
 
     /// <summary>The synchronised folders that exist, Nextcloud first, then Google Drive and Dropbox; a folder is listed once.</summary>

@@ -7,7 +7,7 @@ public static class ErrorLog
     public const long MaxBytes = 1024 * 1024;
 
     public static string DefaultPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MS3DPRINT Manager", "erreurs.log");
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify), "MS3DPRINT Manager", "erreurs.log");
 
     public static void Write(Exception exception, string? path = null)
     {

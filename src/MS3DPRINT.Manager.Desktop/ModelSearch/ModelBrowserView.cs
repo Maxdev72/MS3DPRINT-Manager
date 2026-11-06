@@ -108,7 +108,7 @@ public sealed class ModelBrowserView : UserControl
     private DateTime? _hiddenSince;
 
     public static string WebDataFolder { get; set; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MS3DPRINT Manager", "webview");
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify), "MS3DPRINT Manager", "webview");
 
     public ModelBrowserView()
     {

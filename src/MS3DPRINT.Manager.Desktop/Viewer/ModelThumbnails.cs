@@ -25,7 +25,7 @@ public static class ModelThumbnails
     private static int _pruned;
 
     public static string CacheDirectory { get; set; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MS3DPRINT Manager", "thumbnails");
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify), "MS3DPRINT Manager", "thumbnails");
 
     /// <summary>Where the picture of this version of the file is kept; another size or date gives another name.</summary>
     public static string CachePath(string modelPath, long length, DateTime lastWriteUtc, int size = Size)

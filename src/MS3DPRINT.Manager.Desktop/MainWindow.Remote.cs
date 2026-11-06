@@ -23,7 +23,7 @@ public partial class MainWindow
 
     private void ConfigureWorkspaceMode(HttpClient? http, RemoteWorkspaceCache? cache, string? modePath, IRemoteSessionStore? sessions, bool useHostDefaults)
     {
-        var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MS3DPRINT Manager");
+        var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify), "MS3DPRINT Manager");
         _workspaceModePath = modePath ?? Path.Combine(directory, "workspace-mode.txt");
         _serverHttp = http ?? new HttpClient(new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false }) { Timeout = TimeSpan.FromSeconds(20) };
         _serverCache = cache ?? new RemoteWorkspaceCache(Path.Combine(directory, "remote", "copy.json"));

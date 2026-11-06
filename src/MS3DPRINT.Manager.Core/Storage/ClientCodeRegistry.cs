@@ -17,7 +17,7 @@ public sealed class ClientCodeRegistry
 
     public ClientCodeRegistry(string? dataDirectory = null)
     {
-        _dataDirectory = Path.GetFullPath(dataDirectory ?? Path.Combine(AppContext.BaseDirectory, "data"));
+        _dataDirectory = Path.GetFullPath(dataDirectory ?? MS3DPRINT.Manager.Core.Storage.ApplicationPaths.DataDirectory);
         _activePath = Path.Combine(_dataDirectory, "client-codes.json");
         _previousPath = Path.Combine(_dataDirectory, "client-codes.previous.json");
         var pathHash = SHA256.HashData(Encoding.UTF8.GetBytes(_activePath.ToUpperInvariant()));

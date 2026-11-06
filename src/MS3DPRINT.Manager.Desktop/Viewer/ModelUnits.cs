@@ -48,7 +48,7 @@ public sealed class ModelUnitStore(string path)
 {
     private const int MaxEntries = 500;
 
-    public static ModelUnitStore Default { get; } = new(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MS3DPRINT Manager", "model-units.json"));
+    public static ModelUnitStore Default { get; } = new(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify), "MS3DPRINT Manager", "model-units.json"));
 
     public string? Get(string modelPath) => Load().TryGetValue(Key(modelPath), out var value) ? value : null;
 

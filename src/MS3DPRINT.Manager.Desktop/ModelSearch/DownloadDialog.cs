@@ -231,7 +231,12 @@ public sealed class DownloadDialog : DialogWindow
     {
         var first = _files.Select(item => item.File.Path).FirstOrDefault(File.Exists);
         if (first is null) { _note.Text = "Ces fichiers ne sont plus dans le tampon."; return; }
-        try { Process.Start(new ProcessStartInfo("explorer.exe", "/select,\"" + first + "\"") { UseShellExecute = false }); }
+        try
+        {
+            var start = new ProcessStartInfo(OperatingSystem.IsWindows() ? "explorer.exe" : "xdg-open") { UseShellExecute = false };
+            start.ArgumentList.Add(OperatingSystem.IsWindows() ? "/select," + first : Path.GetDirectoryName(Path.GetFullPath(first))!);
+            Process.Start(start);
+        }
         catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
         {
             _note.Text = "Impossible d’ouvrir le dossier : " + exception.Message;
