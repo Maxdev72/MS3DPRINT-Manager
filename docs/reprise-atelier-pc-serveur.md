@@ -7,21 +7,26 @@ permanente de deux ateliers modifiables séparément.
 
 ## Depuis Manager
 
-1. Rester dans l’atelier local, ouvrir **Paramètres**, puis **Reprendre les données de ce PC**.
-2. Se connecter au serveur HTTPS avec son compte habituel. Le mot de passe reste en mémoire.
-   Si Manager demande une mise à jour du serveur, arrêter ici : aucune archive n’est transférée.
-3. Lire le périmètre de sauvegarde. Les dossiers hors des dossiers gérés restent sur ce PC.
-   Ils ne sont ni sauvegardés par cette opération, ni transférés. Leur exclusion doit être acceptée.
-4. Laisser Manager sauvegarder puis vérifier l’original dans son dossier privé, hors Nextcloud.
-   Les fiches de collections dont le dossier a disparu bloquent la préparation ; leur conservation
-   en annexe inactive exige une sélection explicite. L’original reste dans la sauvegarde.
-5. Transférer et comparer. Les fichiers uniquement PC sont ajoutés ; ceux uniquement serveur
-   sont conservés. Pour chaque conflit, choisir le fichier entier du PC ou du serveur.
-   Les dates sont affichées pour information, sans décider automatiquement de la bonne version.
-6. Vérifier le bilan et cliquer explicitement sur **Activer cette copie sur le serveur**.
-   Annuler garde le focus ; Entrée ne confirme pas l’activation.
-7. Après vérification du reçu et de la stabilité du PC, choisir **Ouvrir le mode serveur**.
-   Les pages Clients, Projets et Tâches utilisent alors le serveur.
+1. Dans l’atelier local, ouvrir **Paramètres → Espace et stockage → Connexion à mon
+   atelier en ligne**, puis **Synchroniser cet atelier**.
+2. Saisir son compte habituel et cliquer **Se connecter et préparer la synchronisation**.
+   Manager sauvegarde le PC, vérifie la copie et la compare automatiquement au serveur.
+   Les anciennes fiches de modèles réellement sans dossier sont conservées à part dans
+   la sauvegarde privée. Les fichiers source restent intacts.
+3. Si des versions diffèrent, utiliser **Garder la version du PC pour tous les conflits**
+   quand le PC contient les bonnes données. **Choisir fichier par fichier** permet
+   de conserver certaines versions serveur. Les dates ne décident jamais à votre place.
+4. Lire le bilan, notamment les éléments qui resteront uniquement sur le PC, puis cliquer
+   **Confirmer la synchronisation**. Le serveur est sauvegardé avant modification.
+   Fermer conserve le focus ; Entrée ne confirme jamais cette modification.
+5. Manager ouvre automatiquement le mode serveur après vérification du reçu et de la
+   stabilité du PC. Clients, projets et tâches utilisent alors les mêmes données que le
+   site. Ce premier envoi n’est plus à refaire pour les modifications réalisées dans ce mode.
+
+Les détails des fichiers et de la comparaison restent accessibles dans des rubriques
+repliables. Aucun chemin technique ni empreinte n’est requis pour utiliser l’assistant.
+Les autres modules restent accessibles dans l’atelier local ; les fichiers modifiés
+séparément sur le disque du PC ne sont pas encore synchronisés en continu.
 
 ## En cas d’interruption
 

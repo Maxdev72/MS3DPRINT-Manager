@@ -12,10 +12,10 @@ public partial class MainWindow
     private bool _migrationOpen;
     private Border BuildMigrationSettingsCard()
     {
-        var action = new Button { Name = "StartGuidedWorkspaceMigration", Content = "Reprendre les données de ce PC", IsEnabled = !IsServerWorkspace };
+        var action = new Button { Name = "StartGuidedWorkspaceMigration", Content = "Synchroniser cet atelier", IsEnabled = !IsServerWorkspace };
         action.Click += async (_, _) => await OpenGuidedMigrationAsync();
         return new Border { Classes = { "card-raised" }, Padding = new Avalonia.Thickness(22, 20), Child = new StackPanel { Spacing = 14, Children = {
-            SettingsCardHeader("IconSave", "Reprise PC vers serveur", "Sauvegarder ce PC, comparer avec le serveur et choisir chaque conflit avant toute activation."), action } } };
+            SettingsCardHeader("IconSave", "Connexion à mon atelier en ligne", "Sauvegarde automatique et premier envoi de cet atelier. Retrouvez ensuite les mêmes clients, projets et tâches sur le PC et le site."), action } } };
     }
     private async Task OpenGuidedMigrationAsync()
     {
@@ -51,14 +51,13 @@ public partial class MainWindow
         private readonly string _privateRoot;
         private readonly StackPanel _body = new() { Spacing = 14 };
         private readonly TextBlock _status = new() { Name = "MigrationStatus", TextWrapping = TextWrapping.Wrap, Classes = { "muted" } };
-        private readonly Button _next = new() { Name = "MigrationNext", Content = "Se connecter et vérifier le serveur" };
-        private readonly Button _cancel = new() { Name = "MigrationCancel", Content = "Fermer et conserver la reprise" };
+        private readonly Button _next = new() { Name = "MigrationNext", Content = "Se connecter et préparer la synchronisation" };
+        private readonly Button _cancel = new() { Name = "MigrationCancel", Content = "Fermer" };
         private readonly TextBox _address = new() { Name = "MigrationServer", Text = "https://ms3dforge.fr", PlaceholderText = "Adresse HTTPS" };
         private readonly TextBox _account = new() { Name = "MigrationAccount", PlaceholderText = "Compte" };
         private readonly TextBox _password = new() { Name = "MigrationPassword", PlaceholderText = "Mot de passe", PasswordChar = '●' };
         private readonly List<(string Path, ComboBox Choice)> _choices = [];
-        private readonly List<(Guid Id, CheckBox Choice)> _annex = [];
-        private readonly CheckBox _excluded = new() { Content = "Ces entrées restent uniquement sur ce PC ; elles ne sont ni sauvegardées ni transférées." };
+        private readonly HashSet<Guid> _inactiveCollections = [];
         private RemoteWorkspaceClient? _client;
         private GuidedWorkspaceMigration? _migration;
         private WorkspaceMigrationStatus? _remote;
@@ -89,14 +88,14 @@ public partial class MainWindow
             {
                 if (_busy || !CanStartNewPreparation) return;
                 _migration?.Dispose(); _migration = null; _client?.ForgetSession(); _client = null; _startNew = true;
-                _step = 0; _remote = null; _finalSourceVerified = false; _newPreparation.IsVisible = false; _choices.Clear(); _annex.Clear(); _excluded.IsChecked = false;
+                _step = 0; _remote = null; _finalSourceVerified = false; _newPreparation.IsVisible = false; _choices.Clear(); _inactiveCollections.Clear();
                 _address.IsEnabled = _account.IsEnabled = _password.IsEnabled = true;
                 _body.Children.Clear(); _body.Children.Add(Text("Serveur HTTPS")); _body.Children.Add(_address);
                 _body.Children.Add(Text("Compte")); _body.Children.Add(_account); _body.Children.Add(Text("Mot de passe")); _body.Children.Add(_password);
                 _status.Text = "L’ancienne préparation reste conservée. Reconnectez-vous pour sauvegarder l’état actuel du PC dans une nouvelle reprise.";
-                _next.Content = "Se connecter et vérifier le serveur";
+                _next.Content = "Se connecter et préparer la synchronisation";
             };
-            Layout("Reprendre les données de ce PC", "Le PC reste intact. Chaque conflit demande un choix ; les fichiers uniquement serveur sont conservés. Les modules non portés restent consultables dans leur copie locale.", [_body, _status], _next, _cancel, destructive: true);
+            Layout("Synchroniser mon atelier", "Manager prépare et sauvegarde votre atelier automatiquement. Vous confirmez le bilan avant de modifier le serveur. Votre PC reste intact.", [_body, _status], _next, _cancel, destructive: true);
             _next.Classes.Remove("danger"); _next.Classes.Add("primary-action");
             Avalonia.Automation.AutomationProperties.SetLiveSetting(_status, Avalonia.Automation.AutomationLiveSetting.Polite);
         }
@@ -135,54 +134,19 @@ public partial class MainWindow
                     }
                     _migration ??= await Task.Run(() => GuidedWorkspaceMigration.Create(server, account, _root, PrivateRoot)); RequireCurrent();
                     _address.IsEnabled = _account.IsEnabled = _password.IsEnabled = false;
-                    if (_migration.Journal.ApplyRequested) { _step = 5; _next.Content = "Vérifier uniquement l’état et le reçu"; _status.Text = "Activation déjà demandée. Aucune nouvelle activation ne sera envoyée."; return; }
-                    if (_migration.Journal.ArchiveSha256 is not null) { _step = 2; _next.Content = "Reprendre le transfert et la comparaison"; _status.Text = "Sauvegarde portable retrouvée pour ce compte, serveur et atelier."; return; }
-                    _body.Children.Clear();
-                    var snapshot = await Task.Run(() => new WorkspaceReconciliationService().Capture(_root)); RequireCurrent();
-                    var excluded = snapshot.Issues.Where(i => i.Code == "ExcludedEntry").ToArray();
-                    _status.Text = "Serveur compatible. La sauvegarde originale sera vérifiée dans un dossier privé hors Nextcloud.\n" + _migration.Journal.Directory;
-                    if (excluded.Length > 0)
+                    if (_migration.Journal.ApplyRequested)
                     {
-                        _body.Children.Add(Text("Entrées hors périmètre conservées uniquement sur le PC :\n" + string.Join("\n", excluded.Select(i => i.Path))));
-                        _body.Children.Add(_excluded);
+                        _step = 5; _remote = await _migration.CheckAsync(_client, _lifetime.Token); RequireCurrent();
+                        await RenderResultAsync(); return;
                     }
-                    else _excluded.IsChecked = true;
-                    _step = 1; _next.Content = "Sauvegarder et préparer la copie portable";
+                    if (_migration.Journal.ArchiveSha256 is not null) await TransferAndReviewAsync();
+                    else await PrepareAndReviewAsync();
                 }
-                else if (_step == 1)
-                {
-                    if (_excluded.IsChecked != true) throw new InvalidDataException("Confirmez le périmètre des entrées conservées uniquement sur ce PC.");
-                    _status.Text = "Sauvegarde originale et vérification de la copie…";
-                    var selected = _annex.Where(a => a.Choice.IsChecked == true).Select(a => a.Id).ToHashSet();
-                    var report = await Task.Run(() => _migration!.Prepare(selected)); RequireCurrent();
-                    _body.Children.Clear(); _annex.Clear();
-                    foreach (var issue in report.Issues)
-                    {
-                        _body.Children.Add(Text(issue.Path + " · " + issue.Message));
-                        if (issue.Code == "MissingCollectionFolder" && Guid.TryParse(Path.GetFileNameWithoutExtension(issue.Path), out var id))
-                        { var check = new CheckBox { Content = "Conserver cette fiche en annexe privée (inactive sur le serveur)" }; _annex.Add((id, check)); _body.Children.Add(check); }
-                    }
-                    if (!report.Succeeded) { _status.Text = "Préparation bloquée. Aucun fichier transmis. Choisissez les annexes éventuelles ou corrigez les anomalies puis préparez une nouvelle reprise."; return; }
-                    _body.Children.Add(Text($"Archive portable vérifiée · {BackupSize(_migration!.Journal.ArchiveBytes)}\nSHA256 : {_migration.Journal.ArchiveSha256}"));
-                    _status.Text = "Copie portable prête. Le serveur actif restera inchangé pendant le transfert et la comparaison.";
-                    _step = 2; _next.Content = "Transférer et comparer";
-                }
-                else if (_step == 2)
-                {
-                    var progress = new Progress<long>(bytes => { if (!_closed && _current() && _step == 2 && _busy) _status.Text = $"Transfert confirmé : {bytes:N0} / {_migration!.Journal.ArchiveBytes:N0} octets"; });
-                    _remote = await _migration!.TransferAsync(_client!, progress, _lifetime.Token); RequireCurrent(); RenderReview();
-                }
+                else if (_step == 1) await PrepareAndReviewAsync();
+                else if (_step == 2) await TransferAndReviewAsync();
                 else if (_step == 3)
                 {
-                    var selected = _choices.Select(c => new WorkspaceReconciliationChoice(c.Path,
-                        c.Choice.SelectedIndex == 1 ? WorkspaceConflictChoice.Pc : WorkspaceConflictChoice.Server)).ToArray();
-                    if (_choices.Any(c => c.Choice.SelectedIndex < 1)) throw new InvalidDataException("Choisissez PC ou serveur pour chaque conflit.");
-                    _remote = await _client!.SetMigrationChoicesAsync(_migration!.Journal.OperationId!.Value, selected, _lifetime.Token); RequireCurrent();
-                    if (_remote.Phase != WorkspaceMigrationPhase.Prepared || _remote.Issues.Any(i => i.Blocking) || string.IsNullOrWhiteSpace(_remote.ReviewHash)) { RenderReview(); return; }
-                    _body.Children.Add(Text("Confirmez l’activation sur le serveur : ses données actuelles sont sauvegardées ; les conflits suivent vos choix. Le PC et sa sauvegarde originale sont conservés. Une réponse perdue imposera la consultation du reçu uniquement."));
-                    _status.Text = "Choix enregistrés et candidate auditée. Vérifiez le bilan avant de cliquer explicitement sur Activer.";
-                    foreach (var choice in _choices) choice.Choice.IsEnabled = false;
-                    _step = 4; _next.Content = "Activer cette copie sur le serveur"; _cancel.Focus();
+                    await FreezeReviewAsync();
                 }
                 else if (_step == 4)
                 {
@@ -191,8 +155,6 @@ public partial class MainWindow
                 }
                 else if (_step == 5)
                 { _remote = await _migration!.CheckAsync(_client!, _lifetime.Token); RequireCurrent(); await RenderResultAsync(); }
-                else if (_step == 6)
-                { await Task.Run(() => _migration!.RequireStableSource()); RequireCurrent(); if (!CanOpenServer) throw new InvalidDataException("Le PC a changé ou le reçu n’est pas validé. Le mode local est conservé."); SwitchSession = _client!.CaptureSession(_migration!.Journal.Account); Close(true); }
             }
             catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or RemoteWorkspaceException or OperationCanceledException or System.Text.Json.JsonException)
             {
@@ -200,35 +162,124 @@ public partial class MainWindow
             }
             finally { _busy = false; if (!_closed) { _next.IsEnabled = true; _body.IsEnabled = true; } else { _http.Dispose(); _migration?.Dispose(); } _idle.TrySetResult(); }
         }
+        private async Task PrepareAndReviewAsync()
+        {
+            _step = 1; _next.Content = "Réessayer la préparation";
+            _status.Text = "Sauvegarde de votre PC et préparation de la copie…";
+            var report = await Task.Run(() => _migration!.Prepare(_inactiveCollections)); RequireCurrent();
+            // Missing folders are preserved in the private annex, disclosed before final activation.
+            var missing = report.Issues.Where(i => i.Blocking).ToArray();
+            if (missing.Length > 0 && missing.All(i => i.Code == "MissingCollectionFolder"
+                && Guid.TryParse(Path.GetFileNameWithoutExtension(i.Path), out _)))
+            {
+                foreach (var issue in missing) _inactiveCollections.Add(Guid.Parse(Path.GetFileNameWithoutExtension(issue.Path)));
+                _status.Text = "Conservation des anciennes fiches et vérification de la copie…";
+                report = await Task.Run(() => _migration!.Prepare(_inactiveCollections)); RequireCurrent();
+            }
+            if (!report.Succeeded)
+            {
+                _body.Children.Clear();
+                _body.Children.Add(Text("La préparation ne peut pas encore se terminer. Votre PC est intact et aucun fichier n’a été envoyé."));
+                _body.Children.Add(Details("Voir le problème", report.Issues.Select(i => i.Path + " · " + i.Message)));
+                _status.Text = "Vous pouvez réessayer. Si le problème persiste, conservez cette fenêtre pour le diagnostic.";
+                return;
+            }
+            await TransferAndReviewAsync();
+        }
+        private async Task TransferAndReviewAsync()
+        {
+            _step = 2; _next.Content = "Réessayer la comparaison";
+            _body.Children.Clear();
+            _body.Children.Add(Text("Votre PC est sauvegardé. La copie est envoyée dans un espace privé pour comparaison ; l’atelier serveur actif reste inchangé jusqu’à votre confirmation."));
+            var progress = new Progress<long>(bytes => { if (!_closed && _current() && _step == 2 && _busy) _status.Text = $"Envoi de la copie : {BackupSize(bytes)} / {BackupSize(_migration!.Journal.ArchiveBytes)}"; });
+            _status.Text = "Envoi et comparaison avec votre atelier en ligne…";
+            _remote = await _migration!.TransferAsync(_client!, progress, _lifetime.Token); RequireCurrent();
+            RenderReview();
+            if (_remote.Phase == WorkspaceMigrationPhase.Prepared && !_remote.Issues.Any(i => i.Blocking)
+                && _remote.Plan is { } plan && !plan.Files.Any(f => f.Kind == WorkspaceDifferenceKind.Conflict))
+                await FreezeReviewAsync();
+        }
         private void RenderReview()
         {
             _body.Children.Clear(); _choices.Clear();
             if (_remote?.Plan is not { } plan) { _status.Text = "Comparaison indisponible : " + string.Join("\n", _remote?.Issues.Select(i => i.Message) ?? []); return; }
-            foreach (var issue in _remote.Issues) _body.Children.Add(Text(issue.Path + " · " + issue.Message));
-            _body.Children.Add(Text($"{plan.Files.Count(f => f.Kind == WorkspaceDifferenceKind.Same):N0} inchangés · {plan.Files.Count(f => f.Kind == WorkspaceDifferenceKind.PcOnly):N0} ajouts PC · {plan.Files.Count(f => f.Kind == WorkspaceDifferenceKind.ServerOnly):N0} conservés du serveur · {plan.Files.Count(f => f.Kind == WorkspaceDifferenceKind.Conflict):N0} conflits.\nLes fichiers inchangés sont comptés ci-dessus ; les différences sont détaillées ci-dessous."));
-            foreach (var file in plan.Files.Where(f => f.Kind != WorkspaceDifferenceKind.Same).OrderBy(f => f.Kind == WorkspaceDifferenceKind.Conflict ? 0 : 1))
+            foreach (var issue in _remote.Issues) _body.Children.Add(Text(issue.Message));
+            _body.Children.Add(Text(Summary(plan)));
+            var conflicts = plan.Files.Where(f => f.Kind == WorkspaceDifferenceKind.Conflict).ToArray();
+            if (conflicts.Length > 0)
             {
-                var kind = file.Kind switch { WorkspaceDifferenceKind.Same => "Inchangé", WorkspaceDifferenceKind.PcOnly => "Ajout PC", WorkspaceDifferenceKind.ServerOnly => "Serveur conservé", _ => "Conflit · choix obligatoire" };
-                _body.Children.Add(Text(file.DisplayName + " · " + (Path.GetExtension(file.Path).TrimStart('.') is { Length: > 0 } extension ? extension.ToUpperInvariant() : "Fichier") + " · " + kind + "\n" + file.Path + "\n" + Detail("PC", file.Pc) + "\n" + Detail("Serveur", file.Server)));
-                if (file.Kind == WorkspaceDifferenceKind.Conflict)
+                _body.Children.Add(Text("Certaines données existent dans deux versions. Quelle version souhaitez-vous garder ?"));
+                var usePc = new Button { Name = "MigrationUsePcForAll", Content = "Garder la version du PC pour tous les conflits" };
+                usePc.Click += async (_, _) =>
                 {
+                    if (_busy || _step != 3) return;
+                    foreach (var item in _choices) item.Choice.SelectedIndex = 1;
+                    await AdvanceAsync();
+                };
+                _body.Children.Add(usePc);
+                var individual = new StackPanel { Spacing = 14 };
+                foreach (var file in conflicts)
+                {
+                    individual.Children.Add(Text(file.DisplayName));
                     var choice = new ComboBox { ItemsSource = new[] { "Choisir la version…", "Conserver PC", "Conserver serveur" }, SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch };
                     var saved = _remote.Choices.FirstOrDefault(c => c.Path == file.Path); if (saved is not null) choice.SelectedIndex = saved.Choice == WorkspaceConflictChoice.Pc ? 1 : 2;
-                    _choices.Add((file.Path, choice)); _body.Children.Add(choice);
+                    _choices.Add((file.Path, choice)); individual.Children.Add(choice);
                 }
+                _body.Children.Add(new Expander { Header = "Choisir fichier par fichier", Content = individual, HorizontalAlignment = HorizontalAlignment.Stretch });
             }
-            _status.Text = "Comparaison par contenu. Les dates ne sélectionnent jamais une version automatiquement.";
-            _step = 3; _next.Content = "Vérifier les choix et le bilan final";
+            _body.Children.Add(Details("Voir les fichiers concernés", plan.Files.Where(f => f.Kind != WorkspaceDifferenceKind.Same)
+                .Select(f => f.DisplayName + "\n" + f.Path + "\n" + Detail("PC", f.Pc) + "\n" + Detail("Serveur", f.Server))));
+            _status.Text = "Les éléments présents uniquement sur le serveur sont conservés. Aucune version n’est choisie d’après sa date.";
+            _step = 3; _next.Content = "Continuer avec ces choix";
         }
+        private async Task FreezeReviewAsync()
+        {
+            if (_choices.Any(c => c.Choice.SelectedIndex < 1)) throw new InvalidDataException("Choisissez une version pour chaque conflit, ou utilisez le bouton pour garder toutes les versions du PC.");
+            var selected = _choices.Select(c => new WorkspaceReconciliationChoice(c.Path,
+                c.Choice.SelectedIndex == 1 ? WorkspaceConflictChoice.Pc : WorkspaceConflictChoice.Server)).ToArray();
+            _remote = await _client!.SetMigrationChoicesAsync(_migration!.Journal.OperationId!.Value, selected, _lifetime.Token); RequireCurrent();
+            if (_remote.Phase != WorkspaceMigrationPhase.Prepared || _remote.Plan is null || _remote.Issues.Any(i => i.Blocking) || string.IsNullOrWhiteSpace(_remote.ReviewHash)) { RenderReview(); return; }
+            foreach (var choice in _choices) choice.Choice.IsEnabled = false;
+            _body.Children.Clear();
+            _body.Children.Add(Text(Summary(_remote.Plan!)));
+            if (selected.Length > 0)
+            {
+                _body.Children.Add(Text($"Versions retenues : {selected.Count(c => c.Choice == WorkspaceConflictChoice.Pc)} du PC · {selected.Count(c => c.Choice == WorkspaceConflictChoice.Server)} du serveur."));
+                var edit = new Button { Content = "Modifier ces choix" };
+                edit.Click += (_, _) => { if (!_busy && _step == 4) RenderReview(); };
+                _body.Children.Add(edit);
+            }
+            var annex = Path.Combine(_migration.Journal.Directory, _migration.Journal.PreparationName!, "inactive-collections");
+            WorkspacePathSafety.EnsureNoLinks(annex);
+            var inactive = Directory.Exists(annex) ? Directory.EnumerateFiles(annex, "*.json").Count(p => Guid.TryParse(Path.GetFileNameWithoutExtension(p), out _)) : 0;
+            if (inactive > 0) _body.Children.Add(Text($"{inactive} ancienne(s) fiche(s) de modèles sans dossier conservée(s) à part dans la sauvegarde privée, sans activation sur le serveur."));
+            if (_migration.Journal.ExcludedEntries.Count > 0)
+                _body.Children.Add(Details("Ces éléments restent uniquement sur ce PC", _migration.Journal.ExcludedEntries));
+            _body.Children.Add(Text("Votre PC reste intact. Le serveur est sauvegardé avant toute modification."));
+            _body.Children.Add(Text("Après confirmation, Manager ouvrira les clients, projets et tâches partagés avec le site. Les autres modules restent dans l’atelier local."));
+            _status.Text = "Tout est prêt. La synchronisation attend votre confirmation.";
+            _step = 4; _next.Content = "Confirmer la synchronisation"; _cancel.Focus();
+        }
+        private static string Summary(WorkspaceReconciliationPlan plan) => $"Fichiers à ajouter : {plan.Files.Count(f => f.Kind == WorkspaceDifferenceKind.PcOnly):N0}\nConservés du serveur : {plan.Files.Count(f => f.Kind == WorkspaceDifferenceKind.ServerOnly):N0}\nVersions différentes : {plan.Files.Count(f => f.Kind == WorkspaceDifferenceKind.Conflict):N0}";
+        private static Expander Details(string title, IEnumerable<string> lines) => new()
+        {
+            Header = title, HorizontalAlignment = HorizontalAlignment.Stretch,
+            Content = Text(string.Join("\n\n", lines))
+        };
         private async Task RenderResultAsync()
         {
-            if (_remote!.Phase == WorkspaceMigrationPhase.Applied && _migration!.Journal.Receipt is { } receipt)
+            if (_remote!.Phase == WorkspaceMigrationPhase.Applied && _migration!.Journal.Receipt is not null)
             {
-                _body.Children.Clear(); _body.Children.Add(Text($"Reçu vérifié : {receipt.OperationId}\nActivation : {receipt.AppliedAt.ToLocalTime():g}\nEmpreinte finale : {receipt.Fingerprint}\nSauvegarde serveur vérifiée.\nSauvegarde PC : {_migration.Journal.Directory}"));
-                _newPreparation.IsVisible = true; _body.Children.Add(_newPreparation);
+                _body.Children.Clear(); _body.Children.Add(Text("Votre atelier est disponible en ligne. Les sauvegardes du PC et du serveur sont conservées."));
                 _finalSourceVerified = await Task.Run(() => _migration.SourceStable()); RequireCurrent();
-                if (!_finalSourceVerified) { _status.Text = "Serveur activé, mais le PC a changé depuis la sauvegarde. Le mode local est conservé ; vérifiez ces changements avant de poursuivre."; _step = 5; return; }
-                _status.Text = "Activation réussie et PC stable. Vous pouvez ouvrir explicitement le mode serveur."; _step = 6; _next.Content = "Ouvrir le mode serveur";
+                if (!_finalSourceVerified)
+                {
+                    _status.Text = "Serveur activé, mais le PC a changé depuis la sauvegarde. Le mode local est conservé ; vérifiez ces changements avant de poursuivre.";
+                    _step = 5; _next.Content = "Vérifier l’état du serveur";
+                    _newPreparation.IsVisible = true; _body.Children.Add(_newPreparation); return;
+                }
+                _status.Text = "Synchronisation terminée. Ouverture de votre atelier en ligne…";
+                SwitchSession = _client!.CaptureSession(_migration.Journal.Account); Close(true);
             }
             else
             {

@@ -63,3 +63,20 @@ preuve de build distincte. Les tests du serveur Linux ne remplacent pas le test 
 et de son volume réel lors de la future mise à jour.
 
 Validation finale : image locale ms3dforge-compagnon:29eb80f construite, démarrage sous app vérifié, stage de vérification Docker 124 tests réussis via cache hors ligne. Voir docs/reprise-guidee-validation.md. Déploiement du compagnon réalisé ensuite le 6 novembre ; voir la validation actualisée.
+
+
+## Simplification du premier envoi — 6 novembre 2026
+
+Le panneau natif enchaîne connexion, sauvegarde, préparation portable et comparaison.
+Une préparation bloquée uniquement par MissingCollectionFolder est reprise avec une
+annexe privée des identifiants signalés ; le service portable revalide chaque sélection.
+Le bilan final indique leur conservation inactive et les entrées hors périmètre, sans
+modifier la source. Les autres anomalies restent bloquantes.
+
+Les conflits gardent un choix explicite, individuel ou groupé pour le PC. Sans conflit,
+la candidate est auditée directement. La confirmation finale reste obligatoire et
+Annuler/Fermer conserve le focus. Après reçu vérifié et source stable, le panneau remet
+la session au mode serveur existant sans nouvelle connexion. Un reçu incertain reste
+consultable par GET uniquement ; une source modifiée empêche la bascule automatique.
+L’API de reprise et le serveur déployé ne changent pas. Le premier envoi simplifié ne
+constitue pas une synchronisation bidirectionnelle continue des fichiers locaux.

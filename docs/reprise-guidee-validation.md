@@ -84,3 +84,36 @@ Reçu : outputs/guided-workspace-reconciliation/legacy-path-fix-delivery.json.
 Aucune donnée métier réelle modifiée ni importée pendant ce correctif. Le serveur
 reste sur son déploiement précédent ; aucun redéploiement nécessaire pour ce blocage
 de préparation sur le PC. Le binaire Linux livré précédemment reste inchangé.
+
+## Premier envoi simplifié — 6 novembre 2026
+
+Le panneau natif enchaîne maintenant connexion, préparation et comparaison. Une seule
+confirmation finale est nécessaire sans conflit ; les conflits peuvent être réglés par
+un choix explicite groupé pour le PC ou individuellement. Les anciennes fiches réellement
+sans dossier sont conservées dans une annexe privée, signalée au bilan final. Les entrées
+hors périmètre restent indiquées. Après reçu vérifié et source stable, le mode serveur
+s’ouvre automatiquement. Aucune activation n’est envoyée par Entrée ni sans confirmation.
+
+Le test de parcours reproduisait les clics intermédiaires avant changement (rouge), puis
+passe après simplification. Validation finale : 1 302 tests Core Windows réussis et 8 tests
+Linux réussis. Le premier passage complet a relevé une régression de recherche des
+paramètres avec « sauvegarde », corrigée avant la passe complète finale. Les tests couvrent
+les annexes automatiques, le choix groupé, le gel des choix, le reçu incertain, la dérive
+serveur et le refus de bascule automatique si le PC change pendant l’activation.
+L’avertissement Avalonia AVA3001 est préexistant. Le détecteur de surface ne signale rien ;
+le bilan a été vérifié visuellement aux largeurs 960 et 1 400 avec des données fictives.
+
+Publication Windows réussie. SHA256 du candidat interne :
+C696BBED6CAA801B8189E96E1998B92A02D7959B4E7948CDB3B5761C597A926A.
+L’archive Linux a été remplacée ; SHA256 du binaire :
+CB6C8844A50AE3A22CF139022D4C474277A4D99E6CF8707FF888492C3DACCC5D.
+Le remplacement de l’exécutable utilisateur Windows attend la fermeture normale de Manager,
+encore ouvert lors de la préparation. Son état effectif est consigné hors Git dans
+outputs/guided-workspace-reconciliation/simple-sync-delivery.json.
+
+Aucune donnée réelle n’a été transférée ou activée, aucun service déployé. Le compagnon
+existant reste compatible ; les sites commerciaux sont inchangés. Cette simplification
+facilite la reprise initiale puis le travail sur le serveur pour clients, projets et tâches ;
+elle ne synchronise pas encore en continu les fichiers modifiés séparément sur le disque.
+Preuves : simple-sync-full-final.log, simple-sync-linux-tests.log, simple-sync-publish.log
+et leurs journaux de compilation dans outputs/guided-workspace-reconciliation/.
