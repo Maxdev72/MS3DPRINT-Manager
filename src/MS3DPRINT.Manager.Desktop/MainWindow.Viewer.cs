@@ -32,7 +32,6 @@ public partial class MainWindow
     /// <summary>Shows the 3D viewer inside the main window, over the current page, and loads a model when a path is given.</summary>
     private async void ShowModelViewer(string? path)
     {
-        if (IsServerWorkspace) { Notify("Visualiseur indisponible en mode serveur."); return; }
         DismissSearchResults();
         if (!ViewerWorkspacePanel.IsVisible)
         {

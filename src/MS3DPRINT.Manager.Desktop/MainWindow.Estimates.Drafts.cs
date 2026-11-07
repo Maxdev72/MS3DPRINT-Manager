@@ -48,7 +48,7 @@ public partial class MainWindow
 
     private void ScheduleEstimateDraft()
     {
-        if (IsServerWorkspace || _suppressEstimateChanges || _restoringEstimateDraft || _estimateFormRoot is null) return;
+        if (_suppressEstimateChanges || _restoringEstimateDraft || _estimateFormRoot is null) return;
         _estimateDraftTouched = true;
         _estimateDraftRevision++;
         _estimateDraftStatus.IsVisible = true;
@@ -59,7 +59,7 @@ public partial class MainWindow
     private bool FlushEstimateDraft()
     {
         _estimateDraftTimer.Stop();
-        if (IsServerWorkspace || !_estimateDraftTouched || _estimateFormRoot is null || _restoringEstimateDraft) return true;
+        if (!_estimateDraftTouched || _estimateFormRoot is null || _restoringEstimateDraft) return true;
         if (_estimateDraftWriter.IsSaved(_estimateFormRoot, _estimateDraftId, _estimateDraftRevision)) return true;
         try
         {
@@ -93,7 +93,7 @@ public partial class MainWindow
     private async Task AutoSaveEstimateDraftAsync()
     {
         _estimateDraftTimer.Stop();
-        if (IsServerWorkspace || _estimateDraftAutoSaving || !_estimateDraftTouched || _restoringEstimateDraft || _estimateFormRoot is not { } root) return;
+        if (_estimateDraftAutoSaving || !_estimateDraftTouched || _restoringEstimateDraft || _estimateFormRoot is not { } root) return;
         var id = _estimateDraftId;
         var revision = _estimateDraftRevision;
         if (_estimateDraftWriter.IsSaved(root, id, revision)) return;

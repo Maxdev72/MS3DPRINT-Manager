@@ -25,7 +25,8 @@ public partial class MainWindow : Window
     private readonly MS3DPRINT.Manager.Core.Storage.WorkspaceLocation _workspaceLocation = new();
 
     /// <summary>The workspace in use: the environment override, else the folder chosen in the settings, else the default.</summary>
-    private string WorkspaceRoot => IsServerWorkspace ? throw new InvalidOperationException("L’atelier local est inaccessible en mode serveur.") : _workspaceLocation.Resolve();
+    // In server mode the PC workshop still serves the pages not yet hosted by the server.
+    private string WorkspaceRoot => _workspaceLocation.Resolve();
 
     private CancellationTokenSource? _searchCancellation;
 

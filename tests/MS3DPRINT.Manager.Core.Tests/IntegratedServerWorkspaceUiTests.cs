@@ -19,7 +19,7 @@ namespace MS3DPRINT.Manager.Core.Tests;
 public sealed class IntegratedServerWorkspaceUiTests
 {
     [Fact]
-    public async Task Native_shell_starts_on_server_without_reading_local_workspace_and_blocks_unconnected_modules()
+    public async Task Native_shell_starts_on_server_and_keeps_pc_pages_without_server_requests()
     {
         var temporary = Path.Combine(Path.GetTempPath(), "integrated-shell-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temporary);
@@ -39,14 +39,14 @@ public sealed class IntegratedServerWorkspaceUiTests
                     await window.PreloadAsync();
                     Assert.Equal("Atelier serveur", window.FindControl<TextBlock>("WorkspaceNameText")!.Text);
                     Assert.NotNull(window.FindControl<TextBox>("ServerAccount"));
+                    // Pages not hosted by the server stay reachable on this PC, without server requests or a mode switch.
                     await Invoke(window, "NavigateToWorkspaceAsync", "Achats");
-                    Assert.False(window.FindControl<Border>("PurchasesWorkspacePanel")!.IsVisible);
-                    Assert.Contains("indisponible", window.FindControl<TextBlock>("ServerConnectionStatus")!.Text);
+                    Assert.DoesNotContain("indisponible", window.FindControl<TextBlock>("ServerConnectionStatus")!.Text);
                     Assert.Equal(0, handler.Requests);
-                    var start = typeof(MainWindow).GetMethod("StartWorkspaceLoad", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, new object[] { "stale", temporary, false });
+                    Assert.False(window.FindControl<Button>("WorkspaceModeButton")!.IsVisible);
+                    // A local dashboard or client list must never overwrite the server pages.
+                    var start = typeof(MainWindow).GetMethod("StartWorkspaceLoad", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, new object[] { "clients", temporary, false });
                     Assert.False((bool)typeof(MainWindow).GetMethod("IsWorkspaceLoadCurrent", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, new[] { start })!);
-                    typeof(MainWindow).GetMethod("ShowModelViewer", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, new object?[] { null });
-                    Assert.False(window.FindControl<Border>("ViewerWorkspacePanel")!.IsVisible);
                 }
                 finally { window.Close(); }
                 return true;

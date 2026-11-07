@@ -124,11 +124,11 @@ public partial class MainWindow
 
     private async Task NavigateToWorkspaceAsync(string destination)
     {
-        if (IsServerWorkspace) { await NavigateServerAsync(destination); return; }
+        if (IsServerWorkspace && IsServerPage(destination)) { await NavigateServerAsync(destination); return; }
         if (!await EnsureWorkspaceAvailableAsync()) return;
         ShowWorkspace(destination);
         PageTitle.Text = destination;
-        PageSubtitle.Text = PageSubtitles.GetValueOrDefault(destination, string.Empty);
+        PageSubtitle.Text = PageSubtitles.GetValueOrDefault(destination, string.Empty) + (IsServerWorkspace ? " · données de ce PC" : "");
         _projectOriginClient = null;
         var projectsVisible = destination == "Projets";
         var clientsVisible = destination == "Clients";

@@ -92,7 +92,7 @@ public partial class MainWindow
         var root = WorkspaceRoot;
         browser.MoveSelectionRequested = paths => RunFileBatchAsync(browser, root, directory, paths, FileBatchOperation.Move, reload);
         browser.TrashSelectionRequested = paths => RunFileBatchAsync(browser, root, directory, paths, FileBatchOperation.Trash, reload);
-        bool Available() => !IsServerWorkspace && ReferenceEquals(_activeFileBrowser, browser) && string.Equals(root, WorkspaceRoot, StringComparison.OrdinalIgnoreCase)
+        bool Available() => ReferenceEquals(_activeFileBrowser, browser) && string.Equals(root, WorkspaceRoot, StringComparison.OrdinalIgnoreCase)
                 && _panel is null && !_importBatchActive && !_pendingOperations.Contains(root + "|files-batch");
         browser.FileCommandsAvailable = Available;
         browser.RenameSelectionRequested = path => RenameProjectEntryAsync(new(project, directory, path));

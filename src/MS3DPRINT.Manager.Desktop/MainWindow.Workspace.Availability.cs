@@ -9,8 +9,8 @@ public partial class MainWindow
 
     private async Task<bool> EnsureWorkspaceAvailableAsync()
     {
-        if (IsServerWorkspace) return true;
         var root = WorkspaceRoot;
+        if (IsServerWorkspace) return Directory.Exists(root);
         if (Directory.Exists(root)) return true;
         if (_recoveringWorkspace || _panel is not null) return false;
         _recoveringWorkspace = true;

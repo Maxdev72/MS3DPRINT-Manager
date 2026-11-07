@@ -103,10 +103,10 @@ public partial class MainWindow
         ServerLogoutButton.IsEnabled = !_serverBusy && _serverConnection?.IsAuthenticated == true;
         ServerReceiptButton.IsEnabled = !_serverBusy && _serverConnection?.IsAuthenticated == true;
         WorkspaceModeButton.IsEnabled = !_serverBusy;
+        WorkspaceModeButton.IsVisible = !IsServerWorkspace;
         DashboardNewProject.IsEnabled = DashboardNewClient.IsEnabled = !IsServerWorkspace || !_serverBusy && _serverConnection?.CanWrite == true;
-        DashboardNewEstimate.IsEnabled = DashboardViewer.IsEnabled = !IsServerWorkspace;
-        ToolTip.SetTip(DashboardNewEstimate, IsServerWorkspace ? "Devis indisponibles en mode serveur" : "Préparer un devis");
-        ToolTip.SetTip(DashboardViewer, IsServerWorkspace ? "Visualiseur indisponible en mode serveur" : "Visualiseur 3D");
+        ToolTip.SetTip(DashboardNewEstimate, "Préparer un devis");
+        ToolTip.SetTip(DashboardViewer, "Visualiseur 3D");
     }
 
     private void UpdateServerChrome()
@@ -123,15 +123,13 @@ public partial class MainWindow
         ServerReceiptButton.IsVisible = IsServerWorkspace && connection?.Copy?.PendingCommand is not null;
         ServerLoginPanel.IsVisible = IsServerWorkspace && connection?.IsAuthenticated != true;
         GlobalSearchContainer.IsVisible = !IsServerWorkspace;
-        ViewerNavButton.IsEnabled = !IsServerWorkspace;
-        ToolTip.SetTip(ViewerNavButton, IsServerWorkspace ? "Visualiseur indisponible en mode serveur" : "Visualiseur 3D");
+        ToolTip.SetTip(ViewerNavButton, "Visualiseur 3D");
         ProjectTrackingViewButton.IsVisible = !IsServerWorkspace;
         ProjectCalendarViewButton.IsVisible = !IsServerWorkspace;
         ProjectListViewButton.IsVisible = !IsServerWorkspace;
         foreach (var button in NavigationButtons())
         {
-            button.IsEnabled = !IsServerWorkspace || button.Tag is "Accueil" or "Clients" or "Projets";
-            ToolTip.SetTip(button, IsServerWorkspace && button.Tag is string name && name is not ("Accueil" or "Clients" or "Projets") ? name + " · indisponible en mode serveur" : button.Tag);
+            ToolTip.SetTip(button, IsServerWorkspace && button.Tag is string name && !IsServerPage(name) ? name + " · données de ce PC" : button.Tag);
         }
         ServerConnectionStatus.Text = !IsServerWorkspace ? "Atelier local indépendant · aucune synchronisation serveur" :
             (connection?.Workspace?.Name is { } workspaceName ? workspaceName + " · " : "") +
@@ -186,10 +184,11 @@ public partial class MainWindow
         await RunServerAsync(connection => connection.LogoutAsync());
     }
 
+    /// <summary>Pages hosted by the server; every other page keeps using this PC's workshop.</summary>
+    private static bool IsServerPage(string destination) => destination is "Accueil" or "Clients" or "Projets";
+
     private async Task NavigateServerAsync(string destination)
     {
-        if (destination is not ("Accueil" or "Clients" or "Projets"))
-        { ServerConnectionStatus.Text = destination + " : indisponible en mode serveur. Choisissez explicitement Atelier local pour ouvrir votre atelier indépendant."; return; }
         _serverPage = destination;
         _serverClientDetail = null; _serverProjectDetail = null;
         ShowWorkspace(destination);
