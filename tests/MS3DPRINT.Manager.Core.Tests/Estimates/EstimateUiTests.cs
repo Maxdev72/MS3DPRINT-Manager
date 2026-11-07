@@ -1458,6 +1458,7 @@ public sealed partial class EstimateUiTests : IDisposable
         try
         {
             Text(window, "EstimateMachineRate", "0,123456789");
+            Text(window, "EstimateWeight", "120");
             Field<TextBox>(window, "_estimateCommercial").Text = "50,005";
             Assert.True((bool)Invoke(window, "CalculateEstimate")!);
             Click(window, "EstimateSaveButton");
@@ -2218,6 +2219,7 @@ public sealed partial class EstimateUiTests : IDisposable
         {
             Invoke(window, "ShowWorkspace", "Estimations");
             Text(window, "EstimateQuantity", quantity);
+            Text(window, "EstimateWeight", "120");
             var key = new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter, KeyModifiers = KeyModifiers.Control };
             window.FindControl<Border>("EstimatesWorkspacePanel")!.RaiseEvent(key);
             Assert.True(key.Handled);
@@ -2235,11 +2237,18 @@ public sealed partial class EstimateUiTests : IDisposable
         {
             Text(window, "EstimateQuantity", "3");
             Click(window, "EstimateSaveButton");
+            Assert.Empty(new EstimateStore(_root).LoadAll()); // 100 g and 2 h are only examples
+            Assert.True(Field<TextBlock>(window, "_estimateInputMessage").IsVisible);
+            Text(window, "EstimateWeight", "80");
+            Click(window, "EstimateSaveButton");
             Click(window, "EstimateSaveButton");
             await Task.Delay(300); Dispatcher.UIThread.RunJobs();
             Click(window, "EstimateSaveButton");
             Assert.Single(new EstimateStore(_root).LoadAll());
             Text(window, "EstimateName", "Deuxième commande");
+            Click(window, "EstimateSaveButton");
+            Assert.Single(new EstimateStore(_root).LoadAll());
+            Field<TextBox>(window, "_estimateDurationMinutes").Text = "30";
             Click(window, "EstimateSaveButton");
             Assert.Equal(2, new EstimateStore(_root).LoadAll().Count);
         }

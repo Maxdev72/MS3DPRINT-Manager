@@ -310,6 +310,7 @@ public partial class MainWindow
 
     private bool TryLoadEstimate(EstimateProfile estimate)
     {
+        _estimatePrintDataEntered = true;
         if (!FlushEstimateDraft()) return false;
         BeginEstimateDraft(); _estimateIsDuplicate = false;
         _estimateTimer?.Stop();
@@ -429,6 +430,7 @@ public partial class MainWindow
         RecalculateElectricity();
         _estimateDirty = false;
         _suppressEstimateChanges = false;
+        _estimatePrintDataEntered = false;
         EstimateFormScroll.Offset = default;
         EstimateChanged(trackDraft: false);
         return true;
@@ -450,6 +452,12 @@ public partial class MainWindow
         if (_estimateFormRoot is not null && !string.Equals(_estimateFormRoot, WorkspaceRoot, StringComparison.OrdinalIgnoreCase))
         { Notify("Rechargez l’estimateur dans le bon espace de travail avant d’enregistrer.", error: true); return; }
         _estimateTimer?.Stop();
+        if (_loadedEstimate is null && !_estimatePrintDataEntered && EstimateScopeIndex != 1 && !IsEstimateOutsourced)
+        {
+            RejectEstimateInput("Saisissez le poids et la durée donnés par le slicer, ou déposez son fichier : 100 g et 2 h ne sont que des exemples.");
+            EstimateFormScroll.Offset = default; EstimateWeight.Focus();
+            return;
+        }
         if ((_estimateDirty || _latestEstimateResult is null) && !CalculateEstimate())
         {
             EstimateFormScroll.Offset = default;

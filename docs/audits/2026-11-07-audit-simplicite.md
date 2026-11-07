@@ -34,7 +34,10 @@ Suivi du 7 novembre 2026 :
 - B1 et B2 : faits (commit 3be7a62).
 - B5 : le formulaire était déjà replié en sections (« Ajouter des frais », « Options de fabrication », « Réglages du devis ») ; le constat venait du balisage, réorganisé au démarrage. Ajouté : « Nouveau devis » garde le filament et l’imprimante utilisés.
 - B7 : bouton « + » à côté de « Projet associé » ; le projet est créé avec le nom du devis prérempli, puis associé au devis (PC ou serveur).
-- A4 et B6 restent à faire.
+- A4 : 100 g et 2 h restent affichés comme exemples (calcul immédiat), mais un nouveau devis n’est enregistré qu’après saisie du poids ou de la durée, ou lecture du fichier du slicer.
+- B6 : bouton « Lire le fichier du slicer » et dépôt du fichier sur la page : G-code Bambu Studio, OrcaSlicer, PrusaSlicer et Cura (poids calculé pour du PLA 1,75 mm), 3MF tranché (tous les plateaux additionnés). Un projet 3MF jamais tranché est signalé.
+- Mode serveur : pages complètes du PC (fichiers, dossiers) avec les clients et projets du serveur ajoutés ; écran de connexion plein écran, adresse ms3dforge.fr fixe.
+- Site : page Téléchargements réservée au compte connecté, alimentée depuis Paramètres › « Publier cette version sur ms3dforge.fr ».
 
 ## C. Ce qui est déjà bien
 

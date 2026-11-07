@@ -11,8 +11,13 @@ public partial class MainWindow
 {
     private static readonly string[] SlicerPatterns = ["*.gcode", "*.gco", "*.3mf"];
 
+    /// <summary>The 100 g / 2 h of a new quote are examples: a quote is saved only once real values were typed or read.</summary>
+    private bool _estimatePrintDataEntered;
+
     private void InitializeEstimateSlicerImport()
     {
+        foreach (var field in new[] { EstimateWeight, EstimateHours })
+            field.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty && !_suppressEstimateChanges) _estimatePrintDataEntered = true; };
         var read = new Button { Name = "EstimateReadSlicerFile", Content = Icons.Label("IconOpen", "Lire le fichier du slicer"), HorizontalAlignment = HorizontalAlignment.Left };
         ToolTip.SetTip(read, "G-code (Bambu Studio, OrcaSlicer, PrusaSlicer, Cura) ou 3MF tranché : le poids et la durée sont remplis. Vous pouvez aussi déposer le fichier sur la page.");
         read.Click += async (_, _) =>

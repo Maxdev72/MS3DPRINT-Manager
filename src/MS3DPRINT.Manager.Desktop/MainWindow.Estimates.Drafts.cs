@@ -136,6 +136,7 @@ public partial class MainWindow
     private void RestoreEstimateDraft(EstimateDraft draft)
     {
         if (!FlushEstimateDraft()) return;
+        _estimatePrintDataEntered = true;
         var previousSuppression = _suppressEstimateChanges;
         _restoringEstimateDraft = _suppressEstimateChanges = true;
         try
