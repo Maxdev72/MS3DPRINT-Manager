@@ -24,7 +24,7 @@ public partial class MainWindow
     private async void OpenRemoteWorkspace()
     {
         if (!IsServerWorkspace) await ChangeWorkspaceModeAsync();
-        else ServerLoginPanel.IsVisible = true;
+        else ShowServerLogin();
     }
 
     private async void Changelog_Click(object? sender, RoutedEventArgs e)

@@ -93,16 +93,6 @@
             <Button x:Name="ServerLogoutButton" Content="Déconnexion" Click="ServerLogout_Click" Classes="ghost" />
             <Button x:Name="WorkspaceModeButton" Content="Atelier local" Click="WorkspaceMode_Click" Classes="ghost" />
           </WrapPanel>
-          <StackPanel x:Name="ServerLoginPanel" Spacing="10">
-            <TextBlock Text="Connectez-vous à votre atelier serveur. La copie reste consultable hors connexion." Classes="muted" TextWrapping="Wrap" />
-            <WrapPanel ItemSpacing="12" LineSpacing="10">
-              <StackPanel Spacing="5"><TextBlock Text="Serveur HTTPS" Classes="caption" /><TextBox x:Name="ServerAddress" Text="https://ms3dforge.fr" Width="250" AutomationProperties.Name="Serveur HTTPS" /></StackPanel>
-              <StackPanel Spacing="5"><TextBlock Text="Compte" Classes="caption" /><TextBox x:Name="ServerAccount" Width="180" AutomationProperties.Name="Compte serveur" /></StackPanel>
-              <StackPanel Spacing="5"><TextBlock Text="Mot de passe" Classes="caption" /><TextBox x:Name="ServerPassword" PasswordChar="●" Width="180" AutomationProperties.Name="Mot de passe" /></StackPanel>
-              <Button x:Name="ServerLoginButton" Content="Se connecter" Classes="primary-action" Click="ServerLogin_Click" VerticalAlignment="Bottom" />
-            </WrapPanel>
-            <CheckBox x:Name="ServerRemember" Content="Mémoriser la connexion sur cet appareil (30 jours, jusqu’à la déconnexion)" IsChecked="True" />
-          </StackPanel>
         </StackPanel>
       </Grid>
       <Border x:Name="DashboardStats" Grid.Row="1" Classes="workbench-banner">
@@ -398,6 +388,24 @@
     <Border x:Name="OperationsPanel" Grid.Row="2" Grid.Column="1" IsVisible="False" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="24,10">
       <StackPanel x:Name="OperationsList" Spacing="4" />
     </Border>
+    <Grid x:Name="ServerLoginOverlay" Grid.RowSpan="3" Grid.ColumnSpan="2" ZIndex="95" IsVisible="{Binding #ServerLoginPanel.IsVisible}" Background="{DynamicResource CanvasBrush}">
+      <Border Width="420" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="36,32" CornerRadius="16" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" BoxShadow="0 18 48 0 #33000000">
+        <StackPanel x:Name="ServerLoginPanel" IsVisible="False" Spacing="16" KeyDown="ServerLogin_KeyDown">
+          <Image Source="avares://MS3DPRINT.Manager.Desktop/Assets/ms3dprint-brand.webp" Width="110" Height="80" HorizontalAlignment="Center" />
+          <StackPanel Spacing="6" HorizontalAlignment="Center">
+            <TextBlock Text="Connexion à votre atelier" Classes="brand-heading" FontSize="24" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+            <TextBlock Text="ms3dforge.fr" Foreground="{DynamicResource CyanBrush}" HorizontalAlignment="Center" />
+          </StackPanel>
+          <TextBox x:Name="ServerAddress" Text="https://ms3dforge.fr" IsVisible="False" />
+          <StackPanel Spacing="6"><TextBlock Text="Identifiant" Classes="caption" /><TextBox x:Name="ServerAccount" AutomationProperties.Name="Identifiant" /></StackPanel>
+          <StackPanel Spacing="6"><TextBlock Text="Mot de passe" Classes="caption" /><TextBox x:Name="ServerPassword" PasswordChar="●" RevealPassword="False" AutomationProperties.Name="Mot de passe" /></StackPanel>
+          <CheckBox x:Name="ServerRemember" Content="Rester connecté 30 jours sur cet appareil" IsChecked="True" />
+          <TextBlock x:Name="ServerLoginError" IsVisible="False" Foreground="{DynamicResource DangerBrush}" TextWrapping="Wrap" />
+          <Button x:Name="ServerLoginButton" Content="Se connecter" Classes="primary-action" Click="ServerLogin_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" MinHeight="44" />
+          <Button x:Name="ServerLoginDismiss" Content="Continuer sans connexion" Classes="ghost" Click="ServerLoginDismiss_Click" HorizontalAlignment="Center" ToolTip.Tip="Les pages de ce PC restent utilisables ; la copie du serveur reste consultable." />
+        </StackPanel>
+      </Border>
+    </Grid>
     <Grid x:Name="SidePanelOverlay" Grid.RowSpan="3" Grid.ColumnSpan="2" IsVisible="False" ZIndex="100" KeyDown="SidePanel_KeyDown">
       <Border x:Name="SidePanelScrim" Background="{DynamicResource OverlayScrimBrush}" />
       <Border x:Name="SidePanel" HorizontalAlignment="Right" Width="460" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0" BoxShadow="-12 0 36 0 #66000000">

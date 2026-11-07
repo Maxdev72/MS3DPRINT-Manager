@@ -83,7 +83,10 @@ public partial class MainWindow
                 UpdateServerChrome();
                 RenderServerPage();
                 ServerConnectionStatus.Text += " · " + e.Message;
-                if (!connection.IsAuthenticated) ServerLoginPanel.IsVisible = true;
+                ServerLoginError.Text = e is RemoteWorkspaceException { Kind: RemoteFailure.Unauthorized } ? "Identifiant ou mot de passe incorrect."
+                    : e is RemoteWorkspaceException { Kind: RemoteFailure.Network } ? "Serveur injoignable : vérifiez la connexion Internet." : e.Message;
+                ServerLoginError.IsVisible = !connection.IsAuthenticated;
+                if (!connection.IsAuthenticated && !_serverLoginDismissed) ServerLoginPanel.IsVisible = true;
             }
         }
         finally
@@ -121,7 +124,8 @@ public partial class MainWindow
         ServerConnectionButton.IsVisible = IsServerWorkspace && connection?.IsAuthenticated != true;
         ServerLogoutButton.IsVisible = IsServerWorkspace && connection?.IsAuthenticated == true;
         ServerReceiptButton.IsVisible = IsServerWorkspace && connection?.Copy?.PendingCommand is not null;
-        ServerLoginPanel.IsVisible = IsServerWorkspace && connection?.IsAuthenticated != true;
+        ServerLoginPanel.IsVisible = IsServerWorkspace && connection?.IsAuthenticated != true && !_serverLoginDismissed
+            && _serverPreloadTask is not { IsCompleted: false }; // no flash while a remembered session is being restored
         ToolTip.SetTip(ViewerNavButton, "Visualiseur 3D");
         ProjectTrackingViewButton.IsVisible = !IsServerWorkspace;
         ProjectCalendarViewButton.IsVisible = !IsServerWorkspace;
@@ -168,6 +172,9 @@ public partial class MainWindow
         if (!Uri.TryCreate(ServerAddress.Text, UriKind.Absolute, out var server) || server.Scheme != "https")
         { ServerConnectionStatus.Text = "Saisissez l’adresse HTTPS du serveur."; return Task.CompletedTask; }
         if (_serverBusy || _serverFormOpen) return Task.CompletedTask;
+        if (string.IsNullOrWhiteSpace(ServerAccount.Text) || string.IsNullOrEmpty(ServerPassword.Text))
+        { ServerLoginError.Text = "Saisissez votre identifiant et votre mot de passe."; ServerLoginError.IsVisible = true; (string.IsNullOrWhiteSpace(ServerAccount.Text) ? ServerAccount : ServerPassword).Focus(); return Task.CompletedTask; }
+        ServerLoginError.IsVisible = false;
         _serverGeneration++;
         var password = ServerPassword.Text ?? "";
         ServerPassword.Text = "";
@@ -175,7 +182,19 @@ public partial class MainWindow
     }
     private Task SynchronizeServerAsync() => RunServerAsync(connection => connection.RefreshAsync());
     private async void ServerLogin_Click(object? sender, RoutedEventArgs e) => await LoginServerAsync();
-    private void ServerConnection_Click(object? sender, RoutedEventArgs e) => ServerLoginPanel.IsVisible = !ServerLoginPanel.IsVisible;
+    private bool _serverLoginDismissed;
+    private void ServerConnection_Click(object? sender, RoutedEventArgs e) => ShowServerLogin();
+    private void ShowServerLogin()
+    {
+        _serverLoginDismissed = false; ServerLoginPanel.IsVisible = true;
+        (string.IsNullOrWhiteSpace(ServerAccount.Text) ? ServerAccount : ServerPassword).Focus();
+    }
+    private void ServerLoginDismiss_Click(object? sender, RoutedEventArgs e) { _serverLoginDismissed = true; ServerLoginPanel.IsVisible = false; }
+    private async void ServerLogin_KeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
+    {
+        if (e.Key == Avalonia.Input.Key.Enter) { e.Handled = true; await LoginServerAsync(); }
+        else if (e.Key == Avalonia.Input.Key.Escape) { e.Handled = true; ServerLoginDismiss_Click(sender, e); }
+    }
     private async void ServerReceipt_Click(object? sender, RoutedEventArgs e) => await RunServerAsync(connection => connection.CheckReceiptAsync(), refresh: true);
     private async void ServerLogout_Click(object? sender, RoutedEventArgs e)
     {
