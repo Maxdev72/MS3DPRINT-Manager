@@ -331,10 +331,13 @@ public partial class MainWindow
 
     private void ResetEstimateV2()
     {
+        var printer = _estimatePrinter.SelectedItem; // the next quote usually runs on the same machine
         RestoreEstimateV2(new(EngineVersion: 2));
         _estimateFilamentPrice.Text = Exact((EstimateFilament.SelectedItem as FilamentProfile)?.PricePerKg ?? 0);
         ApplyEstimatePrinter();
         ApplyWorkshopDefaults();
+        if (printer is null || ReferenceEquals(printer, _estimatePrinter.SelectedItem)) return;
+        _estimatePrinter.SelectedItem = printer; ApplyEstimatePrinter();
     }
 
     private void BuildEstimateProfitability(EstimateInputs input, EstimateResult result)

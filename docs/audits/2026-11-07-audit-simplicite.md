@@ -29,6 +29,13 @@ manipulée dans sa vraie fenêtre pour cet audit ; les points sont à confirmer 
 | B6 | Devis : saisie manuelle du poids et de la durée. | Recopie depuis le slicer. | Lire le fichier 3MF ou G-code déposé sur la page (Core sait déjà ouvrir un 3MF Bambu Studio ou OrcaSlicer pour son slicer et ses noms ; il reste à lire le poids et la durée). |
 | B7 | Créer un projet depuis un devis : passer par Projets. | Changement de page puis formulaire. | Bouton « Créer le projet » directement dans le devis, client prérempli. |
 
+Suivi du 7 novembre 2026 :
+
+- B1 et B2 : faits (commit 3be7a62).
+- B5 : le formulaire était déjà replié en sections (« Ajouter des frais », « Options de fabrication », « Réglages du devis ») ; le constat venait du balisage, réorganisé au démarrage. Ajouté : « Nouveau devis » garde le filament et l’imprimante utilisés.
+- B7 : bouton « + » à côté de « Projet associé » ; le projet est créé avec le nom du devis prérempli, puis associé au devis (PC ou serveur).
+- A4 et B6 restent à faire.
+
 ## C. Ce qui est déjà bien
 
 - La création de projet tient en un seul écran : client avec recherche, nom et priorité, référence automatique.

@@ -13,7 +13,7 @@ public sealed class CreateProjectWindow : DialogWindow
     public ClientSummary? Client => FormKit.SelectedClient(_clients);
     public string ProjectName => _name.Text?.Trim() ?? string.Empty;
 
-    public CreateProjectWindow(IReadOnlyList<ClientSummary> clients, ClientSummary? preselected = null)
+    public CreateProjectWindow(IReadOnlyList<ClientSummary> clients, ClientSummary? preselected = null, string? suggestedName = null)
     {
         Title = "Créer un projet"; Width = 520; Height = 560; MinWidth = 400;
         _clients = FormKit.ClientSearch(clients);
@@ -25,7 +25,7 @@ public sealed class CreateProjectWindow : DialogWindow
             _clients.IsEnabled = false;
             hint = "Le projet est créé pour ce client.";
         }
-        _name = new TextBox { PlaceholderText = "ex. Support de casque" };
+        _name = new TextBox { PlaceholderText = "ex. Support de casque", Text = suggestedName };
         var create = new Button { Content = "Créer le projet" };
         create.Click += (_, _) =>
         {

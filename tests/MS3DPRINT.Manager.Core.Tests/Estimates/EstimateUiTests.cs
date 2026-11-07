@@ -665,6 +665,26 @@ public sealed partial class EstimateUiTests : IDisposable
     });
 
     [Fact]
+    public Task New_quote_keeps_the_last_filament_and_printer() => Run(async () =>
+    {
+        var now = DateTimeOffset.UtcNow;
+        var other = new FilamentProfile(Guid.NewGuid(), "Atelier", "Bobine", "PETG", 30m, true, now, now); new FilamentStore(_root).Create(other);
+        var window = await Open();
+        try
+        {
+            var filament = window.FindControl<ComboBox>("EstimateFilament")!;
+            filament.SelectedItem = filament.Items.Cast<FilamentProfile>().Single(f => f.Id == other.Id);
+            var printer = Field<ComboBox>(window, "_estimatePrinter");
+            var machine = printer.Items.Cast<object>().Last(); printer.SelectedItem = machine;
+            Assert.True((bool)Invoke(window, "ResetEstimate_Click", null, new RoutedEventArgs())!);
+            Assert.Equal(other.Id, Assert.IsType<FilamentProfile>(filament.SelectedItem).Id);
+            Assert.Same(machine, printer.SelectedItem);
+            Assert.NotNull(window.FindControl<Button>("EstimateCreateProjectButton"));
+        }
+        finally { window.Close(); }
+    });
+
+    [Fact]
     public Task Estimate_filament_search_preserves_the_current_choice_until_explicit_confirmation() => Run(async () =>
     {
         var now = DateTimeOffset.UtcNow;

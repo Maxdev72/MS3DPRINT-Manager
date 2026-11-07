@@ -126,7 +126,7 @@ public partial class MainWindow
         finally { _serverFormOpen = false; }
     }
 
-    private async Task EditServerProjectAsync(Guid? id, Guid? selectedClient = null)
+    private async Task EditServerProjectAsync(Guid? id, Guid? selectedClient = null, string? suggestedName = null)
     {
         if (_serverConnection?.CanWrite != true || _serverFormOpen || _panel is not null) return;
         var connection = _serverConnection; var generation = _serverGeneration;
@@ -139,7 +139,7 @@ public partial class MainWindow
         var clients = new ComboBox { Name = "ServerProjectClient", ItemsSource = ServerClients.ToArray(), ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<ClientResponse>((client, _) => new TextBlock { Text = client?.DisplayName + " · " + client?.ClientCode }) };
         clients.SelectedItem = ServerClients.FirstOrDefault(c => c.Id == (detail?.ClientId ?? selectedClient)) ?? ServerClients.FirstOrDefault();
         clients.IsEnabled = id is null && selectedClient is null;
-        var name = ServerInput("ServerProjectName", detail?.ProjectName); name.IsReadOnly = detail is not null;
+        var name = ServerInput("ServerProjectName", detail?.ProjectName ?? suggestedName); name.IsReadOnly = detail is not null;
         var year = ServerInput("ServerProjectYear", DateTime.Today.Year.ToString()); year.IsEnabled = detail is null;
         var status = ServerEnum(detail?.Status ?? ProjectStatus.Quote); status.IsEnabled = detail is not null;
         var priority = ServerEnum(detail?.Priority ?? ProjectPriority.None);

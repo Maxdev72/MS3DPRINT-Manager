@@ -359,6 +359,39 @@ public partial class MainWindow
         return true;
     }
 
+    private async void EstimateCreateProject_Click(object? sender, RoutedEventArgs e)
+    {
+        var name = EstimateName.Text?.Trim() is { Length: > 0 } typed && typed != "Nouvelle estimation" ? typed : null;
+        string? reference = null, folder = null;
+        if (IsServerWorkspace)
+        {
+            var known = ServerProjects.Select(p => p.Id).ToHashSet();
+            await EditServerProjectAsync(null, suggestedName: name);
+            reference = ServerProjects.FirstOrDefault(p => !known.Contains(p.Id))?.Reference;
+        }
+        else
+        {
+            var root = WorkspaceRoot;
+            var dialog = new CreateProjectWindow(await Task.Run(() => new WorkspaceClientReader().Load(root)), suggestedName: name);
+            if (!await dialog.ShowDialog<bool>(this) || dialog.Client is not { } client) return;
+            try
+            {
+                var priority = dialog.Priority; var projectName = dialog.ProjectName;
+                if (await EnsurePriorityClientAsync(client, priority) is not { } tracked) return;
+                BeginBusy();
+                try { folder = (await Task.Run(() => new WorkspaceProjectCreator().CreateTracked(root, tracked, DateTime.Today.Year, projectName, priority))).FolderName; }
+                finally { EndBusy(); }
+            }
+            catch (Exception exception) when (exception is ArgumentException or IOException or InvalidOperationException)
+            { Notify(exception.Message, error: true); return; }
+        }
+        if (reference is null && folder is null) return;
+        await LoadEstimateFilamentsAsync();
+        EstimateProject.SelectedItem = (EstimateProject.ItemsSource as IEnumerable<ProjectSummary>)?.FirstOrDefault(p => reference is not null
+            ? p.Reference == reference : string.Equals(Path.GetFileName(p.ProjectPath), folder, StringComparison.OrdinalIgnoreCase));
+        Notify(EstimateProject.SelectedItem is null ? "Projet créé." : "Projet créé et associé au devis.");
+    }
+
     private bool ResetEstimate_Click(object? sender, RoutedEventArgs e)
     {
         if (!FlushEstimateDraft()) return false;
@@ -370,7 +403,8 @@ public partial class MainWindow
         EstimateName.Text = "Nouvelle estimation";
         EstimateScopeIndex = 0;
         EstimateProject.SelectedItem = null;
-        EstimateFilament.SelectedItem = (EstimateFilament.ItemsSource as IEnumerable<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>)?.FirstOrDefault();
+        // The next quote usually reuses the same material: keep the filament in use.
+        EstimateFilament.SelectedItem ??= (EstimateFilament.ItemsSource as IEnumerable<MS3DPRINT.Manager.Core.Filaments.FilamentProfile>)?.FirstOrDefault();
         EstimateWeight.Text = "100";
         EstimateHours.Text = "2";
         EstimateMachineRate.Text = "2";

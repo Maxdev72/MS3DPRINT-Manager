@@ -202,7 +202,7 @@ public sealed class IntegratedServerWorkspaceUiTests
                     Assert.Equal(conflict ? 2 : 1, handler.Writes);
                     Assert.Empty(window.OwnedWindows);
                     handler.LoseWriteResponse = false;
-                    var projectEditing = Invoke(window, "EditServerProjectAsync", new object?[] { null, null }!);
+                    var projectEditing = Invoke(window, "EditServerProjectAsync", new object?[] { null, null, null }!);
                     await Task.Yield(); Dispatcher.UIThread.RunJobs();
                     form = window;
                     ((TextBox)Field("ServerProjectName")).Text = "Nouveau projet test";
@@ -210,7 +210,7 @@ public sealed class IntegratedServerWorkspaceUiTests
                     try { await projectEditing.WaitAsync(TimeSpan.FromSeconds(5)); }
                     catch (TimeoutException) { Assert.Fail("project writes=" + handler.Writes + "; status=" + window.FindControl<TextBlock>("ServerConnectionStatus")!.Text + "; form=" + string.Join(" | ", form.GetLogicalDescendants().OfType<TextBlock>().Select(t => t.Text))); }
                     Assert.Equal(conflict ? 3 : 2, handler.Writes);
-                    var updating = Invoke(window, "EditServerProjectAsync", new object?[] { handler.Project, null }!);
+                    var updating = Invoke(window, "EditServerProjectAsync", new object?[] { handler.Project, null, null }!);
                     await Task.Yield(); Dispatcher.UIThread.RunJobs();
                     form = window;
                     Assert.True(((TextBox)Field("ServerProjectName")).IsReadOnly);
