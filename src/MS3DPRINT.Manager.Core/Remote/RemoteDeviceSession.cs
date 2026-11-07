@@ -3,6 +3,9 @@ namespace MS3DPRINT.Manager.Core.Remote;
 /// <summary>A native device token. Persist only in the operating system credential vault.</summary>
 public sealed class RemoteDeviceSession
 {
+    /// <summary>Server grants 30 days to native apps; one extra day absorbs clock drift.</summary>
+    public static readonly TimeSpan MaximumLifetime = TimeSpan.FromDays(31);
+
     public string Server { get; }
     public string Account { get; }
     public string AccessToken { get; }

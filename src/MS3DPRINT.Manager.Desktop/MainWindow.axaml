@@ -101,7 +101,7 @@
               <StackPanel Spacing="5"><TextBlock Text="Mot de passe" Classes="caption" /><TextBox x:Name="ServerPassword" PasswordChar="●" Width="180" AutomationProperties.Name="Mot de passe" /></StackPanel>
               <Button x:Name="ServerLoginButton" Content="Se connecter" Classes="primary-action" Click="ServerLogin_Click" VerticalAlignment="Bottom" />
             </WrapPanel>
-            <CheckBox x:Name="ServerRemember" Content="Mémoriser la connexion sur cet appareil (8 heures maximum)" IsChecked="True" />
+            <CheckBox x:Name="ServerRemember" Content="Mémoriser la connexion sur cet appareil (30 jours, jusqu’à la déconnexion)" IsChecked="True" />
           </StackPanel>
         </StackPanel>
       </Grid>

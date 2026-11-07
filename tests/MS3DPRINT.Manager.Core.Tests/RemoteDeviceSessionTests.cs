@@ -22,12 +22,20 @@ public sealed class RemoteDeviceSessionTests
     [Theory]
     [InlineData("https://different.test/", 1)]
     [InlineData("https://example.test/", -1)]
-    [InlineData("https://example.test/", 9)]
-    public void Session_destination_expiry_and_native_eight_hour_limit_are_verified(string server, int hours)
+    [InlineData("https://example.test/", 32 * 24)]
+    public void Session_destination_expiry_and_native_thirty_day_limit_are_verified(string server, int hours)
     {
         var client = new RemoteWorkspaceClient(new HttpClient(new LoginHandler()), new("https://example.test/"));
         Assert.Throws<RemoteWorkspaceException>(() => client.RestoreSession(new(server, "owner", "token", DateTimeOffset.UtcNow.AddHours(hours))));
         Assert.False(client.IsAuthenticated);
+    }
+
+    [Fact]
+    public void Thirty_day_native_session_is_restored()
+    {
+        var client = new RemoteWorkspaceClient(new HttpClient(new LoginHandler()), new("https://example.test/"));
+        client.RestoreSession(new("https://example.test/", "owner", "token", DateTimeOffset.UtcNow.AddDays(30)));
+        Assert.True(client.IsAuthenticated);
     }
 
     private sealed class LoginHandler : HttpMessageHandler

@@ -54,6 +54,7 @@ public sealed class AuthenticationTests
         Assert.Contains("no-store", login.Headers.CacheControl!.ToString());
         var data = await login.Content.ReadFromJsonAsync<JsonElement>();
         var token = data.GetProperty("accessToken").GetString();
+        Assert.Equal(30 * 24 * 3600, data.GetProperty("expiresIn").GetInt32());
         client.DefaultRequestHeaders.Authorization = new("Bearer", token);
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/v1/projects")).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsync("/api/v1/auth/logout", null)).StatusCode);

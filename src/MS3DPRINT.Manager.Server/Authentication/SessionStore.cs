@@ -9,6 +9,8 @@ namespace MS3DPRINT.Manager.Server.Authentication;
 public sealed class SessionStore
 {
     public static readonly TimeSpan Lifetime = TimeSpan.FromHours(8);
+    // Native apps keep their token in the OS credential vault; sign-out still revokes it at once.
+    public static readonly TimeSpan NativeLifetime = TimeSpan.FromDays(30);
     private static readonly PasswordHasher<string> Hasher = new();
     private static readonly string DummyHash = Hasher.HashPassword("owner", Guid.NewGuid().ToString());
     private readonly string _path;
@@ -55,7 +57,7 @@ public sealed class SessionStore
         return exists && valid && storedName == name.Trim().ToUpperInvariant();
     }
 
-    public string CreateSession()
+    public string CreateSession(TimeSpan? lifetime = null)
     {
         var token = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(32));
         using var connection = Open();
@@ -68,7 +70,7 @@ public sealed class SessionStore
         command.CommandText = "INSERT INTO sessions SELECT $hash, $expires WHERE EXISTS (SELECT 1 FROM owner WHERE id=1)";
         command.Parameters.Clear();
         command.Parameters.AddWithValue("$hash", Hash(token));
-        command.Parameters.AddWithValue("$expires", (_clock.GetUtcNow() + Lifetime).ToUnixTimeSeconds());
+        command.Parameters.AddWithValue("$expires", (_clock.GetUtcNow() + (lifetime ?? Lifetime)).ToUnixTimeSeconds());
         if (command.ExecuteNonQuery() != 1) throw new InvalidOperationException("Créez le propriétaire avant de vous connecter.");
         transaction.Commit();
         return token;

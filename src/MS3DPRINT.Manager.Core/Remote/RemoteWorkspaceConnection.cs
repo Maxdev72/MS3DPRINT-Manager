@@ -203,7 +203,7 @@ public sealed class RemoteWorkspaceConnection : IDisposable
     }
 
     private static bool ValidSession(RemoteDeviceSession session) => session.ExpiresAt > DateTimeOffset.UtcNow
-        && session.ExpiresAt <= DateTimeOffset.UtcNow.AddHours(8);
+        && session.ExpiresAt <= DateTimeOffset.UtcNow.Add(RemoteDeviceSession.MaximumLifetime);
     private static bool SameIdentity(string server, string account, RemoteWorkspaceCopy copy)
         => new Uri(server) == new Uri(copy.Server) && string.Equals(account.Trim(), copy.Account.Trim(), StringComparison.OrdinalIgnoreCase);
     private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(_disposed, this);

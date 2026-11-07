@@ -53,7 +53,7 @@ public sealed partial class RemoteWorkspaceClient
     {
         if (!string.Equals(account.Trim(), _account, StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("Le compte ne correspond pas à la session active.", nameof(account));
-        if (!IsAuthenticated || _expiresAt > DateTimeOffset.UtcNow.AddHours(8))
+        if (!IsAuthenticated || _expiresAt > DateTimeOffset.UtcNow.Add(RemoteDeviceSession.MaximumLifetime))
             throw new RemoteWorkspaceException(RemoteFailure.Unauthorized, "Session native invalide ou expirée.");
         return new RemoteDeviceSession(_server.AbsoluteUri, account, _token!, _expiresAt);
     }
@@ -62,7 +62,7 @@ public sealed partial class RemoteWorkspaceClient
     {
         ForgetSession();
         if (new Uri(session.Server) != _server || session.ExpiresAt <= DateTimeOffset.UtcNow
-            || session.ExpiresAt > DateTimeOffset.UtcNow.AddHours(8))
+            || session.ExpiresAt > DateTimeOffset.UtcNow.Add(RemoteDeviceSession.MaximumLifetime))
             throw new RemoteWorkspaceException(RemoteFailure.Unauthorized, "Session native invalide ou expirée.");
         _account = session.Account.Trim(); _token = session.AccessToken; _expiresAt = session.ExpiresAt;
     }

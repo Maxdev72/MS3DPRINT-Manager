@@ -25,8 +25,8 @@ public static class AuthEndpoints
         else if (!await CheckCsrf(context, antiforgery)) return Results.BadRequest();
         if (request.Name is null || request.Password is null || !sessions.VerifyOwner(request.Name, request.Password))
             return Results.Unauthorized();
-        var token = sessions.CreateSession();
-        if (native) return Results.Ok(new NativeSessionResponse(token, (int)SessionStore.Lifetime.TotalSeconds));
+        var token = sessions.CreateSession(native ? SessionStore.NativeLifetime : SessionStore.Lifetime);
+        if (native) return Results.Ok(new NativeSessionResponse(token, (int)SessionStore.NativeLifetime.TotalSeconds));
         context.Response.Cookies.Append(SessionAuthenticationHandler.CookieName, token, Cookie(clock.GetUtcNow() + SessionStore.Lifetime));
         return Results.Ok(new SessionResponse(true));
     }

@@ -100,7 +100,7 @@ ni cookie de session. La réponse fournit `accessToken` et `expiresIn` ; utilise
 ensuite `Authorization: Bearer ...`. Ne jamais placer le jeton dans une URL.
 Le serveur refuse de combiner Bearer et cookie de session dans une même requête.
 
-Les sessions expirent après 8 heures, sans renouvellement automatique à ce
+Les sessions web expirent après 8 heures, celles des applications natives après 30 jours, sans renouvellement automatique à ce
 stade. Une déconnexion invalide immédiatement une copie du cookie ou du jeton.
 Les tentatives de connexion sont limitées à 20 par minute pour l'instance ;
 HTTP 429 demande d'attendre. Le serveur est conçu pour un propriétaire et
