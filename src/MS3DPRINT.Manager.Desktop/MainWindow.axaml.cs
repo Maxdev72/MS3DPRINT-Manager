@@ -126,7 +126,6 @@ public partial class MainWindow : Window
     private async void Window_Opened(object? sender, EventArgs e)
     {
         EnsureOnScreen();
-        if (IsServerWorkspace) { await PreloadAsync(); return; }
         UpdateCentralWorkspaceWidth(Bounds.Width);
         var shortcut = 1;
         // Ctrl+1 to Ctrl+9, then Ctrl+0 for the tenth page
@@ -189,7 +188,7 @@ public partial class MainWindow : Window
     /// <summary>Reads the dashboard data once, so a splash screen can wait for it before showing the window.</summary>
     public async Task PreloadAsync(bool force = false)
     {
-        if (IsServerWorkspace) { await PreloadServerAsync(); return; }
+        if (IsServerWorkspace) await PreloadServerAsync();
         var workspaceRoot = WorkspaceRoot;
         if (!Directory.Exists(workspaceRoot)) { _preloaded = false; return; }
         if (_preloaded && !force && _preloadedRoot == workspaceRoot) return;

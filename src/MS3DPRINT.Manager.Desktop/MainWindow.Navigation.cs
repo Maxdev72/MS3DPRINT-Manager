@@ -38,7 +38,7 @@ public partial class MainWindow
         var dashboard = destination == "Accueil";
         DashboardStats.IsVisible = dashboard;
         DashboardContent.IsVisible = dashboard;
-        if (dashboard && !IsServerWorkspace) _ = LoadRecentFilesAsync();
+        if (dashboard) _ = LoadRecentFilesAsync();
         ProjectsWorkspacePanel.IsVisible = destination == "Projets";
         ClientsWorkspacePanel.IsVisible = destination == "Clients";
         CollectionsWorkspacePanel.IsVisible = destination == "Collections";
@@ -124,11 +124,11 @@ public partial class MainWindow
 
     private async Task NavigateToWorkspaceAsync(string destination)
     {
-        if (IsServerWorkspace && IsServerPage(destination)) { await NavigateServerAsync(destination); return; }
-        if (!await EnsureWorkspaceAvailableAsync()) return;
+        // In server mode a PC without its workshop folder still lists the server clients and projects.
+        if (!(IsServerWorkspace && destination is "Accueil" or "Clients" or "Projets") && !await EnsureWorkspaceAvailableAsync()) return;
         ShowWorkspace(destination);
         PageTitle.Text = destination;
-        PageSubtitle.Text = PageSubtitles.GetValueOrDefault(destination, string.Empty) + (IsServerWorkspace ? " · données de ce PC" : "");
+        PageSubtitle.Text = PageSubtitles.GetValueOrDefault(destination, string.Empty);
         _projectOriginClient = null;
         var projectsVisible = destination == "Projets";
         var clientsVisible = destination == "Clients";
@@ -180,7 +180,6 @@ public partial class MainWindow
         var page = NavigationButtons().FirstOrDefault(b => b.Classes.Contains("selected"))?.Tag as string;
         if (page is null || CurrentNavigationStop?.Key != "page:" + page) return;
         _lastActivationRefresh = DateTime.UtcNow;
-        if (IsServerWorkspace && IsServerPage(page)) { await SynchronizeServerAsync(); return; }
         // Reload the data only: the page, its filters and its title stay as they are.
         Task? reload = page switch
         {

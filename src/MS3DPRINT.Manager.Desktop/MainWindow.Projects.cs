@@ -106,7 +106,7 @@ public partial class MainWindow
 
     private async Task LoadProjectsAsync()
     {
-        if (IsServerWorkspace) { _serverProjectDetail = null; RenderServerProjects(); return; }
+        _serverProjectDetail = null;
         RememberWorkspace("Projets");
         var workspaceRoot = WorkspaceRoot;
         var load = StartWorkspaceLoad("projects", workspaceRoot);
@@ -123,7 +123,7 @@ public partial class MainWindow
 
         try
         {
-            var projects = await Task.Run(() => new WorkspaceProjectReader().Load(workspaceRoot));
+            IReadOnlyList<ProjectSummary> projects = IsServerWorkspace && !Directory.Exists(workspaceRoot) ? [] : await Task.Run(() => new WorkspaceProjectReader().Load(workspaceRoot));
             if (!IsWorkspaceLoadCurrent(load)) return;
             _allProjects = projects;
             _projectCatalogUnavailable = false;
@@ -152,7 +152,12 @@ public partial class MainWindow
 
     private void RenderProjects()
     {
-        if (IsServerWorkspace) { RenderServerProjects(); return; }
+        RenderPcProjects();
+        if (_projectListMode && !_projectCatalogUnavailable) AppendServerOnlyProjects();
+    }
+
+    private void RenderPcProjects()
+    {
         if (!_projectListMode || _projectCatalogUnavailable) return;
         ProjectListViewButton.Classes.Set("selected", !_projectTrackingView && !_projectCalendarView);
         ProjectTrackingViewButton.Classes.Set("selected", _projectTrackingView);

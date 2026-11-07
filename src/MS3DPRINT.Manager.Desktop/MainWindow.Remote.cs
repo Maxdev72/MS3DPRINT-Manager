@@ -18,7 +18,6 @@ public partial class MainWindow
     private int _serverGeneration;
     private bool _serverFormOpen;
     private Task? _serverPreloadTask;
-    private string _serverPage = "Accueil";
     private readonly DispatcherTimer _serverTimer = new() { Interval = TimeSpan.FromSeconds(10) };
 
     private void ConfigureWorkspaceMode(HttpClient? http, RemoteWorkspaceCache? cache, string? modePath, IRemoteSessionStore? sessions, bool useHostDefaults)
@@ -129,7 +128,7 @@ public partial class MainWindow
         ProjectListViewButton.IsVisible = !IsServerWorkspace;
         foreach (var button in NavigationButtons())
         {
-            ToolTip.SetTip(button, IsServerWorkspace && button.Tag is string name && !IsServerPage(name) ? name + " · données de ce PC" : button.Tag);
+            ToolTip.SetTip(button, button.Tag);
         }
         // Short state on screen; server, account and timings stay in the tooltip.
         ServerConnectionStatus.Text = !IsServerWorkspace ? "Atelier local indépendant · aucune synchronisation serveur" :
@@ -209,26 +208,17 @@ public partial class MainWindow
 
     private IEnumerable<string> ServerClientNames() => IsServerWorkspace && _serverConnection?.Copy is { } copy ? copy.Clients.Select(c => c.DisplayName) : [];
 
-    /// <summary>Pages hosted by the server; every other page keeps using this PC's workshop.</summary>
-    private static bool IsServerPage(string destination) => destination is "Accueil" or "Clients" or "Projets";
+    private string _serverRenderSignature = "";
 
-    private async Task NavigateServerAsync(string destination)
-    {
-        _serverPage = destination;
-        _serverClientDetail = null; _serverProjectDetail = null;
-        ShowWorkspace(destination);
-        PageTitle.Text = destination;
-        PageSubtitle.Text = "Données de l’atelier serveur · " + (_serverConnection?.IsOnline == true ? "modifications sur le serveur" : "copie de consultation hors connexion");
-        RenderServerPage();
-        await Task.CompletedTask;
-    }
-
+    /// <summary>After a server read: refresh an open server sheet, or add newly created server clients and projects to the PC lists.</summary>
     private void RenderServerPage()
     {
-        if (!IsServerWorkspace) return;
-        if (_serverPage == "Clients") RenderServerClients();
-        else if (_serverPage == "Projets") RenderServerProjects();
-        else RenderServerDashboard();
+        if (!IsServerWorkspace || _serverConnection?.Copy is not { } copy) return;
+        var signature = (_serverConnection.CanWrite ? "w" : "r") + string.Join("|", copy.Projects.Select(p => p.Id + ":" + p.UpdatedAt.UtcTicks)) + "#" + string.Join("|", copy.Clients.Select(c => c.Id + ":" + c.DisplayName));
+        if (signature == _serverRenderSignature) return;
+        _serverRenderSignature = signature;
+        if (ProjectsWorkspacePanel.IsVisible && (_serverProjectDetail is not null || _projectListMode)) RenderServerProjects();
+        else if (ClientsWorkspacePanel.IsVisible && (_serverClientDetail is not null || _clientListMode)) RenderServerClients();
     }
 
     private async void WorkspaceMode_Click(object? sender, RoutedEventArgs e) => await ChangeWorkspaceModeAsync();
@@ -266,7 +256,7 @@ public partial class MainWindow
         ClientList.Children.Clear(); ProjectList.Children.Clear(); RecentProjectsList.Children.Clear();
         _activeFileBrowser = null;
         IsServerWorkspace = server;
-        _serverPage = "Accueil"; _serverClientDetail = null; _serverProjectDetail = null; _serverPreloadTask = null;
+        _serverRenderSignature = ""; _serverClientDetail = null; _serverProjectDetail = null; _serverPreloadTask = null;
         _preloaded = false;
         if (server)
         {

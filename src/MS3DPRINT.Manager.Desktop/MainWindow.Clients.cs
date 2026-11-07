@@ -60,7 +60,7 @@ public partial class MainWindow
 
     private async Task LoadClientsAsync()
     {
-        if (IsServerWorkspace) { _serverClientDetail = null; RenderServerClients(); return; }
+        _serverClientDetail = null;
         RememberWorkspace("Clients");
         var workspaceRoot = WorkspaceRoot;
         var load = StartWorkspaceLoad("clients", workspaceRoot);
@@ -77,7 +77,7 @@ public partial class MainWindow
         ClientsPanelSubtitle.Text = "Chargement des clients…";
         try
         {
-            var clients = await Task.Run(() => new WorkspaceClientReader().Load(workspaceRoot));
+            IReadOnlyList<ClientSummary> clients = IsServerWorkspace && !Directory.Exists(workspaceRoot) ? [] : await Task.Run(() => new WorkspaceClientReader().Load(workspaceRoot));
             if (!IsWorkspaceLoadCurrent(load)) return;
             _allClients = clients;
             _clientCatalogUnavailable = false;
@@ -96,7 +96,12 @@ public partial class MainWindow
 
     private void RenderClients()
     {
-        if (IsServerWorkspace) { RenderServerClients(); return; }
+        RenderPcClients();
+        if (_clientListMode && !_clientCatalogUnavailable) AppendServerOnlyClients();
+    }
+
+    private void RenderPcClients()
+    {
         if (!_clientListMode || _clientCatalogUnavailable) return;
         ClientList.Children.Clear();
         var text = ClientFilterBox.Text?.Trim() ?? string.Empty;

@@ -23,68 +23,48 @@ public partial class MainWindow
     }
     private static TextBlock ServerText(string text, bool title = false) => new() { Text = text, TextWrapping = TextWrapping.Wrap, FontSize = title ? 18 : 14, FontWeight = title ? FontWeight.SemiBold : FontWeight.Normal };
 
-    private void RenderServerDashboard()
-    {
-        var projects = ServerProjects;
-        ProjectCountText.Text = projects.Count.ToString();
-        QuoteCountText.Text = projects.Count(p => p.Status == "Quote").ToString();
-        InProgressCountText.Text = projects.Count(p => p.Status == "InProgress").ToString();
-        NavClientsCount.Text = ServerClients.Count.ToString(); NavClientsBadge.IsVisible = ServerClients.Count > 0;
-        NavProjectsCount.Text = projects.Count.ToString(); NavProjectsBadge.IsVisible = projects.Count > 0;
-        RecentProjectsList.Children.Clear(); AttentionList.Children.Clear(); RecentFilesList.Children.Clear();
-        RecentFilesList.Children.Add(ServerText("Fichiers indisponibles en mode serveur."));
-        AttentionList.Children.Add(ServerText(_serverConnection?.IsOnline == true ? "Lecture automatique toutes les 30 secondes." : "Copie de consultation · reconnectez-vous pour modifier."));
-        foreach (var project in projects.Where(p => p.Status != "Completed").OrderBy(p => p.DueDate ?? DateOnly.MaxValue).Take(8))
-        {
-            var content = new StackPanel { Spacing = 6 };
-            content.Children.Add(ServerText(project.ProjectName, true));
-            content.Children.Add(ServerText(project.Reference + " · " + ServerClientName(project.ClientId)));
-            content.Children.Add(ServerText(project.Tasks.FirstOrDefault(t => !t.IsCompleted)?.Title ?? (project.Tasks.Count > 0 ? "Toutes les tâches sont terminées" : "Aucune tâche")));
-            var button = ServerAction(project.ProjectName, () => OpenServerProjectAsync(project.Id));
-            button.Content = content; button.Classes.Add("table-row");
-            button.HorizontalAlignment = HorizontalAlignment.Stretch; button.HorizontalContentAlignment = HorizontalAlignment.Stretch;
-            RecentProjectsList.Children.Add(button);
-        }
-        if (projects.Count == 0) RecentProjectsList.Children.Add(ServerText(_serverConnection?.Copy is null ? "Connectez-vous pour lire les projets de votre atelier." : "Aucun projet sur le serveur."));
-    }
-
+    /// <summary>A server client sheet when one is open, otherwise the full PC client list (server-only clients appended).</summary>
     private void RenderServerClients()
     {
         if (ClientList is null) return;
-        ClientList.Children.Clear(); ClientList.Spacing = 0;
-        _clientListMode = true;
-        ClientsPanelTitle.Text = "Tous les clients";
-        ClientsPanelActions.IsVisible = true; ClientsPanelHeader.IsVisible = true; ClientFilterBar.IsVisible = true; ClientFilterBar.IsEnabled = true;
-        if (_serverClientDetail is { } id)
+        if (_serverClientDetail is { } id && ServerClients.FirstOrDefault(c => c.Id == id) is { } client)
         {
-            var client = ServerClients.FirstOrDefault(c => c.Id == id);
-            if (client is not null) { RenderServerClientSheet(client); return; }
-            _serverClientDetail = null;
+            ClientList.Children.Clear(); ClientList.Spacing = 0; _clientListMode = false;
+            RenderServerClientSheet(client); return;
         }
+        _serverClientDetail = null;
+        if (_clientListMode) RenderClients();
+    }
+
+    /// <summary>Clients created on the server (for example from the other PC) that have no folder on this PC yet.</summary>
+    private void AppendServerOnlyClients()
+    {
+        if (!IsServerWorkspace || _serverConnection?.Copy is null) return;
         var query = ClientFilterBox.Text?.Trim() ?? "";
-        var rows = ServerClients.Where(c => (query.Length == 0 || (c.DisplayName + " " + c.ClientCode).Contains(query, StringComparison.CurrentCultureIgnoreCase)) &&
-            (_clientKindFilter.Length == 0 || (_clientKindFilter == "Particulier" ? c.Kind == "Individual" : _clientKindFilter == "Professionnel" && c.Kind == "Professional")));
-        rows = _clientSortColumn == 1 ? rows.OrderBy(c => c.ClientCode) : rows.OrderBy(c => c.DisplayName, StringComparer.CurrentCultureIgnoreCase);
-        if (!_clientSortAscending) rows = rows.Reverse();
-        var clients = rows.ToArray();
-        ClientsPanelSubtitle.Text = $"{clients.Length} client{(clients.Length == 1 ? "" : "s")} · atelier serveur";
-        PagedRows.Render(ClientList, clients, client =>
+        var local = _allClients.Select(c => c.ClientCode).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var clients = ServerClients.Where(c => !local.Contains(c.ClientCode)
+            && (query.Length == 0 || (c.DisplayName + " " + c.ClientCode).Contains(query, StringComparison.CurrentCultureIgnoreCase)))
+            .OrderBy(c => c.DisplayName, StringComparer.CurrentCultureIgnoreCase).ToArray();
+        if (clients.Length == 0) return;
+        ClientList.Children.Add(ServerOnlyHeading(clients.Length == 1 ? "1 client sur le serveur, pas encore sur ce PC" : $"{clients.Length} clients sur le serveur, pas encore sur ce PC"));
+        foreach (var client in clients)
         {
             var open = ServerAction("", () => OpenServerClientAsync(client.Id));
             Avalonia.Automation.AutomationProperties.SetName(open, "Ouvrir " + client.DisplayName);
             var edit = ServerAction("Modifier la fiche", () => EditServerClientAsync(client.Id), write: true);
-            return CreateActionRow(ClientRowColumns, open, CreateOverflowActions(edit),
+            ClientList.Children.Add(CreateActionRow(ClientRowColumns, open, CreateOverflowActions(edit),
                 CreateCompactTableCell(client.DisplayName, prominent: true), CreateCompactTableCell(client.ClientCode, accent: true),
                 CreateCompactTableCell(client.Kind == "Individual" ? "Particulier" : "Professionnel"),
-                CreateCompactTableCell(ServerProjects.Count(p => p.ClientId == client.Id) + " projets"));
-        }, () => CreateSortableHeader(ClientRowColumns, ["CLIENT", "CODE", "FICHE", "PROJETS", "ACTIONS"], _clientSortColumn, _clientSortAscending, column =>
-        { _clientSortAscending = _clientSortColumn != column || !_clientSortAscending; _clientSortColumn = column; RenderServerClients(); }),
-        ("server-clients", _serverConnection?.Server, _serverConnection?.Account, query, _clientKindFilter, _clientSortColumn, _clientSortAscending));
+                CreateCompactTableCell(ServerProjects.Count(p => p.ClientId == client.Id) + " projets")));
+        }
     }
+
+    private static TextBlock ServerOnlyHeading(string text)
+        => new() { Text = text, Margin = new Avalonia.Thickness(0, 18, 0, 6), FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap, Classes = { "muted" } };
 
     private Task OpenServerClientAsync(Guid id)
     {
-        _serverPage = "Clients"; ShowWorkspace("Clients"); _serverClientDetail = id;
+        ShowWorkspace("Clients"); _serverClientDetail = id;
         PageTitle.Text = "Clients"; RenderServerClients(); return Task.CompletedTask;
     }
     private void RenderServerClientSheet(ClientResponse client)
@@ -92,51 +72,56 @@ public partial class MainWindow
         ClientsPanelTitle.Text = client.DisplayName; ClientsPanelSubtitle.Text = client.ClientCode + " · atelier serveur";
         ClientFilterBar.IsVisible = false;
         var body = new StackPanel { Spacing = 14 };
-        body.Children.Add(ServerAction("Tous les clients", () => { _serverClientDetail = null; RenderServerClients(); return Task.CompletedTask; }));
+        body.Children.Add(ServerAction("Tous les clients", () => { _serverClientDetail = null; return LoadClientsAsync(); }));
         body.Children.Add(ServerText(client.DisplayName, true));
         body.Children.Add(ServerText(client.ClientCode + " · " + (client.Kind == "Individual" ? "Particulier" : "Professionnel")));
         body.Children.Add(ServerAction("Modifier la fiche", () => EditServerClientAsync(client.Id), true));
         body.Children.Add(ServerAction("Nouveau projet pour ce client", () => EditServerProjectAsync(null, client.Id), true));
         body.Children.Add(ServerText("Projets", true));
         foreach (var project in ServerProjects.Where(p => p.ClientId == client.Id)) body.Children.Add(ServerAction(project.ProjectName + " · " + project.Reference, () => OpenServerProjectAsync(project.Id)));
-        body.Children.Add(ServerText("Fichiers et opérations de classement indisponibles en mode serveur."));
+        body.Children.Add(ServerText("Ce client n’a pas encore de dossier sur ce PC : ses fichiers apparaîtront après la synchronisation."));
         ClientList.Children.Add(body);
     }
 
+    /// <summary>A server project sheet when one is open, otherwise the full PC project list (server-only projects appended).</summary>
     private void RenderServerProjects()
     {
         if (ProjectList is null) return;
-        ProjectList.Children.Clear(); ProjectList.Spacing = 0; _projectListMode = true;
-        ProjectsPanelTitle.Text = "Tous les projets"; ProjectsPanelActions.IsVisible = true; ProjectsPanelHeader.IsVisible = true;
-        ProjectFilterBar.IsVisible = true; ProjectFilterBar.IsEnabled = true;
-        if (_serverProjectDetail is { } id)
+        if (_serverProjectDetail is { } id && ServerProjects.FirstOrDefault(p => p.Id == id) is { } selected)
         {
-            var selected = ServerProjects.FirstOrDefault(p => p.Id == id);
-            if (selected is not null) { RenderServerProjectSheet(selected); return; }
-            _serverProjectDetail = null;
+            ProjectList.Children.Clear(); ProjectList.Spacing = 0; _projectListMode = false;
+            RenderServerProjectSheet(selected); return;
         }
+        _serverProjectDetail = null;
+        if (_projectListMode) RenderProjects();
+    }
+
+    /// <summary>Projects created on the server (for example from the other PC) that have no folder on this PC yet.</summary>
+    private void AppendServerOnlyProjects()
+    {
+        if (!IsServerWorkspace || _serverConnection?.Copy is null || _projectCalendarView || _projectStatusFilter == "ARCHIVES") return;
         var query = ProjectFilterBox.Text?.Trim() ?? "";
-        var rows = ServerProjects.Where(p => (_projectStatusFilter.Length == 0 || ServerStatus(p.Status) == _projectStatusFilter) &&
-            (_projectPriorityFilter is null || p.Priority == _projectPriorityFilter.ToString()) &&
-            (query.Length == 0 || (p.ProjectName + " " + p.Reference + " " + ServerClientName(p.ClientId) + " " + string.Join(" ", p.Tasks.Select(t => t.Title + " " + t.Notes))).Contains(query, StringComparison.CurrentCultureIgnoreCase)));
-        rows = _projectSortColumn switch { 1 => rows.OrderBy(p => ServerClientName(p.ClientId)), 2 => rows.OrderBy(p => p.Status), 3 => rows.OrderBy(p => p.DueDate), 4 => rows.OrderByDescending(p => Enum.Parse<ProjectPriority>(p.Priority)), _ => rows.OrderBy(p => p.ProjectName, StringComparer.CurrentCultureIgnoreCase) };
-        if (!_projectSortAscending) rows = rows.Reverse();
-        var projects = rows.ToArray(); ProjectsPanelSubtitle.Text = $"{projects.Length} projet{(projects.Length == 1 ? "" : "s")} · atelier serveur";
-        PagedRows.Render(ProjectList, projects, project =>
+        var local = _allProjects.Select(p => p.Reference).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var projects = ServerProjects.Where(p => !local.Contains(p.Reference)
+            && (_projectStatusFilter.Length == 0 || ServerStatus(p.Status) == _projectStatusFilter)
+            && (_projectPriorityFilter is null || p.Priority == _projectPriorityFilter.ToString())
+            && (query.Length == 0 || (p.ProjectName + " " + p.Reference + " " + ServerClientName(p.ClientId)).Contains(query, StringComparison.CurrentCultureIgnoreCase)))
+            .OrderBy(p => p.ProjectName, StringComparer.CurrentCultureIgnoreCase).ToArray();
+        if (projects.Length == 0) return;
+        ProjectList.Children.Add(ServerOnlyHeading(projects.Length == 1 ? "1 projet sur le serveur, pas encore sur ce PC" : $"{projects.Length} projets sur le serveur, pas encore sur ce PC"));
+        foreach (var project in projects)
         {
             var open = ServerAction("", () => OpenServerProjectAsync(project.Id));
             Avalonia.Automation.AutomationProperties.SetName(open, "Ouvrir " + project.ProjectName);
             var edit = ServerAction("Modifier la fiche", () => EditServerProjectAsync(project.Id), true);
             var heading = new StackPanel { Spacing = 4, Children = { CreateCompactTableCell(project.ProjectName, prominent: true), CreateCompactTableCell(project.Reference, accent: true) } };
-            return CreateActionRow(ProjectRowColumns, open, CreateOverflowActions(edit), heading, CreateCompactTableCell(ServerClientName(project.ClientId)), CreateStatusBadge(ServerStatus(project.Status)), CreateCompactTableCell(project.DueDate?.ToString("dd/MM/yyyy") ?? "Sans échéance"));
-        }, () => CreateSortableHeader(ProjectRowColumns, ["PROJET", "CLIENT", "STATUT", "ÉCHÉANCE", "ACTIONS"], _projectSortColumn, _projectSortAscending, column =>
-        { _projectSortAscending = _projectSortColumn != column || !_projectSortAscending; _projectSortColumn = column; SaveWindowPreferences(); RenderServerProjects(); }),
-        ("server-projects", _serverConnection?.Server, _serverConnection?.Account, query, _projectStatusFilter, _projectPriorityFilter, _projectSortColumn, _projectSortAscending));
+            ProjectList.Children.Add(CreateActionRow(ProjectRowColumns, open, CreateOverflowActions(edit), heading, CreateCompactTableCell(ServerClientName(project.ClientId)), CreateStatusBadge(ServerStatus(project.Status)), CreateCompactTableCell(project.DueDate?.ToString("dd/MM/yyyy") ?? "Sans échéance")));
+        }
     }
 
     private Task OpenServerProjectAsync(Guid id)
     {
-        _serverPage = "Projets"; ShowWorkspace("Projets"); _serverProjectDetail = id;
+        ShowWorkspace("Projets"); _serverProjectDetail = id;
         PageTitle.Text = "Projets"; RenderServerProjects(); return Task.CompletedTask;
     }
     private void RenderServerProjectSheet(ProjectResponse project)
@@ -144,7 +129,7 @@ public partial class MainWindow
         ProjectsPanelTitle.Text = project.ProjectName; ProjectsPanelSubtitle.Text = project.Reference + " · " + ServerClientName(project.ClientId);
         ProjectFilterBar.IsVisible = false;
         var body = new StackPanel { Spacing = 14 };
-        body.Children.Add(ServerAction("Tous les projets", () => { _serverProjectDetail = null; RenderServerProjects(); return Task.CompletedTask; }));
+        body.Children.Add(ServerAction("Tous les projets", () => { _serverProjectDetail = null; return LoadProjectsAsync(); }));
         body.Children.Add(ServerText(project.ProjectName, true)); body.Children.Add(CreateStatusBadge(ServerStatus(project.Status)));
         body.Children.Add(ServerText((project.DueDate?.ToString("dd/MM/yyyy") ?? "Sans échéance") + " · " + ProjectPriorityVisual.Text(Enum.TryParse<ProjectPriority>(project.Priority, out var priority) ? priority : ProjectPriority.None)));
         body.Children.Add(ServerAction("Modifier la fiche", () => EditServerProjectAsync(project.Id), true));
@@ -173,7 +158,7 @@ public partial class MainWindow
             if (!string.IsNullOrWhiteSpace(task.Notes)) body.Children.Add(ServerText(task.Notes));
         }
         body.Children.Add(ServerAction("Ajouter une tâche", () => EditServerTaskAsync(project, null), true, "ServerAddTask"));
-        body.Children.Add(ServerText("Fichiers, devis, factures et opérations de classement indisponibles en mode serveur."));
+        body.Children.Add(ServerText("Ce projet n’a pas encore de dossier sur ce PC : ses fichiers apparaîtront après la synchronisation."));
         ProjectList.Children.Add(body);
     }
     private Task MoveServerTaskAsync(ProjectResponse project, ProjectTask task, int direction) => RunServerAsync(async connection =>
