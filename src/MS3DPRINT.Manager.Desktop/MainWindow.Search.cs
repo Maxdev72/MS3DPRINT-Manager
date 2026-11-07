@@ -114,7 +114,6 @@ public partial class MainWindow
 
     private async void SearchBox_TextChanged(object? sender, TextChangedEventArgs e)
     {
-        if (IsServerWorkspace) return;
         if (SearchBox is null || SearchResultsPanel is null) return;
         _searchIndex = -1;
         var query = SearchBox.Text?.Trim() ?? string.Empty;
@@ -138,9 +137,11 @@ public partial class MainWindow
         try
         {
             await Task.Delay(180, cancellationToken);
-            var results = await Task.Run(
+            IReadOnlyList<MS3DPRINT.Manager.Core.Search.GlobalSearchResult> results = await Task.Run(
                 () => new WorkspaceSearchReader().Search(workspaceRoot, query, cancellationToken),
                 cancellationToken);
+            // Server mode: clients and projects come from the server copy, files from this PC.
+            if (IsServerWorkspace) results = [.. ServerSearch(query), .. results.Where(r => r.Kind == MS3DPRINT.Manager.Core.Search.GlobalSearchResultKind.File)];
             if (cancellationToken.IsCancellationRequested || !string.Equals(workspaceRoot, WorkspaceRoot, StringComparison.OrdinalIgnoreCase))
                 return;
 
@@ -174,10 +175,11 @@ public partial class MainWindow
 
     private async void SearchResult_Click(object? sender, RoutedEventArgs e)
     {
-        if (IsServerWorkspace) return;
         if (sender is not Button { Tag: MS3DPRINT.Manager.Core.Search.GlobalSearchResult result }) return;
         DismissSearchResults();
         SearchBox.Text = string.Empty;
+        if (result.Path.StartsWith("server:", StringComparison.Ordinal) && Guid.TryParse(result.Path["server:".Length..], out var serverId))
+        { await (result.Kind == MS3DPRINT.Manager.Core.Search.GlobalSearchResultKind.Client ? OpenServerClientAsync(serverId) : OpenServerProjectAsync(serverId)); return; }
         if (result.Project is { } project)
         {
             _projectOriginClient = null;

@@ -89,6 +89,14 @@ public sealed class IntegratedServerWorkspaceUiTests
                     Capture(window, "projects");
                     await Invoke(window, "OpenServerProjectAsync", handler.Project);
                     Capture(window, "detail");
+                    // PC pages and global search follow the server copy in server mode.
+                    var choices = (IReadOnlyList<MS3DPRINT.Manager.Core.Projects.ProjectSummary>)typeof(MainWindow).GetMethod("WithServerProjects", BindingFlags.Instance | BindingFlags.NonPublic)!
+                        .Invoke(window, [Array.Empty<MS3DPRINT.Manager.Core.Projects.ProjectSummary>()])!;
+                    Assert.Contains(choices, p => p.ProjectName == "Projet serveur");
+                    var found = ((IEnumerable<MS3DPRINT.Manager.Core.Search.GlobalSearchResult>)typeof(MainWindow).GetMethod("ServerSearch", BindingFlags.Instance | BindingFlags.NonPublic)!
+                        .Invoke(window, ["serveur"])!).ToArray();
+                    Assert.Contains(found, r => r.Kind == MS3DPRINT.Manager.Core.Search.GlobalSearchResultKind.Client && r.Title == "Client serveur");
+                    Assert.Contains(found, r => r.Kind == MS3DPRINT.Manager.Core.Search.GlobalSearchResultKind.Project && r.Title == "Projet serveur");
                     var healthyCopy = File.ReadAllBytes(Path.Combine(temporary, "copy.json"));
                     handler.InvalidSnapshot = true;
                     await Invoke(window, "SynchronizeServerAsync");

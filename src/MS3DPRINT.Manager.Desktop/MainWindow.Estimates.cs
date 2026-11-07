@@ -38,6 +38,7 @@ public partial class MainWindow
                 return (inventory.LoadFilaments(root), inventory.LoadPrinters(root), new WorkspaceProjectReader().Load(root));
             });
             if (!IsWorkspaceLoadCurrent(load)) return false;
+            projects = WithServerProjects(projects);
             var restoreDraft = _estimateFormRoot is null || !string.Equals(_estimateFormRoot, root, StringComparison.OrdinalIgnoreCase);
             if (restoreDraft)
             {

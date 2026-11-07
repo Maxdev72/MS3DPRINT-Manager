@@ -122,7 +122,6 @@ public partial class MainWindow
         foreach (var control in new Control[] { ServerConnectionButton, ServerRefreshButton, ServerLogoutButton }) control.IsVisible = IsServerWorkspace;
         ServerReceiptButton.IsVisible = IsServerWorkspace && connection?.Copy?.PendingCommand is not null;
         ServerLoginPanel.IsVisible = IsServerWorkspace && connection?.IsAuthenticated != true;
-        GlobalSearchContainer.IsVisible = !IsServerWorkspace;
         ToolTip.SetTip(ViewerNavButton, "Visualiseur 3D");
         ProjectTrackingViewButton.IsVisible = !IsServerWorkspace;
         ProjectCalendarViewButton.IsVisible = !IsServerWorkspace;
@@ -183,6 +182,30 @@ public partial class MainWindow
         _serverGeneration++;
         await RunServerAsync(connection => connection.LogoutAsync());
     }
+
+    /// <summary>In server mode, project choices on PC pages follow the server; a matching PC project keeps its folder.</summary>
+    private IReadOnlyList<MS3DPRINT.Manager.Core.Projects.ProjectSummary> WithServerProjects(IReadOnlyList<MS3DPRINT.Manager.Core.Projects.ProjectSummary> local)
+    {
+        if (!IsServerWorkspace || _serverConnection?.Copy is not { } copy) return local;
+        var clients = copy.Clients.ToDictionary(c => c.Id);
+        return copy.Projects.Select(p => local.FirstOrDefault(l => string.Equals(l.Reference, p.Reference, StringComparison.OrdinalIgnoreCase))
+            ?? new MS3DPRINT.Manager.Core.Projects.ProjectSummary(clients.TryGetValue(p.ClientId, out var c) ? c.DisplayName : "", "", "server:" + p.Id,
+                p.Reference, p.Reference + "_" + p.ProjectName, null)).ToArray();
+    }
+
+    private IEnumerable<MS3DPRINT.Manager.Core.Search.GlobalSearchResult> ServerSearch(string query)
+    {
+        if (_serverConnection?.Copy is not { } copy) return [];
+        bool Has(string? value) => value?.Contains(query, StringComparison.CurrentCultureIgnoreCase) == true;
+        var clients = copy.Clients.ToDictionary(c => c.Id);
+        return copy.Clients.Where(c => Has(c.DisplayName) || Has(c.ClientCode))
+            .Select(c => new MS3DPRINT.Manager.Core.Search.GlobalSearchResult(MS3DPRINT.Manager.Core.Search.GlobalSearchResultKind.Client, c.DisplayName, c.ClientCode, "server:" + c.Id))
+            .Concat(copy.Projects.Where(p => Has(p.ProjectName) || Has(p.Reference)).Select(p => new MS3DPRINT.Manager.Core.Search.GlobalSearchResult(
+                MS3DPRINT.Manager.Core.Search.GlobalSearchResultKind.Project, p.ProjectName,
+                p.Reference + " · " + (clients.TryGetValue(p.ClientId, out var c) ? c.DisplayName : ""), "server:" + p.Id)));
+    }
+
+    private IEnumerable<string> ServerClientNames() => IsServerWorkspace && _serverConnection?.Copy is { } copy ? copy.Clients.Select(c => c.DisplayName) : [];
 
     /// <summary>Pages hosted by the server; every other page keeps using this PC's workshop.</summary>
     private static bool IsServerPage(string destination) => destination is "Accueil" or "Clients" or "Projets";

@@ -51,7 +51,7 @@ public partial class MainWindow
         IReadOnlyList<ClientSummary> clientList;
         try { clientList = await Task.Run(() => new ClientCatalog(new ClientProfileStore(new MS3DPRINT.Manager.Core.Workspace.WorkspaceMetadataPaths(root))).Load(root)); }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or System.Text.Json.JsonException) { clientList = []; }
-        var clients = clientList.Select(c => c.DisplayName).Where(n => !string.IsNullOrWhiteSpace(n)).Order().ToArray();
+        var clients = clientList.Select(c => c.DisplayName).Concat(ServerClientNames()).Where(n => !string.IsNullOrWhiteSpace(n)).Distinct(StringComparer.CurrentCultureIgnoreCase).Order().ToArray();
         RefreshReadingContext(root, clients, null);
         var dialog = new RevenueEntryWindow(clients, DateOnly.FromDateTime(DateTime.Today), invoicePdf);
         if (suggestion is not null) dialog.Suggest(suggestion);
@@ -83,7 +83,7 @@ public partial class MainWindow
         IReadOnlyList<ClientSummary> clientList;
         try { clientList = await Task.Run(() => new ClientCatalog(new ClientProfileStore(new MS3DPRINT.Manager.Core.Workspace.WorkspaceMetadataPaths(root))).Load(root)); }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or System.Text.Json.JsonException) { clientList = []; }
-        var correctionClients = clientList.Select(c => c.DisplayName).Where(n => !string.IsNullOrWhiteSpace(n)).Order().ToArray();
+        var correctionClients = clientList.Select(c => c.DisplayName).Concat(ServerClientNames()).Where(n => !string.IsNullOrWhiteSpace(n)).Distinct(StringComparer.CurrentCultureIgnoreCase).Order().ToArray();
         RefreshReadingContext(root, correctionClients, null);
         var dialog = new RevenueEntryWindow(correctionClients, DateOnly.FromDateTime(DateTime.Today), null, entry);
         if (!await dialog.ShowDialog<bool>(this) || dialog.Result is not { } corrected) return;

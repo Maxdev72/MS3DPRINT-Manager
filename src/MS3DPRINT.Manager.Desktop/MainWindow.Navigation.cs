@@ -185,7 +185,6 @@ public partial class MainWindow
 
         if (e.Key == Key.K)
         {
-            if (IsServerWorkspace) return;
             SearchBox.Focus();
             SearchBox.SelectAll();
             e.Handled = true;
