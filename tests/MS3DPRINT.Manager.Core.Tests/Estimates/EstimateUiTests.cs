@@ -665,6 +665,30 @@ public sealed partial class EstimateUiTests : IDisposable
     });
 
     [Fact]
+    public Task Slicer_file_fills_weight_and_duration() => Run(async () =>
+    {
+        var window = await Open();
+        try
+        {
+            var gcode = Path.Combine(_root, "plate.gcode");
+            File.WriteAllText(gcode, "; total estimated time: 2h 5m 31s\n; total filament weight [g] : 37.25\nG28\n");
+            Assert.True(await (Task<bool>)Invoke(window, "ApplySlicerFileAsync", gcode)!);
+            Assert.Equal("37,25", window.FindControl<TextBox>("EstimateWeight")!.Text);
+            Assert.Equal("2", Field<TextBox>(window, "_estimateDurationHours").Text);
+            Assert.Equal("6", Field<TextBox>(window, "_estimateDurationMinutes").Text);
+            Assert.True(TryDecimal(window.FindControl<TextBox>("EstimateHours")!.Text, out var hours) && Math.Abs(hours - 2.1m) < 0.001m);
+            var project = Path.Combine(_root, "unsliced.3mf");
+            using (var zip = System.IO.Compression.ZipFile.Open(project, System.IO.Compression.ZipArchiveMode.Create)) zip.CreateEntry("3D/3dmodel.model");
+            Assert.False(await (Task<bool>)Invoke(window, "ApplySlicerFileAsync", project)!);
+            Assert.Equal("37,25", window.FindControl<TextBox>("EstimateWeight")!.Text);
+            Assert.NotNull(window.GetLogicalDescendants().OfType<Button>().SingleOrDefault(b => b.Name == "EstimateReadSlicerFile"));
+        }
+        finally { window.Close(); }
+    });
+
+    private static bool TryDecimal(string? text, out decimal value) => decimal.TryParse(text, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.GetCultureInfo("fr-FR"), out value);
+
+    [Fact]
     public Task New_quote_keeps_the_last_filament_and_printer() => Run(async () =>
     {
         var now = DateTimeOffset.UtcNow;

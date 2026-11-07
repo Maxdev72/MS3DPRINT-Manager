@@ -93,6 +93,7 @@ public partial class MainWindow
         UpdateEstimateLayout();
         InitializeEstimateProgressiveDisclosure();
         InitializeEstimateQuickForm();
+        InitializeEstimateSlicerImport();
         InitializeEstimateDesign();
         InitializeEstimateSubcontracting();
         InitializeQuantityPricing();
