@@ -170,6 +170,27 @@ public partial class MainWindow
         finally { EndBusy(); }
     }
 
+    private DateTime _lastActivationRefresh;
+
+    /// <summary>Coming back to the window reloads the list on screen, so no page needs an « Actualiser » button.</summary>
+    private async void Window_Activated(object? sender, EventArgs e)
+    {
+        // Never while a dialog, an operation or a sheet is open; a list page only, at most every 5 seconds.
+        if (_panel is not null || _busy != 0 || _serverBusy || DateTime.UtcNow - _lastActivationRefresh < TimeSpan.FromSeconds(5)) return;
+        var page = NavigationButtons().FirstOrDefault(b => b.Classes.Contains("selected"))?.Tag as string;
+        if (page is null || CurrentNavigationStop?.Key != "page:" + page) return;
+        _lastActivationRefresh = DateTime.UtcNow;
+        if (IsServerWorkspace && IsServerPage(page)) { await SynchronizeServerAsync(); return; }
+        // Reload the data only: the page, its filters and its title stay as they are.
+        Task? reload = page switch
+        {
+            "Projets" => LoadProjectsAsync(), "Clients" => LoadClientsAsync(), "Collections" => LoadCollectionsAsync(),
+            "Filaments" => LoadFilamentsAsync(), "Imprimantes" => LoadPrintersAsync(), "Recettes" => LoadRevenuesAsync(),
+            "Achats" => LoadPurchasesAsync(), "Corbeille" => LoadTrashAsync(), _ => null
+        };
+        if (reload is not null) await reload;
+    }
+
     private void Window_KeyDown(object? sender, KeyEventArgs e)
     {
         if (_panel is not null) return;

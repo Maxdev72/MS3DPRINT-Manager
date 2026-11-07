@@ -145,7 +145,7 @@ public sealed class RemoteWorkspaceConnectionTests : IDisposable
 
         Assert.Equal(id, connection.Workspace!.WorkspaceId);
         Assert.True(connection.Revision!.Verified);
-        Assert.Equal("connecté · données à jour · documents Nextcloud non associés", MS3DPRINT.Manager.Desktop.MainWindow.StartupLabel(connection));
+        Assert.Equal("connecté · données à jour", MS3DPRINT.Manager.Desktop.MainWindow.StartupLabel(connection));
     }
 
     [Fact]

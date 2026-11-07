@@ -19,7 +19,7 @@ public partial class MainWindow
     private bool _serverFormOpen;
     private Task? _serverPreloadTask;
     private string _serverPage = "Accueil";
-    private readonly DispatcherTimer _serverTimer = new() { Interval = TimeSpan.FromSeconds(30) };
+    private readonly DispatcherTimer _serverTimer = new() { Interval = TimeSpan.FromSeconds(10) };
 
     private void ConfigureWorkspaceMode(HttpClient? http, RemoteWorkspaceCache? cache, string? modePath, IRemoteSessionStore? sessions, bool useHostDefaults)
     {
@@ -99,7 +99,6 @@ public partial class MainWindow
     private void UpdateServerControls()
     {
         ServerLoginButton.IsEnabled = !_serverBusy && _serverConnection is not null;
-        ServerRefreshButton.IsEnabled = !_serverBusy && _serverConnection?.IsAuthenticated == true;
         ServerLogoutButton.IsEnabled = !_serverBusy && _serverConnection?.IsAuthenticated == true;
         ServerReceiptButton.IsEnabled = !_serverBusy && _serverConnection?.IsAuthenticated == true;
         WorkspaceModeButton.IsEnabled = !_serverBusy;
@@ -119,7 +118,9 @@ public partial class MainWindow
         WorkspaceSourceText.Text = IsServerWorkspace ? "Données serveur" : pcData ? "Données PC conservées ; ouvrir le serveur ne les transfère pas" : "Espace de travail local";
         ToolTip.SetTip(WorkspaceSourceText, pcData ? "Données PC conservées ; ouvrir le serveur ne les transfère pas. Le serveur peut être plus ancien." : WorkspaceSourceText.Text);
         WorkspaceModeButton.Content = IsServerWorkspace ? "Atelier local" : "Atelier serveur";
-        foreach (var control in new Control[] { ServerConnectionButton, ServerRefreshButton, ServerLogoutButton }) control.IsVisible = IsServerWorkspace;
+        // One action at a time: sign in while signed out, sign out while connected. Data refreshes on its own.
+        ServerConnectionButton.IsVisible = IsServerWorkspace && connection?.IsAuthenticated != true;
+        ServerLogoutButton.IsVisible = IsServerWorkspace && connection?.IsAuthenticated == true;
         ServerReceiptButton.IsVisible = IsServerWorkspace && connection?.Copy?.PendingCommand is not null;
         ServerLoginPanel.IsVisible = IsServerWorkspace && connection?.IsAuthenticated != true;
         ToolTip.SetTip(ViewerNavButton, "Visualiseur 3D");
@@ -130,17 +131,19 @@ public partial class MainWindow
         {
             ToolTip.SetTip(button, IsServerWorkspace && button.Tag is string name && !IsServerPage(name) ? name + " · données de ce PC" : button.Tag);
         }
+        // Short state on screen; server, account and timings stay in the tooltip.
         ServerConnectionStatus.Text = !IsServerWorkspace ? "Atelier local indépendant · aucune synchronisation serveur" :
-            (connection?.Workspace?.Name is { } workspaceName ? workspaceName + " · " : "") +
-            (connection?.Server?.Host ?? "ms3dforge.fr") + " · " + (connection?.Account ?? "connexion requise") + " · " +
-            StartupLabel(connection) +
-            (connection?.Copy?.ReadAt is { } read ? " · dernière lecture " + read.ToLocalTime().ToString("dd/MM HH:mm") : "") +
-            (connection?.Copy?.PendingCommand is { } pending ? " · résultat incertain : vérifier le reçu " + pending : "");
+            (connection?.Workspace?.Name ?? "Atelier") + " · " + StartupLabel(connection) +
+            (connection?.Copy?.PendingCommand is not null ? " · vérifiez le reçu" : "");
+        ToolTip.SetTip(ServerConnectionStatus, !IsServerWorkspace ? null :
+            (connection?.Server?.Host ?? "ms3dforge.fr") + " · " + (connection?.Account ?? "non connecté") +
+            (connection?.Copy?.ReadAt is { } read ? "\nDernière lecture " + read.ToLocalTime().ToString("dd/MM HH:mm") : "") +
+            (connection?.Copy?.PendingCommand is { } pending ? "\nRésultat incertain : reçu " + pending : ""));
         RefreshWorkspaceIdentity();
         UpdateServerControls();
     }
 
-    /// <summary>Data and documents are reported separately; documents stay « non associés » until Nextcloud is bound.</summary>
+    /// <summary>Short connection state shown in the server bar; documents get their own state once Nextcloud is bound.</summary>
     public static string StartupLabel(RemoteWorkspaceConnection? connection)
     {
         var state = WorkspaceStartupPolicy.Resolve(new(
@@ -157,7 +160,7 @@ public partial class MainWindow
             WorkspaceStartupState.ReadyOfflineReadOnly => "hors connexion · consultation seule",
             WorkspaceStartupState.NeedsSignIn => connection?.Copy is null ? "connexion requise" : "hors connexion · consultation seule",
             WorkspaceStartupState.NeedsWorkspaceSelection => "connecté · atelier non identifié (serveur à mettre à jour)",
-            _ => "connecté · " + (connection?.Revision?.Verified == true ? "données à jour" : "données à vérifier") + " · documents Nextcloud non associés"
+            _ => "connecté · " + (connection?.Revision?.Verified == true ? "données à jour" : "données à vérifier")
         };
     }
 
@@ -173,7 +176,6 @@ public partial class MainWindow
     }
     private Task SynchronizeServerAsync() => RunServerAsync(connection => connection.RefreshAsync());
     private async void ServerLogin_Click(object? sender, RoutedEventArgs e) => await LoginServerAsync();
-    private async void ServerRefresh_Click(object? sender, RoutedEventArgs e) => await SynchronizeServerAsync();
     private void ServerConnection_Click(object? sender, RoutedEventArgs e) => ServerLoginPanel.IsVisible = !ServerLoginPanel.IsVisible;
     private async void ServerReceipt_Click(object? sender, RoutedEventArgs e) => await RunServerAsync(connection => connection.CheckReceiptAsync(), refresh: true);
     private async void ServerLogout_Click(object? sender, RoutedEventArgs e)
