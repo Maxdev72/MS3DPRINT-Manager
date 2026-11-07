@@ -94,11 +94,43 @@ async function refresh(showToast = false) {
 }
 function navigate(view) {
   state.view = view; state.project = null; state.client = null; state.page = 1; $("search-input").value = ""; render();
+  if (view === "downloads") loadDownloads();
+}
+async function loadDownloads() {
+  try { state.downloads = await api("/api/v1/downloads"); }
+  catch (error) { state.downloads = []; if (error.status !== 401) message($("global-error"), error.message); }
+  if (state.view === "downloads") render();
+}
+function renderDownloads() {
+  const section = $("downloads-section"); section.replaceChildren();
+  const size = bytes => (bytes / 1048576).toLocaleString("fr-FR", { maximumFractionDigits: 1 }) + " Mo";
+  const when = value => new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeStyle: "short" }).format(new Date(value));
+  for (const [kind, title, help] of [["windows", "Windows", "Lancez « MS3DPRINT Manager.exe ». Aucune installation n’est nécessaire."],
+    ["linux", "Linux", "Extrayez l’archive, puis lancez « MS3DPRINT Manager ». Le fichier LISEZ-MOI.md liste les dépendances."]]) {
+    const item = (state.downloads || []).find(download => download.kind === kind);
+    const card = el("article", "download-card"); card.append(el("h2", "", title));
+    if (!item) { card.append(el("p", "muted", "Pas encore publiée. Dans MS3DPRINT Manager : Paramètres › Publier sur ms3dforge.fr.")); section.append(card); continue; }
+    card.append(el("p", "muted", item.label), el("p", "", help));
+    const link = el("a", "button primary"); link.href = "/api/v1/downloads/" + kind; link.setAttribute("download", item.fileName);
+    link.append(icon("download"), el("span", "", "Télécharger · " + size(item.size)));
+    card.append(link, el("p", "download-meta", "Publiée le " + when(item.publishedAt)), el("p", "download-hash", "SHA256 " + item.sha256));
+    section.append(card);
+  }
 }
 function render() {
   const detail = state.project || state.client;
   document.querySelectorAll("[data-view]").forEach(node => { const active = node.dataset.view === state.view; node.classList.toggle("active", active); if (active) node.setAttribute("aria-current", "page"); else node.removeAttribute("aria-current"); });
   $("project-count").textContent = state.projects.length; $("client-count").textContent = state.clients.length;
+  const downloads = state.view === "downloads";
+  $("downloads-section").hidden = !downloads;
+  if (downloads) {
+    $("breadcrumb-current").textContent = "Téléchargements"; $("page-title").textContent = "Vos logiciels.";
+    $("page-subtitle").textContent = "La dernière version de MS3DPRINT Manager pour vos ordinateurs.";
+    $("list-section").hidden = true; $("detail-section").hidden = true; $("overview-summary").hidden = true;
+    document.querySelector(".page-heading").hidden = false; $("primary-action").hidden = true;
+    renderDownloads(); syncButtons(); return;
+  }
+  $("primary-action").hidden = false;
   $("breadcrumb-current").textContent = state.view === "clients" ? "Clients" : state.view === "projects" ? "Projets" : "Vue d’ensemble";
   $("page-title").textContent = state.view === "clients" ? "Vos clients." : state.view === "projects" ? "Vos projets." : "L’atelier, en vue.";
   $("page-subtitle").textContent = state.view === "clients" ? "Les personnes et les entreprises avec qui vous travaillez." : "Vos projets et les prochaines actions à reprendre.";

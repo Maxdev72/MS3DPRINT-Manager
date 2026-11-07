@@ -93,6 +93,7 @@ public static class ServerApplication
         app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
         app.MapWorkspace();
         app.MapWorkspaceMigrations();
+        Downloads.DownloadEndpoints.MapDownloads(app);
 
         return app;
     }

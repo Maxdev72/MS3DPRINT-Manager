@@ -15,7 +15,61 @@ public partial class MainWindow
         var action = new Button { Name = "StartGuidedWorkspaceMigration", Content = "Synchroniser cet atelier", IsEnabled = !IsServerWorkspace };
         action.Click += async (_, _) => await OpenGuidedMigrationAsync();
         return new Border { Classes = { "card-raised" }, Padding = new Avalonia.Thickness(22, 20), Child = new StackPanel { Spacing = 14, Children = {
-            SettingsCardHeader("IconSave", "Connexion à mon atelier en ligne", "Sauvegarde automatique et premier envoi de cet atelier. Retrouvez ensuite les mêmes clients, projets et tâches sur le PC et le site."), action } } };
+            SettingsCardHeader("IconSave", "Connexion à mon atelier en ligne", "Sauvegarde automatique et premier envoi de cet atelier. Retrouvez ensuite les mêmes clients, projets et tâches sur le PC et le site."), action, BuildPublishDownloadsAction() } } };
+    }
+
+    private bool _publishingDownloads;
+
+    /// <summary>Puts this version (and the Linux archive when it is next to it) on the site's download page.</summary>
+    private Control BuildPublishDownloadsAction()
+    {
+        var publish = new Button { Name = "PublishDownloads", Content = "Publier cette version sur ms3dforge.fr" };
+        ToolTip.SetTip(publish, "Met l’exécutable Windows et l’archive Linux dans la page Téléchargements du site, réservée à votre compte.");
+        publish.Click += async (_, _) => await PublishDownloadsAsync();
+        return publish;
+    }
+
+    internal static IReadOnlyList<(string Kind, string Path)> DownloadCandidates(string? executable)
+    {
+        if (string.IsNullOrEmpty(executable)) return [];
+        var folder = Path.GetDirectoryName(executable)!;
+        var files = new List<(string, string)>();
+        if (executable.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) files.Add(("windows", executable));
+        const string archive = "MS3DPRINT-Manager-linux-x64.tar.gz";
+        var linux = new[] { Path.Combine(folder, archive), Path.Combine(folder, "outputs", archive) }.FirstOrDefault(File.Exists);
+        if (linux is not null) files.Add(("linux", linux));
+        return files;
+    }
+
+    private async Task PublishDownloadsAsync()
+    {
+        if (_publishingDownloads) return;
+        RemoteDeviceSession? saved = null;
+        try { saved = _serverSessions?.Load(); } catch (Exception e) when (e is InvalidDataException or IOException or System.ComponentModel.Win32Exception) { }
+        if (saved is null) { Notify("Connectez-vous d’abord à ms3dforge.fr en cochant « Rester connecté », puis recommencez.", error: true); return; }
+        var files = DownloadCandidates(Environment.ProcessPath);
+        if (files.Count == 0) { Notify("Aucun fichier à publier depuis cette version du logiciel.", error: true); return; }
+        _publishingDownloads = true;
+        BeginBusy();
+        Notify("Envoi vers ms3dforge.fr en cours… La page reste utilisable.");
+        var sent = new List<string>();
+        try
+        {
+            using var http = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false }) { Timeout = TimeSpan.FromMinutes(60) };
+            var client = new RemoteWorkspaceClient(http, new Uri(saved.Server));
+            client.RestoreSession(saved);
+            foreach (var (kind, path) in files)
+            {
+                var result = await client.PublishDownloadAsync(kind, path);
+                sent.Add((kind == "windows" ? "Windows" : "Linux") + " (" + (result.Size / 1048576m).ToString("0.#", System.Globalization.CultureInfo.GetCultureInfo("fr-FR")) + " Mo)");
+            }
+            Notify("Publié sur ms3dforge.fr : " + string.Join(", ", sent) + ". Page Téléchargements du site.");
+        }
+        catch (Exception e) when (e is RemoteWorkspaceException or ArgumentException or IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            Notify((sent.Count > 0 ? "Publié : " + string.Join(", ", sent) + ". " : "") + "Échec de l’envoi : " + e.Message, error: true);
+        }
+        finally { EndBusy(); _publishingDownloads = false; }
     }
     private async Task OpenGuidedMigrationAsync()
     {
