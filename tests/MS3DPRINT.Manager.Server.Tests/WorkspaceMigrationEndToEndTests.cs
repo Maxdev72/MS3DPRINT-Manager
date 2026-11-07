@@ -35,7 +35,7 @@ public sealed class WorkspaceMigrationEndToEndTests
             File.WriteAllText(Path.Combine(host.Workspace, relative, "keep.txt"), "historical document");
             var pc = Directory.CreateDirectory(Path.Combine(local, "pc")).FullName; Write(pc, "pc.txt", "latest PC");
             var service = new WorkspaceReconciliationService(); var before = service.Capture(host.Workspace).Fingerprint;
-            Assert.Contains(service.Capture(host.Workspace).Issues, i => i.Code == "ProjectProfileMissing" && i.Blocking);
+            Assert.Contains(service.Capture(host.Workspace).Issues, i => i.Code == "ProjectProfileMissing" && !i.Blocking);
             using var handler = new LostApplyResponseHandler(host.Server.CreateHandler(), false);
             using var http = new HttpClient(handler) { BaseAddress = new Uri("https://localhost") };
             var client = new RemoteWorkspaceClient(http, http.BaseAddress); await client.LoginAsync("owner", host.Password);
@@ -74,10 +74,38 @@ public sealed class WorkspaceMigrationEndToEndTests
             Assert.Equal("historical document", File.ReadAllText(Path.Combine(host.Workspace, relative, "keep.txt")));
             Assert.Equal("latest PC", Read(host.Workspace, "pc.txt")); Assert.True(migration.SourceStable());
             Assert.Empty(new ProjectProfileStore(paths).LoadAll());
-            Assert.Contains(service.Capture(host.Workspace).Issues, i => i.Code == "ProjectProfileMissing" && i.Blocking);
+            Assert.Contains(service.Capture(host.Workspace).Issues, i => i.Code == "ProjectProfileMissing" && !i.Blocking);
         }
         finally { Directory.Delete(local, true); }
     }
+    [Fact]
+    public async Task Pc_project_folder_without_profile_is_transferred_as_documents()
+    {
+        using var host = new ServerFixture(); host.CreateOwner();
+        var local = Directory.CreateTempSubdirectory("pc-historical-e2e-").FullName;
+        try
+        {
+            var now = DateTimeOffset.UtcNow;
+            var pc = Directory.CreateDirectory(Path.Combine(local, "pc")).FullName;
+            new ClientProfileStore(new WorkspaceMetadataPaths(pc)).Create(new ClientProfile(Guid.NewGuid(), ClientKind.Professional, "CLIENT_TEST", "CT",
+                "Client test", null, null, null, null, new(null, null, null, null, null), now, now, RelativePath: "01_CLIENTS/CLIENT_TEST"));
+            var relative = "01_CLIENTS/CLIENT_TEST/CT-2026-001_NO_PROFILE";
+            Directory.CreateDirectory(Path.Combine(pc, relative)); File.WriteAllText(Path.Combine(pc, relative, "model.txt"), "pc document");
+            using var http = new HttpClient(host.Server.CreateHandler()) { BaseAddress = new Uri("https://localhost") };
+            var client = new RemoteWorkspaceClient(http, http.BaseAddress); await client.LoginAsync("owner", host.Password);
+            using var migration = GuidedWorkspaceMigration.Create(http.BaseAddress, "owner", pc, Path.Combine(local, "private"));
+            Assert.True(migration.Prepare(new HashSet<Guid>()).Succeeded);
+            var status = await migration.TransferAsync(client, null, CancellationToken.None);
+            Assert.Equal(WorkspaceMigrationPhase.Prepared, status.Phase);
+            Assert.Contains(status.Issues, i => i.Code == "PreservedProjectFolder" && !i.Blocking && i.Path == relative);
+            status = await migration.ApplyAsync(client, status, CancellationToken.None);
+            Assert.Equal(WorkspaceMigrationPhase.Applied, status.Phase);
+            Assert.Equal("pc document", File.ReadAllText(Path.Combine(host.Workspace, relative, "model.txt")));
+            Assert.Empty(new ProjectProfileStore(new WorkspaceMetadataPaths(host.Workspace)).LoadAll());
+        }
+        finally { Directory.Delete(local, true); }
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

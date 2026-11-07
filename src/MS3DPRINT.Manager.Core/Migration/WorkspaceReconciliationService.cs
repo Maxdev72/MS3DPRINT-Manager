@@ -36,8 +36,7 @@ public sealed class WorkspaceReconciliationService
         var directories = pc.Directories.Union(server.Directories, StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray();
         ValidateTree(files.Select(f => f.Path), directories);
         var plan = new WorkspaceReconciliationPlan(pc.Fingerprint, server.Fingerprint, "", Array.AsReadOnly(files),
-            Array.AsReadOnly(directories), Array.AsReadOnly(pc.Issues.Concat(server.Issues.Select(i =>
-                i.Code == "ProjectProfileMissing" && server.Directories.Contains(i.Path, StringComparer.Ordinal) ? HistoricalFolder(i) : i)).Distinct().ToArray()));
+            Array.AsReadOnly(directories), Array.AsReadOnly(pc.Issues.Select(i => Preserve(i, pc)).Concat(server.Issues.Select(i => Preserve(i, server))).Distinct().ToArray()));
         return plan with { PlanHash = PlanHash(plan) };
     }
 
@@ -51,6 +50,9 @@ public sealed class WorkspaceReconciliationService
         return snapshot with { Issues = snapshot.Issues.Select(i => i.Code == "ProjectProfileMissing" && folders.Contains(i.Path)
             ? HistoricalFolder(i) : i).ToArray() };
     }
+    // A project folder without a profile, on either side, travels as plain documents.
+    private static MigrationIssue Preserve(MigrationIssue issue, WorkspaceSnapshot side)
+        => issue.Code == "ProjectProfileMissing" && side.Directories.Contains(issue.Path, StringComparer.Ordinal) ? HistoricalFolder(issue) : issue;
     private static MigrationIssue HistoricalFolder(MigrationIssue issue) => new("PreservedProjectFolder", issue.Path,
         "Dossier historique conservé avec tous ses fichiers, sans créer de fiche projet ni de tâches.", false);
 

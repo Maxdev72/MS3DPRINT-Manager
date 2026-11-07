@@ -20,9 +20,10 @@ namespace MS3DPRINT.Manager.Core.Tests;
 public sealed class GuidedWorkspaceMigrationUiTests
 {
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task One_login_prepares_missing_collections_compares_and_waits_for_final_confirmation_before_opening_server(bool pcChangesDuringApply)
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task One_login_prepares_missing_collections_compares_and_waits_for_final_confirmation_before_opening_server(bool pcChangesDuringApply, bool rememberedSession)
     {
         var temporary = Directory.CreateTempSubdirectory("simple-sync-ui-").FullName;
         var previous = Environment.GetEnvironmentVariable("MS3DPRINT_WORKSPACE");
@@ -54,14 +55,15 @@ public sealed class GuidedWorkspaceMigrationUiTests
             {
                 var window = new MainWindow(new HttpClient(handler), new RemoteWorkspaceCache(Path.Combine(temporary, "cache.json")), mode); window.Show();
                 var type = typeof(MainWindow).GetNestedType("GuidedMigrationPanel", BindingFlags.NonPublic)!;
-                var dialog = (DialogWindow)Activator.CreateInstance(type, [pc, (Func<bool>)(() => true), new HttpClient(handler), Path.Combine(temporary, "private")])!;
+                var dialog = (DialogWindow)Activator.CreateInstance(type, [pc, (Func<bool>)(() => true), new HttpClient(handler), Path.Combine(temporary, "private"),
+                    rememberedSession ? new RemoteDeviceSession("https://ms3dforge.fr/", "owner", "remembered", DateTimeOffset.UtcNow.AddDays(10)) : null])!;
                 var showing = dialog.ShowDialog<bool>(window);
                 try
                 {
                     await Task.Yield(); Dispatcher.UIThread.RunJobs();
-                    Find<TextBox>(window, "MigrationAccount").Text = "owner"; Find<TextBox>(window, "MigrationPassword").Text = "fake password";
+                    if (!rememberedSession) { Find<TextBox>(window, "MigrationAccount").Text = "owner"; Find<TextBox>(window, "MigrationPassword").Text = "fake password"; }
                     await Next(dialog);
-                    Assert.Equal(1, handler.Logins); Assert.Equal(1, handler.ChoiceSaves); Assert.Equal(0, handler.Applies);
+                    Assert.Equal(rememberedSession ? 0 : 1, handler.Logins); Assert.Equal(1, handler.ChoiceSaves); Assert.Equal(0, handler.Applies);
                     Assert.Equal("Confirmer la synchronisation", Find<Button>(window, "MigrationNext").Content);
                     var body = (Control)type.GetField("_body", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(dialog)!;
                     Assert.Empty(body.GetLogicalDescendants().OfType<CheckBox>());
@@ -115,7 +117,7 @@ public sealed class GuidedWorkspaceMigrationUiTests
                 Assert.False(Directory.Exists(Path.Combine(temporary, "pc", "Echanges mobile")));
                 migrationFlag.SetValue(window, false);
                 var type = typeof(MainWindow).GetNestedType("GuidedMigrationPanel", BindingFlags.NonPublic)!;
-                var dialog = (DialogWindow)Activator.CreateInstance(type, [Path.Combine(temporary, "pc"), (Func<bool>)(() => true), new HttpClient(handler), Path.Combine(temporary, "private")])!;
+                var dialog = (DialogWindow)Activator.CreateInstance(type, [Path.Combine(temporary, "pc"), (Func<bool>)(() => true), new HttpClient(handler), Path.Combine(temporary, "private"), null])!;
                 var showing = dialog.ShowDialog<bool>(window);
                 try
                 {

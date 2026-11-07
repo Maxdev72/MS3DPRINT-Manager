@@ -100,7 +100,7 @@ internal static class MigrationMetadataAudit
                 issues.Add(new("ClientProfileMissing", directory, "Ce dossier client n’a pas de fiche ; il exige une reprise explicite avant migration."));
             }
             foreach (var project in new ProjectCatalog(new ProjectProfileStore(paths)).Load(root).Where(p => p.Profile is null))
-                issues.Add(new("ProjectProfileMissing", Path.GetRelativePath(root, project.ProjectPath).Replace('\\', '/'), "Ce dossier projet n’a pas de fiche ; il exige une reprise explicite avant migration."));
+                issues.Add(new("ProjectProfileMissing", Path.GetRelativePath(root, project.ProjectPath).Replace('\\', '/'), "Dossier projet sans fiche : conservé avec tous ses fichiers, sans créer de fiche ni de tâches.", false));
         }
         catch (Exception e) when (e is JsonException or ArgumentException or InvalidOperationException)
         {

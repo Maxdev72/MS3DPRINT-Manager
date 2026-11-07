@@ -24,8 +24,11 @@ public partial class MainWindow
         var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(WorkspaceRoot));
         var generation = _serverGeneration;
         _migrationOpen = true;
+        RemoteDeviceSession? saved = null;
+        try { saved = _serverSessions?.Load(); } catch (Exception e) when (e is InvalidDataException or IOException or System.ComponentModel.Win32Exception) { }
         var panel = new GuidedMigrationPanel(root, () => !_serverClosed && !IsServerWorkspace && _serverGeneration == generation
-            && Path.TrimEndingDirectorySeparator(Path.GetFullPath(WorkspaceRoot)).Equals(root, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal));
+            && Path.TrimEndingDirectorySeparator(Path.GetFullPath(WorkspaceRoot)).Equals(root, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal),
+            saved: saved);
         try
         {
             var openServer = await panel.ShowDialog<bool>(this);
@@ -59,6 +62,7 @@ public partial class MainWindow
         private readonly List<(string Path, ComboBox Choice)> _choices = [];
         private readonly HashSet<Guid> _inactiveCollections = [];
         private RemoteWorkspaceClient? _client;
+        private RemoteDeviceSession? _saved;
         private GuidedWorkspaceMigration? _migration;
         private WorkspaceMigrationStatus? _remote;
         private int _step;
@@ -74,14 +78,16 @@ public partial class MainWindow
              _remote is { Phase: WorkspaceMigrationPhase.Blocked, Receipt: null } blocked
              && blocked.OperationId == migration.Journal.OperationId && blocked.ArchiveBytes == migration.Journal.ArchiveBytes
              && string.Equals(blocked.ArchiveSha256, migration.Journal.ArchiveSha256, StringComparison.OrdinalIgnoreCase));
-        public GuidedMigrationPanel(string root, Func<bool> current, HttpClient? http = null, string? privateRoot = null)
+        public GuidedMigrationPanel(string root, Func<bool> current, HttpClient? http = null, string? privateRoot = null, RemoteDeviceSession? saved = null)
         {
             _root = root; _current = current; Width = 600;
+            if (saved is not null && saved.ExpiresAt > DateTimeOffset.UtcNow.AddMinutes(5)) { _saved = saved; _address.Text = saved.Server.TrimEnd('/'); _account.Text = saved.Account; }
             _http = http ?? new HttpClient(new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false }) { Timeout = TimeSpan.FromMinutes(30) };
             _privateRoot = privateRoot ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify), "MS3DPRINT Manager", "workspace-migrations");
             _body.Children.Add(new TextBlock { Text = "Serveur HTTPS", Classes = { "caption" } }); _body.Children.Add(_address);
             _body.Children.Add(new TextBlock { Text = "Compte", Classes = { "caption" } }); _body.Children.Add(_account);
             _body.Children.Add(new TextBlock { Text = "Mot de passe · conservé uniquement en mémoire", TextWrapping = TextWrapping.Wrap, Classes = { "caption" } }); _body.Children.Add(_password);
+            if (_saved is not null) { _body.Children.Clear(); _body.Children.Add(Text("Connecté en tant que " + _saved.Account + " sur " + _saved.Server.TrimEnd('/') + ". Aucun mot de passe à saisir.")); _next.Content = "Préparer la synchronisation"; }
             _next.Click += async (_, _) => await AdvanceAsync();
             _cancel.Click += (_, _) => Close(false);
             _newPreparation.Click += (_, _) =>
@@ -121,7 +127,21 @@ public partial class MainWindow
                     if (!Uri.TryCreate(_address.Text, UriKind.Absolute, out var server)) throw new ArgumentException("Indiquez une adresse HTTPS valide.");
                     _client = new RemoteWorkspaceClient(_http, server);
                     var account = (_account.Text ?? "").Trim(); var password = _password.Text ?? ""; _password.Text = "";
-                    await _client.LoginAsync(account, password, _lifetime.Token); await _client.GetMigrationCapabilitiesAsync(_lifetime.Token); RequireCurrent();
+                    // The remembered device session is reused; a password is asked only when it is refused.
+                    if (_saved is { } saved && password.Length == 0 && new Uri(saved.Server) == server && string.Equals(saved.Account, account, StringComparison.OrdinalIgnoreCase))
+                    {
+                        _client.RestoreSession(saved);
+                        try { await _client.GetMigrationCapabilitiesAsync(_lifetime.Token); }
+                        catch (RemoteWorkspaceException e) when (e.Kind == RemoteFailure.Unauthorized)
+                        {
+                            _saved = null; _body.Children.Clear(); _body.Children.Add(Text("Serveur HTTPS")); _body.Children.Add(_address);
+                            _body.Children.Add(Text("Compte")); _body.Children.Add(_account); _body.Children.Add(Text("Mot de passe")); _body.Children.Add(_password);
+                            _next.Content = "Se connecter et préparer la synchronisation";
+                            throw new RemoteWorkspaceException(RemoteFailure.Unauthorized, "Session expirée : saisissez votre mot de passe.");
+                        }
+                    }
+                    else { await _client.LoginAsync(account, password, _lifetime.Token); await _client.GetMigrationCapabilitiesAsync(_lifetime.Token); }
+                    RequireCurrent();
                     Directory.CreateDirectory(PrivateRoot);
                     WorkspacePathSafety.EnsureNoLinks(PrivateRoot);
                     var candidates = Directory.EnumerateDirectories(PrivateRoot)
