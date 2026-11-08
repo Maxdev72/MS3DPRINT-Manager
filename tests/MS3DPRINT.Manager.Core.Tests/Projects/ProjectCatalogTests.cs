@@ -42,6 +42,21 @@ public sealed class ProjectCatalogTests : IDisposable
         Assert.Null(projects.Single(p => p.ProjectPath == copy).Profile);
     }
 
+    [Theory]
+    [InlineData("01_CLIENTS\\A\\ACM-2026-001_TEST")]
+    [InlineData("01_CLIENTS/A/ACM-2026-001_TEST")]
+    public void Load_ProfileWrittenOnAnotherSystemKeepsItsStatus(string relativePath)
+    {
+        var paths = new WorkspaceMetadataPaths(_root);
+        var now = DateTimeOffset.UtcNow;
+        var client = new ClientProfile(Guid.NewGuid(), ClientKind.Professional, "A", "ACM", "A", null, null, null, null, new(null, null, null, null, null), now, now);
+        new ClientProfileStore(paths).Create(client);
+        Directory.CreateDirectory(Path.Combine(_root, "01_CLIENTS", "A", "ACM-2026-001_TEST"));
+        new ProjectProfileStore(paths).Create(new ProjectProfile(Guid.NewGuid(), client.Id, "ACM", "ACM-2026-001", "ACM-2026-001_TEST", "TEST", ProjectStatus.InProgress, now, null, null, null, now, relativePath));
+
+        Assert.Equal(ProjectStatus.InProgress, Assert.Single(new ProjectCatalog(new ProjectProfileStore(paths)).Load(_root)).Status);
+    }
+
     [Fact]
     public void Load_UnderscoreClientCodeIsRecognizedAndCounted()
     {

@@ -16,7 +16,7 @@ public sealed class CollectionCatalog
 
         var profiles = new CollectionProfileStore(workspaceRoot).LoadAll()
             .Where(p => p.Category == collectionFolder)
-            .Select(p => (Profile: p, Path: Path.GetFullPath(Path.Combine(workspaceRoot, p.RelativePath))))
+            .Select(p => (Profile: p, Path: Path.GetFullPath(Path.Combine(workspaceRoot, WorkspaceEntityPaths.Native(p.RelativePath)))))
             .Where(p => Directory.Exists(p.Path)).ToArray();
         var indexed = profiles.Select(p => new CollectionItemSummary(p.Profile.Name, p.Path,
             new DateTimeOffset(Directory.GetLastWriteTimeUtc(p.Path), TimeSpan.Zero), p.Profile));

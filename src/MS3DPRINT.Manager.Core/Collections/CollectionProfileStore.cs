@@ -33,7 +33,7 @@ public sealed class CollectionProfileStore
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         var fullPath = Path.GetFullPath(Path.IsPathRooted(path) ? path : Path.Combine(_root, path));
-        return LoadAll().FirstOrDefault(p => string.Equals(Path.GetFullPath(Path.Combine(_root, p.RelativePath)), fullPath, StringComparison.OrdinalIgnoreCase));
+        return LoadAll().FirstOrDefault(p => string.Equals(Path.GetFullPath(Path.Combine(_root, WorkspaceEntityPaths.Native(p.RelativePath))), fullPath, StringComparison.OrdinalIgnoreCase));
     }
 
     public string ProfilePath(Guid id)
@@ -64,7 +64,7 @@ public sealed class CollectionProfileStore
         ProfileMutationLock.CheckVersion(previous.UpdatedAt, expectedUpdatedAt);
         if (previous.Category != profile.Category || previous.CreatedAt != profile.CreatedAt)
             throw new ArgumentException("La catégorie et la date de création de la fiche ne peuvent pas changer.", nameof(profile));
-        if (LoadAll().Any(p => p.Id != profile.Id && string.Equals(Path.GetFullPath(Path.Combine(_root, p.RelativePath)), Path.GetFullPath(Path.Combine(_root, profile.RelativePath)), StringComparison.OrdinalIgnoreCase)))
+        if (LoadAll().Any(p => p.Id != profile.Id && string.Equals(Path.GetFullPath(Path.Combine(_root, WorkspaceEntityPaths.Native(p.RelativePath))), Path.GetFullPath(Path.Combine(_root, WorkspaceEntityPaths.Native(profile.RelativePath))), StringComparison.OrdinalIgnoreCase)))
             throw new InvalidOperationException("Une autre fiche existe déjà pour ce dossier.");
         profile = profile with { UpdatedAt = ProfileMutationLock.NextVersion(previous.UpdatedAt, profile.UpdatedAt) };
         Write(profile, replace: true);
@@ -114,7 +114,7 @@ public sealed class CollectionProfileStore
         var segments = profile.RelativePath.Replace('\\', '/').Split('/');
         if (segments.Length < 2 || segments[0] != profile.Category || segments.Any(s => s is "" or "." or ".." || s.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || IsReserved(s)))
             throw new ArgumentException("Le chemin doit désigner un dossier de sa catégorie.", nameof(profile));
-        var fullPath = Path.GetFullPath(Path.Combine(_root, profile.RelativePath));
+        var fullPath = Path.GetFullPath(Path.Combine(_root, WorkspaceEntityPaths.Native(profile.RelativePath)));
         WorkspacePathSafety.EnsureNoLinks(fullPath);
         if (requireFolder && !Directory.Exists(fullPath)) throw new DirectoryNotFoundException("Le dossier de la fiche est introuvable.");
     }

@@ -81,7 +81,7 @@ public sealed class EntityManagementService
     {
         RequireCategory(item.Path, category); RequireCategory(destinationDirectory, category, allowRoot: true);
         Prevalidate(item.Path, Path.Combine(destinationDirectory, Path.GetFileName(item.Path)));
-        if (_collections.LoadAll().Any(existing => !Same(Path.Combine(_root, existing.RelativePath), item.Path) && WorkspaceEntityPaths.IsInside(Path.Combine(_root, existing.RelativePath), destinationDirectory)))
+        if (_collections.LoadAll().Any(existing => !Same(Path.Combine(_root, WorkspaceEntityPaths.Native(existing.RelativePath)), item.Path) && WorkspaceEntityPaths.IsInside(Path.Combine(_root, WorkspaceEntityPaths.Native(existing.RelativePath)), destinationDirectory)))
             throw new ArgumentException("Choisissez un dossier de classement, pas une autre fiche.");
         AdoptCollection(item, category);
         return Relocate(item.Path, Path.Combine(destinationDirectory, Path.GetFileName(item.Path)), () => _files.Move(item.Path, destinationDirectory));

@@ -203,7 +203,7 @@ public sealed class WorkspaceReconciliationService
                 }
                 if (profile.CreatedAt == default || profile.UpdatedAt == default || !paths.Add(profile.RelativePath))
                     issues.Add(new("InvalidCollection", path, "La fiche de collection possède une version ou un dossier invalide ou dupliqué."));
-                if (!Directory.Exists(Path.Combine(root, profile.RelativePath)))
+                if (!Directory.Exists(Path.Combine(root, WorkspaceEntityPaths.Native(profile.RelativePath))))
                     issues.Add(new("MissingCollectionFolder", path, "Le dossier de cette fiche de collection est absent. Une décision de reprise est nécessaire."));
             }
         }
