@@ -180,7 +180,35 @@ public partial class MainWindow
         ServerPassword.Text = "";
         return RunServerAsync(connection => connection.LoginAsync(server, (ServerAccount.Text ?? "").Trim(), password, ServerRemember.IsChecked == true));
     }
-    private Task SynchronizeServerAsync() => RunServerAsync(connection => connection.RefreshAsync());
+    private RemoteProfileSync? _profileSync;
+    private string? _profileSyncRoot;
+
+    /// <summary>Every 10 s: read the server, then align the sheets of this PC and the server's (most recent wins).</summary>
+    private async Task SynchronizeServerAsync()
+    {
+        ProfileSyncResult? result = null;
+        await RunServerAsync(async connection =>
+        {
+            await connection.RefreshAsync();
+            result = await SyncProfilesAsync(connection);
+            if (result is { Pushed: > 0 }) await connection.RefreshAsync();
+        });
+        if (result is not { Changed: true } || _panel is not null || _busy != 0) return;
+        var page = NavigationButtons().FirstOrDefault(b => b.Classes.Contains("selected"))?.Tag as string;
+        if (page is null || CurrentNavigationStop?.Key != "page:" + page) return;
+        await (page switch { "Accueil" => PreloadAsync(force: true), "Projets" => LoadProjectsAsync(), "Clients" => LoadClientsAsync(), _ => Task.CompletedTask });
+    }
+
+    private async Task<ProfileSyncResult?> SyncProfilesAsync(RemoteWorkspaceConnection connection)
+    {
+        var root = WorkspaceRoot;
+        if (!connection.CanWrite || connection.Copy is not { } copy || !Directory.Exists(root)) return null;
+        if (_profileSyncRoot != root) { _profileSync = new(root); _profileSyncRoot = root; }
+        var sync = _profileSync!;
+        return await Task.Run(() => sync.RunAsync(copy.Clients, copy.Projects,
+            (id, command) => connection.ExecuteAsync(command.CommandId, client => client.UpdateClientAsync(id, command)),
+            (id, command) => connection.ExecuteAsync(command.CommandId, client => client.UpdateProjectAsync(id, command))));
+    }
     private async void ServerLogin_Click(object? sender, RoutedEventArgs e) => await LoginServerAsync();
     private bool _serverLoginDismissed;
     private void ServerConnection_Click(object? sender, RoutedEventArgs e) => ShowServerLogin();

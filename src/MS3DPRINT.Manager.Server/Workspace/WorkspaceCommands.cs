@@ -95,9 +95,12 @@ public sealed class WorkspaceCommands
         Version(profile.UpdatedAt, command.ExpectedUpdatedAt);
         if (!Enum.IsDefined(command.Status) || !Enum.IsDefined(command.Priority)) throw new ArgumentException();
         Text(command.Description, 10000); Text(command.Notes, 10000);
+        ProjectTasks.Validate(command.Tasks);
         return new(200, Detail(_projects.Update(profile with
         {
-            Status = command.Status, DueDate = command.DueDate, Description = Clean(command.Description), Notes = Clean(command.Notes), Priority = command.Priority
+            Status = command.Status, DueDate = command.DueDate, Description = Clean(command.Description), Notes = Clean(command.Notes), Priority = command.Priority,
+            // Null keeps the tasks (website form); a list replaces them (sheet synchronized from Manager).
+            Tasks = command.Tasks is null ? profile.Tasks : command.Tasks.Select(t => t with { Title = t.Title.Trim(), Notes = Clean(t.Notes) }).ToArray()
         }, command.ExpectedUpdatedAt)));
     }
 

@@ -11,9 +11,10 @@ public sealed class WorkspaceReader(ServerStorage storage)
         .LoadAll().Select(profile => new ClientResponse(profile.Id, profile.Kind.ToString(), profile.ClientCode,
             profile.Kind == ClientKind.Professional ? profile.CompanyName ?? profile.FolderName
                 : string.Join(" ", new[] { profile.FirstName, profile.LastName }.Where(value => !string.IsNullOrWhiteSpace(value))),
-            profile.UpdatedAt)).ToArray();
+            profile.UpdatedAt, profile.CompanyName, profile.FirstName, profile.LastName, profile.Address, profile.Notes, profile.PrimaryContact)).ToArray();
 
     public IReadOnlyList<ProjectResponse> ReadProjects() => new ProjectProfileStore(new WorkspaceMetadataPaths(storage.WorkspaceRoot))
         .LoadAll().Select(profile => new ProjectResponse(profile.Id, profile.ClientId, profile.Reference, profile.ProjectName,
-            profile.Status.ToString(), profile.DueDate, profile.Priority.ToString(), profile.UpdatedAt, ProjectTasks.Items(profile))).ToArray();
+            profile.Status.ToString(), profile.DueDate, profile.Priority.ToString(), profile.UpdatedAt, ProjectTasks.Items(profile),
+            profile.Description, profile.Notes, FullSheet: true)).ToArray();
 }
