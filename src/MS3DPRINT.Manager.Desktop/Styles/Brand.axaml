@@ -40,7 +40,7 @@
   <Style Selector="Window.compact Image.compact-brand"><Setter Property="IsVisible" Value="True" /></Style>
 
   <Style Selector="Border.workbench-banner"><Setter Property="Background" Value="{DynamicResource WorkbenchBrush}" /><Setter Property="CornerRadius" Value="6" /><Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" /><Setter Property="BorderThickness" Value="1" /><Setter Property="Padding" Value="24" /></Style>
-  <Style Selector="Button.dashboard-stage"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderBrush" Value="Transparent" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Padding" Value="14,12" /></Style>
+  <Style Selector="Button.dashboard-stage"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderBrush" Value="Transparent" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Padding" Value="16,12" /></Style>
   <Style Selector="Button.dashboard-stage:pointerover"><Setter Property="Background" Value="{DynamicResource CyanSoftBrush}" /></Style>
   <Style Selector="Button.dashboard-stage TextBlock"><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Style>
   <Style Selector="Button.dashboard-stage TextBlock.caption"><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /><Setter Property="FontWeight" Value="Normal" /></Style>
@@ -62,11 +62,11 @@
   <Style Selector="TextBlock.settings-label"><Setter Property="FontWeight" Value="SemiBold" /><Setter Property="Margin" Value="0,12,0,0" /></Style>
   <Style Selector="Button.settings-tab TextBlock.settings-nav-detail"><Setter Property="FontWeight" Value="Normal" /></Style>
   <Style Selector="Border.estimate-form TextBlock.estimate-help, Grid.workshop-form TextBlock.faint"><Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" /><Setter Property="LineHeight" Value="22" /></Style>
-  <Style Selector="Button.queue-row"><Setter Property="Padding" Value="16,14" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /></Style>
+  <Style Selector="Button.queue-row"><Setter Property="Padding" Value="16,16" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /></Style>
   <Style Selector="TextBlock.queue-next-action"><Setter Property="Foreground" Value="{DynamicResource AccentBrush}" /><Setter Property="FontSize" Value="{DynamicResource FontSizeCaption}" /><Setter Property="FontWeight" Value="Normal" /></Style>
   <Style Selector="Grid.project-row Button.quick-row-action"><Setter Property="Opacity" Value="0" /></Style>
   <Style Selector="Grid.project-row:pointerover Button.quick-row-action, Grid.project-row:focus-within Button.quick-row-action, Window.compact Grid.project-row Button.quick-row-action"><Setter Property="Opacity" Value="1" /></Style>
-  <Style Selector="Border.project-overview"><Setter Property="Padding" Value="22" /><Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" /><Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="6" /><Setter Property="Margin" Value="0,0,0,16" /></Style>
+  <Style Selector="Border.project-overview"><Setter Property="Padding" Value="24" /><Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" /><Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="6" /><Setter Property="Margin" Value="0,0,0,16" /></Style>
 
   <!-- Windows' accessibility preference also suppresses the new spatial effects. -->
   <Style Selector="Window.reduce-motion Button, Window.reduce-motion Border, Window.reduce-motion Path"><Setter Property="Transitions" Value="{x:Null}" /></Style>

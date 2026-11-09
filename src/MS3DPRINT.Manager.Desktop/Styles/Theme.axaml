@@ -115,7 +115,7 @@
       <x:Double x:Key="FontSizeTitle">20</x:Double>
       <x:Double x:Key="FontSizePage">26</x:Double>
       <x:Double x:Key="FontSizeDisplay">40</x:Double>
-      <x:Double x:Key="ControlHeight">42</x:Double>
+      <x:Double x:Key="ControlHeight">40</x:Double>
 
       <!-- Icons: 24x24 grid, drawn with a 1.8 px round stroke -->
       <StreamGeometry x:Key="IconHome">M3 11.5 12 4l9 7.5 M5.5 10v9.5h13V10 M10 19.5v-5h4v5</StreamGeometry>
@@ -181,7 +181,7 @@
     <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
-    <Setter Property="Padding" Value="14,8" />
+    <Setter Property="Padding" Value="16,8" />
     <Setter Property="MinHeight" Value="40" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="CornerRadius" Value="8" />
@@ -203,8 +203,8 @@
     <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
     <Setter Property="CornerRadius" Value="8" />
-    <Setter Property="Padding" Value="12,10" />
-    <Setter Property="MinHeight" Value="42" />
+    <Setter Property="Padding" Value="12,12" />
+    <Setter Property="MinHeight" Value="40" />
     <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
   </Style>
   <Style Selector="TextBox:focus">
@@ -238,7 +238,7 @@
     <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="Padding" Value="12,8" />
-    <Setter Property="MinHeight" Value="42" />
+    <Setter Property="MinHeight" Value="40" />
   </Style>
   <!-- Date fields (DateBox): same surface, border and text as the other inputs, in both themes. -->
   <Style Selector="CalendarDatePicker">
@@ -246,8 +246,8 @@
     <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
     <Setter Property="CornerRadius" Value="8" />
-    <Setter Property="Padding" Value="12,10" />
-    <Setter Property="MinHeight" Value="42" />
+    <Setter Property="Padding" Value="12,12" />
+    <Setter Property="MinHeight" Value="40" />
     <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
   </Style>
   <Style Selector="CalendarDatePicker /template/ Border#Background, CalendarDatePicker:pointerover /template/ Border#Background, CalendarDatePicker:focus-within /template/ Border#Background">

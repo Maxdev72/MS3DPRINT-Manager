@@ -42,7 +42,10 @@ toute nouvelle valeur en dur (les `Setter` de marge des feuilles de style resten
 Un test lit les fichiers d’interface et refuse toute taille de police, marge ou
 couleur écrite en dur hors des jetons (liste d’exceptions explicite et courte).
 
-## Éléments réutilisables (étape 2)
+## Éléments réutilisables (étape 2) — commencée le 9 novembre 2026
+
+Fait : `ListToolbar` (Filaments et Imprimantes), contrôles à 40 px, grille vérifiée aussi dans les feuilles de style.
+Les autres éléments viennent avec les pages qui les utilisent (étapes 3 à 6).
 
 - `PageHeader` : titre, sous-titre, zone d’action à droite (un seul bouton principal).
 - `ListToolbar` : recherche (largeur fixe) · puces de filtre · menu « Plus de filtres »

@@ -62,7 +62,8 @@ public sealed partial class DesignTokenTests
 
     [GeneratedRegex(@"FontSize\s*=\s*\d|FontSize=""\d|Property=""FontSize"" Value=""\d")]
     private static partial Regex LiteralFontSize();
-    [GeneratedRegex(@"\b(?:Margin|Padding|Spacing|ColumnSpacing|RowSpacing|ItemSpacing|LineSpacing)=""([-\d., ]+)""")]
+    // Attributes on controls and Setter values in the style sheets.
+    [GeneratedRegex(@"(?:\b(?:Margin|Padding|Spacing|ColumnSpacing|RowSpacing|ItemSpacing|LineSpacing)=|Property=""(?:Margin|Padding|Spacing|ColumnSpacing|RowSpacing|ItemSpacing|LineSpacing)"" Value=)""([-\d., ]+)""")]
     private static partial Regex AxamlSpacing();
     [GeneratedRegex(@"new (?:Avalonia\.)?Thickness\(([-\d., ]+)\)")]
     private static partial Regex CodeThickness();

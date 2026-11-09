@@ -53,13 +53,13 @@
   <Style Selector="Window.workbench-ui Button.table-row:pointerover, Window.workbench-ui Button.queue-row:pointerover">
     <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
   </Style>
-  <Style Selector="Window.workbench-ui Button.primary-action"><Setter Property="MinHeight" Value="42" /></Style>
+  <Style Selector="Window.workbench-ui Button.primary-action"><Setter Property="MinHeight" Value="40" /></Style>
   <Style Selector="Window.workbench-ui Button.filter-chip">
     <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="CornerRadius" Value="4" />
-    <Setter Property="Padding" Value="12,10" />
+    <Setter Property="Padding" Value="12,12" />
     <Setter Property="MinHeight" Value="40" />
   </Style>
   <Style Selector="Window.workbench-ui Button.filter-chip.selected">
@@ -78,7 +78,7 @@
     <Setter Property="BorderThickness" Value="0,0,0,1" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
     <Setter Property="CornerRadius" Value="0" />
-    <Setter Property="Padding" Value="0,10,0,24" />
+    <Setter Property="Padding" Value="0,12,0,24" />
     <Setter Property="Margin" Value="0,0,0,16" />
   </Style>
   <Style Selector="Window.workbench-ui Border.settings-section">
@@ -107,7 +107,7 @@
     <Setter Property="MinHeight" Value="46" />
     <Setter Property="FontSize" Value="{DynamicResource FontSizeSection}" />
   </Style>
-  <Style Selector="Grid.dialog-form Button.primary-action"><Setter Property="MinHeight" Value="42" /></Style>
+  <Style Selector="Grid.dialog-form Button.primary-action"><Setter Property="MinHeight" Value="40" /></Style>
   <Style Selector="Grid.dialog-form TextBlock.form-label">
     <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
@@ -169,9 +169,9 @@
     <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
     <Setter Property="BorderBrush" Value="Transparent" />
   </Style>
-  <Style Selector="Button.priority-choice"><Setter Property="Padding" Value="10" /><Setter Property="CornerRadius" Value="6" /><Setter Property="Background" Value="Transparent" /><Setter Property="BorderBrush" Value="Transparent" /></Style>
+  <Style Selector="Button.priority-choice"><Setter Property="Padding" Value="12" /><Setter Property="CornerRadius" Value="6" /><Setter Property="Background" Value="Transparent" /><Setter Property="BorderBrush" Value="Transparent" /></Style>
   <Style Selector="Button.priority-choice.selected"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource FocusBorderBrush}" /></Style>
-  <Style Selector="Button.project-priority"><Setter Property="Padding" Value="6" /><Setter Property="MinWidth" Value="32" /><Setter Property="MinHeight" Value="36" /><Setter Property="Background" Value="Transparent" /><Setter Property="BorderBrush" Value="Transparent" /></Style>
+  <Style Selector="Button.project-priority"><Setter Property="Padding" Value="8" /><Setter Property="MinWidth" Value="32" /><Setter Property="MinHeight" Value="36" /><Setter Property="Background" Value="Transparent" /><Setter Property="BorderBrush" Value="Transparent" /></Style>
   <Style Selector="Button.priority-choice:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.project-priority:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource FocusBorderBrush}" />
@@ -217,10 +217,10 @@
   <Style Selector="Border.estimate-price-rail TextBox"><Setter Property="MinHeight" Value="46" /><Setter Property="FontSize" Value="{DynamicResource FontSizeSection}" /></Style>
   <Style Selector="Border.settings-section TextBlock.settings-group-title">
     <Setter Property="FontSize" Value="{DynamicResource FontSizeSection}" /><Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="Margin" Value="0,20,0,6" /><Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+    <Setter Property="Margin" Value="0,24,0,8" /><Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
   </Style>
   <Style Selector="Viewbox.settings-heading-icon Path.icon"><Setter Property="Stroke" Value="{DynamicResource CyanBrush}" /></Style>
-  <Style Selector="Window.compact Border.settings-section"><Setter Property="Padding" Value="18" /></Style>
+  <Style Selector="Window.compact Border.settings-section"><Setter Property="Padding" Value="16" /></Style>
   <Style Selector="Button.settings-tab:focus-visible"><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /></Style>
   <Style Selector="TextBlock.settings-search-hit"><Setter Property="Foreground" Value="{DynamicResource CyanBrush}" /></Style>
   <Style Selector="Border.estimate-price-rail TextBlock.estimate-label"><Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" /><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Style>
@@ -247,7 +247,7 @@
   <Style Selector="CalendarDayButton:inactive:not(:today) > TextBlock, CalendarButton:inactive:not(:selected) > TextBlock"><Setter Property="Foreground" Value="{DynamicResource FaintTextBrush}" /></Style>
   <Style Selector="CalendarDayButton:focus-visible /template/ Border#Border, CalendarButton:focus-visible /template/ Border#Border"><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /></Style>
   <Style Selector="CalendarItem /template/ Button#PART_HeaderButton"><Setter Property="FontSize" Value="{DynamicResource FontSizeSection}" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
-  <Style Selector="Button.task-view"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /><Setter Property="Padding" Value="10,8" /><Setter Property="CornerRadius" Value="6" /></Style>
+  <Style Selector="Button.task-view"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /><Setter Property="Padding" Value="12,8" /><Setter Property="CornerRadius" Value="6" /></Style>
   <Style Selector="Button.task-view:pointerover /template/ ContentPresenter"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /></Style>
   <Style Selector="Button.task-view.selected /template/ ContentPresenter"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /></Style>
   <Style Selector="Button.task-view.selected TextBlock"><Setter Property="FontWeight" Value="SemiBold" /></Style>
@@ -256,7 +256,7 @@
   <Style Selector="Border.task-detail TextBox, Border.task-detail ComboBox, Border.task-detail AutoCompleteBox, Border.task-detail CalendarDatePicker"><Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /></Style>
   <Style Selector="Border.task-detail ComboBox:disabled /template/ Border#Background"><Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" /></Style>
   <Style Selector="Border.task-detail.floating"><Setter Property="BoxShadow" Value="0 12 32 0 #66000000" /><Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" /></Style>
-  <Style Selector="Border.task-chip"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" /><Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="12" /><Setter Property="Padding" Value="10,3" /></Style>
+  <Style Selector="Border.task-chip"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" /><Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="12" /><Setter Property="Padding" Value="12,4" /></Style>
   <Style Selector="Border.task-hint"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="CornerRadius" Value="8" /></Style>
   <Style Selector="Button.task-group"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /><Setter Property="Padding" Value="4,4" /></Style>
   <Style Selector="Button.task-group:pointerover /template/ ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
@@ -277,7 +277,7 @@
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="MinHeight" Value="50" />
     <Setter Property="MinWidth" Value="128" />
-    <Setter Property="Padding" Value="20,10" />
+    <Setter Property="Padding" Value="24,12" />
     <Setter Property="CornerRadius" Value="6" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />

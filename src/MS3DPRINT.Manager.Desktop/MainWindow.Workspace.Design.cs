@@ -21,11 +21,20 @@ public partial class MainWindow
         Classes.Add("workbench-ui");
         InitializeRevenueDrop();
         StartMobilePublication();
-        DecorateInventoryPage(PrintersWorkspacePanel, "Votre parc d’imprimantes", _printerPageSummary, "Nouvelle imprimante");
+        UseListToolbar(PrintersWorkspacePanel, [], _printerPageSummary, "Nouvelle imprimante");
         DecorateInventoryPage(RevenuesWorkspacePanel, "Livre des recettes", _revenuePageSummary, "Enregistrer un encaissement");
         if (RevenuesWorkspacePanel.Child is Grid { Children: [Grid revenueToolbar, ..] } && revenueToolbar.Children[0] is StackPanel revenueHeading) revenueHeading.Children.Add(_revenueThresholdNote);
         DecorateInventoryPage(PurchasesWorkspacePanel, "Registre des achats", _purchasePageSummary, "Enregistrer un achat");
-        DecorateInventoryPage(FilamentsWorkspacePanel, "Matières de l’atelier", _filamentPageSummary, "Nouveau filament");
+        // The page title already says « Filaments »: the toolbar carries search, family, count and the creation button.
+        UseListToolbar(FilamentsWorkspacePanel, [ListToolbar.Search(ListToolbar.Detach(FilamentSearch)), ListToolbar.Detach(FilamentFamily), ListToolbar.Detach(FilamentClearButton)], _filamentPageSummary, "Nouveau filament");
+        // The emptied filter row goes away entirely, so the table sits right under the toolbar like on the other lists.
+        if (FilamentsWorkspacePanel.Child is Grid filamentLayout && FilamentList.Parent is ScrollViewer filamentScroll)
+        {
+            filamentLayout.Children.Remove(FilamentFilters);
+            filamentLayout.RowDefinitions.RemoveAt(1);
+            Grid.SetRow(filamentScroll, 1);
+        }
+        FilamentFamily.Width = 220;
         DecorateInventoryPage(TrashWorkspacePanel, "Éléments supprimés", _trashPageSummary, null);
         foreach (var panel in new[] { ProjectsWorkspacePanel, ClientsWorkspacePanel, CollectionsWorkspacePanel, FilamentsWorkspacePanel, PrintersWorkspacePanel, RevenuesWorkspacePanel, PurchasesWorkspacePanel, TrashWorkspacePanel, FolderWorkspacePanel })
             panel.Classes.Add("workspace-sheet");
@@ -42,6 +51,20 @@ public partial class MainWindow
             action.Content = Icons.Label("IconPlus", actionLabel, 16);
             Avalonia.Automation.AutomationProperties.SetName(action, actionLabel);
         }
+    }
+
+    /// <summary>Replaces a page's first toolbar row with the shared <see cref="ListToolbar"/>, keeping its creation button.</summary>
+    private static void UseListToolbar(Border page, IEnumerable<Control> left, TextBlock count, string actionLabel)
+    {
+        if (page.Child is not Grid { Children: [Grid old, ..] } layout) return;
+        var action = old.Children.OfType<StackPanel>().LastOrDefault()?.Children.OfType<Button>().LastOrDefault();
+        if (action is null) return;
+        action.Content = Icons.Label("IconPlus", actionLabel, 16);
+        Avalonia.Automation.AutomationProperties.SetName(action, actionLabel);
+        count.TextWrapping = TextWrapping.NoWrap;
+        var toolbar = ListToolbar.Create(left, [count, ListToolbar.Detach(action)]);
+        Grid.SetRow(toolbar, Grid.GetRow(old));
+        layout.Children[layout.Children.IndexOf(old)] = toolbar;
     }
 
     private static string ReadableColumnHeading(string value)
