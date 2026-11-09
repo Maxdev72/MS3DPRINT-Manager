@@ -44,7 +44,7 @@ public sealed class ProjectTemplateWindow : DialogWindow
         var hint = new TextBlock
         {
             Text = "Écrivez « Dossier/Sous-dossier » pour créer un sous-dossier. La catégorie indique où sont classés les fichiers importés : un seul dossier par catégorie.",
-            Classes = { "faint" }, FontSize = 12, TextWrapping = Avalonia.Media.TextWrapping.Wrap
+            Classes = { "faint" }, FontSize = Ui.Text.Micro, TextWrapping = Avalonia.Media.TextWrapping.Wrap
         };
         Layout("Arborescence des projets", "Dossiers créés dans chaque nouveau projet. Les projets existants ne changent pas.",
             [hint, _list, add, _error], save, extraAction: reset);
@@ -85,7 +85,7 @@ public sealed class ProjectTemplateWindow : DialogWindow
                 if (!await ConfirmRemovalWindow.AskAsync(remove, string.IsNullOrWhiteSpace(row.Path.Text) ? "Dossier du modèle" : row.Path.Text, "Cette ligne sera retirée du modèle des prochains projets. Les dossiers et fichiers existants seront conservés.")) return;
                 _rows.Remove(row); Rebuild();
             };
-            var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto,Auto,Auto"), ColumnSpacing = 6 };
+            var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto,Auto,Auto"), ColumnSpacing = 8 };
             row.Path.HorizontalAlignment = HorizontalAlignment.Stretch;
             Grid.SetColumn(row.Category, 1);
             Grid.SetColumn(up, 2);

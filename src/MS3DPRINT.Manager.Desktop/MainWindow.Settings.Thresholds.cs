@@ -11,7 +11,7 @@ namespace MS3DPRINT.Manager.Desktop;
 
 public partial class MainWindow
 {
-    private readonly TextBlock _revenueThresholdNote = new() { TextWrapping = TextWrapping.Wrap, FontSize = 13, LineHeight = 20, IsVisible = false };
+    private readonly TextBlock _revenueThresholdNote = new() { TextWrapping = TextWrapping.Wrap, FontSize = Ui.Text.Caption, LineHeight = 20, IsVisible = false };
 
     /// <summary>Ceilings of the user's regime, watched against the collected turnover of the book.</summary>
     private Border BuildThresholdsSettingsCard(string root)
@@ -77,13 +77,13 @@ public partial class MainWindow
     {
         var root = WorkspaceRoot;
         // One compact line of figures: the project's files stay the main content of the sheet.
-        var heading = new TextBlock { Text = "Bilan du projet", FontSize = 16, FontWeight = FontWeight.SemiBold, Classes = { "brand-heading" }, VerticalAlignment = VerticalAlignment.Center };
-        var section = new WrapPanel { Orientation = Orientation.Horizontal, ItemSpacing = 28, LineSpacing = 6, IsVisible = false, Children = { heading } };
+        var heading = new TextBlock { Text = "Bilan du projet", FontSize = Ui.Text.Section, FontWeight = FontWeight.SemiBold, Classes = { "brand-heading" }, VerticalAlignment = VerticalAlignment.Center };
+        var section = new WrapPanel { Orientation = Orientation.Horizontal, ItemSpacing = 32, LineSpacing = 8, IsVisible = false, Children = { heading } };
         ToolTip.SetTip(section, "Calcul d’après les recettes et achats rattachés à la référence du projet. Les cotisations, l’électricité et l’usure des machines ne sont pas déduites.");
         static Control Stat(string label, string value) => new StackPanel { Spacing = 0, Children =
         {
-            new TextBlock { Text = label, FontSize = 12, Classes = { "muted" } },
-            new TextBlock { Text = value, FontSize = 15, FontWeight = FontWeight.SemiBold }
+            new TextBlock { Text = label, FontSize = Ui.Text.Micro, Classes = { "muted" } },
+            new TextBlock { Text = value, FontSize = Ui.Text.Body, FontWeight = FontWeight.SemiBold }
         } };
         section.AttachedToVisualTree += async (_, _) =>
         {

@@ -57,10 +57,10 @@ public partial class MainWindow
             EstimateProject.ItemsSource = projects;
             EstimateProject.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<ProjectSummary>((project, _) =>
             {
-                var content = new StackPanel { Spacing = 3, Margin = new Avalonia.Thickness(0, 3), HorizontalAlignment = HorizontalAlignment.Stretch };
+                var content = new StackPanel { Spacing = 4, Margin = new Avalonia.Thickness(0, 4), HorizontalAlignment = HorizontalAlignment.Stretch };
                 if (project is null) return content;
                 content.Children.Add(new TextBlock { Text = project.Title(), FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap });
-                content.Children.Add(new TextBlock { Text = $"{project.Reference} · {project.ClientTitle()}", FontSize = 13, TextWrapping = TextWrapping.Wrap, Classes = { "muted" } });
+                content.Children.Add(new TextBlock { Text = $"{project.Reference} · {project.ClientTitle()}", FontSize = Ui.Text.Caption, TextWrapping = TextWrapping.Wrap, Classes = { "muted" } });
                 ToolTip.SetTip(content, $"{project.Title()}\n{project.Reference} · {project.ClientTitle()}");
                 return content;
             });
@@ -193,7 +193,7 @@ public partial class MainWindow
     }
 
     private readonly TextBox _estimateHistorySearch = new() { PlaceholderText = "Rechercher un devis : nom, client ou projet…" };
-    private readonly TextBlock _estimateHistoryCount = new() { Classes = { "muted" }, FontSize = 13 };
+    private readonly TextBlock _estimateHistoryCount = new() { Classes = { "muted" }, FontSize = Ui.Text.Caption };
     private EstimateReadResult _estimateHistoryData = new([], []);
     private Control[] _estimateHistoryDraftRows = [];
     private string? _estimateHistoryRoot;
@@ -253,20 +253,20 @@ public partial class MainWindow
             foreach (var estimate in estimates.Take(_estimateHistoryLimit))
             {
                 var text = new Grid { ColumnDefinitions = new ColumnDefinitions("*,94,110,Auto"), ColumnSpacing = 16 };
-                text.Children.Add(new TextBlock { Text = estimate.Name, FontSize = 15, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap, MaxLines = 2, VerticalAlignment = VerticalAlignment.Center });
-                var date = new TextBlock { Text = estimate.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy", EstimateCulture), FontSize = 13, Classes = { "muted" }, VerticalAlignment = VerticalAlignment.Center };
-                var price = new TextBlock { Text = EstimateMoney(estimate.Result.FinalPrice), FontSize = 17, FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
+                text.Children.Add(new TextBlock { Text = estimate.Name, FontSize = Ui.Text.Body, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap, MaxLines = 2, VerticalAlignment = VerticalAlignment.Center });
+                var date = new TextBlock { Text = estimate.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy", EstimateCulture), FontSize = Ui.Text.Caption, Classes = { "muted" }, VerticalAlignment = VerticalAlignment.Center };
+                var price = new TextBlock { Text = EstimateMoney(estimate.Result.FinalPrice), FontSize = Ui.Text.Section, FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
                 var resume = Icons.Label("IconArrowRight", "Reprendre", 16); resume.VerticalAlignment = VerticalAlignment.Center;
                 Grid.SetColumn(date, 1); Grid.SetColumn(price, 2); Grid.SetColumn(resume, 3);
                 text.Children.Add(date); text.Children.Add(price); text.Children.Add(resume);
-                var button = new Button { Content = text, Tag = estimate, Classes = { "estimate-history-row" }, HorizontalAlignment = HorizontalAlignment.Stretch, MinHeight = 56, Padding = new Avalonia.Thickness(0, 10) };
+                var button = new Button { Content = text, Tag = estimate, Classes = { "estimate-history-row" }, HorizontalAlignment = HorizontalAlignment.Stretch, MinHeight = 56, Padding = new Avalonia.Thickness(0, 12) };
                 button.Click += LoadSavedEstimate_Click;
                 var trash = new Button { Content = Icons.Glyph("IconTrash"), Tag = estimate, Classes = { "icon-action" } };
                 ToolTip.SetTip(trash, "Envoyer à la corbeille");
                 Avalonia.Automation.AutomationProperties.SetName(trash, $"Envoyer l’estimation {estimate.Name} à la corbeille");
                 Avalonia.Automation.AutomationProperties.SetName(button, $"{estimate.Name}, {estimate.Result.FinalPrice:0.00} €");
                 trash.Click += TrashEstimate_Click;
-                var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 6 };
+                var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 8 };
                 Grid.SetColumn(trash, 1);
                 row.Children.Add(button);
                 row.Children.Add(trash);
@@ -527,14 +527,14 @@ public partial class MainWindow
             var name = new TextBlock { Text = label };
             if (!strong) name.Classes.Add("muted");
             var amount = new TextBlock { Text = value, FontWeight = strong ? FontWeight.SemiBold : FontWeight.Normal };
-            if (strong) amount.FontSize = 18;
+            if (strong) amount.FontSize = Ui.Text.Section;
             Grid.SetColumn(amount, 1);
             row.Children.Add(name);
             row.Children.Add(amount);
             EstimateRecap.Children.Add(row);
         }
         void Cost(string label, decimal value) { if (value != 0) Row(label, value.ToString("0.00") + " €"); }
-        void Separator() => EstimateRecap.Children.Add(new Border { Height = 1, Margin = new Avalonia.Thickness(0, 6), Background = (IBrush?)Avalonia.Application.Current?.FindResource("BorderBrush") });
+        void Separator() => EstimateRecap.Children.Add(new Border { Height = 1, Margin = new Avalonia.Thickness(0, 8), Background = (IBrush?)Avalonia.Application.Current?.FindResource("BorderBrush") });
 
         EstimateRecap.Children.Add(new TextBlock { Text = EstimateName.Text, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
         if (inputs.Quantity > 1) Row("Quantité", inputs.Quantity + " pièces");

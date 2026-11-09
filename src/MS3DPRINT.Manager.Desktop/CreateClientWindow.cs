@@ -26,7 +26,7 @@ public sealed class CreateClientWindow : DialogWindow
     private readonly ListBox _addressResults = new() { IsVisible = false, MaxHeight = 200, Classes = { "lookup-suggestions" } };
     private readonly TextBlock _codePreview = new() { Classes = { "caption" } };
     private readonly IReadOnlyList<string> _usedCodes;
-    private readonly TextBlock _status = new() { FontSize = 12, IsVisible = false, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _status = new() { FontSize = Ui.Text.Micro, IsVisible = false, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _error = FormKit.ErrorText();
     private readonly CheckBox _individual = new() { Content = "Client particulier" };
     private CancellationTokenSource? _companySearch;
@@ -95,8 +95,8 @@ public sealed class CreateClientWindow : DialogWindow
         _companyResults.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<CompanySuggestion>((item, _) =>
             new StackPanel { Spacing = 4, Children =
             {
-                new TextBlock { Text = item?.Name ?? string.Empty, FontSize = 14, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap },
-                new TextBlock { Text = string.Join(" · ", new[] { item?.Siret, item?.Address }.Where(value => !string.IsNullOrWhiteSpace(value))), FontSize = 13, Classes = { "muted" }, TextWrapping = TextWrapping.Wrap }
+                new TextBlock { Text = item?.Name ?? string.Empty, FontSize = Ui.Text.Body, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap },
+                new TextBlock { Text = string.Join(" · ", new[] { item?.Siret, item?.Address }.Where(value => !string.IsNullOrWhiteSpace(value))), FontSize = Ui.Text.Caption, Classes = { "muted" }, TextWrapping = TextWrapping.Wrap }
             } });
         _companyResults.SelectionChanged += (_, _) =>
         {
@@ -105,7 +105,7 @@ public sealed class CreateClientWindow : DialogWindow
         };
         _addressResults.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<AddressSuggestion>((item, _) => new TextBlock
         {
-            Text = item is null ? string.Empty : item.Label, TextWrapping = TextWrapping.Wrap, FontSize = 14
+            Text = item is null ? string.Empty : item.Label, TextWrapping = TextWrapping.Wrap, FontSize = Ui.Text.Body
         });
         _addressResults.SelectionChanged += (_, _) =>
         {

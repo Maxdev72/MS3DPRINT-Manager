@@ -30,7 +30,7 @@ public sealed partial class ModelViewerView : UserControl
     private readonly TextBox _infill = new() { Text = "15" };
     private readonly TextBox _walls = new() { Text = "1,2" };
     private readonly TextBlock _volumeResult = new() { TextWrapping = TextWrapping.Wrap };
-    private readonly StackPanel _volumeRows = new() { Spacing = 6 };
+    private readonly StackPanel _volumeRows = new() { Spacing = 8 };
     private readonly TextBlock _volumeNote = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
     private MeshMeasures? _measures;
     private readonly Button _compareButton = new() { Content = "Comparer avec une autre version…", IsEnabled = false };
@@ -53,7 +53,7 @@ public sealed partial class ModelViewerView : UserControl
     private SlicerInstall? _slicer;
     private SlicerProfiles? _slicerProfiles;
     private IReadOnlyList<SlicerMachine> _machines = [];
-    private readonly StackPanel _slicerPanel = new() { Spacing = 10, IsVisible = false };
+    private readonly StackPanel _slicerPanel = new() { Spacing = 12, IsVisible = false };
     private readonly TextBlock _slicerNote = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
     private readonly ComboBox _slicerMachine = new() { HorizontalAlignment = HorizontalAlignment.Stretch };
     private readonly ComboBox _slicerQuality = new() { HorizontalAlignment = HorizontalAlignment.Stretch };
@@ -64,8 +64,8 @@ public sealed partial class ModelViewerView : UserControl
     private SliceResult? _slice;
     private SlicerMachine? _sliceMachineUsed;
     private readonly Button _createEstimate = new() { Content = "Créer une estimation avec ce modèle", IsEnabled = false, HorizontalAlignment = HorizontalAlignment.Stretch, Classes = { "primary-action" } };
-    private readonly StackPanel _measureGroup = new() { Spacing = 10, IsVisible = false };
-    private readonly StackPanel _cutGroup = new() { Spacing = 10, IsVisible = false };
+    private readonly StackPanel _measureGroup = new() { Spacing = 12, IsVisible = false };
+    private readonly StackPanel _cutGroup = new() { Spacing = 12, IsVisible = false };
     private readonly TextBlock _toolsHint = new() { Text = "Mesurer, couper ou comparer : choisissez un outil dans la barre au-dessus de la vue.", Classes = { "muted" }, TextWrapping = TextWrapping.Wrap };
     private static readonly string[] TabNames = ["Infos", "Affichage", "Outils", "Analyse"];
     private Border? _stageFrame;
@@ -85,7 +85,7 @@ public sealed partial class ModelViewerView : UserControl
     private readonly ComboBox _renderer = new() { ItemsSource = new[] { "Accéléré (carte graphique)", "Logiciel (processeur)" }, SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch };
     private readonly TextBlock _rendererNote = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
     private DispatcherTimer? _gpuWatch;
-    private readonly TextBlock _title = new() { Text = "Aucun modèle", FontSize = 16, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis };
+    private readonly TextBlock _title = new() { Text = "Aucun modèle", FontSize = Ui.Text.Section, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis };
     private readonly TextBlock _location = new() { Classes = { "caption" }, TextTrimming = TextTrimming.PrefixCharacterEllipsis, IsVisible = false };
     private readonly TextBlock _dimensions = new() { FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap, IsVisible = false };
     private readonly TextBlock _message = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
@@ -106,7 +106,7 @@ public sealed partial class ModelViewerView : UserControl
     private readonly CheckBox _grid = new() { Content = "Grille au sol (G)", IsChecked = true };
     private readonly TextBlock _gridNote = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
     private readonly Button _captureTool = new() { IsEnabled = false };
-    private readonly StackPanel _emptyState = new() { Spacing = 10, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+    private readonly StackPanel _emptyState = new() { Spacing = 12, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
     private CancellationTokenSource? _activeLoad;
     private CancellationTokenSource? _activeAnalysis;
     private MeshModel? _mesh;
@@ -122,10 +122,10 @@ public sealed partial class ModelViewerView : UserControl
         AddHandler(DragDrop.DropEvent, View_Drop);
 
         // viewport with its empty state and a navigation hint
-        var hint = new TextBlock { Text = "Clic gauche : tourner · Clic droit : déplacer · Molette : zoom · R recentrer · W filaire · G grille · P image", Classes = { "caption" }, Margin = new Thickness(14, 0, 14, 10), VerticalAlignment = VerticalAlignment.Bottom, IsHitTestVisible = false };
-        _emptyState.Children.Add(new TextBlock { Text = "Déposez un fichier STL, OBJ ou 3MF ici", FontSize = 16, FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Center });
+        var hint = new TextBlock { Text = "Clic gauche : tourner · Clic droit : déplacer · Molette : zoom · R recentrer · W filaire · G grille · P image", Classes = { "caption" }, Margin = new Thickness(16, 0, 16, 12), VerticalAlignment = VerticalAlignment.Bottom, IsHitTestVisible = false };
+        _emptyState.Children.Add(new TextBlock { Text = "Déposez un fichier STL, OBJ ou 3MF ici", FontSize = Ui.Text.Section, FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Center });
         _emptyState.Children.Add(new TextBlock { Text = "ou choisissez-en un sur votre ordinateur", Classes = { "muted" }, HorizontalAlignment = HorizontalAlignment.Center });
-        var emptyBrowse = new Button { Content = Icons.Label("IconOpen", "Ouvrir un fichier"), Classes = { "primary-action" }, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 6, 0, 0) };
+        var emptyBrowse = new Button { Content = Icons.Label("IconOpen", "Ouvrir un fichier"), Classes = { "primary-action" }, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 8, 0, 0) };
         emptyBrowse.Click += async (_, _) => await BrowseAsync();
         _emptyState.Children.Add(emptyBrowse);
         var stage = new Border
@@ -161,7 +161,7 @@ public sealed partial class ModelViewerView : UserControl
         _reset.Click += (_, _) => _viewport.ResetView();
         _captureTool.Click += async (_, _) => await CaptureViewAsync();
         _wireToggle.IsCheckedChanged += (_, _) => _mode.SelectedIndex = _wireToggle.IsChecked == true ? 1 : 0;
-        var divider = new Border { Width = 1, Margin = new Thickness(4, 6), Background = (IBrush?)Application.Current?.FindResource("BorderBrush") };
+        var divider = new Border { Width = 1, Margin = new Thickness(4, 8), Background = (IBrush?)Application.Current?.FindResource("BorderBrush") };
         _stage.Children.Add(new Border
         {
             Classes = { "toolbar" }, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(12),
@@ -269,11 +269,11 @@ public sealed partial class ModelViewerView : UserControl
         _cutGroup.Children.Add(_cutSlider);
         _cutGroup.Children.Add(_cutFlip);
         _cutGroup.Children.Add(_cutLabel);
-        var compareGroup = new StackPanel { Spacing = 10, Children = { FormKit.SectionLabel("Comparer deux versions"), _compareButton, _compareDetails } };
+        var compareGroup = new StackPanel { Spacing = 12, Children = { FormKit.SectionLabel("Comparer deux versions"), _compareButton, _compareDetails } };
 
         var infoTab = new StackPanel
         {
-            Spacing = 10,
+            Spacing = 12,
             Children =
             {
                 _title, _location, _dimensions, _message, _feasibilityChip,
@@ -285,11 +285,11 @@ public sealed partial class ModelViewerView : UserControl
                 FormKit.SectionLabel("Durée d’impression"), _slicerPanel
             }
         };
-        var displayTab = new StackPanel { Spacing = 10, Children = { Muted("Mode d’affichage"), _mode, Muted("Couleur du modèle"), _swatches, hexRow, Muted("Repère"), _grid, _gridNote, Muted("Rendu"), _renderer, _rendererNote } };
-        var toolsTab = new StackPanel { Spacing = 14, Children = { _orientGroup, _toolsHint, _measureGroup, _cutGroup, compareGroup } };
+        var displayTab = new StackPanel { Spacing = 12, Children = { Muted("Mode d’affichage"), _mode, Muted("Couleur du modèle"), _swatches, hexRow, Muted("Repère"), _grid, _gridNote, Muted("Rendu"), _renderer, _rendererNote } };
+        var toolsTab = new StackPanel { Spacing = 16, Children = { _orientGroup, _toolsHint, _measureGroup, _cutGroup, compareGroup } };
         var analysisTab = new StackPanel
         {
-            Spacing = 10,
+            Spacing = 12,
             Children =
             {
                 new TextBlock { Text = "Repère les parois plus fines que votre seuil. Choisissez-le selon votre buse, votre matériau et votre trancheur ; la mesure suit les unités du modèle.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap },
@@ -299,7 +299,7 @@ public sealed partial class ModelViewerView : UserControl
         var feasibility = FeasibilityControls();
         for (var i = 0; i < feasibility.Length; i++) analysisTab.Children.Insert(i, feasibility[i]);
         _tabs = [infoTab, displayTab, toolsTab, analysisTab];
-        var tabRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+        var tabRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         _tabButtons = TabNames.Select((name, index) =>
         {
             var chip = new Button { Content = name, Classes = { "filter-chip" } };
@@ -313,7 +313,7 @@ public sealed partial class ModelViewerView : UserControl
         var scroller = new ScrollViewer
         {
             HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
-            Content = new Border { Padding = new Thickness(0, 4, 10, 4), Child = tabBody }
+            Content = new Border { Padding = new Thickness(0, 4, 12, 4), Child = tabBody }
         };
         var panel = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,*,Auto"), RowSpacing = 12 };
         panel.Children.Add(topBar);
@@ -410,7 +410,7 @@ public sealed partial class ModelViewerView : UserControl
     private static Control Place(Control control, int column) { Grid.SetColumn(control, column); return control; }
 
     private static TextBlock Muted(string text) => new() { Text = text, Classes = { "muted" }, VerticalAlignment = VerticalAlignment.Center };
-    private static TextBlock Unit(string text) => new() { Text = text, Classes = { "muted" }, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 10) };
+    private static TextBlock Unit(string text) => new() { Text = text, Classes = { "muted" }, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 12) };
 
     private IMeshViewport? CreateGpuViewport()
     {
@@ -827,7 +827,7 @@ public sealed partial class ModelViewerView : UserControl
         void Row(string label, string value, bool strong)
         {
             var labelText = new TextBlock { Text = label, Classes = { "muted" } };
-            var valueText = new TextBlock { Text = value, FontWeight = strong ? FontWeight.SemiBold : FontWeight.Normal, FontSize = strong ? 15 : 13, HorizontalAlignment = HorizontalAlignment.Right, TextAlignment = TextAlignment.Right };
+            var valueText = new TextBlock { Text = value, FontWeight = strong ? FontWeight.SemiBold : FontWeight.Normal, FontSize = strong ? Ui.Text.Body : Ui.Text.Caption, HorizontalAlignment = HorizontalAlignment.Right, TextAlignment = TextAlignment.Right };
             var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
             Grid.SetColumn(valueText, 1);
             row.Children.Add(labelText);
@@ -953,11 +953,11 @@ public sealed partial class ModelViewerView : UserControl
 
         void Cells(string label, string a, string b, string difference, bool header)
         {
-            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("1.2*,*,*,1.5*"), ColumnSpacing = 6 };
+            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("1.2*,*,*,1.5*"), ColumnSpacing = 8 };
             string[] values = [label, a, b, difference];
             for (var column = 0; column < 4; column++)
             {
-                var text = new TextBlock { Text = values[column], FontSize = 12, FontWeight = header ? FontWeight.SemiBold : FontWeight.Normal };
+                var text = new TextBlock { Text = values[column], FontSize = Ui.Text.Micro, FontWeight = header ? FontWeight.SemiBold : FontWeight.Normal };
                 // the last column holds the longest text (difference and percentage): let it wrap rather than cut it
                 if (column == 3) text.TextWrapping = TextWrapping.Wrap; else text.TextTrimming = TextTrimming.CharacterEllipsis;
                 if (header || column == 0) text.Classes.Add("muted");

@@ -70,8 +70,8 @@ public partial class MainWindow
         var texts = new StackPanel { Spacing = 1, VerticalAlignment = VerticalAlignment.Center };
         var title = result.Project?.Title() ?? result.Client?.Title() ?? result.Title;
         var detail = result.Project is { } project ? $"{project.Reference} · {project.ClientTitle()}" : result.Detail;
-        texts.Children.Add(new TextBlock { Text = title, FontSize = 15, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis });
-        texts.Children.Add(new TextBlock { Text = detail, FontSize = 13, Classes = { "muted" }, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis });
+        texts.Children.Add(new TextBlock { Text = title, FontSize = Ui.Text.Body, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis });
+        texts.Children.Add(new TextBlock { Text = detail, FontSize = Ui.Text.Caption, Classes = { "muted" }, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis });
         var badge = new Border { Classes = { "badge" }, Child = new TextBlock { Text = kind } };
         var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 12 };
         Grid.SetColumn(texts, 1); Grid.SetColumn(badge, 2);

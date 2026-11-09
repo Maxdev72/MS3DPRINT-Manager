@@ -83,13 +83,13 @@ public partial class MainWindow
         };
         var actions = new WrapPanel { Orientation = Orientation.Horizontal };
         foreach (var button in new[] { save, restore }) { button.Margin = new Thickness(0, 0, 8, 8); actions.Children.Add(button); }
-        var content = new StackPanel { Spacing = 14 };
+        var content = new StackPanel { Spacing = 16 };
         content.Children.Add(SettingsCardHeader("IconSave", "Sauvegarde et restauration", "Conservez une copie indépendante de vos clients, projets, devis, matières, imprimantes et réglages atelier."));
         content.Children.Add(documents);
-        content.Children.Add(new TextBlock { Text = "Avec documents : fichiers des dossiers gérés et corbeille inclus. Sans documents : données métier et arborescence uniquement, sans corbeille. Les réglages du poste (performances, fenêtre, emplacement actif) restent sur cet ordinateur.", TextWrapping = TextWrapping.Wrap, Classes = { "muted" }, FontSize = 13, LineHeight = 21 });
+        content.Children.Add(new TextBlock { Text = "Avec documents : fichiers des dossiers gérés et corbeille inclus. Sans documents : données métier et arborescence uniquement, sans corbeille. Les réglages du poste (performances, fenêtre, emplacement actif) restent sur cet ordinateur.", TextWrapping = TextWrapping.Wrap, Classes = { "muted" }, FontSize = Ui.Text.Caption, LineHeight = 21 });
         content.Children.Add(actions); content.Children.Add(last);
         content.Children.Add(new TextBlock { Text = "Enregistrez vos saisies avant de lancer la sauvegarde et évitez de modifier les fichiers pendant la copie. Choisissez un emplacement hors de l’espace de travail ; l’archive ZIP n’est pas chiffrée.", TextWrapping = TextWrapping.Wrap, Classes = { "caption" }, LineHeight = 21 });
-        return new Border { Classes = { "card-raised" }, Padding = new Thickness(22, 20), Child = content };
+        return new Border { Classes = { "card-raised" }, Padding = new Thickness(24, 24), Child = content };
     }
 
     private async Task<bool> SaveWorkspaceBackupAsync(string root, string archive, bool documents)

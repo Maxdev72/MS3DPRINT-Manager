@@ -40,17 +40,17 @@
   <!-- ============ Typography ============ -->
   <Style Selector="TextBlock.muted"><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /></Style>
   <Style Selector="TextBlock.faint"><Setter Property="Foreground" Value="{DynamicResource FaintTextBrush}" /></Style>
-  <Style Selector="TextBlock.page-title"><Setter Property="FontSize" Value="{DynamicResource FontSizeTitle}" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
-  <Style Selector="TextBlock.section-title"><Setter Property="FontSize" Value="19" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
-  <Style Selector="TextBlock.card-title"><Setter Property="FontSize" Value="17" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
+  <Style Selector="TextBlock.page-title"><Setter Property="FontSize" Value="{DynamicResource FontSizePage}" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
+  <Style Selector="TextBlock.section-title"><Setter Property="FontSize" Value="{DynamicResource FontSizeTitle}" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
+  <Style Selector="TextBlock.card-title"><Setter Property="FontSize" Value="{DynamicResource FontSizeSection}" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
   <Style Selector="TextBlock.caption"><Setter Property="FontSize" Value="{DynamicResource FontSizeCaption}" /><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /></Style>
   <Style Selector="TextBlock.overline">
-    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeMicro}" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="LetterSpacing" Value="1" />
     <Setter Property="Foreground" Value="{DynamicResource FaintTextBrush}" />
   </Style>
-  <Style Selector="TextBlock.metric"><Setter Property="FontSize" Value="30" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
+  <Style Selector="TextBlock.metric"><Setter Property="FontSize" Value="{DynamicResource FontSizePage}" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
 
   <!-- ============ Surfaces ============ -->
   <Style Selector="Border.card">
@@ -129,7 +129,7 @@
     <Setter Property="MinWidth" Value="36" />
     <Setter Property="MinHeight" Value="36" />
     <Setter Property="Padding" Value="7,2" />
-    <Setter Property="FontSize" Value="18" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeSection}" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
@@ -143,7 +143,7 @@
     <Setter Property="MinHeight" Value="42" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="CornerRadius" Value="4" />
-    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Left" />
     <Setter Property="FontWeight" Value="Normal" />
@@ -182,9 +182,9 @@
     <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
-    <Setter Property="Padding" Value="14,10" />
-    <Setter Property="MinHeight" Value="42" />
-    <Setter Property="FontSize" Value="15" />
+    <Setter Property="Padding" Value="16,8" />
+    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
     <Setter Property="FontWeight" Value="Medium" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Left" />
@@ -205,7 +205,7 @@
   <Style Selector="Button.crumb">
     <Setter Property="Padding" Value="6,2" />
     <Setter Property="MinHeight" Value="24" />
-    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeCaption}" />
     <Setter Property="FontWeight" Value="Medium" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
@@ -215,7 +215,7 @@
   <Style Selector="Button.sort-head">
     <Setter Property="Padding" Value="0" />
     <Setter Property="MinHeight" Value="0" />
-    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeMicro}" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
@@ -296,7 +296,7 @@
     <Setter Property="HorizontalAlignment" Value="Left" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
-  <Style Selector="Border.badge > TextBlock"><Setter Property="FontSize" Value="12" /><Setter Property="FontWeight" Value="SemiBold" /><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /></Style>
+  <Style Selector="Border.badge > TextBlock"><Setter Property="FontSize" Value="{DynamicResource FontSizeMicro}" /><Setter Property="FontWeight" Value="SemiBold" /><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /></Style>
   <Style Selector="Border.badge.info"><Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" /></Style>
   <Style Selector="Border.badge.info > TextBlock"><Setter Property="Foreground" Value="{DynamicResource AccentBrush}" /></Style>
   <Style Selector="Border.badge.success"><Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" /></Style>
@@ -390,13 +390,13 @@
 
   <!-- Estimator reading roles: brighter labels, comfortable inputs, quiet explanatory copy. -->
   <Style Selector="TextBlock.estimate-label, Border.estimate-form TextBlock.caption, Grid.workshop-form TextBlock.caption">
-    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
     <Setter Property="FontWeight" Value="Medium" />
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
   <Style Selector="Border.estimate-form TextBox, Grid.workshop-form TextBox">
-    <Setter Property="FontSize" Value="16" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeSection}" />
     <Setter Property="MinHeight" Value="44" />
   </Style>
   <Style Selector="Border.estimate-form ComboBox, Grid.workshop-form ComboBox">
@@ -406,12 +406,12 @@
     <Setter Property="TextAlignment" Value="Left" />
   </Style>
   <Style Selector="Border.estimate-form TextBlock.estimate-help, Grid.workshop-form TextBlock.faint">
-    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeCaption}" />
     <Setter Property="LineHeight" Value="20" />
     <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
-  <Style Selector="Border.estimate-form Button.scope-choice TextBlock"><Setter Property="FontSize" Value="14" /></Style>
+  <Style Selector="Border.estimate-form Button.scope-choice TextBlock"><Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" /></Style>
   <Style Selector="Border.estimate-summary TextBlock.muted, Border.estimate-status TextBlock"><Setter Property="LineHeight" Value="21" /></Style>
   <Style Selector="Border.estimate-status">
     <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" />
@@ -422,7 +422,7 @@
   <Style Selector="Border.estimate-status.warning"><Setter Property="Background" Value="{DynamicResource WarningSoftBrush}" /></Style>
   <Style Selector="Border.estimate-status.warning TextBlock"><Setter Property="Foreground" Value="{DynamicResource WarningBrush}" /></Style>
   <Style Selector="Grid.workshop-form TextBlock.muted"><Setter Property="LineHeight" Value="21" /></Style>
-  <Style Selector="TextBlock.estimate-group-title"><Setter Property="FontSize" Value="16" /><Setter Property="FontWeight" Value="SemiBold" /><Setter Property="Margin" Value="0,24,0,10" /></Style>
+  <Style Selector="TextBlock.estimate-group-title"><Setter Property="FontSize" Value="{DynamicResource FontSizeSection}" /><Setter Property="FontWeight" Value="SemiBold" /><Setter Property="Margin" Value="0,24,0,10" /></Style>
 
   <!-- Estimator disclosures use the application's surfaces, including Fluent's nested header states. -->
   <Style Selector="Expander.estimate-section">
@@ -558,13 +558,13 @@
     <Setter Property="MinHeight" Value="48" />
   </Style>
   <Style Selector="Border.estimate-editor TextBox.estimate-number">
-    <Setter Property="FontSize" Value="18" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeSection}" />
   </Style>
   <Style Selector="Grid.estimate-footer">
     <Setter Property="Margin" Value="0,8,0,0" />
   </Style>
   <Style Selector="StackPanel#EstimateRecap TextBlock.estimate-group-title">
-    <Setter Property="FontSize" Value="17" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeSection}" />
     <Setter Property="Foreground" Value="{DynamicResource CyanBrush}" />
     <Setter Property="Margin" Value="0,20,0,8" />
   </Style>

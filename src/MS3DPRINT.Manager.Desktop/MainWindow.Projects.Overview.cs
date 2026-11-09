@@ -15,12 +15,12 @@ public partial class MainWindow
     private Control BuildProjectOverview(ProjectSummary project)
     {
         var overviewRoot = WorkspaceRoot;
-        var content = new StackPanel { Spacing = 18 };
+        var content = new StackPanel { Spacing = 16 };
         var heading = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
         // The project's own name leads the sheet; reference and client right under it.
         heading.Children.Add(new StackPanel { Spacing = 4, Children =
         {
-            new TextBlock { Text = project.Title(), FontSize = 24, FontWeight = FontWeight.SemiBold, Classes = { "brand-heading" }, TextWrapping = TextWrapping.Wrap },
+            new TextBlock { Text = project.Title(), FontSize = Ui.Text.Page, FontWeight = FontWeight.SemiBold, Classes = { "brand-heading" }, TextWrapping = TextWrapping.Wrap },
             new TextBlock { Text = project.Reference + " · " + project.ClientTitle(), Classes = { "muted" }, TextWrapping = TextWrapping.Wrap }
         } });
         var edit = new Button { Content = Icons.Label("IconEdit", "Modifier"), Tag = project, Classes = { "ghost" } };
@@ -41,14 +41,14 @@ public partial class MainWindow
             Text = string.IsNullOrWhiteSpace(project.Profile?.Description)
                 ? project.Profile is null ? "Complétez la fiche pour préciser le suivi de ce projet." : "Décrivez la pièce et les attentes du client depuis Modifier."
                 : project.Profile.Description,
-            TextWrapping = TextWrapping.Wrap, FontSize = 15, LineHeight = 24, Classes = { "muted" }
+            TextWrapping = TextWrapping.Wrap, FontSize = Ui.Text.Body, LineHeight = 24, Classes = { "muted" }
         });
         if (!string.IsNullOrWhiteSpace(project.Profile?.Notes))
             content.Children.Add(EstimateSection("Notes de l’atelier", "Informations internes au projet", new TextBlock { Text = project.Profile.Notes, TextWrapping = TextWrapping.Wrap, LineHeight = 22 }));
 
         if (BuildProjectTasksSection(project) is { } tasks) content.Children.Add(tasks);
 
-        var actions = new WrapPanel { ItemSpacing = 10, LineSpacing = 10 };
+        var actions = new WrapPanel { ItemSpacing = 12, LineSpacing = 12 };
         var estimate = new Button { Content = Icons.Label("IconEstimates", "Préparer une estimation"), Classes = { "primary-action" } };
         estimate.Click += async (_, _) => await StartProjectEstimateAsync(project);
         var folder = new Button { Content = Icons.Label("IconOpen", "Ouvrir le dossier"), Tag = project.ProjectPath };

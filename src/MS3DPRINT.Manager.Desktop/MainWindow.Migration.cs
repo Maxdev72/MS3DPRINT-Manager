@@ -14,7 +14,7 @@ public partial class MainWindow
     {
         var action = new Button { Name = "StartGuidedWorkspaceMigration", Content = "Synchroniser cet atelier", IsEnabled = !IsServerWorkspace };
         action.Click += async (_, _) => await OpenGuidedMigrationAsync();
-        return new Border { Classes = { "card-raised" }, Padding = new Avalonia.Thickness(22, 20), Child = new StackPanel { Spacing = 14, Children = {
+        return new Border { Classes = { "card-raised" }, Padding = new Avalonia.Thickness(24, 24), Child = new StackPanel { Spacing = 16, Children = {
             SettingsCardHeader("IconSave", "Connexion à mon atelier en ligne", "Sauvegarde automatique et premier envoi de cet atelier. Retrouvez ensuite les mêmes clients, projets et tâches sur le PC et le site."), action, BuildPublishDownloadsAction() } } };
     }
 
@@ -106,7 +106,7 @@ public partial class MainWindow
         private readonly CancellationTokenSource _lifetime = new();
         private readonly HttpClient _http;
         private readonly string _privateRoot;
-        private readonly StackPanel _body = new() { Spacing = 14 };
+        private readonly StackPanel _body = new() { Spacing = 16 };
         private readonly TextBlock _status = new() { Name = "MigrationStatus", TextWrapping = TextWrapping.Wrap, Classes = { "muted" } };
         private readonly Button _next = new() { Name = "MigrationNext", Content = "Se connecter et préparer la synchronisation" };
         private readonly Button _cancel = new() { Name = "MigrationCancel", Content = "Fermer" };
@@ -304,7 +304,7 @@ public partial class MainWindow
                     await AdvanceAsync();
                 };
                 _body.Children.Add(usePc);
-                var individual = new StackPanel { Spacing = 14 };
+                var individual = new StackPanel { Spacing = 16 };
                 foreach (var file in conflicts)
                 {
                     individual.Children.Add(Text(file.DisplayName));
@@ -385,6 +385,6 @@ public partial class MainWindow
             }
         }
         private static string Detail(string label, MigrationFile? file) => file is null ? label + " : absent" : $"{label} : {file.Bytes:N0} octets · {file.ModifiedAt.ToLocalTime():g}\nSHA256 {file.Sha256}";
-        private static TextBlock Text(string text) => new() { Text = text, TextWrapping = TextWrapping.Wrap, FontSize = 13, LineHeight = 20 };
+        private static TextBlock Text(string text) => new() { Text = text, TextWrapping = TextWrapping.Wrap, FontSize = Ui.Text.Caption, LineHeight = 20 };
     }
 }

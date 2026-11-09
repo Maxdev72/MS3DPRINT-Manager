@@ -38,7 +38,7 @@ public sealed class FolderPickerWindow : DialogWindow
 
         var frame = new Border
         {
-            Classes = { "card-raised" }, Padding = new Thickness(6),
+            Classes = { "card-raised" }, Padding = new Thickness(8),
             Child = new ScrollViewer { Height = 380, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled, Content = _list }
         };
         var body = new StackPanel
@@ -78,7 +78,7 @@ public sealed class FolderPickerWindow : DialogWindow
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            _list.Children.Add(new TextBlock { Text = "Ce dossier ne peut pas être lu : " + exception.Message, Classes = { "muted" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap, Margin = new Thickness(10) });
+            _list.Children.Add(new TextBlock { Text = "Ce dossier ne peut pas être lu : " + exception.Message, Classes = { "muted" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap, Margin = new Thickness(12) });
             return;
         }
 
@@ -94,7 +94,7 @@ public sealed class FolderPickerWindow : DialogWindow
             _list.Children.Add(entry);
         }
         if (_list.Children.Count == 0)
-            _list.Children.Add(new TextBlock { Text = "Aucun sous-dossier ici : « Déplacer ici » choisit ce dossier.", Classes = { "muted" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap, Margin = new Thickness(10) });
+            _list.Children.Add(new TextBlock { Text = "Aucun sous-dossier ici : « Déplacer ici » choisit ce dossier.", Classes = { "muted" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap, Margin = new Thickness(12) });
     }
 
     /// <summary>Links and junctions are not offered: they could lead out of the workspace (cloud placeholders are fine).</summary>

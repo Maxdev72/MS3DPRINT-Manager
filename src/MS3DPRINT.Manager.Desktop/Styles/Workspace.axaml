@@ -39,11 +39,11 @@
     <Setter Property="Margin" Value="0,8,0,0" />
   </Style>
   <Style Selector="Window.workbench-ui Border.table-head TextBlock">
-    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeCaption}" />
     <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
   </Style>
   <Style Selector="Window.workbench-ui Button.sort-head">
-    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeCaption}" />
     <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
   </Style>
   <Style Selector="Window.workbench-ui Button.table-row">
@@ -105,11 +105,11 @@
   <!-- These apply to both the side-panel host and separately opened dialogs. -->
   <Style Selector="Grid.dialog-form TextBox, Grid.dialog-form ComboBox">
     <Setter Property="MinHeight" Value="46" />
-    <Setter Property="FontSize" Value="16" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeSection}" />
   </Style>
   <Style Selector="Grid.dialog-form Button.primary-action"><Setter Property="MinHeight" Value="42" /></Style>
   <Style Selector="Grid.dialog-form TextBlock.form-label">
-    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
   </Style>
   <Style Selector="Window.workbench-ui Expander.estimate-section /template/ ToggleButton#ExpanderHeader /template/ Border#ToggleButtonBackground">
@@ -214,16 +214,16 @@
     <Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" />
   </Style>
   <!-- Keep the same state feedback without interpolating when motion is reduced. -->
-  <Style Selector="Border.estimate-price-rail TextBox"><Setter Property="MinHeight" Value="46" /><Setter Property="FontSize" Value="18" /></Style>
+  <Style Selector="Border.estimate-price-rail TextBox"><Setter Property="MinHeight" Value="46" /><Setter Property="FontSize" Value="{DynamicResource FontSizeSection}" /></Style>
   <Style Selector="Border.settings-section TextBlock.settings-group-title">
-    <Setter Property="FontSize" Value="16" /><Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeSection}" /><Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Margin" Value="0,20,0,6" /><Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
   </Style>
   <Style Selector="Viewbox.settings-heading-icon Path.icon"><Setter Property="Stroke" Value="{DynamicResource CyanBrush}" /></Style>
   <Style Selector="Window.compact Border.settings-section"><Setter Property="Padding" Value="18" /></Style>
   <Style Selector="Button.settings-tab:focus-visible"><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /></Style>
   <Style Selector="TextBlock.settings-search-hit"><Setter Property="Foreground" Value="{DynamicResource CyanBrush}" /></Style>
-  <Style Selector="Border.estimate-price-rail TextBlock.estimate-label"><Setter Property="FontSize" Value="14" /><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Style>
+  <Style Selector="Border.estimate-price-rail TextBlock.estimate-label"><Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" /><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Style>
   <Style Selector="Expander.estimate-price-details"><Setter Property="Padding" Value="0,8" /><Setter Property="BorderThickness" Value="0" /></Style>
   <Style Selector="Expander.estimate-price-details /template/ ToggleButton#ExpanderHeader"><Setter Property="Padding" Value="0,12" /><Setter Property="MinHeight" Value="44" /></Style>
   <Style Selector="Window.reduce-motion Grid.workspace-row, Window.reduce-motion Border, Window.reduce-motion TextBox /template/ Border#PART_BorderElement, Window.reduce-motion Expander /template/ ToggleButton#ExpanderHeader /template/ Border#ToggleButtonBackground">
@@ -237,7 +237,7 @@
   <Style Selector="Button.project-calendar-day:pointerover"><Setter Property="Background" Value="{DynamicResource HoverBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /></Style>
   <Style Selector="Button.project-calendar-day:focus-visible"><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /></Style>
   <Style Selector="Calendar.project-date-picker"><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /><Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" /><Setter Property="CornerRadius" Value="6" /></Style>
-  <Style Selector="CalendarDayButton, CalendarButton"><Setter Property="FontSize" Value="15" /><Setter Property="MinWidth" Value="46" /></Style>
+  <Style Selector="CalendarDayButton, CalendarButton"><Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" /><Setter Property="MinWidth" Value="46" /></Style>
   <Style Selector="CalendarDayButton /template/ Border, CalendarButton /template/ Border"><Setter Property="CornerRadius" Value="4" /></Style>
   <Style Selector="CalendarDayButton:selected /template/ Border#Root"><Setter Property="Background" Value="{DynamicResource CyanSoftBrush}" /></Style>
   <Style Selector="CalendarDayButton:selected /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Style>
@@ -246,7 +246,7 @@
   <Style Selector="CalendarDayButton:today > TextBlock, CalendarButton:selected > TextBlock"><Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" /></Style>
   <Style Selector="CalendarDayButton:inactive:not(:today) > TextBlock, CalendarButton:inactive:not(:selected) > TextBlock"><Setter Property="Foreground" Value="{DynamicResource FaintTextBrush}" /></Style>
   <Style Selector="CalendarDayButton:focus-visible /template/ Border#Border, CalendarButton:focus-visible /template/ Border#Border"><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /></Style>
-  <Style Selector="CalendarItem /template/ Button#PART_HeaderButton"><Setter Property="FontSize" Value="16" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
+  <Style Selector="CalendarItem /template/ Button#PART_HeaderButton"><Setter Property="FontSize" Value="{DynamicResource FontSizeSection}" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
   <Style Selector="Button.task-view"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /><Setter Property="Padding" Value="10,8" /><Setter Property="CornerRadius" Value="6" /></Style>
   <Style Selector="Button.task-view:pointerover /template/ ContentPresenter"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /></Style>
   <Style Selector="Button.task-view.selected /template/ ContentPresenter"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /></Style>
@@ -273,7 +273,7 @@
   </Style>
   <!-- Project views are primary navigation, visually stronger than the catalogue filters. -->
   <Style Selector="Window.workbench-ui StackPanel#ProjectViewTabs Button.filter-chip">
-    <Setter Property="FontSize" Value="16" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeSection}" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="MinHeight" Value="50" />
     <Setter Property="MinWidth" Value="128" />

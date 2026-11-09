@@ -27,7 +27,7 @@ public partial class MainWindow
             Text = project.Title(), FontWeight = FontWeight.SemiBold,
             TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis
         };
-        if (large) { title.FontSize = 16; title.LineHeight = 22; }
+        if (large) { title.FontSize = Ui.Text.Section; title.LineHeight = 22; }
         if (project.Priority == ProjectPriority.None) return title;
         var flag = ProjectPriorityVisual.Flag(project.Priority);
         flag.Classes.Add("dashboard-priority");
@@ -65,8 +65,8 @@ public partial class MainWindow
                 : tasks.Count > 0 ? "Toutes les tâches sont terminées · vérifier le projet"
                 : project.Profile is null ? "Compléter la fiche du projet"
                 : project.Status == ProjectStatus.InProgress ? "Poursuivre la fabrication" : "Préparer le projet";
-            var content = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 14 };
-            var text = new StackPanel { Spacing = 5, VerticalAlignment = VerticalAlignment.Center };
+            var content = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 16 };
+            var text = new StackPanel { Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
             text.Children.Add(DashboardProjectTitle(project, large: true));
             text.Children.Add(new TextBlock { Text = project.Reference + " · " + project.ClientTitle(), Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis });
             var nextAction = new TextBlock { Text = actionText, Classes = { "queue-next-action" }, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis };
@@ -77,7 +77,7 @@ public partial class MainWindow
             state.Children.Add(badge);
             if (tasks.Count > 0) state.Children.Add(new TextBlock { Text = $"{tasks.Count(t => t.IsCompleted)} / {tasks.Count} tâches", Classes = { "caption" } });
             var (deadline, variant) = ProjectDeadlineLabel(project);
-            state.Children.Add(new TextBlock { Text = deadline, FontSize = 13, Foreground = (IBrush?)Avalonia.Application.Current?.FindResource(variant == "danger" || variant == "warning" ? "WarningBrush" : "MutedTextBrush") });
+            state.Children.Add(new TextBlock { Text = deadline, FontSize = Ui.Text.Caption, Foreground = (IBrush?)Avalonia.Application.Current?.FindResource(variant == "danger" || variant == "warning" ? "WarningBrush" : "MutedTextBrush") });
             var arrow = Icons.Glyph("IconArrowRight", 18); Grid.SetColumn(arrow, 2);
             Grid.SetColumn(state, 1);
             content.Children.Add(text);
@@ -131,7 +131,7 @@ public partial class MainWindow
         foreach (var project in dashboard.Deadlines.Where(p => !shown.Contains(p.Reference)))
         {
             var (text, variant) = ProjectDeadlineLabel(project);
-            var row = new StackPanel { Spacing = 6 };
+            var row = new StackPanel { Spacing = 8 };
             var labels = new StackPanel { Spacing = 1 };
             labels.Children.Add(DashboardProjectTitle(project));
             labels.Children.Add(new TextBlock { Text = project.Reference, Classes = { "caption" }, TextWrapping = TextWrapping.Wrap });

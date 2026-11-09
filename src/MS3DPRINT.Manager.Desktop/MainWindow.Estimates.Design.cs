@@ -13,7 +13,7 @@ public partial class MainWindow
 
     private void InitializeEstimateDesign()
     {
-        EstimateFinal.FontSize = 42;
+        EstimateFinal.FontSize = Ui.Text.Display;
         UpdateEstimateDesignContext();
     }
 
@@ -71,8 +71,8 @@ public partial class MainWindow
             ToolTip.SetTip(segment, labels[index] + " · " + EstimateMoney(amount));
             var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 8 };
             row.Children.Add(new Border { Width = 7, Height = 7, CornerRadius = new CornerRadius(2), Background = brush, VerticalAlignment = VerticalAlignment.Center });
-            var label = new TextBlock { Text = labels[index], FontSize = 13, TextWrapping = TextWrapping.Wrap, Classes = { "muted" } };
-            var value = new TextBlock { Text = EstimateMoney(amount), FontSize = 13, MaxWidth = 160, TextWrapping = TextWrapping.Wrap };
+            var label = new TextBlock { Text = labels[index], FontSize = Ui.Text.Caption, TextWrapping = TextWrapping.Wrap, Classes = { "muted" } };
+            var value = new TextBlock { Text = EstimateMoney(amount), FontSize = Ui.Text.Caption, MaxWidth = 160, TextWrapping = TextWrapping.Wrap };
             Grid.SetColumn(label, 1); Grid.SetColumn(value, 2); row.Children.Add(label); row.Children.Add(value);
             var selected = index;
             row.PointerEntered += (_, _) => { for (var i = 0; i < segments.Count; i++) segments[i].Opacity = i == selected ? 1 : .3; };

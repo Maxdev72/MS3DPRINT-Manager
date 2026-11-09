@@ -147,7 +147,7 @@ public sealed class AvaloniaShellMarkupTests
         var markup = File.ReadAllText(MainWindowPath());
         var source = MainWindowSource();
 
-        Assert.Contains("<Grid x:Name=\"CentralWorkspace\" Grid.Column=\"1\" Margin=\"34,28\" Width=\"1400\"", markup, StringComparison.Ordinal);
+        Assert.Contains("<Grid x:Name=\"CentralWorkspace\" Grid.Column=\"1\" Margin=\"32,32\" Width=\"1400\"", markup, StringComparison.Ordinal);
         Assert.Contains("Window_SizeChanged", markup, StringComparison.Ordinal);
         Assert.Contains("UpdateCentralWorkspaceWidth", source, StringComparison.Ordinal);
         Assert.DoesNotContain("<Grid ColumnDefinitions=\"232,*\" MaxWidth=\"1200\"", markup, StringComparison.Ordinal);

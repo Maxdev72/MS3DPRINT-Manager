@@ -18,9 +18,9 @@ public partial class MainWindow
     {
         var root = WorkspaceRoot;
         var list = new StackPanel { Spacing = 8 };
-        var heading = new TextBlock { Text = "Fichiers à classer", FontSize = 18, FontWeight = FontWeight.SemiBold, Classes = { "brand-heading" } };
+        var heading = new TextBlock { Text = "Fichiers à classer", FontSize = Ui.Text.Section, FontWeight = FontWeight.SemiBold, Classes = { "brand-heading" } };
         var subtitle = new TextBlock { Text = "Projets enregistrés par un logiciel externe, à ranger dans ce projet.", Classes = { "muted" }, TextWrapping = TextWrapping.Wrap };
-        var section = new StackPanel { Spacing = 10, IsVisible = false, Children = { heading, subtitle, list } };
+        var section = new StackPanel { Spacing = 12, IsVisible = false, Children = { heading, subtitle, list } };
         var scanning = false;
         DispatcherTimer? timer = null;
 
@@ -56,7 +56,7 @@ public partial class MainWindow
                 var detail = new TextBlock
                 {
                     Text = $"{proposal.Reason}\nProposé : {proposal.Destination.RelativeDirectory.Replace('\\', '/')}/{proposal.Destination.FileName}",
-                    Classes = { "muted" }, TextWrapping = TextWrapping.Wrap, FontSize = 14, LineHeight = 21
+                    Classes = { "muted" }, TextWrapping = TextWrapping.Wrap, FontSize = Ui.Text.Body, LineHeight = 21
                 };
                 var accept = new Button { Content = Icons.Label("IconMove", "Classer"), Classes = { "primary-action" }, Tag = proposal };
                 var ignore = new Button { Content = "Ignorer", Classes = { "ghost" }, Tag = proposal };

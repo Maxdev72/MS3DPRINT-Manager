@@ -23,7 +23,7 @@ public sealed partial class FileBrowserView
         var labels = new StackPanel { Spacing = 4, Children = { heading, destination } };
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 12 };
         grid.Children.Add(Icons.Glyph("IconUpload", 22)); Grid.SetColumn(labels, 1); grid.Children.Add(labels);
-        var target = new Border { Child = grid, Classes = { "file-drop-target" }, Padding = new Thickness(14, 12), MinHeight = 64 };
+        var target = new Border { Child = grid, Classes = { "file-drop-target" }, Padding = new Thickness(16, 12), MinHeight = 64 };
         Children.Insert(0, target);
         Background = Brushes.Transparent;
         DragDrop.SetAllowDrop(this, true);

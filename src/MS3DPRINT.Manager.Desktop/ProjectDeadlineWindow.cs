@@ -12,7 +12,7 @@ public sealed class ProjectDeadlineWindow : DialogWindow
         Title = "Échéance du projet"; Width = 500; Height = 600; MinWidth = 440;
         var calendar = new Calendar { SelectedDate = date.ToDateTime(TimeOnly.MinValue), DisplayDate = date.ToDateTime(TimeOnly.MinValue), FirstDayOfWeek = DayOfWeek.Monday, HorizontalAlignment = HorizontalAlignment.Center, Classes = { "project-date-picker" } };
         AutomationProperties.SetName(calendar, "Date d’échéance du projet");
-        var chosen = new TextBlock { Text = date.ToString("dddd d MMMM yyyy", System.Globalization.CultureInfo.GetCultureInfo("fr-FR")), FontSize = 18, FontWeight = Avalonia.Media.FontWeight.SemiBold, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
+        var chosen = new TextBlock { Text = date.ToString("dddd d MMMM yyyy", System.Globalization.CultureInfo.GetCultureInfo("fr-FR")), FontSize = Ui.Text.Section, FontWeight = Avalonia.Media.FontWeight.SemiBold, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
         AutomationProperties.SetLiveSetting(chosen, AutomationLiveSetting.Polite);
         calendar.SelectedDatesChanged += (_, _) => chosen.Text = calendar.SelectedDate?.ToString("dddd d MMMM yyyy", System.Globalization.CultureInfo.GetCultureInfo("fr-FR")) ?? "Choisissez une date";
         var error = FormKit.ErrorText();

@@ -112,7 +112,7 @@ public sealed partial class FileBrowserView : StackPanel
                 if (_loading) return;
                 var reset = new Button { Content = "Effacer les filtres", HorizontalAlignment = HorizontalAlignment.Left };
                 reset.Click += (_, _) => { SearchInput.Text = ""; FamilyInput.SelectedItem = FileFamily.All; SearchInput.Focus(); };
-                Rows.Children.Add(new StackPanel { Spacing = 10, Margin = new Thickness(14, 12), Children =
+                Rows.Children.Add(new StackPanel { Spacing = 12, Margin = new Thickness(16, 12), Children =
                 { new TextBlock { Text = _entries.Count == 0 ? "Importez un fichier ou créez un dossier avec les boutons ci-dessus." : "Essayez un autre nom ou choisissez tous les formats.", TextWrapping = TextWrapping.Wrap, Classes = { "muted" } } } });
                 if (_entries.Count != 0) ((StackPanel)Rows.Children[0]).Children.Add(reset);
             }

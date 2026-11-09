@@ -75,7 +75,7 @@ public partial class MainWindow
     /// <summary>Friendly empty state: icon, explanation and, when useful, the action that fills the list.</summary>
     private static Control CreateEmptyState(string iconKey, string title, string message, string? actionLabel = null, EventHandler<RoutedEventArgs>? action = null, object? actionTag = null)
     {
-        var stack = new StackPanel { Spacing = 8, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Avalonia.Thickness(0, 36) };
+        var stack = new StackPanel { Spacing = 8, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Avalonia.Thickness(0, 32) };
         var icon = new Avalonia.Controls.Shapes.Path { Classes = { "icon", "icon-accent" }, Width = 30, Height = 30 };
         if (Avalonia.Application.Current?.TryFindResource(iconKey, out var geometry) == true && geometry is Geometry data) icon.Data = data;
         stack.Children.Add(new Border { Classes = { "icon-chip" }, Width = 56, Height = 56, CornerRadius = new Avalonia.CornerRadius(14), HorizontalAlignment = HorizontalAlignment.Center, Child = icon });
@@ -83,7 +83,7 @@ public partial class MainWindow
         stack.Children.Add(new TextBlock { Text = message, Classes = { "caption" }, HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxWidth = 360 });
         if (actionLabel is not null && action is not null)
         {
-            var button = new Button { Content = actionLabel, Tag = actionTag, Classes = { "primary-action" }, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Avalonia.Thickness(0, 6, 0, 0) };
+            var button = new Button { Content = actionLabel, Tag = actionTag, Classes = { "primary-action" }, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Avalonia.Thickness(0, 8, 0, 0) };
             button.Click += action;
             stack.Children.Add(button);
         }
@@ -100,7 +100,7 @@ public partial class MainWindow
             finally { button.IsEnabled = true; }
         });
         state.Margin = new Avalonia.Thickness(16, 24);
-        var detail = new SelectableTextBlock { Text = exception.Message, TextWrapping = TextWrapping.Wrap, MaxWidth = 560, FontSize = 13 };
+        var detail = new SelectableTextBlock { Text = exception.Message, TextWrapping = TextWrapping.Wrap, MaxWidth = 560, FontSize = Ui.Text.Caption };
         var detailBox = new Border
         {
             IsVisible = false, Padding = new Avalonia.Thickness(12), CornerRadius = new Avalonia.CornerRadius(4),
@@ -138,7 +138,7 @@ public partial class MainWindow
     }
 
     // one look for every list header, sortable or not: the size of the sort buttons (Button.sort-head), the faint colour, the same padding
-    private const double HeaderFontSize = 13;
+    private const double HeaderFontSize = Ui.Text.Caption;
 
     private static readonly Avalonia.Thickness HeaderPadding = new(14, 12);
 
@@ -190,7 +190,7 @@ public partial class MainWindow
         var icon = new Avalonia.Controls.Shapes.Path { Classes = { "icon" }, Width = 17, Height = 17 };
         if (accentIcon) icon.Classes.Add("icon-accent");
         if (Avalonia.Application.Current?.TryFindResource(iconKey, out var geometry) == true && geometry is Geometry data) icon.Data = data;
-        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 10, VerticalAlignment = VerticalAlignment.Center };
+        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 12, VerticalAlignment = VerticalAlignment.Center };
         if (modelPath is not null && ThreeDFileSupport.IsPreviewable(modelPath))
         {
             // the icon stands in until the picture of the model is ready
@@ -241,7 +241,7 @@ public partial class MainWindow
         {
             Text = value,
             FontWeight = prominent ? FontWeight.SemiBold : FontWeight.Normal,
-            FontSize = prominent ? 16 : 15,
+            FontSize = prominent ? Ui.Text.Section : Ui.Text.Body,
             TextWrapping = prominent ? TextWrapping.Wrap : TextWrapping.NoWrap,
             MaxLines = prominent ? 2 : 1,
             LineHeight = 22,
@@ -275,9 +275,9 @@ public partial class MainWindow
     private static Control CreateActionRow(string columns, Button? open, Button? actions, params Control[] cells)
     {
         var columnCount = columns.Split(',').Length;
-        var row = new Grid { Classes = { "workspace-row" }, ColumnDefinitions = new ColumnDefinitions(columns), ColumnSpacing = 16, Margin = new Avalonia.Thickness(14, 0), MinHeight = 60 };
+        var row = new Grid { Classes = { "workspace-row" }, ColumnDefinitions = new ColumnDefinitions(columns), ColumnSpacing = 16, Margin = new Avalonia.Thickness(16, 0), MinHeight = 60 };
         // Match the full-width hit target while keeping the columns inset from the edges.
-        var background = new Border { Classes = { "workspace-row-background" }, Margin = new Avalonia.Thickness(-14, 0), IsHitTestVisible = false };
+        var background = new Border { Classes = { "workspace-row-background" }, Margin = new Avalonia.Thickness(-16, 0), IsHitTestVisible = false };
         Grid.SetColumnSpan(background, columnCount);
         row.Children.Add(background);
         if (open is not null)
@@ -285,7 +285,7 @@ public partial class MainWindow
             open.Classes.Add("table-row");
             if (cells.Length > 0 && CellText(cells[0]) is { Length: > 0 } rowName)
                 Avalonia.Automation.AutomationProperties.SetName(open, "Ouvrir " + rowName);
-            open.Margin = new Avalonia.Thickness(-14, 0);
+            open.Margin = new Avalonia.Thickness(-16, 0);
             Grid.SetColumnSpan(open, columnCount);
             row.Children.Add(open);
         }
@@ -331,7 +331,7 @@ public partial class MainWindow
         foreach (var action in actions)
         {
             if (action.Classes.Contains("menu-destructive") && menu.Children.Count > 0)
-                menu.Children.Add(new Border { Height = 1, Margin = new Avalonia.Thickness(8, 6), Background = (IBrush?)Avalonia.Application.Current?.FindResource("SubtleBorderBrush") });
+                menu.Children.Add(new Border { Height = 1, Margin = new Avalonia.Thickness(8, 8), Background = (IBrush?)Avalonia.Application.Current?.FindResource("SubtleBorderBrush") });
             action.Classes.Add("menu-action");
             action.HorizontalAlignment = HorizontalAlignment.Stretch;
             action.HorizontalContentAlignment = HorizontalAlignment.Left;
@@ -347,7 +347,7 @@ public partial class MainWindow
                 BorderBrush = (IBrush?)Avalonia.Application.Current?.FindResource("BorderBrush"),
                 BorderThickness = new Avalonia.Thickness(1),
                 CornerRadius = new Avalonia.CornerRadius(8),
-                Padding = new Avalonia.Thickness(6),
+                Padding = new Avalonia.Thickness(8),
                 Child = menu
             }
         };

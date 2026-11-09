@@ -79,9 +79,9 @@ public sealed class EstimateHelpWindow : DialogWindow
         var body = new List<Control>();
         foreach (var group in EstimateFieldHelp.Entries.GroupBy(e => e.Group))
         {
-            body.Add(new TextBlock { Text = group.Key, FontWeight = FontWeight.SemiBold, FontSize = 16, Margin = new Avalonia.Thickness(0, 12, 0, 0), TextWrapping = TextWrapping.Wrap });
+            body.Add(new TextBlock { Text = group.Key, FontWeight = FontWeight.SemiBold, FontSize = Ui.Text.Section, Margin = new Avalonia.Thickness(0, 12, 0, 0), TextWrapping = TextWrapping.Wrap });
             foreach (var item in group)
-                body.Add(new StackPanel { Spacing = 6, Children = { new TextBlock { Text = item.Label, FontSize = 15, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap }, new TextBlock { Text = item.Explanation, LineHeight = 22, TextWrapping = TextWrapping.Wrap, Classes = { "muted" } } } });
+                body.Add(new StackPanel { Spacing = 8, Children = { new TextBlock { Text = item.Label, FontSize = Ui.Text.Body, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap }, new TextBlock { Text = item.Explanation, LineHeight = 22, TextWrapping = TextWrapping.Wrap, Classes = { "muted" } } } });
         }
         var close = new Button { Content = "Fermer" }; close.Click += (_, _) => Close(true);
         Layout("Comprendre chaque champ", "Au quotidien : choisir matière et machine, saisir quantité, poids, durée et les prestations. Les réglages réutilisables sont dans Paramètres → Atelier.", body, close, cancel: new Button { IsVisible = false });

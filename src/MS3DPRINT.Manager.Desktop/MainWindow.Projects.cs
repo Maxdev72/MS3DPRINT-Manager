@@ -227,7 +227,7 @@ public partial class MainWindow
 
     private static Control CreateProjectClientCell(string name)
     {
-        var label = new TextBlock { Text = name, FontSize = 14, LineHeight = 19, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis };
+        var label = new TextBlock { Text = name, FontSize = Ui.Text.Body, LineHeight = 19, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis };
         ToolTip.SetTip(label, name);
         return label;
     }
@@ -243,8 +243,8 @@ public partial class MainWindow
                 return button;
             }).ToArray();
         var menu = (Flyout)CreateOverflowActions(PlacementMode.BottomEdgeAlignedLeft, options).Tag!;
-        var picker = new Button { Content = CreateProjectStatusCell(project), Classes = { "ghost", "interactive-cell" }, BorderThickness = new Avalonia.Thickness(0), Padding = new Avalonia.Thickness(6, 4), HorizontalAlignment = HorizontalAlignment.Left,
-            Margin = new Avalonia.Thickness(-6, 0, 0, 0) }; // Align the ring with the STATUT heading despite the button padding.
+        var picker = new Button { Content = CreateProjectStatusCell(project), Classes = { "ghost", "interactive-cell" }, BorderThickness = new Avalonia.Thickness(0), Padding = new Avalonia.Thickness(8, 4), HorizontalAlignment = HorizontalAlignment.Left,
+            Margin = new Avalonia.Thickness(-8, 0, 0, 0) }; // Align the ring with the STATUT heading despite the button padding.
         ToolTip.SetTip(picker, "Changer le statut");
         Avalonia.Automation.AutomationProperties.SetName(picker, "Changer le statut de " + project.Reference);
         picker.Click += (_, _) => menu.ShowAt(picker);
@@ -309,7 +309,7 @@ public partial class MainWindow
         var reference = new TextBlock { Text = project.Reference, Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
         var title = new TextBlock { Text = project.Title(), FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.Wrap, MaxLines = 2, LineHeight = 20, VerticalAlignment = VerticalAlignment.Center };
         ToolTip.SetTip(title, project.Reference + " · " + project.Title());
-        title.FontSize = 15;
+        title.FontSize = Ui.Text.Body;
         var cell = new StackPanel { Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
         cell.Children.Add(title); cell.Children.Add(reference);
         ToolTip.SetTip(cell, project.Title() + "\n" + project.Reference);

@@ -20,7 +20,7 @@ public sealed class RevenueBatchWindow : DialogWindow
         public required ComboBox Nature { get; init; }
         public required ComboBox Payment { get; init; }
         public TextBox Goods { get; } = new() { PlaceholderText = "Montant en euros" };
-        public TextBlock Services { get; } = new() { FontSize = 16, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
+        public TextBlock Services { get; } = new() { FontSize = Ui.Text.Section, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
         public TextBlock Error { get; } = FormKit.ErrorText();
     }
 
@@ -74,19 +74,19 @@ public sealed class RevenueBatchWindow : DialogWindow
         var heading = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 12 };
         Avalonia.Automation.AutomationProperties.SetName(row.Selected, "Sélectionner la facture " + row.Invoice.Data.InvoiceNumber);
         heading.Children.Add(row.Selected);
-        var identity = new TextBlock { Text = title, TextWrapping = Avalonia.Media.TextWrapping.Wrap, FontSize = 14, LineHeight = 21 };
+        var identity = new TextBlock { Text = title, TextWrapping = Avalonia.Media.TextWrapping.Wrap, FontSize = Ui.Text.Body, LineHeight = 21 };
         Grid.SetColumn(identity, 1); heading.Children.Add(identity);
         var preview = new Button { Content = Icons.Label("IconOpen", "Voir la facture"), Classes = { "ghost" } };
         var previewError = FormKit.ErrorText();
         Avalonia.Automation.AutomationProperties.SetName(preview, "Voir la facture " + row.Invoice.Data.InvoiceNumber);
         ToolTip.SetTip(preview, row.Invoice.FilePath);
         preview.Click += (_, _) => InvoicePreviewUi.Open(row.Invoice, preview, previewError);
-        var document = new StackPanel { Spacing = 6, Children =
+        var document = new StackPanel { Spacing = 8, Children =
         {
             new TextBlock { Text = amount, FontWeight = Avalonia.Media.FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Right }, preview
         } };
         Grid.SetColumn(document, 2); heading.Children.Add(document);
-        var fields = new WrapPanel { ItemSpacing = 12, LineSpacing = 10 };
+        var fields = new WrapPanel { ItemSpacing = 12, LineSpacing = 12 };
         void Field(string label, Control control, double width)
         {
             var field = FormKit.Field(label, control); field.Width = width; fields.Children.Add(field);
@@ -96,7 +96,7 @@ public sealed class RevenueBatchWindow : DialogWindow
         Field("Règlement", row.Payment, 160);
         var goods = FormKit.Field("Part marchandises", row.Goods, "€", "Le reste est compté en prestations."); goods.Width = 220;
         var services = FormKit.Field("Part prestations calculée", row.Services); services.Width = 220;
-        var split = new WrapPanel { ItemSpacing = 16, LineSpacing = 10, Children = { goods, services } };
+        var split = new WrapPanel { ItemSpacing = 16, LineSpacing = 12, Children = { goods, services } };
         void UpdateSplit()
         {
             split.IsVisible = row.Nature.SelectedIndex >= 0 && Natures[row.Nature.SelectedIndex].Nature == RevenueNature.Mixed;
@@ -109,7 +109,7 @@ public sealed class RevenueBatchWindow : DialogWindow
         return new Border
         {
             BorderBrush = (Avalonia.Media.IBrush?)Avalonia.Application.Current?.FindResource("SubtleBorderBrush"),
-            BorderThickness = new Avalonia.Thickness(0, 0, 0, 1), Padding = new Avalonia.Thickness(0, 14),
+            BorderThickness = new Avalonia.Thickness(0, 0, 0, 1), Padding = new Avalonia.Thickness(0, 16),
             Child = new StackPanel { Spacing = 12, Children = { heading, previewError, fields, split, row.Error } }
         };
     }

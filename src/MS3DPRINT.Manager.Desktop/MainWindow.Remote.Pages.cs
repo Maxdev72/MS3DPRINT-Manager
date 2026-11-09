@@ -21,7 +21,7 @@ public partial class MainWindow
         button.Click += async (_, _) => { if (connection is not null && ServerContextCurrent(connection, generation)) await action(); };
         return button;
     }
-    private static TextBlock ServerText(string text, bool title = false) => new() { Text = text, TextWrapping = TextWrapping.Wrap, FontSize = title ? 18 : 14, FontWeight = title ? FontWeight.SemiBold : FontWeight.Normal };
+    private static TextBlock ServerText(string text, bool title = false) => new() { Text = text, TextWrapping = TextWrapping.Wrap, FontSize = title ? Ui.Text.Section : Ui.Text.Body, FontWeight = title ? FontWeight.SemiBold : FontWeight.Normal };
 
     /// <summary>A server client sheet when one is open, otherwise the full PC client list (server-only clients appended).</summary>
     private void RenderServerClients()
@@ -60,7 +60,7 @@ public partial class MainWindow
     }
 
     private static TextBlock ServerOnlyHeading(string text)
-        => new() { Text = text, Margin = new Avalonia.Thickness(0, 18, 0, 6), FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap, Classes = { "muted" } };
+        => new() { Text = text, Margin = new Avalonia.Thickness(0, 16, 0, 8), FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap, Classes = { "muted" } };
 
     private Task OpenServerClientAsync(Guid id)
     {
@@ -71,7 +71,7 @@ public partial class MainWindow
     {
         ClientsPanelTitle.Text = client.DisplayName; ClientsPanelSubtitle.Text = client.ClientCode + " · atelier serveur";
         ClientFilterBar.IsVisible = false;
-        var body = new StackPanel { Spacing = 14 };
+        var body = new StackPanel { Spacing = 16 };
         body.Children.Add(ServerAction("Tous les clients", () => { _serverClientDetail = null; return LoadClientsAsync(); }));
         body.Children.Add(ServerText(client.DisplayName, true));
         body.Children.Add(ServerText(client.ClientCode + " · " + (client.Kind == "Individual" ? "Particulier" : "Professionnel")));
@@ -128,7 +128,7 @@ public partial class MainWindow
     {
         ProjectsPanelTitle.Text = project.ProjectName; ProjectsPanelSubtitle.Text = project.Reference + " · " + ServerClientName(project.ClientId);
         ProjectFilterBar.IsVisible = false;
-        var body = new StackPanel { Spacing = 14 };
+        var body = new StackPanel { Spacing = 16 };
         body.Children.Add(ServerAction("Tous les projets", () => { _serverProjectDetail = null; return LoadProjectsAsync(); }));
         body.Children.Add(ServerText(project.ProjectName, true)); body.Children.Add(CreateStatusBadge(ServerStatus(project.Status)));
         body.Children.Add(ServerText((project.DueDate?.ToString("dd/MM/yyyy") ?? "Sans échéance") + " · " + ProjectPriorityVisual.Text(Enum.TryParse<ProjectPriority>(project.Priority, out var priority) ? priority : ProjectPriority.None)));
@@ -136,7 +136,7 @@ public partial class MainWindow
         body.Children.Add(ServerText("Tâches", true));
         foreach (var task in project.Tasks)
         {
-            var row = new WrapPanel { ItemSpacing = 8, LineSpacing = 6 };
+            var row = new WrapPanel { ItemSpacing = 8, LineSpacing = 8 };
             var check = new CheckBox { Content = task.Title, IsChecked = task.IsCompleted, IsEnabled = _serverConnection?.CanWrite == true };
             var origin = _serverConnection; var generation = _serverGeneration;
             check.IsCheckedChanged += async (_, _) =>

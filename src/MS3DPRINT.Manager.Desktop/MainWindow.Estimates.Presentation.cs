@@ -23,7 +23,7 @@ public partial class MainWindow
         EstimateStep2.Children.Insert(0, _estimateOptionalCosts);
         EstimateStep2.Children.Insert(1, _estimateOptionalCostSummary);
 
-        var technical = new StackPanel { Spacing = 14 };
+        var technical = new StackPanel { Spacing = 16 };
         var rate = (Control)EstimateMachineRate.Parent!.Parent!.Parent!;
         var energy = (Control)EstimateElectricity.Parent!.Parent!;
         EstimatePrintInputs.Children.Remove(rate); EstimatePrintInputs.Children.Remove(energy);
@@ -80,7 +80,7 @@ public partial class MainWindow
         {
             if ((field.Parent is Grid grid ? grid.Parent : field.Parent) is StackPanel stack)
             {
-                stack.Spacing = 6;
+                stack.Spacing = 8;
                 if (stack.Children.FirstOrDefault() is TextBlock label)
                 { label.Classes.Remove("muted"); label.Classes.Add("estimate-label"); }
             }
@@ -109,17 +109,17 @@ public partial class MainWindow
         EstimateFormHint.IsVisible = !compact;
         if (EstimateFormLayout.Parent is Border form) form.Padding = new Thickness(compact ? 16 : 24);
         EstimatePriceRail.Padding = new Thickness(compact ? 16 : 24);
-        EstimateFinal.FontSize = compact ? 32 : 42;
+        EstimateFinal.FontSize = compact ? Ui.Text.Page : Ui.Text.Display;
         var height = Bounds.Height > 0 ? Bounds.Height : Height;
         if (_estimateHistoryScroll is not null) _estimateHistoryScroll.MaxHeight = height < 820 ? 112 : height < 960 ? 168 : 220;
     }
 
     private static Control EstimateResultRow(string label, string value, bool strong = false)
     {
-        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 18, Margin = new Thickness(0, 7) };
+        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 16, Margin = new Thickness(0, 8) };
         row.Children.Add(new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap, LineHeight = 21, FontWeight = strong ? FontWeight.SemiBold : FontWeight.Normal,
             Foreground = (IBrush?)Application.Current?.FindResource(strong ? "TextBrush" : "MutedTextBrush") });
-        var amount = new TextBlock { Text = value, FontSize = strong ? 17 : 15, FontWeight = strong ? FontWeight.SemiBold : FontWeight.Normal, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxWidth = 230 };
+        var amount = new TextBlock { Text = value, FontSize = strong ? Ui.Text.Section : Ui.Text.Body, FontWeight = strong ? FontWeight.SemiBold : FontWeight.Normal, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxWidth = 230 };
         Grid.SetColumn(amount, 1); row.Children.Add(amount);
         return row;
     }

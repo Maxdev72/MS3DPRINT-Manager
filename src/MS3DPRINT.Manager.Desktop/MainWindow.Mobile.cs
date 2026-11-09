@@ -85,7 +85,7 @@ public partial class MainWindow
             SettingsValueRow("Saisies du téléphone à importer", pending.ToString())
         } };
         var header = SettingsCardHeader("IconUpload", "Application mobile", "Le téléphone lit l’état de l’atelier et dépose ses saisies (achats, recettes, photos) dans le dossier « " + MobileExchange.FolderName + " » ; vous les importez ici, après vérification.");
-        return new Border { Classes = { "card-raised" }, Child = new StackPanel { Spacing = 16, Children = { header, publish, details, new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Children = { open, now } } } } };
+        return new Border { Classes = { "card-raised" }, Child = new StackPanel { Spacing = 16, Children = { header, publish, details, new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, Children = { open, now } } } } };
     }
 
     /// <summary>Imports the collections noted on the phone, after confirmation. A line already recorded (same id) is only filed away.</summary>

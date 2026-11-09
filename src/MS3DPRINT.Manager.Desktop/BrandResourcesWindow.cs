@@ -13,6 +13,6 @@ public sealed class BrandResourcesWindow : DialogWindow
         using var reader = new StreamReader(stream);
         var close = new Button { Content = "Fermer" }; close.Click += (_, _) => Close(true);
         Layout(Title, "Logo et direction visuelle issus de ms3dprint.fr. Police Bricolage Grotesque distribuée sous licence SIL Open Font License.",
-            [new SelectableTextBlock { Text = reader.ReadToEnd(), TextWrapping = TextWrapping.Wrap, FontSize = 13, LineHeight = 20 }], close, cancel: new Button { IsVisible = false });
+            [new SelectableTextBlock { Text = reader.ReadToEnd(), TextWrapping = TextWrapping.Wrap, FontSize = Ui.Text.Caption, LineHeight = 20 }], close, cancel: new Button { IsVisible = false });
     }
 }

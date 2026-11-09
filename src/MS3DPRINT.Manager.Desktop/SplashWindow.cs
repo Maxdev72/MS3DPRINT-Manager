@@ -11,7 +11,7 @@ namespace MS3DPRINT.Manager.Desktop;
 public sealed class SplashWindow : Window
 {
     private readonly ProgressBar _progress = new() { Minimum = 0, Maximum = 100, Height = 6, Value = 0 };
-    private readonly TextBlock _status = new() { Text = "Démarrage…", FontSize = 12, Foreground = Token("MutedTextBrush", "#94A7C4"), HorizontalAlignment = HorizontalAlignment.Center };
+    private readonly TextBlock _status = new() { Text = "Démarrage…", FontSize = Ui.Text.Micro, Foreground = Token("MutedTextBrush", "#94A7C4"), HorizontalAlignment = HorizontalAlignment.Center };
 
     public SplashWindow()
     {
@@ -23,11 +23,11 @@ public sealed class SplashWindow : Window
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         Background = Token("CanvasBrush", "#080C14");
 
-        var stack = new StackPanel { Spacing = 14, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(40, 0) };
+        var stack = new StackPanel { Spacing = 16, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(48, 0) };
         if (LoadLogo() is { } logo)
             stack.Children.Add(new Image { Source = logo, Width = 96, Height = 96, HorizontalAlignment = HorizontalAlignment.Center });
-        stack.Children.Add(new TextBlock { Text = "MS3DPRINT", FontSize = 26, FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Center, Foreground = Token("TextBrush", "#EAF0FC") });
-        stack.Children.Add(new TextBlock { Text = "MANAGER", FontSize = 12, LetterSpacing = 4, HorizontalAlignment = HorizontalAlignment.Center, Foreground = Token("AccentBrush", "#6B9BFF") });
+        stack.Children.Add(new TextBlock { Text = "MS3DPRINT", FontSize = Ui.Text.Page, FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Center, Foreground = Token("TextBrush", "#EAF0FC") });
+        stack.Children.Add(new TextBlock { Text = "MANAGER", FontSize = Ui.Text.Micro, LetterSpacing = 4, HorizontalAlignment = HorizontalAlignment.Center, Foreground = Token("AccentBrush", "#6B9BFF") });
         stack.Children.Add(new Border { Height = 8 });
         stack.Children.Add(_progress);
         stack.Children.Add(_status);

@@ -7,7 +7,7 @@
           BorderBrush="{DynamicResource BorderBrush}"
           BorderThickness="1"
           CornerRadius="{DynamicResource PanelCornerRadius}"
-          Padding="18">
+          Padding="16">
     <Grid RowDefinitions="Auto,*,Auto" RowSpacing="12">
       <ContentPresenter Content="{Binding Header, ElementName=Root}" />
       <ContentPresenter Grid.Row="1" Content="{Binding Body, ElementName=Root}" />

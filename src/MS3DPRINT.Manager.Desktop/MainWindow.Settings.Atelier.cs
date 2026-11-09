@@ -42,7 +42,7 @@ public partial class MainWindow
             SettingsValueRow("Électricité", Exact(settings.ElectricityPricePerKwh) + " €/kWh"),
             SettingsValueRow("Provision pour échecs", Exact(settings.FailureRatePercent) + " %"),
             Group("Cotisations et frais commerciaux"),
-            new TextBlock { Text = description, TextWrapping = TextWrapping.Wrap, Classes = { "muted" }, Margin = new Avalonia.Thickness(0, 4, 0, 10) },
+            new TextBlock { Text = description, TextWrapping = TextWrapping.Wrap, Classes = { "muted" }, Margin = new Avalonia.Thickness(0, 4, 0, 12) },
             SettingsValueRow("Cotisations · ventes", Rate(charges.SalesSocialPercent, charges.SocialEnabled)),
             SettingsValueRow("Cotisations · prestations BIC", Rate(charges.ServicesBicSocialPercent, charges.SocialEnabled)),
             SettingsValueRow("Cotisations · prestations BNC", Rate(charges.ServicesBncSocialPercent, charges.SocialEnabled)),
@@ -63,9 +63,9 @@ public partial class MainWindow
 
     private static Control SettingsValueRow(string label, string value)
     {
-        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 20, MinHeight = 44 };
+        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 24, MinHeight = 44 };
         row.Children.Add(new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center });
-        var amount = new TextBlock { Text = value, FontSize = 16, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxWidth = 230, TextAlignment = TextAlignment.Right };
+        var amount = new TextBlock { Text = value, FontSize = Ui.Text.Section, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxWidth = 230, TextAlignment = TextAlignment.Right };
         // An empty value reads as a gap to fill, not as a value: muted, regular weight.
         if (value is "À renseigner" or "Non surveillé") { amount.FontWeight = FontWeight.Normal; amount.FontStyle = FontStyle.Italic; amount.Classes.Add("muted"); }
         Grid.SetColumn(amount, 1); row.Children.Add(amount);
@@ -78,7 +78,7 @@ public partial class MainWindow
         row.Children.Add(new StackPanel { Spacing = 4, Children =
         {
             new TextBlock { Text = title, FontWeight = FontWeight.SemiBold },
-            new TextBlock { Text = detail, Classes = { "muted" }, TextWrapping = TextWrapping.Wrap, FontSize = 14, LineHeight = 21, FontWeight = FontWeight.Normal }
+            new TextBlock { Text = detail, Classes = { "muted" }, TextWrapping = TextWrapping.Wrap, FontSize = Ui.Text.Body, LineHeight = 21, FontWeight = FontWeight.Normal }
         } });
         var arrow = Icons.Glyph("IconArrowRight", 18); Grid.SetColumn(arrow, 1); row.Children.Add(arrow);
         return row;

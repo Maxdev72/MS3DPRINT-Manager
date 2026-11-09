@@ -28,18 +28,18 @@ public partial class MainWindow
         EstimateStep0.Children.Remove(EstimateScope);
         foreach (var choice in EstimateScope.Children.OfType<Button>())
         {
-            var caption = new TextBlock { Text = choice.Tag as string == "1" ? "Modélisation seule" : choice.Tag as string == "2" ? "Impression + modélisation" : "Impression 3D", FontSize = 14, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center };
+            var caption = new TextBlock { Text = choice.Tag as string == "1" ? "Modélisation seule" : choice.Tag as string == "2" ? "Impression + modélisation" : "Impression 3D", FontSize = Ui.Text.Body, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center };
             var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 8 };
             row.Children.Add(Icons.Glyph(choice.Tag as string == "1" ? "IconEdit" : "IconCube", 18));
             Grid.SetColumn(caption, 1); row.Children.Add(caption); choice.Content = row;
-            choice.Padding = new Thickness(10); choice.MinHeight = 50;
+            choice.Padding = new Thickness(12); choice.MinHeight = 50;
         }
         EstimateAddFilamentButton.Content = Icons.Glyph("IconPlus", 18);
         EstimateAddFilamentButton.Classes.Add("tool");
         Avalonia.Automation.AutomationProperties.SetName(EstimateAddFilamentButton, "Nouveau filament");
         ToolTip.SetTip(EstimateAddFilamentButton, "Ajouter un filament à l’atelier");
 
-        var identity = new StackPanel { Spacing = 14 };
+        var identity = new StackPanel { Spacing = 16 };
         foreach (var child in EstimateStep0.Children.ToArray())
         {
             EstimateStep0.Children.Remove(child);
@@ -78,7 +78,7 @@ public partial class MainWindow
         durationField.Children.Clear();
         _estimateDurationLabel = new TextBlock { Text = "Durée d’impression", Classes = { "estimate-label" } };
         durationField.Children.Add(_estimateDurationLabel);
-        var duration = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,*,Auto"), ColumnSpacing = 6 };
+        var duration = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,*,Auto"), ColumnSpacing = 8 };
         _estimateDurationHours.Classes.Add("estimate-number"); _estimateDurationMinutes.Classes.Add("estimate-number");
         Avalonia.Automation.AutomationProperties.SetName(_estimateDurationHours, "Durée d’impression en heures");
         Avalonia.Automation.AutomationProperties.SetName(_estimateDurationMinutes, "Minutes complémentaires");
@@ -98,7 +98,7 @@ public partial class MainWindow
         var technical = EstimatePrintInputs.Children.OfType<Expander>().Single();
         EstimatePrintInputs.Children.Remove(technical);
         EstimatePrintInputs.Children.Remove(EstimateV2ProductionHost);
-        var fabrication = new StackPanel { Spacing = 22 };
+        var fabrication = new StackPanel { Spacing = 24 };
         foreach (var oldSection in EstimateV2ProductionHost.Children.OfType<Expander>().ToArray())
         {
             var header = (Control)oldSection.Header!; var content = (Control)oldSection.Content!;
@@ -152,7 +152,7 @@ public partial class MainWindow
             var historyBody = new StackPanel { Spacing = 12, Children = { _estimateHistorySearch, _estimateHistoryCount, _estimateHistoryScroll } };
             var history = (Expander)EstimateSection("Historique des estimations", "Retrouvez vos devis par nom, client ou projet", historyBody);
             history.Classes.Add("estimate-history");
-            if (history.Header is StackPanel historyHeader && historyHeader.Children[0] is TextBlock title) title.FontSize = 18;
+            if (history.Header is StackPanel historyHeader && historyHeader.Children[0] is TextBlock title) title.FontSize = Ui.Text.Section;
             var historySurface = new Border { Classes = { "estimate-history-surface" }, Child = history };
             EstimateLayout.RowDefinitions = new RowDefinitions("*,Auto");
             EstimateLayout.RowSpacing = 16;
@@ -177,8 +177,8 @@ public partial class MainWindow
     }
 
     private static Control EstimateZoneHeading(string icon, string title)
-        => new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Margin = new Thickness(0, 8, 0, 0), Classes = { "estimate-zone-title" },
-            Children = { Icons.Glyph(icon, 18), new TextBlock { Text = title, FontSize = 16, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center } } };
+        => new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, Margin = new Thickness(0, 8, 0, 0), Classes = { "estimate-zone-title" },
+            Children = { Icons.Glyph(icon, 18), new TextBlock { Text = title, FontSize = Ui.Text.Section, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center } } };
 
     private void DecorateEstimateSection(Expander section, string icon)
     {

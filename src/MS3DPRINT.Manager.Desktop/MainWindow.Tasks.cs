@@ -107,7 +107,7 @@ public partial class MainWindow
         {
             var count = TaskViews.Count(view, _tasks, today);
             var late = view == TaskViews.Today && _tasks.Any(t => !t.IsDeleted && !t.IsCompleted && t.DueDate < today);
-            var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 10 };
+            var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 12 };
             var text = new TextBlock { Text = label, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
             var number = new TextBlock { Text = view == TaskViews.Done || count == 0 ? "" : count.ToString(), Classes = { "caption" }, VerticalAlignment = VerticalAlignment.Center };
             if (late) number.Foreground = (IBrush?)Application.Current?.FindResource("WarningBrush") ?? Brushes.Orange;
@@ -123,7 +123,7 @@ public partial class MainWindow
         }
         void Heading(string text, Button? action = null)
         {
-            var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Margin = new Thickness(10, 18, 0, 4) };
+            var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Margin = new Thickness(12, 16, 0, 4) };
             grid.Children.Add(new TextBlock { Text = text, Classes = { "caption" }, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center });
             if (action is not null) { Grid.SetColumn(action, 1); grid.Children.Add(action); }
             TaskViewList.Children.Add(grid);
@@ -150,7 +150,7 @@ public partial class MainWindow
             ToolTip.SetTip(button, list + " · clic droit pour renommer ou retirer");
         }
         if (_addingTaskList) TaskViewList.Children.Add(TaskListNameBox(null));
-        else if (lists.Count == 0) TaskViewList.Children.Add(new TextBlock { Text = "Tapez #Nom dans une tâche ou cliquez sur +.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(10, 0, 0, 0) });
+        else if (lists.Count == 0) TaskViewList.Children.Add(new TextBlock { Text = "Tapez #Nom dans une tâche ou cliquez sur +.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(12, 0, 0, 0) });
 
         var projects = _taskProjects.Where(p => TaskViews.ProjectView(p.Profile!.Id) == _taskView || _tasks.Any(t => t.ProjectId == p.Profile!.Id && !t.IsDeleted && !t.IsCompleted))
             .OrderBy(p => p.Title(), StringComparer.CurrentCultureIgnoreCase).ToArray();
@@ -262,7 +262,7 @@ public partial class MainWindow
                 && !_tasks.Any(t => t.ProjectId == p.Profile.Id && !t.IsDeleted && !t.IsCompleted))
             .OrderBy(p => p.Profile!.DueDate).Take(3).ToArray();
         if (due.Length == 0 && bare.Length == 0) return;
-        var box = new StackPanel { Spacing = 6, Margin = new Thickness(0, 0, 0, 6) };
+        var box = new StackPanel { Spacing = 8, Margin = new Thickness(0, 0, 0, 8) };
         foreach (var project in due)
         {
             var late = project.Profile!.DueDate < today;
@@ -281,7 +281,7 @@ public partial class MainWindow
         AutomationProperties.SetName(go, action + " " + project.Title());
         if (openProject) go.Click += ProjectEntry_Click;
         else go.Click += (_, _) => { _taskView = TaskViews.ProjectView(project.Profile!.Id); RenderTasks(); NewTaskBox.Focus(); };
-        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 10 };
+        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 12 };
         var glyph = Icons.Glyph(icon, 16); glyph.VerticalAlignment = VerticalAlignment.Center;
         Grid.SetColumn(label, 1); Grid.SetColumn(go, 2);
         grid.Children.Add(glyph); grid.Children.Add(label); grid.Children.Add(go);
@@ -318,7 +318,7 @@ public partial class MainWindow
         if (task.List is { } list && !_taskView.StartsWith("list:")) facts.Children.Add(new TextBlock { Text = "#" + list, Classes = { "caption" } });
         if (task.Steps is { Count: > 0 } steps) facts.Children.Add(new TextBlock { Text = $"{steps.Count(s => s.IsCompleted)}/{steps.Count}", Classes = { "caption" } });
         if (!string.IsNullOrWhiteSpace(task.Notes)) { var note = Icons.Glyph("IconEdit", 12); ToolTip.SetTip(note, task.Notes); facts.Children.Add(note); }
-        var text = new StackPanel { Spacing = 3, VerticalAlignment = VerticalAlignment.Center, Children = { title } };
+        var text = new StackPanel { Spacing = 4, VerticalAlignment = VerticalAlignment.Center, Children = { title } };
         if (facts.Children.Count > 0) text.Children.Add(facts);
         var open = new Button { Content = text, Tag = task.Id, Classes = { "task-row-action" }, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch };
         AutomationProperties.SetName(open, "Modifier : " + task.Title);
@@ -326,10 +326,10 @@ public partial class MainWindow
         var flag = ProjectPriorityVisual.Flag(task.Priority);
         flag.VerticalAlignment = VerticalAlignment.Center; flag.IsVisible = task.Priority != ProjectPriority.None;
         ToolTip.SetTip(flag, ProjectPriorityVisual.Text(task.Priority));
-        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 10, MinHeight = 46 };
+        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 12, MinHeight = 46 };
         Grid.SetColumn(open, 1); Grid.SetColumn(flag, 2);
         row.Children.Add(check); row.Children.Add(open); row.Children.Add(flag);
-        var border = new Border { Child = row, Tag = task.Id, Classes = { "project-task-row", "task-row" }, Padding = new Thickness(6, 0, 10, 0) };
+        var border = new Border { Child = row, Tag = task.Id, Classes = { "project-task-row", "task-row" }, Padding = new Thickness(8, 0, 12, 0) };
         border.Classes.Set("selected", task.Id == _selectedTaskId);
         return border;
     }
@@ -361,9 +361,9 @@ public partial class MainWindow
         var task = NewTaskForView(WorkTask.New("-", 0) with { DueDate = quick.DueDate, Priority = quick.Priority, List = quick.List });
         void Chip(string icon, string text, bool warning = false)
         {
-            var label = new TextBlock { Text = text, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+            var label = new TextBlock { Text = text, FontSize = Ui.Text.Micro, VerticalAlignment = VerticalAlignment.Center };
             var glyph = Icons.Glyph(icon, 12); glyph.VerticalAlignment = VerticalAlignment.Center;
-            var chip = new Border { Classes = { "task-chip" }, Child = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { glyph, label } } };
+            var chip = new Border { Classes = { "task-chip" }, Child = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { glyph, label } } };
             if (warning) label.Foreground = (IBrush?)Application.Current?.FindResource("WarningBrush") ?? Brushes.Orange;
             TaskQuickPreview.Children.Add(chip);
         }
@@ -500,7 +500,7 @@ public partial class MainWindow
         var check = new CheckBox { IsChecked = task.IsCompleted, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 8, 0, 0) };
         AutomationProperties.SetName(check, task.IsCompleted ? "Rouvrir la tâche" : "Terminer la tâche");
         check.IsCheckedChanged += async (_, _) => await Save(t => t with { CompletedAt = check.IsChecked == true ? DateTimeOffset.UtcNow : null }, refresh: true);
-        var title = new TextBox { Text = task.Title, MaxLength = 500, FontSize = 17, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap, AcceptsReturn = false };
+        var title = new TextBox { Text = task.Title, MaxLength = 500, FontSize = Ui.Text.Section, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap, AcceptsReturn = false };
         AutomationProperties.SetName(title, "Tâche");
         async Task SaveTitle()
         {
@@ -520,7 +520,7 @@ public partial class MainWindow
 
         // Due date: one click for the usual choices, the calendar for the rest.
         var today = TaskToday;
-        var quick = new WrapPanel { ItemSpacing = 6, LineSpacing = 6 };
+        var quick = new WrapPanel { ItemSpacing = 8, LineSpacing = 8 };
         foreach (var (label, value) in new (string, DateOnly?)[] { ("Aujourd’hui", today), ("Demain", today.AddDays(1)), ("+1 semaine", today.AddDays(7)), ("Aucune", null) })
         {
             var button = new Button { Content = label, Classes = { "filter-chip" } };
@@ -617,7 +617,7 @@ public partial class MainWindow
         var remove = new Button { Content = Icons.Label("IconTrash", "Retirer la tâche"), Classes = { "menu-destructive" }, HorizontalAlignment = HorizontalAlignment.Left };
         remove.Click += async (_, _) => { if (SelectedTask is { } current) await RemoveTaskAsync(current); };
         var created = new TextBlock { Text = $"Créée le {task.CreatedAt.ToLocalTime():dd/MM/yyyy}" + (task.CompletedAt is { } at ? $" · terminée le {at.ToLocalTime():dd/MM/yyyy}" : "") + " · enregistrement automatique", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
-        TaskDetail.Children.Add(new StackPanel { Spacing = 10, Margin = new Thickness(0, 6, 0, 0), Children = { remove, created } });
+        TaskDetail.Children.Add(new StackPanel { Spacing = 12, Margin = new Thickness(0, 8, 0, 0), Children = { remove, created } });
     }
 
     private static IReadOnlyList<TaskStep>? NullIfEmpty(IEnumerable<TaskStep> steps) => steps.ToArray() is { Length: > 0 } items ? items : null;

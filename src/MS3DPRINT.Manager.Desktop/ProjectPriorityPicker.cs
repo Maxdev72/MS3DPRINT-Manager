@@ -22,13 +22,13 @@ public static class ProjectPriorityVisual
         path.Stroke = color; path.Fill = value == ProjectPriority.None ? Brushes.Transparent : color;
         return icon;
     }
-    public static Control Label(ProjectPriority value) => new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Children = { Flag(value), new TextBlock { Text = Text(value), VerticalAlignment = VerticalAlignment.Center } } };
+    public static Control Label(ProjectPriority value) => new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, Children = { Flag(value), new TextBlock { Text = Text(value), VerticalAlignment = VerticalAlignment.Center } } };
 }
 
 public sealed class ProjectPriorityPicker : StackPanel
 {
     private readonly List<(Button Button, ProjectPriority Priority)> _choices = [];
-    private readonly TextBlock _hint = new() { Classes = { "muted" }, FontSize = 13 };
+    private readonly TextBlock _hint = new() { Classes = { "muted" }, FontSize = Ui.Text.Caption };
     private ProjectPriority _value;
     /// <summary>Raised when the user picks a priority (not when code sets <see cref="Value"/>).</summary>
     public event Action<ProjectPriority>? Changed;

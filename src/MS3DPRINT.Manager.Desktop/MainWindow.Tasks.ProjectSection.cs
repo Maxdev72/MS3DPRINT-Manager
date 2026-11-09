@@ -19,7 +19,7 @@ public partial class MainWindow
         try { tasks = new TaskStore(new WorkspaceMetadataPaths(WorkspaceRoot)).LoadActive().Where(t => t.ProjectId == profile.Id).ToArray(); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return null; }
         var open = tasks.Where(t => !t.IsCompleted).OrderBy(t => t.DueDate is null).ThenBy(t => t.DueDate).ThenByDescending(t => (int)t.Priority).ThenBy(t => t.Order).ToArray();
-        var body = new StackPanel { Spacing = 6 };
+        var body = new StackPanel { Spacing = 8 };
         foreach (var task in open.Take(8))
         {
             var line = task.Title + (task.DueDate is { } due ? " · " + due.ToString("dd/MM") : "");
@@ -27,7 +27,7 @@ public partial class MainWindow
         }
         if (open.Length > 8) body.Children.Add(new TextBlock { Text = $"… et {open.Length - 8} autre(s)", Classes = { "caption" } });
         if (open.Length == 0) body.Children.Add(new TextBlock { Text = tasks.Count > 0 ? "Toutes les tâches sont terminées." : "Aucune tâche pour ce projet.", Classes = { "muted" } });
-        var go = new Button { Content = Icons.Label("IconProjectTasks", open.Length > 0 ? "Gérer les tâches du projet" : "Ajouter une tâche"), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 6, 0, 0) };
+        var go = new Button { Content = Icons.Label("IconProjectTasks", open.Length > 0 ? "Gérer les tâches du projet" : "Ajouter une tâche"), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 8, 0, 0) };
         go.Click += async (_, _) => await OpenProjectTaskTrackingAsync(project);
         body.Children.Add(go);
         return EstimateSection("Tâches", $"{tasks.Count(t => t.IsCompleted)} / {tasks.Count} faites", body);

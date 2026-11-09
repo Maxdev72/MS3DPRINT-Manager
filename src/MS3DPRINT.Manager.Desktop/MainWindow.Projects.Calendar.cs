@@ -23,7 +23,7 @@ public partial class MainWindow
     private void RenderProjectCalendar(ProjectSummary[] projects)
     {
         var root = WorkspaceRoot;
-        var body = new StackPanel { Spacing = 14 };
+        var body = new StackPanel { Spacing = 16 };
         var toolbar = new WrapPanel { ItemSpacing = 8, LineSpacing = 8 };
         Button Action(string label, string name, Action action)
         {
@@ -41,7 +41,7 @@ public partial class MainWindow
         if (_projectCalendarAgenda)
         {
             var dates = ProjectCalendar.Agenda(projects);
-            body.Children.Add(new TextBlock { Text = "Échéances · en retard et à venir", FontSize = 20, FontWeight = FontWeight.SemiBold });
+            body.Children.Add(new TextBlock { Text = "Échéances · en retard et à venir", FontSize = Ui.Text.Title, FontWeight = FontWeight.SemiBold });
             if (dates.Count == 0) body.Children.Add(CalendarHint("Aucune échéance pour les projets affichés."));
             // Use the common pager to keep long histories bounded.
             var agendaList = new StackPanel { Spacing = 4 };
@@ -57,10 +57,10 @@ public partial class MainWindow
             var next = CalendarNavigation("IconArrowRight", "Mois suivant", 1);
             previous.IsEnabled = _projectCalendarMonth.Year > 1 || _projectCalendarMonth.Month > 1;
             next.IsEnabled = _projectCalendarMonth.Year < 9999 || _projectCalendarMonth.Month < 12;
-            var caption = new TextBlock { Text = CalendarCulture.TextInfo.ToTitleCase(_projectCalendarMonth.ToString("MMMM yyyy", CalendarCulture)), FontSize = 22, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+            var caption = new TextBlock { Text = CalendarCulture.TextInfo.ToTitleCase(_projectCalendarMonth.ToString("MMMM yyyy", CalendarCulture)), FontSize = Ui.Text.Title, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center };
             Grid.SetColumn(toolbar, 1); Grid.SetColumn(previous, 2); Grid.SetColumn(next, 3);
             heading.Children.Add(caption); heading.Children.Add(toolbar); heading.Children.Add(previous); heading.Children.Add(next); body.Children.Add(heading);
-            var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*,*,*,*,*"), RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,Auto,Auto,Auto"), ColumnSpacing = 3, RowSpacing = 3 };
+            var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*,*,*,*,*"), RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,Auto,Auto,Auto"), ColumnSpacing = 4, RowSpacing = 4 };
             var weekdays = new[] { "Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam.", "Dim." };
             for (var i = 0; i < 7; i++)
             {
@@ -71,7 +71,7 @@ public partial class MainWindow
             for (var i = 0; i < days.Count; i++)
             {
                 var day = days[i];
-                var button = new Button { Classes = { "project-calendar-day" }, HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Top, Padding = new Thickness(8, 5), MinHeight = 52, IsEnabled = day.Date is not null };
+                var button = new Button { Classes = { "project-calendar-day" }, HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Top, Padding = new Thickness(8, 4), MinHeight = 52, IsEnabled = day.Date is not null };
                 if (day.Date is { } date)
                 {
                     button.Tag = date;
@@ -83,8 +83,8 @@ public partial class MainWindow
                     content.Children.Add(new TextBlock { Text = date.Day.ToString(), FontWeight = date == DateOnly.FromDateTime(DateTime.Today) ? FontWeight.Bold : FontWeight.Normal });
                     if (day.Projects.Count > 0)
                     {
-                        content.Children.Add(new TextBlock { Text = $"{day.Projects.Count} échéance{(day.Projects.Count == 1 ? "" : "s")}", FontSize = 12, Foreground = (IBrush?)Application.Current?.FindResource("CyanBrush"), TextTrimming = TextTrimming.CharacterEllipsis });
-                        content.Children.Add(new TextBlock { Text = day.Projects[0].Title(), FontSize = 12, MaxLines = 1, TextTrimming = TextTrimming.CharacterEllipsis });
+                        content.Children.Add(new TextBlock { Text = $"{day.Projects.Count} échéance{(day.Projects.Count == 1 ? "" : "s")}", FontSize = Ui.Text.Micro, Foreground = (IBrush?)Application.Current?.FindResource("CyanBrush"), TextTrimming = TextTrimming.CharacterEllipsis });
+                        content.Children.Add(new TextBlock { Text = day.Projects[0].Title(), FontSize = Ui.Text.Micro, MaxLines = 1, TextTrimming = TextTrimming.CharacterEllipsis });
                     }
                     button.Content = content;
                     var name = date.ToString("dddd d MMMM yyyy", CalendarCulture) + (day.Projects.Count == 0 ? " · aucune échéance" : " · " + string.Join(", ", day.Projects.Select(p => p.Title())));
@@ -94,13 +94,13 @@ public partial class MainWindow
                 Grid.SetColumn(button, i % 7); Grid.SetRow(button, i / 7 + 1); grid.Children.Add(button);
             }
             body.Children.Add(grid);
-            body.Children.Add(new TextBlock { Text = _projectCalendarDay.ToString("dddd d MMMM yyyy", CalendarCulture), FontSize = 18, FontWeight = FontWeight.SemiBold });
+            body.Children.Add(new TextBlock { Text = _projectCalendarDay.ToString("dddd d MMMM yyyy", CalendarCulture), FontSize = Ui.Text.Section, FontWeight = FontWeight.SemiBold });
             var selected = ProjectCalendar.Agenda(projects).Where(p => p.Profile!.DueDate == _projectCalendarDay).ToArray();
             if (selected.Length == 0) body.Children.Add(CalendarHint("Aucune échéance ce jour. Planifiez un projet depuis « À planifier » ci-dessous."));
             foreach (var project in selected) body.Children.Add(BuildCalendarProject(project, root));
         }
         var unplanned = projects.Where(p => p.Profile?.DueDate is null).ToArray();
-        var unplannedBody = new StackPanel { Spacing = 6 };
+        var unplannedBody = new StackPanel { Spacing = 8 };
         PagedRows.Render(unplannedBody, unplanned, p => BuildCalendarProject(p, root), () => CalendarHint("Choisissez une date pour ces projets. Aucun fichier ne sera déplacé."),
             (root, ProjectFilterBox.Text, _projectStatusFilter, _projectPriorityFilter));
         body.Children.Add(new Expander { Header = $"À planifier · {unplanned.Length} projet{(unplanned.Length == 1 ? "" : "s")}", Content = unplannedBody, IsExpanded = unplanned.Length > 0 && projects.All(p => p.Profile?.DueDate is null), Classes = { "estimate-section" }, HorizontalAlignment = HorizontalAlignment.Stretch });
@@ -122,7 +122,7 @@ public partial class MainWindow
         var text = new StackPanel { Spacing = 4 };
         text.Children.Add(new TextBlock { Text = project.Title(), FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap });
         text.Children.Add(CalendarHint(project.Reference + " · " + project.ClientTitle()));
-        var facts = new WrapPanel { ItemSpacing = 12, LineSpacing = 6 };
+        var facts = new WrapPanel { ItemSpacing = 12, LineSpacing = 8 };
         if (project.Profile?.DueDate is { } due)
         {
             var date = due.ToString("dd/MM/yyyy");
@@ -132,7 +132,7 @@ public partial class MainWindow
         facts.Children.Add(CreateStatusBadge(project.StatusLabel));
         if (project.Priority != ProjectPriority.None) facts.Children.Add(ProjectPriorityVisual.Label(project.Priority));
         text.Children.Add(facts);
-        var actions = new WrapPanel { ItemSpacing = 8, LineSpacing = 6 };
+        var actions = new WrapPanel { ItemSpacing = 8, LineSpacing = 8 };
         var open = new Button { Content = "Ouvrir le projet", Tag = project, Classes = { "ghost" } };
         AutomationProperties.SetName(open, "Ouvrir le projet : " + project.Title()); open.Click += ProjectEntry_Click; actions.Children.Add(open);
         var plan = new Button { Content = project.Profile is null ? "Compléter la fiche" : project.Profile.DueDate is null ? "Planifier" : "Modifier l’échéance", Classes = { "ghost" } };

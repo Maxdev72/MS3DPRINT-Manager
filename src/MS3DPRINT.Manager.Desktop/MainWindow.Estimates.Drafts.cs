@@ -33,7 +33,7 @@ public partial class MainWindow
 
     private void InitializeEstimateDrafts()
     {
-        _estimateDraftStatus.FontSize = 13;
+        _estimateDraftStatus.FontSize = Ui.Text.Caption;
         _estimateDraftStatus.IsVisible = false;
         EstimateStep1.Children.Insert(0, _estimateDraftStatus);
         _estimateDraftTimer.Tick += async (_, _) => await AutoSaveEstimateDraftAsync();
@@ -219,12 +219,12 @@ public partial class MainWindow
         foreach (var draft in drafts)
         {
             var name = draft.Fields.GetValueOrDefault("Name") ?? "Brouillon sans nom";
-            var label = new StackPanel { Spacing = 3, Children =
+            var label = new StackPanel { Spacing = 4, Children =
             {
-                new TextBlock { Text = name, FontSize = 15, FontWeight = Avalonia.Media.FontWeight.SemiBold, TextWrapping = Avalonia.Media.TextWrapping.Wrap, MaxLines = 2, TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis },
-                new TextBlock { Text = "Brouillon · " + draft.UpdatedAt.ToLocalTime().ToString("dd/MM HH:mm"), FontSize = 13, Classes = { "muted" } }
+                new TextBlock { Text = name, FontSize = Ui.Text.Body, FontWeight = Avalonia.Media.FontWeight.SemiBold, TextWrapping = Avalonia.Media.TextWrapping.Wrap, MaxLines = 2, TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis },
+                new TextBlock { Text = "Brouillon · " + draft.UpdatedAt.ToLocalTime().ToString("dd/MM HH:mm"), FontSize = Ui.Text.Caption, Classes = { "muted" } }
             } };
-            var open = new Button { Content = label, Classes = { "estimate-history-row" }, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch, Padding = new Avalonia.Thickness(0, 10) };
+            var open = new Button { Content = label, Classes = { "estimate-history-row" }, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch, Padding = new Avalonia.Thickness(0, 12) };
             Avalonia.Automation.AutomationProperties.SetName(open, "Reprendre le brouillon " + name);
             open.Click += (_, _) =>
             {

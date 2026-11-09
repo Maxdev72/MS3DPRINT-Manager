@@ -88,7 +88,7 @@ public partial class MainWindow
             var (label, go) = segments[index];
             if (go is null || index == segments.Length - 1)
             {
-                Breadcrumb.Children.Add(new TextBlock { Text = label, FontSize = 13, FontWeight = FontWeight.SemiBold, Margin = new Avalonia.Thickness(6, 0), VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = 260 });
+                Breadcrumb.Children.Add(new TextBlock { Text = label, FontSize = Ui.Text.Caption, FontWeight = FontWeight.SemiBold, Margin = new Avalonia.Thickness(8, 0), VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = 260 });
                 continue;
             }
             var crumb = new Button { Content = label, Classes = { "crumb" } };

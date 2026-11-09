@@ -35,20 +35,20 @@ public sealed class WorkshopEstimateWindow : DialogWindow
     {
         var field = FormKit.Field(label, input, unit, hint);
         ((TextBlock)field.Children[0]).TextWrapping = TextWrapping.Wrap;
-        field.Spacing = 6;
-        if (hint is not null && field.Children.LastOrDefault() is TextBlock explanation) { explanation.FontSize = 13; explanation.LineHeight = 20; }
+        field.Spacing = 8;
+        if (hint is not null && field.Children.LastOrDefault() is TextBlock explanation) { explanation.FontSize = Ui.Text.Caption; explanation.LineHeight = 20; }
         return field;
     }
     private static Control Section(string title, string description, params Control[] children)
     {
-        var content = new StackPanel { Spacing = 18 };
+        var content = new StackPanel { Spacing = 16 };
         foreach (var child in children) content.Children.Add(child);
         return new Expander
         {
             Header = new StackPanel { Spacing = 4, Children =
             {
-                new TextBlock { Text = title, FontSize = 15, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap },
-                new TextBlock { Text = description, FontSize = 13, LineHeight = 20, Classes = { "muted" }, TextWrapping = TextWrapping.Wrap }
+                new TextBlock { Text = title, FontSize = Ui.Text.Body, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap },
+                new TextBlock { Text = description, FontSize = Ui.Text.Caption, LineHeight = 20, Classes = { "muted" }, TextWrapping = TextWrapping.Wrap }
             } },
             Classes = { "estimate-section" }, HorizontalAlignment = HorizontalAlignment.Stretch,
             HorizontalContentAlignment = HorizontalAlignment.Stretch, Content = content

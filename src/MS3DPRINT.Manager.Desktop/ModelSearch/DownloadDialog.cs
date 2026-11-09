@@ -51,16 +51,16 @@ public sealed class DownloadDialog : DialogWindow
 
         var list = new Border
         {
-            Classes = { "card-raised" }, Padding = new Thickness(6),
+            Classes = { "card-raised" }, Padding = new Thickness(8),
             Child = new ScrollViewer { MaxHeight = 260, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled, Content = _rows }
         };
         // the licence reminder is a calm note of its own, not a paragraph under the heading
         var licence = new Border
         {
-            Background = (IBrush?)Application.Current?.FindResource("WarningSoftBrush"), CornerRadius = new CornerRadius(8), Padding = new Thickness(12, 9),
+            Background = (IBrush?)Application.Current?.FindResource("WarningSoftBrush"), CornerRadius = new CornerRadius(8), Padding = new Thickness(12, 8),
             Child = new Grid
             {
-                ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 10,
+                ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 12,
                 Children = { Icons.Glyph("IconInfo", 16), new TextBlock { Text = LicenceReminder, Classes = { "caption" }, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center } }
             }
         };
@@ -80,9 +80,9 @@ public sealed class DownloadDialog : DialogWindow
             ToolTip.SetTip(name, file.Path);
             var format = new Border { Classes = { "badge", "info" }, Child = new TextBlock { Text = Path.GetExtension(file.Name).TrimStart('.').ToUpperInvariant() } };
             var size = new TextBlock { Text = SizeText(file.Length), Classes = { "muted" }, VerticalAlignment = VerticalAlignment.Center, MinWidth = 52, TextAlignment = TextAlignment.Right };
-            var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,Auto,*,Auto,Auto"), ColumnSpacing = 10, Children = { box, Icons.Glyph("IconCube", 18), name, format, size } };
+            var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,Auto,*,Auto,Auto"), ColumnSpacing = 12, Children = { box, Icons.Glyph("IconCube", 18), name, format, size } };
             Grid.SetColumn(grid.Children[1], 1); Grid.SetColumn(name, 2); Grid.SetColumn(format, 3); Grid.SetColumn(size, 4);
-            var row = new Border { Padding = new Thickness(8, 7), CornerRadius = new CornerRadius(8), Child = grid };
+            var row = new Border { Padding = new Thickness(8, 8), CornerRadius = new CornerRadius(8), Child = grid };
             _files.Add((file, box, row));
             _rows.Children.Add(row);
         }

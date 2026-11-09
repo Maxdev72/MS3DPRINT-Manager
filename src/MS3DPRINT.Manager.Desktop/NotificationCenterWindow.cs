@@ -64,7 +64,7 @@ public sealed class NotificationCenterWindow : DialogWindow
                 var title = new TextBlock { Text = entry.Title, TextWrapping = TextWrapping.Wrap, FontWeight = FontWeight.SemiBold, MaxLines = 3, TextTrimming = TextTrimming.CharacterEllipsis };
                 ToolTip.SetTip(title, entry.Title);
                 var metadata = new TextBlock { Text = $"{entry.Created:dd/MM HH:mm} · {(entry.Error ? "Erreur" : "Information")} · {(entry.Read ? "Lue" : "Non lue")}", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
-                var heading = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 10 };
+                var heading = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 12 };
                 var icon = Icons.Glyph(entry.Error ? "IconAlert" : "IconCheck", 18);
                 var labels = new StackPanel { Spacing = 4, Children = { title, metadata } };
                 Grid.SetColumn(labels, 1); heading.Children.Add(icon); heading.Children.Add(labels);
@@ -86,7 +86,7 @@ public sealed class NotificationCenterWindow : DialogWindow
                 {
                     IsExpanded = ReferenceEquals(entry, selected),
                     Header = heading, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch,
-                    Content = new StackPanel { Spacing = 10, Children = { new SelectableTextBlock { Text = detail, TextWrapping = TextWrapping.Wrap }, copy } }
+                    Content = new StackPanel { Spacing = 12, Children = { new SelectableTextBlock { Text = detail, TextWrapping = TextWrapping.Wrap }, copy } }
                 });
             }
             if (entries.Length == 0) list.Children.Add(new TextBlock

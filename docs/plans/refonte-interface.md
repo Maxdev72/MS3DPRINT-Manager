@@ -19,17 +19,19 @@ Deux pistes, maquettées sur la page Projets :
   (`#5B7CFA`), statuts en pastille de couleur sur le texte, presque aucun fond de
   carte.
 
-À choisir avant l’étape 1. Un thème clair pourra s’ajouter ensuite à l’une ou
+**Retenue le 9 novembre 2026 : A · Bleu nuit épuré.** Un thème clair pourra s’ajouter ensuite à l’une ou
 l’autre : il ne demandera que de nouvelles valeurs pour les mêmes jetons.
 
-## Règles communes (étape 1)
+## Règles communes (étape 1) — faite le 9 novembre 2026
 
-Définies une seule fois dans `Styles/Tokens.axaml` et une classe `Ui` en C#.
+Définies une seule fois : `Ui.cs` (C#) et les clés `FontSize…` de `Styles/Theme.axaml`. Les 14 tailles de
+police et les 353 marges ou écarts hors grille ont été ramenés sur l’échelle ; `DesignTokenTests` empêche
+toute nouvelle valeur en dur (les `Setter` de marge des feuilles de style restent à vérifier à l’étape 2).
 
 | Jeton | Valeurs |
 |---|---|
 | Espacement | 4 · 8 · 12 · 16 · 24 · 32 · 48 — aucune autre marge ni aucun autre écart |
-| Texte | 12 (légende) · 13 (secondaire) · 14 (courant) · 16 (titre de section) · 20 (titre de page) · 28 (chiffre clé) |
+| Texte | 12 (pastilles) · 13 (secondaire) · 14 (courant) · 16 (section) · 20 (titre de panneau) · 26 (titre de page, chiffre clé) · 40 (total du devis) |
 | Graisse | normale · semi-grasse — pas d’autre |
 | Arrondis | 6 (contrôles) · 10 (cartes) · 999 (pastilles) |
 | Hauteurs | 36 (contrôle compact) · 40 (contrôle) · 48 (ligne de tableau) |

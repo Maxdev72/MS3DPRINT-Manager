@@ -114,7 +114,7 @@ public sealed class ExpensePlanWindow : DialogWindow
             }
             var rows = ExpensePlans.Schedule(p, DateOnly.FromDateTime(DateTime.Today));
             _previewRows.Children.Add(new TextBlock { Text = $"{rows.Count} échéances · {RevenueExporter.Money(rows.Sum(r => r.Amount))}" + (p.EndOn is null ? " · prévision jusqu’au " + rows[^1].DueOn.ToString("dd/MM/yyyy") : ""), FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap });
-            var list = new StackPanel { Spacing = 5 };
+            var list = new StackPanel { Spacing = 4 };
             PagedRows.Render(list, rows, r => new TextBlock { Text = r.DueOn.ToString("dd/MM/yyyy") + " · " + RevenueExporter.Money(r.Amount)
                 + (r.Principal is { } capital ? " · capital " + RevenueExporter.Money(capital) : "") + (r.Interest is { } interest ? " · intérêts " + RevenueExporter.Money(interest) : "")
                 + (r.Insurance is { } insurance ? " · assurance " + RevenueExporter.Money(insurance) : "") + (r.RemainingCapital is { } balance ? " · capital restant dû " + RevenueExporter.Money(balance) : ""), TextWrapping = TextWrapping.Wrap }, () => new TextBlock { Text = "Montants repris sans recalcul bancaire", Classes = { "caption" } });

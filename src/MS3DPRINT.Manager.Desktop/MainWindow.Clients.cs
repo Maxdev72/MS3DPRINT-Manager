@@ -203,8 +203,8 @@ public partial class MainWindow
         ClientList.Children.Add(back);
         SetBreadcrumb(("Clients", GoToClientsAsync), (client.Title(), null));
 
-        var card = new StackPanel { Spacing = 14 };
-        card.Children.Add(new TextBlock { Text = client.Title(), FontSize = 26, FontWeight = FontWeight.SemiBold, Classes = { "brand-heading" }, TextWrapping = TextWrapping.Wrap });
+        var card = new StackPanel { Spacing = 16 };
+        card.Children.Add(new TextBlock { Text = client.Title(), FontSize = Ui.Text.Page, FontWeight = FontWeight.SemiBold, Classes = { "brand-heading" }, TextWrapping = TextWrapping.Wrap });
         card.Children.Add(new TextBlock { Text = $"{client.ProfileLabel} · {client.ClientCode} · {client.ProjectCount} projet(s)", Classes = { "muted" } });
         if (client.Profile?.PrimaryContact is { } contact)
         {
@@ -222,7 +222,7 @@ public partial class MainWindow
         changeCode.Click += ChangeClientCode_Click;
         var newProject = new Button { Content = Icons.Label("IconPlus", "Nouveau projet"), Tag = client, Classes = { "primary-action" } };
         newProject.Click += CreateProjectForClient_Click;
-        card.Children.Add(new WrapPanel { ItemSpacing = 10, LineSpacing = 10, Children = { newProject, edit, changeCode } });
+        card.Children.Add(new WrapPanel { ItemSpacing = 12, LineSpacing = 12, Children = { newProject, edit, changeCode } });
         ClientList.Children.Add(new Border { Classes = { "client-overview" }, Child = card });
         try
         {

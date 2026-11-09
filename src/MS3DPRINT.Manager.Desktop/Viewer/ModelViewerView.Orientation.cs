@@ -36,7 +36,7 @@ public sealed partial class ModelViewerView
             return button;
         }
 
-        var turns = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*"), RowDefinitions = new RowDefinitions("Auto,Auto,Auto"), ColumnSpacing = 6, RowSpacing = 6 };
+        var turns = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*"), RowDefinitions = new RowDefinitions("Auto,Auto,Auto"), ColumnSpacing = 8, RowSpacing = 8 };
         var buttons = new[] { Turn("X −90°", 0, -90), Turn("X +90°", 0, 90), Turn("Y −90°", 1, -90), Turn("Y +90°", 1, 90), Turn("Z −90°", 2, -90), Turn("Z +90°", 2, 90) };
         for (var i = 0; i < buttons.Length; i++)
         {
@@ -45,7 +45,7 @@ public sealed partial class ModelViewerView
             turns.Children.Add(buttons[i]);
         }
 
-        var angles = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto,*,Auto,*"), ColumnSpacing = 6 };
+        var angles = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto,*,Auto,*"), ColumnSpacing = 8 };
         var fields = new[] { ("X", _angleX), ("Y", _angleY), ("Z", _angleZ) };
         for (var i = 0; i < fields.Length; i++)
         {

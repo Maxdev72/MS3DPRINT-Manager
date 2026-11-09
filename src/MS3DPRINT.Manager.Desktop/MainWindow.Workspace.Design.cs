@@ -13,7 +13,7 @@ public partial class MainWindow
 
     private static TextBlock WorkspaceSummary() => new()
     {
-        TextWrapping = TextWrapping.Wrap, FontSize = 13, LineHeight = 20, Classes = { "muted" }
+        TextWrapping = TextWrapping.Wrap, FontSize = Ui.Text.Caption, LineHeight = 20, Classes = { "muted" }
     };
 
     private void InitializeWorkspaceDesign()
@@ -34,8 +34,8 @@ public partial class MainWindow
     private static void DecorateInventoryPage(Border page, string title, TextBlock summary, string? actionLabel)
     {
         if (page.Child is not Grid { Children: [Grid toolbar, ..] } || toolbar.Children[0] is not StackPanel heading) return;
-        heading.Spacing = 5;
-        heading.Children.Add(new TextBlock { Text = title, FontSize = 22, Classes = { "brand-heading" }, TextWrapping = TextWrapping.Wrap });
+        heading.Spacing = 4;
+        heading.Children.Add(new TextBlock { Text = title, FontSize = Ui.Text.Title, Classes = { "brand-heading" }, TextWrapping = TextWrapping.Wrap });
         heading.Children.Add(summary);
         if (actionLabel is not null && toolbar.Children.OfType<StackPanel>().LastOrDefault()?.Children.OfType<Button>().LastOrDefault() is { } action)
         {

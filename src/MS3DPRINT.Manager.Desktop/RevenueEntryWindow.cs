@@ -56,7 +56,7 @@ public sealed class RevenueEntryWindow : DialogWindow
         var paste = new Button { Content = "Coller une capture" };
         ToolTip.SetTip(paste, "Colle l’image copiée (capture d’écran, photo copiée) ou le fichier copié, puis la lit · Ctrl+V");
         paste.Click += async (_, _) => await PasteInvoiceAsync();
-        var readers = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 10, Children = { import, paste } };
+        var readers = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 12, Children = { import, paste } };
         var body = new List<Control>
         {
             readers, _invoiceNote, FormKit.Field("Date d’encaissement", _date), FormKit.Field("Client", _client), FormKit.Field("Libellé", _label),
@@ -206,7 +206,7 @@ public sealed class RevenueHeaderWindow : DialogWindow
     private readonly TextBox _phone = new() { PlaceholderText = "Téléphone" };
     private readonly ListBox _companyResults = new() { IsVisible = false, MaxHeight = 240, Classes = { "lookup-suggestions" } };
     private readonly ListBox _addressResults = new() { IsVisible = false, MaxHeight = 200, Classes = { "lookup-suggestions" } };
-    private readonly TextBlock _lookupStatus = new() { IsVisible = false, FontSize = 13, TextWrapping = Avalonia.Media.TextWrapping.Wrap, Classes = { "muted" } };
+    private readonly TextBlock _lookupStatus = new() { IsVisible = false, FontSize = Ui.Text.Caption, TextWrapping = Avalonia.Media.TextWrapping.Wrap, Classes = { "muted" } };
     private CancellationTokenSource? _companySearch;
     private CancellationTokenSource? _addressSearch;
     private bool _applyingSuggestion;
@@ -231,11 +231,11 @@ public sealed class RevenueHeaderWindow : DialogWindow
         _companyResults.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<CompanySuggestion>((item, _) =>
             new StackPanel { Spacing = 4, Children =
             {
-                new TextBlock { Text = item?.Name ?? "", FontSize = 14, FontWeight = Avalonia.Media.FontWeight.SemiBold, TextWrapping = Avalonia.Media.TextWrapping.Wrap },
-                new TextBlock { Text = string.Join(" · ", new[] { item?.Siret, item?.Address }.Where(v => !string.IsNullOrWhiteSpace(v))), FontSize = 13, Classes = { "muted" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap }
+                new TextBlock { Text = item?.Name ?? "", FontSize = Ui.Text.Body, FontWeight = Avalonia.Media.FontWeight.SemiBold, TextWrapping = Avalonia.Media.TextWrapping.Wrap },
+                new TextBlock { Text = string.Join(" · ", new[] { item?.Siret, item?.Address }.Where(v => !string.IsNullOrWhiteSpace(v))), FontSize = Ui.Text.Caption, Classes = { "muted" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap }
             } });
         _addressResults.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<AddressSuggestion>((item, _) =>
-            new TextBlock { Text = item?.Label ?? "", FontSize = 14, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+            new TextBlock { Text = item?.Label ?? "", FontSize = Ui.Text.Body, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
         _companyResults.SelectionChanged += (_, _) =>
         {
             if (_closed || _companyResults.SelectedItem is not CompanySuggestion company) return;

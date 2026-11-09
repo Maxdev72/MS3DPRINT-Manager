@@ -31,7 +31,7 @@ public partial class MainWindow
         filters.Children.Add(_projectPriorityFilterBox); filters.Children.Add(_projectPrioritySortButton);
         // Status chips, priority and sort share one line (they wrap on narrow windows) instead of stacking three rows above the list.
         ProjectFilterBar.Children.Remove(ProjectStatusFilters);
-        var line = new WrapPanel { ItemSpacing = 20, LineSpacing = 8, Children = { ProjectStatusFilters, filters } };
+        var line = new WrapPanel { ItemSpacing = 24, LineSpacing = 8, Children = { ProjectStatusFilters, filters } };
         Grid.SetRow(line, 1); Grid.SetColumnSpan(line, 3); ProjectFilterBar.Children.Add(line);
         UpdatePrioritySortButton();
     }
@@ -62,7 +62,7 @@ public partial class MainWindow
         button.Classes.Add("project-priority");
         button.Classes.Add("interactive-cell");
         button.Content = label ? ProjectPriorityVisual.Label(project.Priority) : ProjectPriorityVisual.Flag(project.Priority);
-        if (label) button.FontSize = 14;
+        if (label) button.FontSize = Ui.Text.Body;
         button.HorizontalAlignment = HorizontalAlignment.Left;
         ToolTip.SetTip(button, ProjectPriorityVisual.Text(project.Priority) + " · Modifier");
         Avalonia.Automation.AutomationProperties.SetName(button, ProjectPriorityVisual.Text(project.Priority) + " · " + project.Title());

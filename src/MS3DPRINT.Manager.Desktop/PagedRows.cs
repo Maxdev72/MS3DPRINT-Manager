@@ -55,7 +55,7 @@ public static class PagedRows
             next.Click += (_, _) => Move(1);
             var controls = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { previous, next } };
             var label = new TextBlock { Text = $"{page * PageSize + 1}–{Math.Min(items.Count, (page + 1) * PageSize)} sur {items.Count}", Classes = { "muted" }, VerticalAlignment = VerticalAlignment.Center };
-            var bar = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12, Margin = new Thickness(0, 10) };
+            var bar = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12, Margin = new Thickness(0, 12) };
             Grid.SetColumn(controls, 1); bar.Children.Add(label); bar.Children.Add(controls);
             return bar;
         }

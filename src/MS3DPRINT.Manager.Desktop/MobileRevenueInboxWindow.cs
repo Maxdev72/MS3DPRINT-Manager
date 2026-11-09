@@ -30,7 +30,7 @@ public sealed class MobileRevenueInboxWindow : DialogWindow
             var box = new CheckBox { IsChecked = true, VerticalAlignment = VerticalAlignment.Center };
             _rows.Add((box, item));
             var nature = RevenueExporter.NatureName(r.Nature);
-            var text = new StackPanel { Spacing = 3, Children =
+            var text = new StackPanel { Spacing = 4, Children =
             {
                 new TextBlock { Text = $"{r.ReceivedOn:dd/MM/yyyy} · {r.Label} · {RevenueExporter.Money(r.Amount)}", FontWeight = Avalonia.Media.FontWeight.SemiBold, TextWrapping = Avalonia.Media.TextWrapping.Wrap },
                 new TextBlock { Text = $"{nature} · {r.PaymentMethod}" + (string.IsNullOrWhiteSpace(r.ClientName) ? "" : $" · {r.ClientName}") + (string.IsNullOrWhiteSpace(r.InvoiceNumber) ? "" : $" · pièce {r.InvoiceNumber}")

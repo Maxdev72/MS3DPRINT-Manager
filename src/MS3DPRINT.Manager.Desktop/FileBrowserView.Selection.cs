@@ -88,7 +88,7 @@ public sealed partial class FileBrowserView
 
     private Control SelectionHeader()
     {
-        var header = _header(); header.Margin = new Thickness(36, 0, 0, 0); return header;
+        var header = _header(); header.Margin = new Thickness(32, 0, 0, 0); return header;
     }
 
     private Control SelectionRow(ProjectFileEntry entry)

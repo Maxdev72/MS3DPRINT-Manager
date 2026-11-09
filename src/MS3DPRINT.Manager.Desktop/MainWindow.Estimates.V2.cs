@@ -24,12 +24,12 @@ public partial class MainWindow
     private string? _estimateChargePresetId;
     private readonly TextBox _estimateSalesShare = Number("100"), _estimateBicShare = Number("0"), _estimateCommercial = Number("");
     private readonly ComboBox _estimateChargeCategory = Choice("Vente d’objets / marchandises", "Prestation artisanale ou commerciale (BIC)", "Prestation libérale (BNC)", "Mixte : répartir le prix du devis");
-    private readonly StackPanel _estimateSplitFields = new() { Spacing = 10 };
+    private readonly StackPanel _estimateSplitFields = new() { Spacing = 12 };
     private readonly TextBlock _estimateChargeSummary = EstimateHint("");
     private readonly TextBlock _estimateWorkshopSummary = EstimateHint("");
     private Control? _estimateCapacityField;
     private CostFrequency[] _estimateFrequencies = [CostFrequency.PerOrder, CostFrequency.PerAttempt, CostFrequency.PerGoodPiece, CostFrequency.PerAttempt, CostFrequency.PerOrder, CostFrequency.PerOrder];
-    private readonly StackPanel _estimateAllocations = new() { Spacing = 12 }, _estimateExtraCosts = new() { Spacing = 10 };
+    private readonly StackPanel _estimateAllocations = new() { Spacing = 12 }, _estimateExtraCosts = new() { Spacing = 12 };
     private readonly List<MachineAllocationEditor> _estimateMachineEditors = [];
     private readonly List<ExtraCostEditor> _estimateCostEditors = [];
     private IReadOnlyList<PrinterProfile> _estimatePrinters = [];
@@ -51,7 +51,7 @@ public partial class MainWindow
     {
         var field = FormKit.Field(label, control, unit);
         if (field.Children[0] is TextBlock caption) { caption.TextWrapping = TextWrapping.Wrap; caption.Classes.Add("estimate-label"); }
-        field.Spacing = 6;
+        field.Spacing = 8;
         return field;
     }
     private static Control EstimateSection(string label, string description, Control content)
@@ -59,10 +59,10 @@ public partial class MainWindow
         var section = new Expander
         {
             Classes = { "estimate-section" },
-            Header = new StackPanel { Spacing = 3, Children =
+            Header = new StackPanel { Spacing = 4, Children =
             {
-                new TextBlock { Text = label, FontSize = 14, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap },
-                new TextBlock { Text = description, FontSize = 13, LineHeight = 20, TextWrapping = TextWrapping.Wrap, Classes = { "muted" } }
+                new TextBlock { Text = label, FontSize = Ui.Text.Body, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap },
+                new TextBlock { Text = description, FontSize = Ui.Text.Caption, LineHeight = 20, TextWrapping = TextWrapping.Wrap, Classes = { "muted" } }
             } },
             Content = content, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch
         };
@@ -86,7 +86,7 @@ public partial class MainWindow
         EstimateV2VersionHost.Children.Add(compatibility);
         _estimatePrinter.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<PrinterChoice>((choice, _) => new TextBlock { Text = choice?.ToString(), TextTrimming = TextTrimming.CharacterEllipsis });
         EstimateV2MachineHost.Children.Add(EstimateField("Imprimante utilisée", _estimatePrinter));
-        var production = new StackPanel { Spacing = 10 };
+        var production = new StackPanel { Spacing = 12 };
         production.Children.Add(EstimateHint("Ensemble : 0 pièce par plateau signifie que les données couvrent toute la commande. Sinon, poids et durée décrivent un plateau complet, même le dernier partiellement rempli."));
         _estimateCapacityField = EstimateField("Pièces par plateau", _estimateCapacity, "pièces");
         _estimateCapacity.PlaceholderText = "0 = toute la commande";
@@ -94,7 +94,7 @@ public partial class MainWindow
         production.Children.Add(_estimateWeightIncludesSupports);
         production.Children.Add(EstimateField("Supports et purges supplémentaires par pièce / ensemble", _estimateExtraGrams, "g"));
         EstimateV2ProductionHost.Children.Add(EstimateSection("Production et consommations", "Ajouter des supports ou purges non compris dans le poids", production));
-        var machines = new StackPanel { Spacing = 10 };
+        var machines = new StackPanel { Spacing = 12 };
         machines.Children.Add(EstimateHint("Ajoutez chaque machine mobilisée. Les heures sont les totaux de la commande, avant échecs ; leur somme doit égaler durée saisie × passages. Ces affectations remplacent le taux de référence ci-dessous."));
         machines.Children.Add(_estimateAllocations);
         var addMachine = new Button { Content = "Ajouter une affectation machine" };
@@ -106,13 +106,13 @@ public partial class MainWindow
         var workshop = new Button { Content = Icons.Label("IconSettings", "Réglages de l’atelier", 16), HorizontalAlignment = HorizontalAlignment.Left };
         workshop.Click += EstimateWorkshopSettings_Click;
         EstimateV2PricingHost.Children.Add(workshop);
-        var costs = new StackPanel { Spacing = 10 };
+        var costs = new StackPanel { Spacing = 12 };
         costs.Children.Add(_estimateExtraCosts);
         var addCost = new Button { Content = "Ajouter un poste (scan, préparation, contrôle…)" };
         addCost.Click += (_, _) => { AddEstimateCost(new("Prestation", 0, CostFrequency.PerOrder)); EstimateChanged(); };
         costs.Children.Add(addCost);
         EstimateV2CostsHost.Children.Add(EstimateSection("Prestations supplémentaires", "Scan, préparation, assemblage ou contrôle", costs));
-        var charges = new StackPanel { Spacing = 10 };
+        var charges = new StackPanel { Spacing = 12 };
         charges.Children.Add(EstimateField("Recettes concernées par ce devis", _estimateChargeCategory));
         _estimateSplitFields.Children.Add(EstimateField("Part du prix final en ventes", _estimateSalesShare, "%"));
         _estimateSplitFields.Children.Add(EstimateField("Part du prix final en prestations BIC", _estimateBicShare, "%"));
@@ -211,7 +211,7 @@ public partial class MainWindow
         var printer = (_estimatePrinter.SelectedItem as PrinterChoice)?.Printer;
         allocation ??= new(printer?.Name ?? "Moyenne du parc / taux libre", 0, printer is null ? _fleetHourlyRate : PrinterCostCalculator.HourlyRate(printer),
             printer?.MaintenanceHourlyRate ?? _fleetMaintenance, printer is null ? _fleetPowerWatts : printer.PowerWatts, printer?.Id);
-        var panel = new StackPanel { Spacing = 6 };
+        var panel = new StackPanel { Spacing = 8 };
         var editor = new MachineAllocationEditor(panel, Number(allocation.Name), Number(Exact(allocation.Hours)), Number(Exact(allocation.HourlyRate)), Number(Exact(allocation.MaintenanceHourlyRate)), Number(allocation.PowerWatts?.ToString() ?? ""), allocation.PrinterId);
         var select = new ComboBox { ItemsSource = _estimatePrinters.Select(p => new PrinterChoice(p)).ToArray(), PlaceholderText = "Reprendre les paramètres d’une imprimante", HorizontalAlignment = HorizontalAlignment.Stretch };
         select.SelectionChanged += (_, _) =>
@@ -225,7 +225,7 @@ public partial class MainWindow
         };
         panel.Children.Add(select);
         panel.Children.Add(EstimateField("Machine / libellé", editor.Name));
-        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*"), ColumnSpacing = 10 };
+        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*"), ColumnSpacing = 12 };
         grid.Children.Add(EstimateField("Total d’heures", editor.Hours, "h"));
         var rateField = EstimateField("Amortissement", editor.Rate, "€/h"); Grid.SetColumn(rateField, 1); grid.Children.Add(rateField); panel.Children.Add(grid);
         panel.Children.Add(EstimateField("Maintenance", editor.Maintenance, "€/h")); panel.Children.Add(EstimateField("Puissance (optionnelle)", editor.Power, "W"));
@@ -243,7 +243,7 @@ public partial class MainWindow
     private sealed record ExtraCostEditor(StackPanel Panel, TextBox Name, TextBox Amount, CheckBox RepeatOnFailure, CheckBox Enabled);
     private void AddEstimateCost(EstimateCostItem item)
     {
-        var editor = new ExtraCostEditor(new() { Spacing = 6 }, Number(item.Name), Number(Exact(item.Amount)),
+        var editor = new ExtraCostEditor(new() { Spacing = 8 }, Number(item.Name), Number(Exact(item.Amount)),
             new() { Content = "À refaire si l’impression échoue", IsChecked = item.Frequency == CostFrequency.PerAttempt }, new() { Content = "Inclure ce poste", IsChecked = item.Enabled });
         editor.Panel.Children.Add(EstimateField("Poste", editor.Name)); editor.Panel.Children.Add(EstimateField("Montant total de la commande", editor.Amount, "€")); editor.Panel.Children.Add(editor.RepeatOnFailure); editor.Panel.Children.Add(editor.Enabled);
         var remove = new Button { Content = "Retirer ce poste", Classes = { "ghost" } };
@@ -385,7 +385,7 @@ public partial class MainWindow
             warning.Foreground = (IBrush?)Application.Current?.FindResource("WarningBrush"); details.Children.Add(warning);
         }
         var note = EstimateHint("Coûts de production affichés avant provision pour échecs. Le résultat tient compte des charges activées ; il ne constitue pas un bénéfice net fiscal.");
-        note.Margin = new Thickness(0, 18, 0, 0); details.Children.Add(note);
+        note.Margin = new Thickness(0, 16, 0, 0); details.Children.Add(note);
         if (input.DiscountPercent > 0)
         {
             var before = input.V2?.CommercialPrice ?? p.RecommendedPrice;

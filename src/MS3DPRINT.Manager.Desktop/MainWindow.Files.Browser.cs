@@ -114,7 +114,7 @@ public partial class MainWindow
             var hint = entry.IsDirectory ? "Ouvrir le dossier" : ThreeDFileSupport.IsPreviewable(entry.FullPath) ? "Aperçu 3D" :
                 PreviewFileSupport.GetKind(entry.FullPath) != PreviewFileKind.None ? "Afficher le document" : "Ouvrir dans l’application associée";
             var labels = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center, Children =
-            { name, new TextBlock { Text = hint, FontSize = 12, Classes = { "muted" }, TextTrimming = TextTrimming.CharacterEllipsis } } };
+            { name, new TextBlock { Text = hint, FontSize = Ui.Text.Micro, Classes = { "muted" }, TextTrimming = TextTrimming.CharacterEllipsis } } };
             Grid.SetColumn(labels, 1); grid.Children.Add(labels);
         }
         return grid;

@@ -13,11 +13,11 @@ public partial class MainWindow
     private readonly Dictionary<Border, string> _settingsIndex = new();
     private static Control SettingsCardHeader(string icon, string title, string description, Control? action = null)
     {
-        var heading = new StackPanel { Spacing = 6 };
+        var heading = new StackPanel { Spacing = 8 };
         heading.Children.Add(new TextBlock { Text = title, Classes = { "card-title" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
-        if (!string.IsNullOrEmpty(description)) heading.Children.Add(new TextBlock { Text = description, Classes = { "muted" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap, FontSize = 14, LineHeight = 22 });
-        var grid = new Grid { Classes = { "settings-card-heading" }, ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), RowDefinitions = new RowDefinitions("Auto,Auto"), ColumnSpacing = 12, RowSpacing = 10 };
-        var glyph = Icons.Glyph(icon, 21); glyph.VerticalAlignment = VerticalAlignment.Top; glyph.Margin = new Thickness(0, 3, 0, 0);
+        if (!string.IsNullOrEmpty(description)) heading.Children.Add(new TextBlock { Text = description, Classes = { "muted" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap, FontSize = Ui.Text.Body, LineHeight = 22 });
+        var grid = new Grid { Classes = { "settings-card-heading" }, ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), RowDefinitions = new RowDefinitions("Auto,Auto"), ColumnSpacing = 12, RowSpacing = 12 };
+        var glyph = Icons.Glyph(icon, 21); glyph.VerticalAlignment = VerticalAlignment.Top; glyph.Margin = new Thickness(0, 4, 0, 0);
         glyph.Classes.Add("settings-heading-icon");
         Grid.SetColumn(heading, 1); grid.Children.Add(glyph); grid.Children.Add(heading);
         if (action is not null)
@@ -75,14 +75,14 @@ public partial class MainWindow
         {
             var (title, detail) = SettingsCategoryText((string)button.Tag!);
             var icon = (button.Tag as string) switch { "organisation" => "IconProjects", "storage" => "IconCollections", "application" => "IconSettings", _ => "IconPrinters" };
-            var heading = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 9 };
+            var heading = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 8 };
             heading.Children.Add(Icons.Glyph(icon, 17));
             var caption = new TextBlock { Text = title, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
             Grid.SetColumn(caption, 1); heading.Children.Add(caption);
-            button.Content = new StackPanel { Spacing = 5, Children =
+            button.Content = new StackPanel { Spacing = 4, Children =
             {
                 heading,
-                new TextBlock { Text = detail, Classes = { "settings-nav-detail", "muted" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap, FontSize = 13, LineHeight = 18 }
+                new TextBlock { Text = detail, Classes = { "settings-nav-detail", "muted" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap, FontSize = Ui.Text.Caption, LineHeight = 18 }
             } };
             Avalonia.Automation.AutomationProperties.SetName(button, title);
         }
@@ -117,8 +117,8 @@ public partial class MainWindow
         foreach (var button in SettingsCategories.Children.OfType<Button>())
         {
             button.Width = compact ? double.NaN : 204;
-            button.Padding = compact ? new Thickness(12, 10) : new Thickness(14, 14);
-            button.Margin = compact ? new Thickness(0, 0, 6, 6) : new Thickness(0, 0, 0, 8);
+            button.Padding = compact ? new Thickness(12, 12) : new Thickness(16, 16);
+            button.Margin = compact ? new Thickness(0, 0, 8, 8) : new Thickness(0, 0, 0, 8);
             button.HorizontalContentAlignment = HorizontalAlignment.Left;
             if (button.Content is StackPanel labels && labels.Children.LastOrDefault() is TextBlock detail)
                 detail.IsVisible = !compact;

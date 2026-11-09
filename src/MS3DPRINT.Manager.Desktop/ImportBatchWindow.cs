@@ -18,7 +18,7 @@ public sealed class ImportBatchWindow : DialogWindow
         Title = "Importer plusieurs fichiers"; Width = 600; Height = 760; MinWidth = 460;
         var error = FormKit.ErrorText();
         var rows = new List<(ImportBatchItem Item, TextBox Name, ComboBox Folder)>();
-        var list = new StackPanel { Spacing = 18 };
+        var list = new StackPanel { Spacing = 16 };
         foreach (var item in items)
         {
             var name = new TextBox { Text = item.FileName };
@@ -80,7 +80,7 @@ public sealed class ConfirmImportSourcesWindow : DialogWindow
     {
         Title = "Sources des fichiers importés"; Width = 600; Height = 720; MinWidth = 460;
         var checks = new List<(ImportedSource Copy, CheckBox Check)>();
-        var list = new StackPanel { Spacing = 18 };
+        var list = new StackPanel { Spacing = 16 };
         var count = new TextBlock { Classes = { "muted" }, TextWrapping = TextWrapping.Wrap };
         var delete = new Button { Content = "Supprimer les sources sélectionnées" };
         var all = new CheckBox { Content = "Sélectionner toutes les sources", IsChecked = true };
@@ -102,7 +102,7 @@ public sealed class ConfirmImportSourcesWindow : DialogWindow
             var check = new CheckBox { Content = Path.GetFileName(copy.Source), IsChecked = true, Tag = copy.Source };
             Avalonia.Automation.AutomationProperties.SetName(check, "Supprimer l’original " + copy.Source);
             checks.Add((copy, check)); check.IsCheckedChanged += (_, _) => Update();
-            list.Children.Add(new StackPanel { Spacing = 6, Children =
+            list.Children.Add(new StackPanel { Spacing = 8, Children =
             {
                 check,
                 FormKit.Field("Source à supprimer", new SelectableTextBlock { Text = copy.Source, TextWrapping = TextWrapping.Wrap }),

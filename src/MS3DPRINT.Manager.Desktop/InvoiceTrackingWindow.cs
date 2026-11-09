@@ -68,23 +68,23 @@ public sealed class InvoiceTrackingWindow : DialogWindow
         var data = invoice.Invoice.Data;
         var heading = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
         heading.Children.Add(new TextBlock { Text = $"{data.InvoiceNumber} · {data.ClientName ?? invoice.Invoice.FolderClient ?? "Client inconnu"}",
-            FontSize = 15, FontWeight = Avalonia.Media.FontWeight.SemiBold, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+            FontSize = Ui.Text.Body, FontWeight = Avalonia.Media.FontWeight.SemiBold, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
         var label = invoice.State switch { InvoicePaymentState.Unpaid => "À encaisser", InvoicePaymentState.Partial => "Partiellement encaissée", _ => "Soldée" };
         var badge = new Border { Classes = { "badge", invoice.State switch { InvoicePaymentState.Unpaid => "warning", InvoicePaymentState.Partial => "info", _ => "success" } },
             Child = new TextBlock { Text = label } };
         Grid.SetColumn(badge, 1); heading.Children.Add(badge);
-        var amounts = new WrapPanel { ItemSpacing = 24, LineSpacing = 10 };
+        var amounts = new WrapPanel { ItemSpacing = 24, LineSpacing = 12 };
         void Amount(string title, decimal value) => amounts.Children.Add(new StackPanel { Spacing = 4, MinWidth = 130, Children =
         {
-            new TextBlock { Text = title, FontSize = 12, Classes = { "muted" } },
-            new TextBlock { Text = RevenueExporter.Money(value), FontSize = 16, FontWeight = Avalonia.Media.FontWeight.SemiBold }
+            new TextBlock { Text = title, FontSize = Ui.Text.Micro, Classes = { "muted" } },
+            new TextBlock { Text = RevenueExporter.Money(value), FontSize = Ui.Text.Section, FontWeight = Avalonia.Media.FontWeight.SemiBold }
         } });
         Amount("Facturé", invoice.Total); Amount("Encaissé", invoice.Collected); Amount("Reste à encaisser", invoice.Remaining);
         var error = FormKit.ErrorText();
         var preview = new Button { Content = Icons.Label("IconOpen", "Voir la facture"), Classes = { "ghost" } };
         Avalonia.Automation.AutomationProperties.SetName(preview, "Voir la facture " + data.InvoiceNumber);
         preview.Click += (_, _) => InvoicePreviewUi.Open(invoice.Invoice, preview, error);
-        var actions = new WrapPanel { ItemSpacing = 10, LineSpacing = 8, Children = { preview } };
+        var actions = new WrapPanel { ItemSpacing = 12, LineSpacing = 8, Children = { preview } };
         if (invoice.Remaining > 0)
         {
             var payment = new Button { Content = Icons.Label("IconBook", "Enregistrer un paiement"), Classes = { "ghost" } };
@@ -93,7 +93,7 @@ public sealed class InvoiceTrackingWindow : DialogWindow
             actions.Children.Add(payment);
         }
         var content = new StackPanel { Spacing = 12, Children = { heading,
-            new TextBlock { Text = "Émise le " + (data.IssuedOn?.ToString("dd/MM/yyyy") ?? "date inconnue"), Classes = { "muted" }, FontSize = 12 }, amounts, actions, error } };
+            new TextBlock { Text = "Émise le " + (data.IssuedOn?.ToString("dd/MM/yyyy") ?? "date inconnue"), Classes = { "muted" }, FontSize = Ui.Text.Micro }, amounts, actions, error } };
         if (invoice.Overpaid > 0) content.Children.Add(new TextBlock { Text = $"Excédent encaissé : {RevenueExporter.Money(invoice.Overpaid)}. Vérifiez les paiements dans le livre.", TextWrapping = Avalonia.Media.TextWrapping.Wrap, Classes = { "muted" } });
         if (invoice.Payments.Count > 0)
         {

@@ -107,10 +107,14 @@
       <x:Double x:Key="PagePadding">30</x:Double>
       <CornerRadius x:Key="PanelCornerRadius">14</CornerRadius>
       <CornerRadius x:Key="ControlCornerRadius">8</CornerRadius>
+      <!-- Type scale: the same seven sizes as Ui.Text in Ui.cs (a test keeps them equal). -->
+      <x:Double x:Key="FontSizeMicro">12</x:Double>
       <x:Double x:Key="FontSizeCaption">13</x:Double>
       <x:Double x:Key="FontSizeBody">14</x:Double>
-      <x:Double x:Key="FontSizeSubtitle">18</x:Double>
-      <x:Double x:Key="FontSizeTitle">30</x:Double>
+      <x:Double x:Key="FontSizeSection">16</x:Double>
+      <x:Double x:Key="FontSizeTitle">20</x:Double>
+      <x:Double x:Key="FontSizePage">26</x:Double>
+      <x:Double x:Key="FontSizeDisplay">40</x:Double>
       <x:Double x:Key="ControlHeight">42</x:Double>
 
       <!-- Icons: 24x24 grid, drawn with a 1.8 px round stroke -->
@@ -167,7 +171,7 @@
 
   <Style Selector="Window">
     <Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI, Inter, Arial" />
-    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
     <Setter Property="Background" Value="{DynamicResource CanvasBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
   </Style>
@@ -201,7 +205,7 @@
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="Padding" Value="12,10" />
     <Setter Property="MinHeight" Value="42" />
-    <Setter Property="FontSize" Value="15" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
   </Style>
   <Style Selector="TextBox:focus">
     <Setter Property="BorderBrush" Value="{DynamicResource FocusBorderBrush}" />
@@ -244,7 +248,7 @@
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="Padding" Value="12,10" />
     <Setter Property="MinHeight" Value="42" />
-    <Setter Property="FontSize" Value="15" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
   </Style>
   <Style Selector="CalendarDatePicker /template/ Border#Background, CalendarDatePicker:pointerover /template/ Border#Background, CalendarDatePicker:focus-within /template/ Border#Background">
     <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
@@ -266,7 +270,7 @@
   <Style Selector="CheckBox.pointing:checked:pointerover /template/ Border#NormalRectangle"><Setter Property="Background" Value="{DynamicResource SuccessBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}" /></Style>
   <Style Selector="CheckBox">
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
-    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
   </Style>
   <Style Selector="ToolTip">
     <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />

@@ -10,7 +10,7 @@ public partial class MainWindow
     private readonly CheckBox _estimateOutsource = new() { Content = "Fabrication confiée à un fournisseur" };
     private readonly TextBox _estimateSupplier = new() { PlaceholderText = "Nom du fournisseur (facultatif)" };
     private readonly TextBox _estimateSupplierCost = Number(""), _estimateSupplierShipping = Number("0"), _estimateSupplierQuantity = Number("1");
-    private readonly StackPanel _estimateSupplierInputs = new() { Spacing = 14, IsVisible = false };
+    private readonly StackPanel _estimateSupplierInputs = new() { Spacing = 16, IsVisible = false };
     private bool IsEstimateOutsourced => IsEstimateV2 && EstimateScopeIndex != 1 && _estimateOutsource.IsChecked == true;
 
     private void InitializeEstimateSubcontracting()

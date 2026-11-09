@@ -254,7 +254,7 @@ public partial class MainWindow : Window
         GlobalSearchContainer.Width = compact ? 260 : 300;
         // The model search is a browser: its page chrome is thinned so the web page gets the room.
         var browser = ModelSearchWorkspacePanel.IsVisible;
-        CentralWorkspace.Margin = browser ? new Avalonia.Thickness(16, 12) : new Avalonia.Thickness(34, 28);
+        CentralWorkspace.Margin = browser ? new Avalonia.Thickness(16, 12) : new Avalonia.Thickness(32, 32);
         CentralWorkspace.RowSpacing = browser ? 8 : 24;
         PageSubtitle.IsVisible = !browser;
         var centralMargins = browser ? 32d : 68d;
@@ -307,7 +307,7 @@ public partial class MainWindow : Window
         var close = new Button { Content = Icons.Glyph("IconClose", 14), Classes = { "icon-action" }, MinWidth = 36, MinHeight = 36, Padding = new Avalonia.Thickness(4, 0), VerticalAlignment = VerticalAlignment.Top };
         ToolTip.SetTip(close, "Fermer");
         Avalonia.Automation.AutomationProperties.SetName(close, "Fermer la notification");
-        var layout = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), RowDefinitions = new RowDefinitions("Auto,Auto"), ColumnSpacing = 10 };
+        var layout = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), RowDefinitions = new RowDefinitions("Auto,Auto"), ColumnSpacing = 12 };
         Grid.SetColumn(text, 1); Grid.SetColumn(close, 2);
         layout.Children.Add(icon); layout.Children.Add(text); layout.Children.Add(close);
         var toast = new Border { Classes = { "toast", error ? "error" : "success" }, Child = layout, Tag = message };

@@ -43,13 +43,13 @@ public abstract class DialogWindow : Window
         }
         if (destructive) Opened += (_, _) => cancel.Focus();
 
-        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, HorizontalAlignment = HorizontalAlignment.Right };
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, HorizontalAlignment = HorizontalAlignment.Right };
         if (extraAction is not null) actions.Children.Add(extraAction);
         actions.Children.Add(cancel);
         actions.Children.Add(primary);
 
         var headings = new StackPanel { Spacing = 8 };
-        HeadingText = new TextBlock { Text = heading, Classes = { "brand-heading" }, FontSize = 26, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap };
+        HeadingText = new TextBlock { Text = heading, Classes = { "brand-heading" }, FontSize = Ui.Text.Page, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap };
         headings.Children.Add(HeadingText);
         if (!string.IsNullOrWhiteSpace(description))
             headings.Children.Add(new TextBlock { Text = description, LineHeight = 22, Classes = { "muted" }, TextWrapping = TextWrapping.Wrap });
@@ -57,10 +57,10 @@ public abstract class DialogWindow : Window
         Avalonia.Automation.AutomationProperties.SetName(close, "Fermer sans enregistrer");
         ToolTip.SetTip(close, "Fermer sans enregistrer · Échap");
         close.Click += (_, _) => Close(false);
-        var headerGrid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 14, Children = { headings, close } };
+        var headerGrid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 16, Children = { headings, close } };
         Grid.SetColumn(close, 1);
-        var header = new Border { Padding = new Thickness(28, 26, 24, 22), BorderBrush = (IBrush?)Application.Current?.FindResource("SubtleBorderBrush"), BorderThickness = new Thickness(0, 0, 0, 1), Child = headerGrid };
-        var form = new StackPanel { Margin = new Thickness(28, 22, 28, 22), Spacing = 20 };
+        var header = new Border { Padding = new Thickness(32, 24, 24, 24), BorderBrush = (IBrush?)Application.Current?.FindResource("SubtleBorderBrush"), BorderThickness = new Thickness(0, 0, 0, 1), Child = headerGrid };
+        var form = new StackPanel { Margin = new Thickness(32, 24, 32, 24), Spacing = 24 };
         foreach (var control in body) form.Children.Add(control);
 
         var footer = new Border
@@ -68,7 +68,7 @@ public abstract class DialogWindow : Window
             Background = (IBrush?)Application.Current?.FindResource("SidebarBrush"),
             BorderBrush = (IBrush?)Application.Current?.FindResource("SubtleBorderBrush"),
             BorderThickness = new Thickness(0, 1, 0, 0),
-            Padding = new Thickness(26, 14),
+            Padding = new Thickness(24, 16),
             Child = actions
         };
         var root = new Grid { RowDefinitions = new RowDefinitions("Auto,*,Auto"), Classes = { "dialog-form" } };
@@ -194,7 +194,7 @@ public static class FormKit
     public static StackPanel Field(string label, Control input, string? unit = null, string? hint = null)
     {
         if (input is ComboBox or TextBox or AutoCompleteBox) input.HorizontalAlignment = HorizontalAlignment.Stretch;
-        var caption = new TextBlock { Text = label, FontSize = 14, FontWeight = FontWeight.Medium, TextWrapping = TextWrapping.Wrap, Classes = { "form-label" } };
+        var caption = new TextBlock { Text = label, FontSize = Ui.Text.Body, FontWeight = FontWeight.Medium, TextWrapping = TextWrapping.Wrap, Classes = { "form-label" } };
         Avalonia.Automation.AutomationProperties.SetName(input, label);
         Avalonia.Automation.AutomationProperties.SetLabeledBy(input, caption);
         var help = string.Join(" ", new[] { string.IsNullOrWhiteSpace(unit) ? null : "Unité : " + unit + ".", hint }.Where(text => !string.IsNullOrWhiteSpace(text)));
@@ -206,13 +206,13 @@ public static class FormKit
             Grid.SetColumn(suffix, 1);
             row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 8, Children = { input, suffix } };
         }
-        var field = new StackPanel { Spacing = 7, Children = { caption, row } };
+        var field = new StackPanel { Spacing = 8, Children = { caption, row } };
         // A field whose input is hidden (e.g. company name for an individual) hides its label too.
         field.Bind(Visual.IsVisibleProperty, input.GetObservable(Visual.IsVisibleProperty));
-        var inlineError = new TextBlock { IsVisible = false, TextWrapping = TextWrapping.Wrap, FontSize = 13, Foreground = (IBrush?)Application.Current?.FindResource("DangerBrush") ?? Brushes.IndianRed };
+        var inlineError = new TextBlock { IsVisible = false, TextWrapping = TextWrapping.Wrap, FontSize = Ui.Text.Caption, Foreground = (IBrush?)Application.Current?.FindResource("DangerBrush") ?? Brushes.IndianRed };
         field.Children.Add(inlineError);
         FieldErrors.Remove(input); FieldErrors.Add(input, inlineError);
-        if (hint is not null) field.Children.Add(new TextBlock { Text = hint, Classes = { "muted" }, FontSize = 13, LineHeight = 20, TextWrapping = TextWrapping.Wrap });
+        if (hint is not null) field.Children.Add(new TextBlock { Text = hint, Classes = { "muted" }, FontSize = Ui.Text.Caption, LineHeight = 20, TextWrapping = TextWrapping.Wrap });
         return field;
     }
 
@@ -278,5 +278,5 @@ public static class FormKit
         error.IsVisible = false; error.Text = string.Empty;
     }
 
-    public static TextBlock SectionLabel(string text) => new() { Text = text.ToUpperInvariant(), Classes = { "overline" }, Margin = new Thickness(0, 6, 0, 0) };
+    public static TextBlock SectionLabel(string text) => new() { Text = text.ToUpperInvariant(), Classes = { "overline" }, Margin = new Thickness(0, 8, 0, 0) };
 }

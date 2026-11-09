@@ -146,26 +146,26 @@ public partial class MainWindow
         AddSettingsCard("atelier", BuildWorkshopSettingsCard(workspaceRoot));
         var remote = new Button { Content = "Ouvrir l’atelier distant MS3DForge", MinHeight = 42 };
         remote.Click += (_, _) => OpenRemoteWorkspace();
-        AddSettingsCard("atelier", new Border { Classes = { "card-raised" }, Padding = new Avalonia.Thickness(22, 20), Child = new StackPanel { Spacing = 10, Children = {
-            new TextBlock { Text = "Accès serveur · clients, projets et tâches", FontSize = 18 },
+        AddSettingsCard("atelier", new Border { Classes = { "card-raised" }, Padding = new Avalonia.Thickness(24, 24), Child = new StackPanel { Spacing = 12, Children = {
+            new TextBlock { Text = "Accès serveur · clients, projets et tâches", FontSize = Ui.Text.Section },
             new TextBlock { Text = "Clients, projets et tâches actualisés automatiquement toutes les 30 secondes après connexion. Dernière copie consultable hors connexion. L’atelier local historique reste indépendant.", TextWrapping = TextWrapping.Wrap }, remote } } });
 
         Border Card(string title, string description, Control? headerAction, params Control[] content)
         {
-            var stack = new StackPanel { Spacing = 14 };
+            var stack = new StackPanel { Spacing = 16 };
             var icon = title switch { "Performances" => "IconSettings", "Arborescence des projets" => "IconProjects", "Stockage" => "IconCollections", "Espace de travail" => "IconProjects", _ => "IconInfo" };
             stack.Children.Add(SettingsCardHeader(icon, title, description, headerAction));
             foreach (var control in content) stack.Children.Add(control);
-            return new Border { Classes = { "card-raised" }, Padding = new Avalonia.Thickness(22, 20), Child = stack };
+            return new Border { Classes = { "card-raised" }, Padding = new Avalonia.Thickness(24, 24), Child = stack };
         }
 
         // ---- workspace: the folder is shown as a field one can select from, and the three actions follow
-        var path = new SelectableTextBlock { Text = workspaceRoot, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, FontSize = 15, LineHeight = 23 };
+        var path = new SelectableTextBlock { Text = workspaceRoot, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, FontSize = Ui.Text.Body, LineHeight = 23 };
         var pathField = new Border
         {
             Background = (IBrush?)Avalonia.Application.Current?.FindResource("SurfaceBrush"), CornerRadius = new Avalonia.CornerRadius(8),
-            BorderBrush = (IBrush?)Avalonia.Application.Current?.FindResource("SubtleBorderBrush"), BorderThickness = new Avalonia.Thickness(1), Padding = new Avalonia.Thickness(12, 10),
-            Child = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 10, Children = { Icons.Glyph("IconProjects", 18), path } }
+            BorderBrush = (IBrush?)Avalonia.Application.Current?.FindResource("SubtleBorderBrush"), BorderThickness = new Avalonia.Thickness(1), Padding = new Avalonia.Thickness(12, 12),
+            Child = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 12, Children = { Icons.Glyph("IconProjects", 18), path } }
         };
         Grid.SetColumn(path, 1);
 

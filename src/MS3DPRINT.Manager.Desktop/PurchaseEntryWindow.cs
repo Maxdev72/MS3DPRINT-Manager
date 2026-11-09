@@ -40,7 +40,7 @@ public sealed class PurchaseEntryWindow : DialogWindow
         var paste = new Button { Content = "Coller une capture" };
         ToolTip.SetTip(paste, "Colle l’image copiée (capture d’écran, photo copiée) ou le fichier copié, puis la lit · Ctrl+V");
         paste.Click += async (_, _) => await PasteDocumentAsync();
-        var readers = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 10, Children = { attach, paste } };
+        var readers = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 12, Children = { attach, paste } };
         var save = new Button { Content = existing is null ? "Enregistrer" : "Enregistrer la correction" };
         save.Click += Save_Click;
         var body = new List<Control>

@@ -51,12 +51,12 @@ public partial class MainWindow
                 RecentFilesList.Children.Clear();
                 foreach (var item in entries.Take(shown))
                 {
-                    var labels = new StackPanel { Spacing = 3, Children =
+                    var labels = new StackPanel { Spacing = 4, Children =
                     {
                         new TextBlock { Text = System.IO.Path.GetFileName(item.Path), FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis },
                         new TextBlock { Text = item.Available ? item.Entry.OpenedAt.ToLocalTime().ToString("dd/MM à HH:mm") : "Indisponible · déplacé ou supprimé", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap }
                     } };
-                    var open = new Button { Tag = item.Path, Content = labels, Classes = { "workspace-card" }, HorizontalContentAlignment = HorizontalAlignment.Stretch, Padding = new Avalonia.Thickness(10, 8), IsEnabled = item.Safe };
+                    var open = new Button { Tag = item.Path, Content = labels, Classes = { "workspace-card" }, HorizontalContentAlignment = HorizontalAlignment.Stretch, Padding = new Avalonia.Thickness(12, 8), IsEnabled = item.Safe };
                     ToolTip.SetTip(open, item.Entry.RelativePath);
                     Avalonia.Automation.AutomationProperties.SetName(open, "Réouvrir " + System.IO.Path.GetFileName(item.Path));
                     open.Click += async (_, _) =>

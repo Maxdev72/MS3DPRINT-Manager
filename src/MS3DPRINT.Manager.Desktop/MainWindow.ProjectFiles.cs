@@ -67,7 +67,7 @@ public partial class MainWindow
         ProjectList.Children.Add(toolbar);
         if (directory == project.ProjectPath)
             AddProjectOverview(project);
-        ProjectList.Children.Add(new TextBlock { Text = "Fichiers du projet", FontSize = 18, FontWeight = FontWeight.SemiBold, Margin = new Avalonia.Thickness(0, 8, 0, 4) });
+        ProjectList.Children.Add(new TextBlock { Text = "Fichiers du projet", FontSize = Ui.Text.Section, FontWeight = FontWeight.SemiBold, Margin = new Avalonia.Thickness(0, 8, 0, 4) });
 
         var trail = new List<(string Label, Func<Task>? Go)>();
         if (origin is null) trail.Add(("Projets", GoToProjectsAsync));

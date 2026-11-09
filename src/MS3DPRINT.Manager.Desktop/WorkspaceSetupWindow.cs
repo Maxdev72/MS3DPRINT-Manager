@@ -16,7 +16,7 @@ public sealed class WorkspaceSetupWindow : DialogWindow
     {
         Title = "Bienvenue";
         Width = 560; Height = 640; MinWidth = 440;
-        var list = new StackPanel { Spacing = 10 };
+        var list = new StackPanel { Spacing = 12 };
         foreach (var folder in detected)
             Add(list, StorageProviderCatalog.Name(folder.Kind) + " · synchronisé", SyncFolderDetector.WorkspaceIn(folder), SyncFolderDetector.WorkspaceIn(folder));
         Add(list, "Dossier local", localRoot, localRoot);

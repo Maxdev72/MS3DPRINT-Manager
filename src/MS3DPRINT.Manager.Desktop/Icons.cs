@@ -27,7 +27,7 @@ public static class Icons
     public static Control Label(string key, string text, double size = 16)
         => new StackPanel
         {
-            Orientation = Orientation.Horizontal, Spacing = 10,
+            Orientation = Orientation.Horizontal, Spacing = 12,
             Children = { Glyph(key, size), new TextBlock { Text = text, VerticalAlignment = VerticalAlignment.Center } }
         };
 }

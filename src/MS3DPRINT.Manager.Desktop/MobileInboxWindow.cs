@@ -29,7 +29,7 @@ public sealed class MobileInboxWindow : DialogWindow
             var p = item.Purchase;
             var box = new CheckBox { IsChecked = true, VerticalAlignment = VerticalAlignment.Center };
             _rows.Add((box, item));
-            var text = new StackPanel { Spacing = 3, Children =
+            var text = new StackPanel { Spacing = 4, Children =
             {
                 new TextBlock { Text = $"{p.PurchasedOn:dd/MM/yyyy} · {p.Supplier} · {RevenueExporter.Money(p.Amount)}", FontWeight = Avalonia.Media.FontWeight.SemiBold, TextWrapping = Avalonia.Media.TextWrapping.Wrap },
                 new TextBlock { Text = $"{p.Label} · {p.PaymentMethod}" + (string.IsNullOrWhiteSpace(p.ProjectRef) ? "" : $" · projet {p.ProjectRef}") + (item.PhotoPath is null ? " · sans photo" : " · photo jointe"), Classes = { "muted" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap }

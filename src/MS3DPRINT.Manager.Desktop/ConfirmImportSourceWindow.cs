@@ -19,7 +19,7 @@ public sealed class ConfirmImportSourceWindow : DialogWindow
             stop.Click += (_, _) => { stopImport(); Close(false); };
         }
         static Control Location(string label, string path) => FormKit.Field(label,
-            new SelectableTextBlock { Text = path, TextWrapping = TextWrapping.Wrap, FontSize = 14 });
+            new SelectableTextBlock { Text = path, TextWrapping = TextWrapping.Wrap, FontSize = Ui.Text.Body });
         var body = new List<Control> { Location("Original dans le dossier source", source), Location("Copie importée", imported) };
         if (stop is not null) body.Add(stop);
         Layout("Supprimer le fichier source ?",

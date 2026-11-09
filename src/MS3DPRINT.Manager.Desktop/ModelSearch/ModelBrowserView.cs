@@ -71,7 +71,7 @@ public sealed class ModelBrowserView : UserControl
     private readonly Grid _viewHost = new();
     private readonly Control _startPage;
     // the start page has its own big search box; an example is typed into it, like someone searching
-    private readonly TextBox _startInput = new() { VerticalAlignment = VerticalAlignment.Center, FontSize = 16 };
+    private readonly TextBox _startInput = new() { VerticalAlignment = VerticalAlignment.Center, FontSize = Ui.Text.Section };
     private readonly DispatcherTimer _typing = new() { Interval = TimeSpan.FromMilliseconds(65) };
     // all in French, and things one really prints: tools, storage, spare parts, decoration
     private static readonly string[] ExampleQueries =
@@ -177,7 +177,7 @@ public sealed class ModelBrowserView : UserControl
         _viewHost.Children.Add(_startPage);
 
         var chrome = new StackPanel { Spacing = 0, Children = { _tabRow, _toolbar, _progress, _sitePanel } };
-        var root = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), RowSpacing = 6, Children = { chrome, _viewHost } };
+        var root = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), RowSpacing = 8, Children = { chrome, _viewHost } };
         Grid.SetRow(_viewHost, 1);
         Content = root;
 
@@ -285,7 +285,7 @@ public sealed class ModelBrowserView : UserControl
         var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { title, selectAll } };
         Grid.SetColumn(selectAll, 1);
 
-        var groups = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*"), ColumnSpacing = 28 };
+        var groups = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*"), ColumnSpacing = 32 };
         var groupIndex = 0;
         foreach (var group in ModelSearchSite.Defaults.GroupBy(site => site.Category))
         {
@@ -297,10 +297,10 @@ public sealed class ModelBrowserView : UserControl
                 {
                     Content = new StackPanel
                     {
-                        Orientation = Orientation.Horizontal, Spacing = 6,
+                        Orientation = Orientation.Horizontal, Spacing = 8,
                         Children = { new Grid { Children = { Icons.Glyph("IconPlus", 14), Icons.Glyph("IconCheck", 14) } }, new TextBlock { Text = name, VerticalAlignment = VerticalAlignment.Center } }
                     },
-                    Classes = { "filter-chip" }, Margin = new Thickness(0, 0, 6, 6)
+                    Classes = { "filter-chip" }, Margin = new Thickness(0, 0, 8, 8)
                 };
                 if (site.Note.Length > 0) ToolTip.SetTip(chip, site.Note);
                 chip.Click += (_, _) => Toggle(name);
@@ -308,7 +308,7 @@ public sealed class ModelBrowserView : UserControl
                 chips.Children.Add(chip);
             }
             var label = new TextBlock { Text = group.Key, Classes = { "caption" }, FontWeight = FontWeight.SemiBold, Margin = new Thickness(2, 0, 0, 8) };
-            var cell = new StackPanel { Margin = new Thickness(0, 0, 0, 14), Children = { label, chips } };
+            var cell = new StackPanel { Margin = new Thickness(0, 0, 0, 16), Children = { label, chips } };
             if (groupIndex % 2 == 0) groups.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
             Grid.SetRow(cell, groupIndex / 2);
             Grid.SetColumn(cell, groupIndex % 2);
@@ -320,18 +320,18 @@ public sealed class ModelBrowserView : UserControl
         _siteHints.Add(hint);
         return new StackPanel
         {
-            Spacing = 10,
+            Spacing = 12,
             Children = { header, groups, hint, new TextBlock { Text = LicenceReminder, Classes = { "caption" }, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 0) } }
         };
     }
 
     private Control BuildStartPage()
     {
-        var title = new TextBlock { Text = "Cherchez un modèle sur plusieurs sites à la fois", Classes = { "page-title" }, FontSize = 34, LetterSpacing = -0.6, HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap };
+        var title = new TextBlock { Text = "Cherchez un modèle sur plusieurs sites à la fois", Classes = { "page-title" }, FontSize = Ui.Text.Page, LetterSpacing = -0.6, HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap };
         var lead = new TextBlock
         {
-            Text = "Un onglet s’ouvre pour chaque site coché. Vous pouvez aussi saisir une adresse.", FontSize = 14, Classes = { "muted" },
-            HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 26)
+            Text = "Un onglet s’ouvre pour chaque site coché. Vous pouvez aussi saisir une adresse.", FontSize = Ui.Text.Body, Classes = { "muted" },
+            HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 24)
         };
 
         _startInput.Classes.Add("search-input");
@@ -344,7 +344,7 @@ public sealed class ModelBrowserView : UserControl
             Classes = { "search-box" }, Height = 60, MaxWidth = 700, CornerRadius = new CornerRadius(14), HorizontalAlignment = HorizontalAlignment.Stretch,
             Child = new Grid
             {
-                ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 10,
+                ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 12,
                 Children = { Icons.Glyph("IconSearch", 20), _startInput, go }
             }
         };
@@ -355,12 +355,12 @@ public sealed class ModelBrowserView : UserControl
 
         // the site choice sits on the page itself, not in a box of its own: the search box is the only raised thing here
         var chooser = BuildChooser();
-        chooser.Margin = new Thickness(4, 44, 4, 0);
-        var shortcuts = new WrapPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 30, 0, 0) };
+        chooser.Margin = new Thickness(4, 48, 4, 0);
+        var shortcuts = new WrapPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 32, 0, 0) };
         foreach (var (keys, meaning) in new[] { ("Ctrl+L", "barre"), ("Ctrl+T", "nouvel onglet"), ("Ctrl+W", "fermer l’onglet"), ("F5", "actualiser") })
         {
             var key = new Border { Classes = { "key-hint" }, VerticalAlignment = VerticalAlignment.Center, Child = new TextBlock { Text = keys, Classes = { "caption" } } };
-            var label = new TextBlock { Text = meaning, Classes = { "faint" }, FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 18, 0) };
+            var label = new TextBlock { Text = meaning, Classes = { "faint" }, FontSize = Ui.Text.Micro, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 16, 0) };
             shortcuts.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Children = { key, label } });
         }
 
@@ -586,7 +586,7 @@ public sealed class ModelBrowserView : UserControl
         var close = new Button { Content = Icons.Glyph("IconClose", 12), Classes = { "tab-close" } };
         Describe(close, "Fermer l’onglet (Ctrl+W)");
         var dot = new Border { Width = 7, Height = 7, CornerRadius = new CornerRadius(4), VerticalAlignment = VerticalAlignment.Center, IsVisible = false, Background = (IBrush?)Application.Current?.FindResource("AccentBrush") };
-        var header = new Button { Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { label, dot, close } }, Classes = { "browser-tab", "sleeping" } };
+        var header = new Button { Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { label, dot, close } }, Classes = { "browser-tab", "sleeping" } };
         AutomationProperties.SetName(header, "Onglet " + title);
         var tab = new BrowserTab { Header = header, Site = site, Address = uri, LoadingDot = dot, Heavy = ModelSearchSite.Defaults.Any(known => known.Name == site && known.Heavy) };
         header.Click += (_, _) => Select(tab);

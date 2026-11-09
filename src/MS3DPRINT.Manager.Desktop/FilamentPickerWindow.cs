@@ -14,7 +14,7 @@ public static class FilamentChoiceVisual
         // Never wrap, and the price on the second line: in a narrow box the name keeps the room it needs.
         var title = new TextBlock { Text = filament.Brand + " · " + filament.Name, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis };
         var details = $"{filament.PricePerKg:0.00} €/kg · " + filament.Material + (string.IsNullOrWhiteSpace(filament.Color) ? "" : " · " + filament.Color) + (filament.IsAbrasive ? " · Abrasif" : "");
-        return new StackPanel { Spacing = 3, Children = { title, new TextBlock { Text = details, Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis } } };
+        return new StackPanel { Spacing = 4, Children = { title, new TextBlock { Text = details, Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis } } };
     }
 }
 

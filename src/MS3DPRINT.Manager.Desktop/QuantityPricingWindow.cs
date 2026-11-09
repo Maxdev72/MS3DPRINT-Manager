@@ -30,13 +30,13 @@ public sealed class QuantityPricingWindow : DialogWindow
             var discount=new TextBox {Text=(tiers.FirstOrDefault(t=>t.Quantity==quantity)?.DiscountPercent??QuantityPricing.Defaults().Single(t=>t.Quantity==quantity).DiscountPercent).ToString("0.##",Culture),Width=85,HorizontalAlignment=HorizontalAlignment.Right};
             AutomationProperties.SetName(discount,$"Remise pour {quantity} pièce{(quantity==1?"":"s")}");
             discount.Width=68;
-            var label=new TextBlock {Text=$"{quantity} pièce{(quantity==1?"":"s")}",FontSize=14,FontWeight=FontWeight.SemiBold,VerticalAlignment=VerticalAlignment.Center};
+            var label=new TextBlock {Text=$"{quantity} pièce{(quantity==1?"":"s")}",FontSize=Ui.Text.Body,FontWeight=FontWeight.SemiBold,VerticalAlignment=VerticalAlignment.Center};
             var percent=new TextBlock {Text="%",VerticalAlignment=VerticalAlignment.Center};
             var heading=new Grid {ColumnDefinitions=new("70,*,Auto,Auto"),ColumnSpacing=8};heading.Children.Add(label);Grid.SetColumn(discount,2);heading.Children.Add(discount);Grid.SetColumn(percent,3);heading.Children.Add(percent);
-            var price=new TextBlock {FontSize=16,FontWeight=FontWeight.SemiBold,TextWrapping=TextWrapping.Wrap};
+            var price=new TextBlock {FontSize=Ui.Text.Section,FontWeight=FontWeight.SemiBold,TextWrapping=TextWrapping.Wrap};
             var detail=new TextBlock {TextWrapping=TextWrapping.Wrap,Classes={"caption"}};
             var prices=new StackPanel {Spacing=4,VerticalAlignment=VerticalAlignment.Center,Children={price,detail}};Grid.SetColumn(prices,1);heading.Children.Add(prices);
-            gridRows.Children.Add(new Border {BorderBrush=(IBrush?)Application.Current?.FindResource("SubtleBorderBrush"),BorderThickness=new Thickness(0,0,0,1),Padding=new Thickness(0,10),Child=heading});
+            gridRows.Children.Add(new Border {BorderBrush=(IBrush?)Application.Current?.FindResource("SubtleBorderBrush"),BorderThickness=new Thickness(0,0,0,1),Padding=new Thickness(0,12),Child=heading});
             _rows.Add((quantity,discount,price,detail));discount.TextChanged+=(_,_)=>Refresh();
         }
         body.Add(new TextBlock {Text="Coûts et marges projetés : frais par commande conservés, frais par pièce adaptés. Avec une capacité renseignée, les impressions sont comptées par plateaux complets ; sinon poids et durée sont extrapolés. Vérifiez le slicer ou le devis fournisseur avant de vous engager.",TextWrapping=TextWrapping.Wrap,Classes={"caption"}});

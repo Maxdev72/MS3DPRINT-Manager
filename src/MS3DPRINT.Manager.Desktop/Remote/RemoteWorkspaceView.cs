@@ -42,7 +42,7 @@ public sealed partial class RemoteWorkspaceView : UserControl, IDisposable
     private readonly TextBox _taskNotes = Field("Notes de la tâche", "RemoteTaskNotes");
     private readonly TextBlock _editing = Text("Nouvelle tâche");
     private readonly StackPanel _taskList = new() { Spacing = 8 };
-    private readonly StackPanel _confirmation = new() { Spacing = 10, IsVisible = false };
+    private readonly StackPanel _confirmation = new() { Spacing = 12, IsVisible = false };
     private readonly List<Control> _mutations = [];
     private readonly List<Control> _projectMutations = [];
     private readonly Button _login;
@@ -85,7 +85,7 @@ public sealed partial class RemoteWorkspaceView : UserControl, IDisposable
         _projects.SelectionChanged += async (_, _) => { if (!_binding) await RunAsync(LoadSelectedProjectAsync); };
         _kind.SelectionChanged += (_, _) => UpdateClientFields();
         _taskList.Children.Add(Text("Aucune tâche chargée."));
-        var body = new StackPanel { Spacing = 16, Margin = new Thickness(18), MaxWidth = 850, HorizontalAlignment = HorizontalAlignment.Stretch };
+        var body = new StackPanel { Spacing = 16, Margin = new Thickness(16), MaxWidth = 850, HorizontalAlignment = HorizontalAlignment.Stretch };
         body.Children.Add(Text("MS3DForge · Atelier distant", size: 24));
         body.Children.Add(Text("Clients, projets et tâches du serveur. Les achats et recettes du compagnon restent liés au dossier d’échange local. Cette vue n’écrit jamais dans l’atelier local."));
         body.Children.Add(Card("Connexion sécurisée", _server, _name, _password, _login, _logout, _status, _lastRead, _refresh, _receipt));
@@ -361,7 +361,7 @@ public sealed partial class RemoteWorkspaceView : UserControl, IDisposable
     }
     private Button Action(string label, string name, Func<Task> work)
     {
-        var button = new Button { Content = label, Name = string.IsNullOrEmpty(name) ? null : name, MinHeight = 42, Margin = new Thickness(0, 2, 6, 2), HorizontalAlignment = HorizontalAlignment.Stretch };
+        var button = new Button { Content = label, Name = string.IsNullOrEmpty(name) ? null : name, MinHeight = 42, Margin = new Thickness(0, 2, 8, 2), HorizontalAlignment = HorizontalAlignment.Stretch };
         button.Click += async (_, _) => await RunAsync(work);
         return button;
     }
@@ -373,7 +373,7 @@ public sealed partial class RemoteWorkspaceView : UserControl, IDisposable
     }
     private static string Value(TextBox box) => (box.Text ?? "").Trim();
     private static TextBlock Text(string value, string? name = null, double size = 14) => new() { Text = value, Name = name, TextWrapping = TextWrapping.Wrap, FontSize = size };
-    private static StackPanel Stack(params Control[] controls) { var stack = new StackPanel { Spacing = 10 }; foreach (var control in controls) stack.Children.Add(control); return stack; }
-    private static Border Card(string title, params Control[] controls) => new() { Padding = new Thickness(14), BorderThickness = new Thickness(1), BorderBrush = Brushes.Gray, CornerRadius = new CornerRadius(10), Child = Stack([Text(title, size: 18), .. controls]) };
+    private static StackPanel Stack(params Control[] controls) { var stack = new StackPanel { Spacing = 12 }; foreach (var control in controls) stack.Children.Add(control); return stack; }
+    private static Border Card(string title, params Control[] controls) => new() { Padding = new Thickness(16), BorderThickness = new Thickness(1), BorderBrush = Brushes.Gray, CornerRadius = new CornerRadius(10), Child = Stack([Text(title, size: 18), .. controls]) };
     public void Dispose() { _disposed = true; _synchronizationTimer.Stop(); _client?.ForgetSession(); _cacheLease?.Dispose(); _cacheLease = null; if (_ownsHttp) _http.Dispose(); }
 }
