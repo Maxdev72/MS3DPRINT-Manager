@@ -331,6 +331,7 @@ public partial class MainWindow : Window
     {
         ["Accueil"] = "Bienvenue dans votre atelier. Voici ce qui mérite votre attention.",
         ["Projets"] = "Suivez vos devis, vos fabrications et vos livraisons.",
+        ["Tâches"] = "Tout ce qu’il reste à faire, projet par projet, l’échéance la plus proche en premier.",
         ["Clients"] = "Particuliers et professionnels, avec leurs projets.",
         ["Collections"] = "Modèles 3D, produits et fournisseurs.",
         ["Filaments"] = "Votre stock de matières et leurs coûts.",

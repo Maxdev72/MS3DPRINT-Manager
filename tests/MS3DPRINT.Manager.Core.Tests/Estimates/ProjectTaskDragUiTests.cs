@@ -26,9 +26,8 @@ public sealed partial class EstimateUiTests
         var owner=await Open();owner.Show();owner.Height=1000;
         try
         {
-            Invoke(owner,"ShowWorkspace","Projets");await (Task)Invoke(owner,"LoadProjectsAsync")!;
-            owner.FindControl<Button>("ProjectTrackingViewButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            var list=owner.FindControl<StackPanel>("ProjectList")!;list.GetVisualDescendants().OfType<Expander>().Single().IsExpanded=true;
+            Invoke(owner,"ShowWorkspace","Tâches");await (Task)Invoke(owner,"LoadTasksAsync",(object?)null)!;
+            var list=owner.FindControl<StackPanel>("TaskList")!;
             Dispatcher.UIThread.RunJobs();owner.UpdateLayout();
             Control Grip(string name)=>list.GetVisualDescendants().OfType<Button>().Single(b=>AutomationProperties.GetName(b)=="Déplacer la tâche : "+name);
             Border Row(string title)=>list.GetVisualDescendants().OfType<Border>().Single(b=>b.Classes.Contains("project-task-row") && b.GetVisualDescendants().OfType<Button>().Any(x=>AutomationProperties.GetName(x)=="Modifier : "+title));

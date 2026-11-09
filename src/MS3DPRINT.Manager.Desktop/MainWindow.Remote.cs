@@ -129,7 +129,6 @@ public partial class MainWindow
         ServerLoginPanel.IsVisible = IsServerWorkspace && connection?.IsAuthenticated != true && !_serverLoginDismissed
             && _serverPreloadTask is not { IsCompleted: false }; // no flash while a remembered session is being restored
         ToolTip.SetTip(ViewerNavButton, "Visualiseur 3D");
-        ProjectTrackingViewButton.IsVisible = !IsServerWorkspace;
         ProjectCalendarViewButton.IsVisible = !IsServerWorkspace;
         ProjectListViewButton.IsVisible = !IsServerWorkspace;
         foreach (var button in NavigationButtons())

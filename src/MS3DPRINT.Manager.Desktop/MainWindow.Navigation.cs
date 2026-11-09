@@ -40,6 +40,7 @@ public partial class MainWindow
         DashboardContent.IsVisible = dashboard;
         if (dashboard) _ = LoadRecentFilesAsync();
         ProjectsWorkspacePanel.IsVisible = destination == "Projets";
+        TasksWorkspacePanel.IsVisible = destination == "Tâches";
         ClientsWorkspacePanel.IsVisible = destination == "Clients";
         CollectionsWorkspacePanel.IsVisible = destination == "Collections";
         FilamentsWorkspacePanel.IsVisible = destination == "Filaments";
@@ -56,7 +57,7 @@ public partial class MainWindow
         ClearBreadcrumb();
         RevealWorkspace(destination switch
         {
-            "Projets" => ProjectsWorkspacePanel, "Clients" => ClientsWorkspacePanel, "Collections" => CollectionsWorkspacePanel,
+            "Projets" => ProjectsWorkspacePanel, "Tâches" => TasksWorkspacePanel, "Clients" => ClientsWorkspacePanel, "Collections" => CollectionsWorkspacePanel,
             "Filaments" => FilamentsWorkspacePanel, "Estimations" => EstimatesWorkspacePanel, "Imprimantes" => PrintersWorkspacePanel, "Recettes" => RevenuesWorkspacePanel, "Achats" => PurchasesWorkspacePanel,
             "Modèles 3D" => ModelSearchWorkspacePanel, "Corbeille" => TrashWorkspacePanel, "Paramètres" => SettingsWorkspacePanel, _ => DashboardContent
         });
@@ -148,6 +149,8 @@ public partial class MainWindow
                 await PreloadAsync(force: true);
             else if (projectsVisible)
                 await LoadProjectsAsync();
+            else if (destination == "Tâches")
+                await LoadTasksAsync();
             else if (clientsVisible)
                 await LoadClientsAsync();
             else if (collectionsVisible)
@@ -183,7 +186,7 @@ public partial class MainWindow
         // Reload the data only: the page, its filters and its title stay as they are.
         Task? reload = page switch
         {
-            "Projets" => LoadProjectsAsync(), "Clients" => LoadClientsAsync(), "Collections" => LoadCollectionsAsync(),
+            "Projets" => LoadProjectsAsync(), "Tâches" => LoadTasksAsync(), "Clients" => LoadClientsAsync(), "Collections" => LoadCollectionsAsync(),
             "Filaments" => LoadFilamentsAsync(), "Imprimantes" => LoadPrintersAsync(), "Recettes" => LoadRevenuesAsync(),
             "Achats" => LoadPurchasesAsync(), "Corbeille" => LoadTrashAsync(), _ => null
         };

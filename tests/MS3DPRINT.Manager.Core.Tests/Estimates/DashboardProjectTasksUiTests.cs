@@ -13,7 +13,7 @@ namespace MS3DPRINT.Manager.Core.Tests.Estimates;
 public sealed partial class EstimateUiTests
 {
     [Fact]
-    public Task Dashboard_next_task_opens_the_matching_tracking_and_updates_after_completion() => Run(async () =>
+    public Task Dashboard_next_task_opens_the_tasks_page_and_updates_after_completion() => Run(async () =>
     {
         new WorkspaceClientCreator().CreateIndividual(_root,"Fabrice","Romby","FR");
         var client=new WorkspaceClientReader().Load(_root).Single();
@@ -36,15 +36,14 @@ public sealed partial class EstimateUiTests
             Assert.Contains(row.GetVisualDescendants().OfType<TextBlock>(),t=>t.Text=="1 / 3 tâches");
             Assert.Contains(row.GetVisualDescendants().OfType<TextBlock>(),t=>t.Text=="Demain");
             foreach(var width in new[]{960d,1440d}) {owner.Width=width;await Task.Delay(280);CaptureDraftUi(owner,"dashboard-project-tasks-"+width);}
-            // Stale list filters must not hide the project opened from the dashboard.
-            owner.FindControl<TextBox>("ProjectFilterBox")!.Text="introuvable";
-            Field<ComboBox>(owner,"_projectPriorityFilterBox").SelectedIndex=3;
+            // A stale search must not hide the project opened from the dashboard.
+            owner.FindControl<TextBox>("TaskFilterBox")!.Text="introuvable";
             row.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            for(var i=0;i<100 && !owner.FindControl<StackPanel>("ProjectList")!.GetVisualDescendants().OfType<Expander>().Any(e=>e.Classes.Contains("project-task-group") && e.IsExpanded);i++) await Task.Delay(20);
-            Dispatcher.UIThread.RunJobs();owner.UpdateLayout();
-            var list=owner.FindControl<StackPanel>("ProjectList")!;
-            Assert.True(list.GetVisualDescendants().OfType<Expander>().Single(e=>e.Classes.Contains("project-task-group")).IsExpanded);
-            Assert.Equal(p.Reference,owner.FindControl<TextBox>("ProjectFilterBox")!.Text);
+            var list=owner.FindControl<StackPanel>("TaskList")!;
+            for(var i=0;i<100 && !list.GetVisualDescendants().OfType<CheckBox>().Any();i++) {await Task.Delay(20);Dispatcher.UIThread.RunJobs();owner.UpdateLayout();}
+            Assert.True(owner.FindControl<Border>("TasksWorkspacePanel")!.IsVisible);
+            Assert.Equal(p.Reference,owner.FindControl<TextBox>("TaskFilterBox")!.Text);
+            Assert.StartsWith("Pièce vélo · ",owner.FindControl<ComboBox>("NewTaskProject")!.SelectedItem!.ToString());
             var check=list.GetVisualDescendants().OfType<CheckBox>().Single(c=>AutomationProperties.GetName(c)=="Terminer : "+p.Tasks![1].Title);
             check.IsChecked=true;
             for(var i=0;i<100 && !store.LoadAll().Single().Tasks![1].IsCompleted;i++)await Task.Delay(20);

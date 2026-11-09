@@ -29,7 +29,7 @@ public partial class MainWindow
         AutomationProperties.SetName(handle, "Déplacer la tâche : " + task.Title);
         ToolTip.SetTip(handle, "Glisser pour reclasser · Alt + Haut / Bas au clavier");
         TaskDrag? drag = null;
-        Border[] Rows() => ProjectList.GetVisualDescendants().OfType<Border>()
+        Border[] Rows() => TaskList.GetVisualDescendants().OfType<Border>()
             .Where(b => b.Tag is TaskRowIdentity id && id.ProjectId == project.Profile!.Id).ToArray();
         void ClearMarkers()
         {

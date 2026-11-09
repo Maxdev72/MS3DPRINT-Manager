@@ -159,14 +159,13 @@ public partial class MainWindow
     private void RenderPcProjects()
     {
         if (!_projectListMode || _projectCatalogUnavailable) return;
-        ProjectListViewButton.Classes.Set("selected", !_projectTrackingView && !_projectCalendarView);
-        ProjectTrackingViewButton.Classes.Set("selected", _projectTrackingView);
+        ProjectListViewButton.Classes.Set("selected", !_projectCalendarView);
         ProjectCalendarViewButton.Classes.Set("selected", _projectCalendarView);
         ProjectStatusFilters.IsVisible = !_projectCalendarView || _projectCalendarFiltersVisible;
         if (_projectPriorityFilterBox.Parent is Control priorityFilters) priorityFilters.IsVisible = !_projectCalendarView || _projectCalendarFiltersVisible;
         _projectPrioritySortButton.IsVisible = !_projectCalendarView;
         ProjectFilterBar.RowSpacing = _projectCalendarView && !_projectCalendarFiltersVisible ? 0 : 14;
-        ProjectFilterBox.PlaceholderText = _projectTrackingView ? "Rechercher un projet ou une tâche…" : "Filtrer les projets…";
+        ProjectFilterBox.PlaceholderText = "Filtrer les projets…";
         UpdatePrioritySortButton();
         ProjectList.Children.Clear();
         var text = ProjectFilterBox.Text?.Trim() ?? string.Empty;
@@ -174,7 +173,7 @@ public partial class MainWindow
             .Where(project => MatchesProjectStatus(project, _projectStatusFilter))
             .Where(project => _projectPriorityFilter is null || project.Priority == _projectPriorityFilter)
             .Where(project => text.Length == 0 ||
-                              $"{project.Reference} {project.ProjectName} {project.ClientFolderName}".Contains(text, StringComparison.CurrentCultureIgnoreCase) || MatchesProjectTaskSearch(project, text))
+                              $"{project.Reference} {project.ProjectName} {project.ClientFolderName}".Contains(text, StringComparison.CurrentCultureIgnoreCase))
             .ToArray();
         var archivedCount = _allProjects.Count(project => project.IsArchived);
         var scopeCount = _projectStatusFilter == "ARCHIVES" ? archivedCount : _allProjects.Count - archivedCount;
@@ -197,7 +196,6 @@ public partial class MainWindow
 
         projects = SortProjects(projects);
         if (_projectCalendarView) { RenderProjectCalendar(projects); return; }
-        if (_projectTrackingView) { RenderProjectTracking(projects); return; }
         PagedRows.Render(ProjectList, projects, CreateProjectRow, () => CreateSortableHeader(ProjectRowColumns, ["PROJET", "CLIENT", "STATUT", "ÉCHÉANCE", "CRÉÉ LE", "ACTIONS"], _projectSortColumn, _projectSortAscending, column =>
         {
             _projectSortAscending = _projectSortColumn != column || !_projectSortAscending;
@@ -344,6 +342,13 @@ public partial class MainWindow
     private static Control CreateCreatedCell(DateTimeOffset? created) => created is { } date
         ? new TextBlock { Text = date.ToLocalTime().ToString("dd/MM/yyyy"), Classes = { "muted" }, VerticalAlignment = VerticalAlignment.Center }
         : new TextBlock { Text = "—", Classes = { "faint" }, VerticalAlignment = VerticalAlignment.Center };
+
+    private void ProjectView_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string tag }) return;
+        _projectCalendarView = tag == "calendar";
+        RenderProjects();
+    }
 
     private ProjectSummary[] SortProjects(ProjectSummary[] projects)
     {

@@ -34,6 +34,7 @@
             <TextBlock Text="ACTIVITÉ" Classes="overline nav-label" Margin="14,0,0,8" />
             <Button Classes="nav-item selected" Tag="Accueil" Click="NavigationButton_Click" AutomationProperties.Name="Accueil"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconHome}" /><TextBlock Classes="nav-label" Text="Accueil" /></StackPanel></Button>
             <Button Classes="nav-item" Tag="Projets" Click="NavigationButton_Click" AutomationProperties.Name="Projets"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"><Path Classes="icon" Data="{StaticResource IconProjects}" /><TextBlock Grid.Column="1" Classes="nav-label" Text="Projets" /><Border x:Name="NavProjectsBadge" Grid.Column="2" Classes="badge nav-label" IsVisible="False"><TextBlock x:Name="NavProjectsCount" Text="0" /></Border></Grid></Button>
+            <Button Classes="nav-item" Tag="Tâches" Click="NavigationButton_Click" AutomationProperties.Name="Tâches"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconProjectTasks}" /><TextBlock Classes="nav-label" Text="Tâches" /></StackPanel></Button>
             <Button Classes="nav-item" Tag="Clients" Click="NavigationButton_Click" AutomationProperties.Name="Clients"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"><Path Classes="icon" Data="{StaticResource IconClients}" /><TextBlock Grid.Column="1" Classes="nav-label" Text="Clients" /><Border x:Name="NavClientsBadge" Grid.Column="2" Classes="badge nav-label" IsVisible="False"><TextBlock x:Name="NavClientsCount" Text="0" /></Border></Grid></Button>
             <Button Classes="nav-item" Tag="Estimations" Click="NavigationButton_Click" AutomationProperties.Name="Estimations"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconEstimates}" /><TextBlock Classes="nav-label" Text="Estimations" /></StackPanel></Button>
             <Button Classes="nav-item" Tag="Recettes" Click="NavigationButton_Click" AutomationProperties.Name="Recettes"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconBook}" /><TextBlock Classes="nav-label" Text="Recettes" /></StackPanel></Button>
@@ -150,7 +151,6 @@
         <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
           <StackPanel x:Name="ProjectViewTabs" Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsVisible, ElementName=ProjectFilterBar}">
             <Button x:Name="ProjectListViewButton" Classes="filter-chip selected" Tag="list" Click="ProjectView_Click" AutomationProperties.Name="Vue liste des projets"><StackPanel Orientation="Horizontal" Spacing="10"><Path Classes="icon" Data="{StaticResource IconProjectList}" /><TextBlock Text="Liste" VerticalAlignment="Center" /></StackPanel></Button>
-            <Button x:Name="ProjectTrackingViewButton" Classes="filter-chip" Tag="tracking" Click="ProjectView_Click" AutomationProperties.Name="Vue suivi des projets"><StackPanel Orientation="Horizontal" Spacing="10"><Path Classes="icon" Data="{StaticResource IconProjectTasks}" /><TextBlock Text="Suivi" VerticalAlignment="Center" /></StackPanel></Button>
             <Button x:Name="ProjectCalendarViewButton" Classes="filter-chip" Tag="calendar" Click="ProjectView_Click" AutomationProperties.Name="Vue calendrier des projets"><StackPanel Orientation="Horizontal" Spacing="10"><Path Classes="icon" Data="{StaticResource IconProjectCalendar}" /><TextBlock Text="Calendrier" VerticalAlignment="Center" /></StackPanel></Button>
           </StackPanel>
           <Grid x:Name="ProjectFilterBar" Grid.Row="1" RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14" RowSpacing="14">
@@ -164,6 +164,25 @@
           </Grid>
           <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
             <StackPanel x:Name="ProjectList" HorizontalAlignment="Stretch" Spacing="0" Margin="0,0,10,0" />
+          </ScrollViewer>
+        </Grid>
+      </Border>
+      <Border x:Name="TasksWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="panel">
+        <Grid RowDefinitions="Auto,Auto,*" RowSpacing="14">
+          <StackPanel x:Name="TaskAddArea" Spacing="6">
+            <Grid ColumnDefinitions="*,280,Auto" ColumnSpacing="10">
+              <TextBox x:Name="NewTaskBox" PlaceholderText="Nouvelle tâche…" MaxLength="500" KeyDown="NewTaskBox_KeyDown" AutomationProperties.Name="Nouvelle tâche" />
+              <ComboBox x:Name="NewTaskProject" Grid.Column="1" HorizontalAlignment="Stretch" PlaceholderText="Pour quel projet ?" AutomationProperties.Name="Projet de la nouvelle tâche" />
+              <Button Grid.Column="2" Classes="primary-action" Click="AddTask_Click" AutomationProperties.Name="Ajouter la tâche"><StackPanel Orientation="Horizontal" Spacing="6"><Path Classes="icon icon-sm" Data="{StaticResource IconPlus}" /><TextBlock Text="Ajouter" /></StackPanel></Button>
+            </Grid>
+          </StackPanel>
+          <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="14">
+            <Border Classes="search-box" Height="36" Width="280"><Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"><Path Classes="icon" Data="{StaticResource IconSearch}" /><TextBox x:Name="TaskFilterBox" Grid.Column="1" Classes="search-input" PlaceholderText="Rechercher une tâche ou un projet…" TextChanged="TaskFilterText_Changed" AutomationProperties.Name="Rechercher une tâche ou un projet" /></Grid></Border>
+            <TextBlock x:Name="TasksSummary" Grid.Column="2" Classes="caption" VerticalAlignment="Center" />
+            <CheckBox x:Name="ShowCompletedTasks" Grid.Column="3" Content="Afficher les terminées" IsCheckedChanged="ShowCompletedTasks_Changed" />
+          </Grid>
+          <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
+            <StackPanel x:Name="TaskList" HorizontalAlignment="Stretch" Spacing="0" Margin="0,0,10,0" />
           </ScrollViewer>
         </Grid>
       </Border>

@@ -25,26 +25,33 @@ public sealed partial class EstimateUiTests
         var owner = await Open(); owner.Show();
         try
         {
-            Invoke(owner, "ShowWorkspace", "Projets"); owner.FindControl<TextBlock>("PageTitle")!.Text="Projets"; await (Task)Invoke(owner, "LoadProjectsAsync")!;
-            owner.FindControl<Button>("ProjectTrackingViewButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            var list = owner.FindControl<StackPanel>("ProjectList")!;
-            Expander Card() => list.GetVisualDescendants().OfType<Expander>().Single(e => e.Classes.Contains("project-task-group"));
-            Card().IsExpanded = true;
+            Invoke(owner, "ShowWorkspace", "Tâches"); await (Task)Invoke(owner, "LoadTasksAsync", (object?)null)!;
             Dispatcher.UIThread.RunJobs(); owner.UpdateLayout();
-            var input = list.GetVisualDescendants().OfType<TextBox>().Single(t => t.Name == "QuickProjectTask");
+            var list = owner.FindControl<StackPanel>("TaskList")!;
+            var input = owner.FindControl<TextBox>("NewTaskBox")!;
             input.Text = "Livrer les pièces";
-            list.GetVisualDescendants().OfType<Button>().Single(b => AutomationProperties.GetName(b) == "Ajouter une tâche à Pièce vélo").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            // Without a project the task is refused and the text stays.
+            await (Task)Invoke(owner, "AddTaskAsync")!;
+            Assert.Equal(2, store.LoadAll().Single().Tasks!.Count);
+            Assert.Equal("Livrer les pièces", input.Text);
+            owner.FindControl<ComboBox>("NewTaskProject")!.SelectedIndex = 0;
+            await (Task)Invoke(owner, "AddTaskAsync")!;
             await WaitForProjectTaskCount(store, 3);
             await Task.Delay(100); Dispatcher.UIThread.RunJobs(); owner.UpdateLayout();
             var first = list.GetVisualDescendants().OfType<CheckBox>().Single(c => AutomationProperties.GetName(c) == "Terminer : Modéliser la pièce");
-            list.GetVisualDescendants().OfType<TextBox>().Single(t => t.Name == "QuickProjectTask").Text = "Brouillon à garder";
+            Assert.Equal("", input.Text);
+            input.Text = "Brouillon à garder";
             first.IsChecked = true;
             for (var i=0;i<60 && !store.LoadAll().Single().Tasks![0].IsCompleted;i++) await Task.Delay(20);
             Assert.True(store.LoadAll().Single().Tasks![0].IsCompleted);
             await Task.Delay(100); Dispatcher.UIThread.RunJobs(); owner.UpdateLayout();
-            Assert.Equal("Brouillon à garder",list.GetVisualDescendants().OfType<TextBox>().Single(t=>t.Name=="QuickProjectTask").Text);
-            Assert.Contains(list.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "Prochaine tâche : Envoyer le modèle au client");
-            foreach (var width in new[]{960d,1440d}) { owner.Width=width; await Task.Delay(280); CaptureDraftUi(owner,"project-tracking-"+width); }
+            Assert.Equal("Brouillon à garder",input.Text);
+            // A completed task leaves the list until « Afficher les terminées » is ticked.
+            Assert.DoesNotContain(list.GetVisualDescendants().OfType<CheckBox>(), c => AutomationProperties.GetName(c) == "Rouvrir : Modéliser la pièce");
+            Assert.Contains(list.GetVisualDescendants().OfType<TextBlock>(), t => t.Text?.EndsWith("1 / 3 faites") == true);
+            owner.FindControl<CheckBox>("ShowCompletedTasks")!.IsChecked = true; Dispatcher.UIThread.RunJobs(); owner.UpdateLayout();
+            Assert.Contains(list.GetVisualDescendants().OfType<CheckBox>(), c => AutomationProperties.GetName(c) == "Rouvrir : Modéliser la pièce");
+            foreach (var width in new[]{960d,1440d}) { owner.Width=width; await Task.Delay(280); CaptureDraftUi(owner,"tasks-page-"+width); }
             list.GetVisualDescendants().OfType<Button>().Single(b=>AutomationProperties.GetName(b)=="Modifier : Envoyer le modèle au client").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             var dialog = await WaitForDialog<ProjectTaskWindow>(owner);
             var body=owner.FindControl<Border>("SidePanelBody")!;
@@ -57,7 +64,7 @@ public sealed partial class EstimateUiTests
             var moving=(Task<bool>)Invoke(owner,"MoveProjectTaskAsync",new WorkspaceProjectReader().Load(_root).Single(),store.LoadAll().Single().Tasks![2],-1)!;
             Assert.True(await moving);
             Assert.Equal("Livrer les pièces",store.LoadAll().Single().Tasks![1].Title);
-            await (Task)Invoke(owner,"LoadProjectsAsync")!;
+            await (Task)Invoke(owner,"LoadTasksAsync",(object?)null)!;
             Assert.Equal(3,store.LoadAll().Single().Tasks!.Count);
             Assert.Equal(ProjectStatus.Quote,store.LoadAll().Single().Status);
         }
@@ -84,15 +91,11 @@ public sealed partial class EstimateUiTests
         var owner=await Open();owner.Show();
         try
         {
-            Invoke(owner,"ShowWorkspace","Projets");await (Task)Invoke(owner,"LoadProjectsAsync")!;
-            owner.FindControl<Button>("ProjectTrackingViewButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            owner.FindControl<TextBox>("ProjectFilterBox")!.Text="mardi";
+            Invoke(owner,"ShowWorkspace","Tâches");await (Task)Invoke(owner,"LoadTasksAsync",(object?)null)!;
+            var list=owner.FindControl<StackPanel>("TaskList")!;
+            owner.FindControl<TextBox>("TaskFilterBox")!.Text="mardi";
             Dispatcher.UIThread.RunJobs();owner.UpdateLayout();
-            var list=owner.FindControl<StackPanel>("ProjectList")!;
-            list.GetVisualDescendants().OfType<Expander>().Single().IsExpanded=true;
-            Dispatcher.UIThread.RunJobs();owner.UpdateLayout();
-            list.GetVisualDescendants().OfType<CheckBox>().Single(c=>c.Content as string=="Masquer les tâches terminées").IsChecked=true;
-            Dispatcher.UIThread.RunJobs();owner.UpdateLayout();
+            Assert.Single(list.Children);
             Assert.DoesNotContain(list.GetVisualDescendants().OfType<Button>(),b=>AutomationProperties.GetName(b)=="Modifier : Déjà fait");
             var menu=list.GetVisualDescendants().OfType<Button>().Single(b=>AutomationProperties.GetName(b)=="Actions de la tâche : Relancer");
             var flyout=Assert.IsType<Flyout>(menu.Tag);
@@ -121,9 +124,8 @@ public sealed partial class EstimateUiTests
         var owner=await Open();owner.Show();
         try
         {
-            Invoke(owner,"ShowWorkspace","Projets");await (Task)Invoke(owner,"LoadProjectsAsync")!;
-            owner.FindControl<Button>("ProjectTrackingViewButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            var list=owner.FindControl<StackPanel>("ProjectList")!;list.GetVisualDescendants().OfType<Expander>().Single().IsExpanded=true;
+            Invoke(owner,"ShowWorkspace","Tâches");await (Task)Invoke(owner,"LoadTasksAsync",(object?)null)!;
+            var list=owner.FindControl<StackPanel>("TaskList")!;
             Dispatcher.UIThread.RunJobs();owner.UpdateLayout();
             list.GetVisualDescendants().OfType<Button>().Single(b=>AutomationProperties.GetName(b)=="Modifier : Relancer").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             await WaitForDialog<ProjectTaskWindow>(owner);

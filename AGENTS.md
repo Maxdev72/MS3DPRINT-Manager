@@ -39,6 +39,6 @@ Le code de `MainWindow` est réparti en fichiers partiels par page dans
 notifications), puis `MainWindow.Navigation.cs`, `.Search.cs`, `.Dashboard.cs`,
 `.Controls.cs` (éléments communs des listes), `.Projects.cs`, `.ProjectFiles.cs`,
 `.Folders.cs`, `.Clients.cs`, `.Collections.cs`, `.Filaments.cs`, `.Printers.cs`,
-`.Estimates.cs`, `.Viewer.cs`, `.Trash.cs` et `.Settings.cs`. Ajouter une fonction dans
+`.Estimates.cs`, `.Tasks.cs`, `.Viewer.cs`, `.Trash.cs` et `.Settings.cs`. Ajouter une fonction dans
 le fichier de la page concernée ; seul `MainWindow.axaml.cs` déclare `: Window`.
 Les tests de structure (`AvaloniaShellMarkupTests`) lisent tous les fichiers `MainWindow*.cs`.
