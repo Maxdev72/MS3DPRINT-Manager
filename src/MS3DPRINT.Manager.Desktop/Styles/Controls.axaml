@@ -7,7 +7,7 @@
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
     <Setter Property="PlaceholderForeground" Value="{DynamicResource MutedTextBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
-    <Setter Property="MinHeight" Value="46" /><Setter Property="Padding" Value="12,8" /><Setter Property="CornerRadius" Value="4" />
+    <Setter Property="MinHeight" Value="40" /><Setter Property="Padding" Value="12,8" /><Setter Property="CornerRadius" Value="6" />
   </Style>
   <Style Selector="AutoCompleteBox.client-search /template/ Border#PART_SuggestionsContainer">
     <Setter Property="Width" Value="{Binding Bounds.Width, RelativeSource={RelativeSource TemplatedParent}}" />
@@ -16,14 +16,14 @@
     <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="CornerRadius" Value="6" />
     <Setter Property="Padding" Value="4" />
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
   </Style>
   <Style Selector="ListBox.lookup-suggestions ListBoxItem">
     <Setter Property="Padding" Value="12,12" />
     <Setter Property="MinHeight" Value="44" />
-    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="CornerRadius" Value="6" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
@@ -57,7 +57,7 @@
     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="CornerRadius" Value="10" />
     <Setter Property="Padding" Value="24" />
   </Style>
   <!-- Workspace pages sit on the canvas: cards inside them are never nested in another card. -->
@@ -72,7 +72,7 @@
     <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="CornerRadius" Value="10" />
     <Setter Property="Padding" Value="16" />
   </Style>
   <Style Selector="Border.icon-chip">
@@ -142,7 +142,7 @@
     <Setter Property="Padding" Value="12,12" />
     <Setter Property="MinHeight" Value="40" />
     <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="CornerRadius" Value="6" />
     <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Left" />
@@ -188,7 +188,7 @@
     <Setter Property="FontWeight" Value="Medium" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Left" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="CornerRadius" Value="6" />
   </Style>
   <Style Selector="Button.nav-item:pointerover"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="BorderBrush" Value="Transparent" /><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Style>
   <Style Selector="Button.nav-item:pointerover Path.icon"><Setter Property="Stroke" Value="{DynamicResource TextBrush}" /></Style>
@@ -269,7 +269,7 @@
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" />
     <Setter Property="BorderThickness" Value="0,0,0,1" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="CornerRadius" Value="6" />
     <Setter Property="FontWeight" Value="Normal" />
   </Style>
   <Style Selector="Button.table-row:pointerover"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" /></Style>
@@ -279,14 +279,14 @@
   <Style Selector="Button.filter-chip">
     <Setter Property="Padding" Value="16,4" />
     <Setter Property="MinHeight" Value="36" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="CornerRadius" Value="6" />
     <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
     <Setter Property="FontWeight" Value="Medium" />
   </Style>
   <Style Selector="Button.filter-chip.selected"><Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" /><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Style>
-  <Style Selector="Border.table-surface"><Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" /><Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="14" /><Setter Property="Padding" Value="24" /></Style>
-  <Style Selector="Border.table-head"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="CornerRadius" Value="8" /><Setter Property="Margin" Value="0,0,0,8" /></Style>
+  <Style Selector="Border.table-surface"><Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" /><Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="10" /><Setter Property="Padding" Value="24" /></Style>
+  <Style Selector="Border.table-head"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="CornerRadius" Value="6" /><Setter Property="Margin" Value="0,0,0,8" /></Style>
   <Style Selector="Button.settings-tab"><Setter Property="Padding" Value="16,12" /><Setter Property="Margin" Value="0,0,8,8" /><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" /></Style>
   <Style Selector="Button.settings-tab.selected"><Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Style>
   <Style Selector="Border.badge">
@@ -330,7 +330,7 @@
   <Style Selector="Border.key-hint">
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="CornerRadius" Value="6" />
     <Setter Property="Padding" Value="8,2" />
   </Style>
   <Style Selector="TextBox.search-input">
@@ -372,7 +372,7 @@
     <Setter Property="MinWidth" Value="36" />
     <Setter Property="MinHeight" Value="36" />
     <Setter Property="Padding" Value="0" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="CornerRadius" Value="6" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
@@ -397,10 +397,10 @@
   </Style>
   <Style Selector="Border.estimate-form TextBox, Grid.workshop-form TextBox">
     <Setter Property="FontSize" Value="{DynamicResource FontSizeSection}" />
-    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="MinHeight" Value="40" />
   </Style>
   <Style Selector="Border.estimate-form ComboBox, Grid.workshop-form ComboBox">
-    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="MinHeight" Value="40" />
   </Style>
   <Style Selector="Border.estimate-form TextBox.estimate-number, Grid.workshop-form TextBox.estimate-number">
     <Setter Property="TextAlignment" Value="Left" />
@@ -415,7 +415,7 @@
   <Style Selector="Border.estimate-summary TextBlock.muted, Border.estimate-status TextBlock"><Setter Property="LineHeight" Value="21" /></Style>
   <Style Selector="Border.estimate-status">
     <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="CornerRadius" Value="6" />
     <Setter Property="Padding" Value="12" />
   </Style>
   <Style Selector="Border.estimate-status TextBlock"><Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" /><Setter Property="FontWeight" Value="Medium" /></Style>
@@ -430,7 +430,7 @@
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
     <Setter Property="Padding" Value="16" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="CornerRadius" Value="6" />
     <Setter Property="MinWidth" Value="0" />
     <Setter Property="MinHeight" Value="0" />
   </Style>
@@ -493,12 +493,12 @@
     <Setter Property="Padding" Value="8" />
   </Style>
   <!-- the address field is sunk into the bar (darker than it), so that it reads as a field and not as one more button -->
-  <Style Selector="Border.browser-toolbar Border.search-box"><Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" /><Setter Property="CornerRadius" Value="8" /></Style>
+  <Style Selector="Border.browser-toolbar Border.search-box"><Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" /><Setter Property="CornerRadius" Value="6" /></Style>
   <Style Selector="Border.browser-toolbar Border.search-box:focus-within"><Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Style>
   <Style Selector="Button.browser-tab">
     <Setter Property="MinHeight" Value="36" />
     <Setter Property="Padding" Value="12,0,8,0" />
-    <Setter Property="CornerRadius" Value="9,9,0,0" />
+    <Setter Property="CornerRadius" Value="10,10,0,0" />
     <Setter Property="BorderThickness" Value="0,2,0,0" />
     <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="Background" Value="Transparent" />
@@ -536,12 +536,12 @@
   <Style Selector="Border.estimate-editor">
     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
     <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="CornerRadius" Value="6" />
   </Style>
   <Style Selector="Border.estimate-price-rail">
     <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
     <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="CornerRadius" Value="6" />
   </Style>
   <Style Selector="Border.estimate-editor Button.scope-choice">
     <Setter Property="MinHeight" Value="52" />

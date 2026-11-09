@@ -37,6 +37,19 @@ public sealed partial class DesignTokenTests
             $"{count} marges ou écarts hors de la grille de 4 px (maximum {OffGridSpacingBaseline}). Utilisez Ui.Space : 4, 8, 12, 16, 24, 32, 48.");
     }
 
+    [Fact]
+    public void Style_sheets_use_only_the_two_corner_radii()
+    {
+        var allowed = new[] { 0, Ui.Radius.Control, Ui.Radius.Card, Ui.Radius.Pill };
+        var offenders = SourceFiles().Where(file => file.EndsWith(".axaml", StringComparison.Ordinal))
+            .SelectMany(file => AxamlRadius().Matches(File.ReadAllText(file))
+                .SelectMany(match => match.Groups[1].Value.Split([' ', ','], StringSplitOptions.RemoveEmptyEntries))
+                .Where(value => !allowed.Contains(double.Parse(value, CultureInfo.InvariantCulture)))
+                .Select(value => Path.GetFileName(file) + ": " + value))
+            .ToArray();
+        Assert.True(offenders.Length == 0, "Arrondi hors échelle — 6 pour les contrôles, 10 pour les cartes :\n" + string.Join("\n", offenders));
+    }
+
     private static IEnumerable<string> OffGridValues(string file)
     {
         var text = File.ReadAllText(file);
@@ -65,6 +78,8 @@ public sealed partial class DesignTokenTests
     // Attributes on controls and Setter values in the style sheets.
     [GeneratedRegex(@"(?:\b(?:Margin|Padding|Spacing|ColumnSpacing|RowSpacing|ItemSpacing|LineSpacing)=|Property=""(?:Margin|Padding|Spacing|ColumnSpacing|RowSpacing|ItemSpacing|LineSpacing)"" Value=)""([-\d., ]+)""")]
     private static partial Regex AxamlSpacing();
+    [GeneratedRegex(@"(?:\bCornerRadius=|Property=""CornerRadius"" Value=|x:Key=""\w*CornerRadius"">)""?([\d., ]+)[""<]")]
+    private static partial Regex AxamlRadius();
     [GeneratedRegex(@"new (?:Avalonia\.)?Thickness\(([-\d., ]+)\)")]
     private static partial Regex CodeThickness();
     [GeneratedRegex(@"\b(?:Spacing|ColumnSpacing|RowSpacing|ItemSpacing|LineSpacing)\s*=\s*(-?\d+(?:\.\d+)?)\b")]

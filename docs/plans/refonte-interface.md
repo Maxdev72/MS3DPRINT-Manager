@@ -63,7 +63,8 @@ Chaque élément a son test de structure et une capture à 960, 1280 et 1600 px.
 
 Ordre choisi pour livrer tôt ce qui sert le plus, une étape = une livraison :
 
-3. **Coque** : menu de gauche, en-tête de page, recherche globale, notifications.
+3. **Coque** : menu de gauche, en-tête de page, recherche globale, notifications. — faite le 9 novembre 2026
+   (sélection douce, arrondis 6 / 10 vérifiés par test, champs et recherche à 40 px).
 4. **Listes** : Projets, Clients, Filaments, Imprimantes, Collections, Corbeille,
    Fichiers — toutes sur `ListToolbar` + `DataTable`.
 5. **Fiches et formulaires** : fiche projet, fiche client, panneaux latéraux et

@@ -3,7 +3,7 @@
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="CornerRadius" Value="6" />
   </Style>
   <Style Selector="Window.workbench-ui Border.file-drop-target.drag-active">
     <Setter Property="Background" Value="{DynamicResource CyanSoftBrush}" />
@@ -19,12 +19,12 @@
   </Style>
   <Style Selector="Window.workbench-ui Border.file-selection-row.file-selected">
     <Setter Property="Background" Value="{DynamicResource CyanSoftBrush}" />
-    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="CornerRadius" Value="6" />
   </Style>
   <!-- One visual family with the estimator: flat editing surfaces, raised supporting areas. -->
   <Style Selector="Window.workbench-ui Border.card, Window.workbench-ui Border.card-raised, Window.workbench-ui Border.table-surface">
     <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="CornerRadius" Value="6" />
   </Style>
   <Style Selector="Window.workbench-ui Border.workspace-sheet">
     <Setter Property="Padding" Value="24" />
@@ -48,7 +48,7 @@
   </Style>
   <Style Selector="Window.workbench-ui Button.table-row">
     <Setter Property="MinHeight" Value="64" />
-    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="CornerRadius" Value="6" />
   </Style>
   <Style Selector="Window.workbench-ui Button.table-row:pointerover, Window.workbench-ui Button.queue-row:pointerover">
     <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
@@ -58,7 +58,7 @@
     <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
     <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="CornerRadius" Value="6" />
     <Setter Property="Padding" Value="12,12" />
     <Setter Property="MinHeight" Value="40" />
   </Style>
@@ -70,7 +70,7 @@
   <Style Selector="Window.workbench-ui Button.filter-chip:pointerover"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /></Style>
   <Style Selector="Window.workbench-ui Border.workbench-banner">
     <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="CornerRadius" Value="6" />
     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
   </Style>
   <Style Selector="Window.workbench-ui Border.project-overview, Window.workbench-ui Border.client-overview">
@@ -104,7 +104,7 @@
   </Style>
   <!-- These apply to both the side-panel host and separately opened dialogs. -->
   <Style Selector="Grid.dialog-form TextBox, Grid.dialog-form ComboBox">
-    <Setter Property="MinHeight" Value="46" />
+    <Setter Property="MinHeight" Value="40" />
     <Setter Property="FontSize" Value="{DynamicResource FontSizeSection}" />
   </Style>
   <Style Selector="Grid.dialog-form Button.primary-action"><Setter Property="MinHeight" Value="40" /></Style>
@@ -119,7 +119,7 @@
   </Style>
   <Style Selector="Border.estimate-history-surface">
     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="CornerRadius" Value="6" />
     <Setter Property="BorderThickness" Value="0" />
   </Style>
   <Style Selector="Window.workbench-ui Expander.estimate-history">
@@ -135,7 +135,7 @@
   </Style>
   <Style Selector="Window.workbench-ui Expander.estimate-history /template/ ToggleButton#ExpanderHeader /template/ Border#ToggleButtonBackground">
     <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="CornerRadius" Value="6" />
   </Style>
   <Style Selector="Window.workbench-ui Button.estimate-history-row">
     <Setter Property="Background" Value="Transparent" />
@@ -158,12 +158,12 @@
   <Style Selector="Window.compact Expander.estimate-history /template/ ToggleButton#ExpanderHeader"><Setter Property="Padding" Value="16,16" /></Style>
   <Style Selector="Border#SearchResultsPanel">
     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="CornerRadius" Value="6" />
   </Style>
   <Style Selector="Button.search-item">
     <Setter Property="Padding" Value="12,12" />
     <Setter Property="MinHeight" Value="64" />
-    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="CornerRadius" Value="6" />
   </Style>
   <Style Selector="Button.search-item.selected /template/ ContentPresenter#PART_ContentPresenter, Button.search-item:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.search-item:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
@@ -182,7 +182,7 @@
   </Style>
   <Style Selector="Border.workspace-row-background">
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="CornerRadius" Value="6" />
     <Setter Property="Transitions"><Transitions><BrushTransition Property="Background" Duration="0:0:0.12" /></Transitions></Setter>
   </Style>
   <Style Selector="Grid.workspace-row:pointerover > Border.workspace-row-background, Grid.workspace-row:focus-within > Border.workspace-row-background">
@@ -229,7 +229,7 @@
   <Style Selector="Window.reduce-motion Grid.workspace-row, Window.reduce-motion Border, Window.reduce-motion TextBox /template/ Border#PART_BorderElement, Window.reduce-motion Expander /template/ ToggleButton#ExpanderHeader /template/ Border#ToggleButtonBackground">
     <Setter Property="Transitions" Value="{x:Null}" />
   </Style>
-  <Style Selector="Button.project-calendar-day"><Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" /><Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="4" /></Style>
+  <Style Selector="Button.project-calendar-day"><Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" /><Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="6" /></Style>
   <Style Selector="Button.project-calendar-day.has-deadline"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /></Style>
   <Style Selector="Button.project-calendar-day.outside-month"><Setter Property="Foreground" Value="{DynamicResource FaintTextBrush}" /><Setter Property="Background" Value="{DynamicResource CanvasBrush}" /></Style>
   <Style Selector="Button.project-calendar-day.today"><Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Style>
@@ -238,7 +238,7 @@
   <Style Selector="Button.project-calendar-day:focus-visible"><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /></Style>
   <Style Selector="Calendar.project-date-picker"><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /><Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" /><Setter Property="CornerRadius" Value="6" /></Style>
   <Style Selector="CalendarDayButton, CalendarButton"><Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" /><Setter Property="MinWidth" Value="46" /></Style>
-  <Style Selector="CalendarDayButton /template/ Border, CalendarButton /template/ Border"><Setter Property="CornerRadius" Value="4" /></Style>
+  <Style Selector="CalendarDayButton /template/ Border, CalendarButton /template/ Border"><Setter Property="CornerRadius" Value="6" /></Style>
   <Style Selector="CalendarDayButton:selected /template/ Border#Root"><Setter Property="Background" Value="{DynamicResource CyanSoftBrush}" /></Style>
   <Style Selector="CalendarDayButton:selected /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Style>
   <Style Selector="CalendarDayButton:today /template/ Border#Root, CalendarButton:selected /template/ Border#Root"><Setter Property="Background" Value="{DynamicResource AccentBrush}" /></Style>
@@ -256,8 +256,8 @@
   <Style Selector="Border.task-detail TextBox, Border.task-detail ComboBox, Border.task-detail AutoCompleteBox, Border.task-detail CalendarDatePicker"><Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /></Style>
   <Style Selector="Border.task-detail ComboBox:disabled /template/ Border#Background"><Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" /></Style>
   <Style Selector="Border.task-detail.floating"><Setter Property="BoxShadow" Value="0 12 32 0 #66000000" /><Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" /></Style>
-  <Style Selector="Border.task-chip"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" /><Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="12" /><Setter Property="Padding" Value="12,4" /></Style>
-  <Style Selector="Border.task-hint"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="CornerRadius" Value="8" /></Style>
+  <Style Selector="Border.task-chip"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" /><Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="10" /><Setter Property="Padding" Value="12,4" /></Style>
+  <Style Selector="Border.task-hint"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="CornerRadius" Value="6" /></Style>
   <Style Selector="Button.task-group"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /><Setter Property="Padding" Value="4,4" /></Style>
   <Style Selector="Button.task-group:pointerover /template/ ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
   <Style Selector="Border.project-task-row"><Setter Property="BorderThickness" Value="0,0,0,1" /><Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" /></Style>

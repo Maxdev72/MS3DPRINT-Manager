@@ -79,7 +79,7 @@
           <TextBlock x:Name="PageSubtitle" Text="Bienvenue dans votre atelier. Voici ce qui mérite votre attention." Classes="muted" TextWrapping="Wrap" LineHeight="21" />
         </StackPanel>
         </Grid>
-        <Border x:Name="GlobalSearchContainer" Grid.Column="1" Classes="search-box" Width="300" Height="44" VerticalAlignment="Center">
+        <Border x:Name="GlobalSearchContainer" Grid.Column="1" Classes="search-box" Width="300" Height="40" VerticalAlignment="Center">
           <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
             <Path Classes="icon" Data="{StaticResource IconSearch}" />
             <TextBox x:Name="SearchBox" Grid.Column="1" Classes="search-input" PlaceholderText="Projet, client, fichier…" TextChanged="SearchBox_TextChanged" KeyDown="SearchBox_KeyDown" VerticalAlignment="Center" AutomationProperties.Name="Recherche globale" />
@@ -385,7 +385,7 @@
         </Grid>
       </Border>
       <Border x:Name="ViewerWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="panel" />
-      <Border x:Name="SearchResultsPanel" Grid.RowSpan="3" IsVisible="False" HorizontalAlignment="Right" VerticalAlignment="Top" Width="560" MaxHeight="520" Margin="0,64,0,0" ZIndex="10" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="8">
+      <Border x:Name="SearchResultsPanel" Grid.RowSpan="3" IsVisible="False" HorizontalAlignment="Right" VerticalAlignment="Top" Width="560" MaxHeight="520" Margin="0,64,0,0" ZIndex="10" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="8">
       <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8">
         <TextBlock x:Name="SearchResultsHeading" Margin="12,8" FontSize="{DynamicResource FontSizeSection}" FontWeight="SemiBold" TextWrapping="Wrap" />
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel x:Name="SearchResults" Spacing="4" /></ScrollViewer>
@@ -414,7 +414,7 @@
       <StackPanel x:Name="OperationsList" Spacing="4" />
     </Border>
     <Grid x:Name="ServerLoginOverlay" Grid.RowSpan="3" Grid.ColumnSpan="2" ZIndex="95" IsVisible="{Binding #ServerLoginPanel.IsVisible}" Background="{DynamicResource CanvasBrush}">
-      <Border Width="420" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="32,32" CornerRadius="16" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" BoxShadow="0 18 48 0 #33000000">
+      <Border Width="420" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="32,32" CornerRadius="10" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" BoxShadow="0 18 48 0 #33000000">
         <StackPanel x:Name="ServerLoginPanel" IsVisible="False" Spacing="16" KeyDown="ServerLogin_KeyDown">
           <Image Source="avares://MS3DPRINT.Manager.Desktop/Assets/ms3dprint-brand.webp" Width="110" Height="80" HorizontalAlignment="Center" />
           <StackPanel Spacing="8" HorizontalAlignment="Center">

@@ -105,8 +105,8 @@
 
       <!-- Spacing, radius and type scale -->
       <x:Double x:Key="PagePadding">30</x:Double>
-      <CornerRadius x:Key="PanelCornerRadius">14</CornerRadius>
-      <CornerRadius x:Key="ControlCornerRadius">8</CornerRadius>
+      <CornerRadius x:Key="PanelCornerRadius">10</CornerRadius>
+      <CornerRadius x:Key="ControlCornerRadius">6</CornerRadius>
       <!-- Type scale: the same seven sizes as Ui.Text in Ui.cs (a test keeps them equal). -->
       <x:Double x:Key="FontSizeMicro">12</x:Double>
       <x:Double x:Key="FontSizeCaption">13</x:Double>
@@ -184,7 +184,7 @@
     <Setter Property="Padding" Value="16,8" />
     <Setter Property="MinHeight" Value="40" />
     <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="CornerRadius" Value="6" />
     <Setter Property="Cursor" Value="Hand" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
@@ -202,8 +202,8 @@
     <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
-    <Setter Property="CornerRadius" Value="8" />
-    <Setter Property="Padding" Value="12,12" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="12,8" />
     <Setter Property="MinHeight" Value="40" />
     <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
   </Style>
@@ -236,7 +236,7 @@
     <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="CornerRadius" Value="6" />
     <Setter Property="Padding" Value="12,8" />
     <Setter Property="MinHeight" Value="40" />
   </Style>
@@ -245,8 +245,8 @@
     <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
-    <Setter Property="CornerRadius" Value="8" />
-    <Setter Property="Padding" Value="12,12" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="12,8" />
     <Setter Property="MinHeight" Value="40" />
     <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
   </Style>

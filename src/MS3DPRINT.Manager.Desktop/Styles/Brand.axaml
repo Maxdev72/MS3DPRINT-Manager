@@ -5,7 +5,7 @@
   </Style>
   <Style Selector="TextBlock.page-title"><Setter Property="FontSize" Value="{DynamicResource FontSizePage}" /><Setter Property="LetterSpacing" Value="-0.5" /></Style>
   <Style Selector="TextBlock.brand-heading"><Setter Property="FontWeight" Value="SemiBold" /></Style>
-  <Style Selector="Button"><Setter Property="CornerRadius" Value="4" /><Setter Property="RenderTransformOrigin" Value="50%,50%" /><Setter Property="RenderTransform" Value="scale(1)" />
+  <Style Selector="Button"><Setter Property="CornerRadius" Value="6" /><Setter Property="RenderTransformOrigin" Value="50%,50%" /><Setter Property="RenderTransform" Value="scale(1)" />
     <Setter Property="Transitions"><Transitions>
       <BrushTransition Property="Background" Duration="0:0:0.15" /><BrushTransition Property="BorderBrush" Duration="0:0:0.15" />
       <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" Easing="CubicEaseOut" />
@@ -15,26 +15,26 @@
   <Style Selector="Button.primary-action"><Setter Property="Background" Value="{DynamicResource BrandBlueBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource BrandBlueBrush}" /></Style>
   <Style Selector="Button.primary-action:pointerover"><Setter Property="Background" Value="{DynamicResource BrandBlueHoverBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource BrandBlueHoverBrush}" /></Style>
   <Style Selector="Button.primary-action:pressed"><Setter Property="Background" Value="{DynamicResource AccentPressedBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource AccentPressedBrush}" /></Style>
-  <Style Selector="TextBox, ComboBox"><Setter Property="CornerRadius" Value="4" /></Style>
+  <Style Selector="TextBox, ComboBox"><Setter Property="CornerRadius" Value="6" /></Style>
   <Style Selector="Border.card, Border.card-raised, Border.table-surface"><Setter Property="CornerRadius" Value="6" /></Style>
-  <Style Selector="Border.table-head"><Setter Property="CornerRadius" Value="4" /><Setter Property="Background" Value="{DynamicResource CyanSoftBrush}" /></Style>
+  <Style Selector="Border.table-head"><Setter Property="CornerRadius" Value="6" /><Setter Property="Background" Value="{DynamicResource CyanSoftBrush}" /></Style>
   <Style Selector="Border.table-head TextBlock"><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /></Style>
   <Style Selector="Border.table-head Button.sort-head"><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /></Style>
   <Style Selector="Border.table-head Button.sort-head.active"><Setter Property="Foreground" Value="{DynamicResource CyanBrush}" /></Style>
   <Style Selector="Button.table-row"><Setter Property="CornerRadius" Value="0" /></Style>
   <Style Selector="Button.table-row:pressed"><Setter Property="RenderTransform" Value="scale(1)" /></Style>
-  <Style Selector="Button.filter-chip, Button.settings-tab"><Setter Property="CornerRadius" Value="4" /></Style>
+  <Style Selector="Button.filter-chip, Button.settings-tab"><Setter Property="CornerRadius" Value="6" /></Style>
   <Style Selector="Button.filter-chip.selected, Button.settings-tab.selected"><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /><Setter Property="Background" Value="{DynamicResource CyanSoftBrush}" /></Style>
 
-  <Style Selector="Border.module-mark"><Setter Property="Width" Value="44" /><Setter Property="Height" Value="44" /><Setter Property="CornerRadius" Value="6" /><Setter Property="Background" Value="{DynamicResource CyanSoftBrush}" /></Style>
+  <Style Selector="Border.module-mark"><Setter Property="Width" Value="40" /><Setter Property="Height" Value="40" /><Setter Property="CornerRadius" Value="6" /><Setter Property="Background" Value="{DynamicResource CyanSoftBrush}" /></Style>
   <Style Selector="Border.module-mark Path.icon"><Setter Property="Width" Value="24" /><Setter Property="Height" Value="24" /><Setter Property="Stroke" Value="{DynamicResource CyanBrush}" /></Style>
-  <Style Selector="Border.navigation-indicator"><Setter Property="Background" Value="{DynamicResource BrandBlueBrush}" /><Setter Property="CornerRadius" Value="4" />
+  <Style Selector="Border.navigation-indicator"><Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" /><Setter Property="CornerRadius" Value="6" />
     <Setter Property="RenderTransform" Value="translateY(0px)" />
     <Setter Property="Transitions"><Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.22" Easing="CubicEaseOut" /></Transitions></Setter>
   </Style>
   <Style Selector="StackPanel#NavigationItems Button.nav-item.selected"><Setter Property="Background" Value="Transparent" /></Style>
-  <Style Selector="Button.nav-item.selected Path.icon"><Setter Property="Stroke" Value="{DynamicResource TextBrush}" /></Style>
-  <Style Selector="Button.nav-item"><Setter Property="CornerRadius" Value="4" /></Style>
+  <Style Selector="Button.nav-item.selected Path.icon"><Setter Property="Stroke" Value="{DynamicResource CyanBrush}" /></Style>
+  <Style Selector="Button.nav-item"><Setter Property="CornerRadius" Value="6" /></Style>
   <Style Selector="Image.compact-brand"><Setter Property="IsVisible" Value="False" /></Style>
   <Style Selector="Window.compact Image.full-brand"><Setter Property="IsVisible" Value="False" /></Style>
   <Style Selector="Window.compact Image.compact-brand"><Setter Property="IsVisible" Value="True" /></Style>
@@ -51,9 +51,9 @@
   <Style Selector="Border.workbench-banner:pointerover Path.layer-bottom"><Setter Property="RenderTransform" Value="translateY(4px)" /></Style>
   <Style Selector="Path.action-arrow"><Setter Property="RenderTransform" Value="translateX(0px)" /><Setter Property="Transitions"><Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" Easing="CubicEaseOut" /></Transitions></Setter></Style>
   <Style Selector="Button:pointerover Path.action-arrow"><Setter Property="RenderTransform" Value="translateX(3px)" /></Style>
-  <Style Selector="Expander.estimate-section"><Setter Property="CornerRadius" Value="4" /></Style>
+  <Style Selector="Expander.estimate-section"><Setter Property="CornerRadius" Value="6" /></Style>
   <Style Selector="Border.estimate-summary"><Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /></Style>
-  <Style Selector="Border.estimate-status"><Setter Property="CornerRadius" Value="4" /></Style>
+  <Style Selector="Border.estimate-status"><Setter Property="CornerRadius" Value="6" /></Style>
   <Style Selector="TextBlock.estimate-input-error"><Setter Property="Foreground" Value="{DynamicResource WarningBrush}" /><Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" /><Setter Property="LineHeight" Value="21" /></Style>
   <Style Selector="StackPanel.estimate-zone-title Path.icon"><Setter Property="Stroke" Value="{DynamicResource CyanBrush}" /></Style>
   <Style Selector="Border.settings-section TextBlock"><Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" /><Setter Property="LineHeight" Value="23" /></Style>
