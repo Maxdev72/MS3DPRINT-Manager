@@ -39,8 +39,6 @@ public sealed class TaskWindow : DialogWindow
             if (chosen.ClientId is { } owner) client.SelectedItem = clients.FirstOrDefault(c => c.Id == owner) ?? clients[0];
         }
         project.SelectionChanged += (_, _) => LinkClient(); LinkClient();
-        AutomationProperties.SetName(title, "Texte de la tâche"); AutomationProperties.SetName(notes, "Notes de la tâche");
-        AutomationProperties.SetName(list, "Liste de la tâche"); AutomationProperties.SetName(project, "Projet lié"); AutomationProperties.SetName(client, "Client lié");
 
         var newStep = new TextBox { PlaceholderText = "Ajouter une sous-tâche…", MaxLength = 500 };
         AutomationProperties.SetName(newStep, "Nouvelle sous-tâche");
@@ -81,7 +79,7 @@ public sealed class TaskWindow : DialogWindow
             removeButton = new Button { Content = Icons.Label("IconTrash", "Retirer"), Classes = { "menu-destructive" } };
             removeButton.Click += async (_, _) =>
             {
-                if (!await new ConfirmRemovalWindow(task.Title, "Cette tâche, ses notes et ses sous-tâches seront retirées. Le projet et le client liés ne sont pas concernés.").ShowDialog<bool>(this)) return;
+                if (!await ConfirmRemovalWindow.AskAsync(removeButton, task.Title, "Cette tâche, ses notes et ses sous-tâches seront retirées. Le projet et le client liés ne sont pas concernés.")) return;
                 error.Text = await remove();
                 error.IsVisible = error.Text is not null;
                 if (error.Text is null) Close(true);
@@ -116,7 +114,7 @@ public sealed class TaskWindow : DialogWindow
             text.TextChanged += (_, _) => Replace(_steps.First(s => s.Id == step.Id) with { Title = text.Text ?? "" });
             drop.Click += async (_, _) =>
             {
-                if (!await new ConfirmRemovalWindow(step.Title, "Cette sous-tâche sera retirée à l’enregistrement de la tâche.").ShowDialog<bool>(this)) return;
+                if (!await ConfirmRemovalWindow.AskAsync(drop, step.Title, "Cette sous-tâche sera retirée à l’enregistrement de la tâche.")) return;
                 _steps.RemoveAll(s => s.Id == step.Id); RenderSteps();
             };
             var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 8 };

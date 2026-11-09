@@ -197,7 +197,7 @@ public partial class MainWindow
         if (result is not { Changed: true } || _panel is not null || _busy != 0) return;
         var page = NavigationButtons().FirstOrDefault(b => b.Classes.Contains("selected"))?.Tag as string;
         if (page is null || CurrentNavigationStop?.Key != "page:" + page) return;
-        await (page switch { "Accueil" => PreloadAsync(force: true), "Projets" => LoadProjectsAsync(), "Clients" => LoadClientsAsync(), _ => Task.CompletedTask });
+        await (page switch { "Accueil" => PreloadAsync(force: true), "Projets" => LoadProjectsAsync(), "Clients" => LoadClientsAsync(), "Tâches" when !_taskBusy => LoadTasksAsync(), _ => Task.CompletedTask });
     }
 
     private async Task<ProfileSyncResult?> SyncProfilesAsync(RemoteWorkspaceConnection connection)
@@ -206,11 +206,22 @@ public partial class MainWindow
         if (!connection.CanWrite || connection.Copy is not { } copy || !Directory.Exists(root)) return null;
         if (_profileSyncRoot != root) { _profileSync = new(root); _profileSyncRoot = root; }
         var sync = _profileSync!;
-        return await Task.Run(() => sync.RunAsync(copy.Clients, copy.Projects,
+        var profiles = await Task.Run(() => sync.RunAsync(copy.Clients, copy.Projects,
             (id, command) => connection.ExecuteAsync(command.CommandId, client => client.UpdateClientAsync(id, command)),
             (id, command) => connection.ExecuteAsync(command.CommandId, client => client.UpdateProjectAsync(id, command)),
                 command => connection.ExecuteAsync(command.CommandId, client => client.CreateClientAsync(command)),
                 command => connection.ExecuteAsync(command.CommandId, client => client.CreateProjectAsync(command))));
+        var tasks = await SyncTasksAsync(connection, root);
+        return new ProfileSyncResult(profiles.Pulled + tasks.Pulled, profiles.Pushed + tasks.Pushed, profiles.Failed + tasks.Failed);
+    }
+
+    private static async Task<ProfileSyncResult> SyncTasksAsync(RemoteWorkspaceConnection connection, string root)
+    {
+        IReadOnlyList<MS3DPRINT.Manager.Core.Tasks.WorkTask> server;
+        // An older server has no task list yet: tasks simply stay on this PC until it is updated.
+        try { server = await connection.ReadAsync(client => client.GetTasksAsync()); }
+        catch (RemoteWorkspaceException) { return new(0, 0, 0); }
+        return await Task.Run(() => MS3DPRINT.Manager.Core.Tasks.RemoteTaskSync.RunAsync(root, server, task => connection.ReadAsync(client => client.PutTaskAsync(task))));
     }
     private async void ServerLogin_Click(object? sender, RoutedEventArgs e) => await LoginServerAsync();
     private bool _serverLoginDismissed;

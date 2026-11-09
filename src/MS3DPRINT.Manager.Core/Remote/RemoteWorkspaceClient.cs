@@ -84,6 +84,10 @@ public sealed partial class RemoteWorkspaceClient
         => SendAsync<IReadOnlyList<ClientResponse>>(HttpMethod.Get, "clients", cancellationToken: cancellationToken);
     public Task<IReadOnlyList<ProjectResponse>> GetProjectsAsync(CancellationToken cancellationToken = default)
         => SendAsync<IReadOnlyList<ProjectResponse>>(HttpMethod.Get, "projects", cancellationToken: cancellationToken);
+    public Task<IReadOnlyList<Tasks.WorkTask>> GetTasksAsync(CancellationToken cancellationToken = default)
+        => SendAsync<IReadOnlyList<Tasks.WorkTask>>(HttpMethod.Get, "tasks", cancellationToken: cancellationToken);
+    public Task<Tasks.WorkTask> PutTaskAsync(Tasks.WorkTask task, CancellationToken cancellationToken = default)
+        => SendAsync<Tasks.WorkTask>(HttpMethod.Put, $"tasks/{task.Id}", task, cancellationToken: cancellationToken);
     public Task<ClientDetailResponse> GetClientAsync(Guid id, CancellationToken cancellationToken = default)
         => SendAsync<ClientDetailResponse>(HttpMethod.Get, $"clients/{id}", cancellationToken: cancellationToken);
     public Task<ProjectDetailResponse> GetProjectAsync(Guid id, CancellationToken cancellationToken = default)

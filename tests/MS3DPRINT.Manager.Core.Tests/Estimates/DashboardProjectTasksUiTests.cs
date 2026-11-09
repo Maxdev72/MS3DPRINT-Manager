@@ -4,6 +4,7 @@ using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using MS3DPRINT.Manager.Core.Projects;
+using MS3DPRINT.Manager.Core.Tasks;
 using MS3DPRINT.Manager.Core.Workspace;
 using MS3DPRINT.Manager.Desktop;
 using MS3DPRINT.Manager.Desktop.Dashboard;
@@ -42,12 +43,15 @@ public sealed partial class EstimateUiTests
             var list=owner.FindControl<StackPanel>("TaskList")!;
             for(var i=0;i<100 && !list.GetVisualDescendants().OfType<CheckBox>().Any();i++) {await Task.Delay(20);Dispatcher.UIThread.RunJobs();owner.UpdateLayout();}
             Assert.True(owner.FindControl<Border>("TasksWorkspacePanel")!.IsVisible);
-            Assert.Equal(p.Reference,owner.FindControl<TextBox>("TaskFilterBox")!.Text);
-            Assert.StartsWith("Pièce vélo · ",owner.FindControl<ComboBox>("NewTaskProject")!.SelectedItem!.ToString());
+            // Opened on the project view; the project checklist became independent tasks linked to it.
+            Assert.Equal("",owner.FindControl<TextBox>("TaskFilterBox")!.Text);
+            Assert.Equal("Pièce vélo",owner.FindControl<TextBlock>("TaskViewTitle")!.Text);
+            Assert.Empty(ProjectTasks.Items(store.LoadAll().Single()));
+            var tasks=new TaskStore(new WorkspaceMetadataPaths(_root));
             var check=list.GetVisualDescendants().OfType<CheckBox>().Single(c=>AutomationProperties.GetName(c)=="Terminer : "+p.Tasks![1].Title);
             check.IsChecked=true;
-            for(var i=0;i<100 && !store.LoadAll().Single().Tasks![1].IsCompleted;i++)await Task.Delay(20);
-            Assert.True(store.LoadAll().Single().Tasks![1].IsCompleted);
+            for(var i=0;i<100 && tasks.Find(p.Tasks![1].Id)?.IsCompleted!=true;i++)await Task.Delay(20);
+            Assert.True(tasks.Find(p.Tasks![1].Id)!.IsCompleted);
             Invoke(owner,"ShowWorkspace","Accueil");await owner.PreloadAsync(force:true);
             Assert.Contains(queue.GetVisualDescendants().OfType<TextBlock>(),t=>t.Text=="Prochaine tâche : Livrer les pièces");
             Assert.Equal(ProjectStatus.Quote,store.LoadAll().Single().Status);
@@ -67,7 +71,7 @@ public sealed partial class EstimateUiTests
             var allDone=profile with { Tasks=[new ProjectTask(Guid.NewGuid(),"Livrer",IsCompleted:true)] };
             ProjectSummary Summary(ProjectProfile p)=>new("Client",_root,_root,p.Reference,p.FolderName,p);
             var projects=new[]{Summary(allDone),Summary(profile with { Id=Guid.NewGuid(),Reference="CT-2026-002" })};
-            var dashboard=new WorkspaceDashboard(1,2,0,2,0,projects,[],0,0){WorkQueue=projects};
+            var dashboard=new WorkspaceDashboard(1,2,0,2,0,projects,[],0,0){WorkQueue=projects,Tasks=TaskMigration.Legacy(allDone).ToArray()};
             Invoke(owner,"BuildWorkQueue",dashboard);
             Dispatcher.UIThread.RunJobs();owner.UpdateLayout();
             var rows=owner.FindControl<StackPanel>("RecentProjectsList")!.Children.OfType<Button>().ToArray();

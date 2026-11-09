@@ -2137,7 +2137,9 @@ public sealed partial class EstimateUiTests : IDisposable
         {
             var sheet = Assert.IsType<Border>(Invoke(window, "BuildProjectOverview", project));
             var sections = Assert.IsType<StackPanel>(sheet.Child).Children.OfType<Expander>();
-            var history = Assert.Single(sections);
+            // « Tâches » comes first; the estimate history is the last section.
+            Assert.Equal(2, sections.Count());
+            var history = sections.Last();
             var open = Assert.Single(Assert.IsType<StackPanel>(history.Content).Children.OfType<Button>());
             Assert.Contains("Prototype validé", Assert.IsType<TextBlock>(open.Content).Text!);
         }

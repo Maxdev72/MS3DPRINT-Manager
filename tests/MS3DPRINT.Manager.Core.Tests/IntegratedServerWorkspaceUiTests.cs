@@ -236,7 +236,7 @@ public sealed class IntegratedServerWorkspaceUiTests
                     await Invoke(window, "ChangeWorkspaceModeAsync");
                     Assert.False(window.IsServerWorkspace);
                     Assert.Equal("local", File.ReadAllText(Path.Combine(temporary, "mode.txt")));
-                    var taskBusy = typeof(MainWindow).GetField("_projectTaskBusy", BindingFlags.Instance | BindingFlags.NonPublic)!;
+                    var taskBusy = typeof(MainWindow).GetField("_taskBusy", BindingFlags.Instance | BindingFlags.NonPublic)!;
                     taskBusy.SetValue(window, true);
                     await Invoke(window, "ChangeWorkspaceModeAsync");
                     Assert.False(window.IsServerWorkspace);

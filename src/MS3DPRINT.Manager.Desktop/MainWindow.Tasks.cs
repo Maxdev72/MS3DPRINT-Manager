@@ -20,6 +20,7 @@ public partial class MainWindow
     private IReadOnlyList<ProjectSummary> _taskProjects = [];
     private IReadOnlyList<ClientSummary> _taskClients = [];
     private string _taskView = TaskViews.All;
+    private string? _tasksLoadedRoot;
     private bool _taskBusy;
     private TextBlock? _newTaskError;
 
@@ -29,9 +30,9 @@ public partial class MainWindow
         ShowWorkspace("Tâches");
         PageTitle.Text = "Tâches";
         PageSubtitle.Text = PageSubtitles["Tâches"];
-        TaskFilterBox.Text = "";
         if (project.Profile is { } profile) _taskView = TaskViews.ProjectView(profile.Id);
         await LoadTasksAsync();
+        TaskFilterBox.Text = "";
     }
 
     private async Task LoadTasksAsync()
@@ -47,6 +48,7 @@ public partial class MainWindow
                 return (new TaskStore(new WorkspaceMetadataPaths(root)).LoadAll(), new WorkspaceProjectReader().Load(root), new WorkspaceClientReader().Load(root));
             });
             if (!IsWorkspaceLoadCurrent(load)) return;
+            _tasksLoadedRoot = root;
             (_tasks, _taskProjects, _taskClients) = (tasks, projects.Where(p => p.Profile is not null).ToArray(), clients.Where(c => c.Profile is not null).ToArray());
             RenderTasks();
         }
@@ -200,7 +202,8 @@ public partial class MainWindow
 
     private double NextTaskOrder() => _tasks.Count == 0 ? 0 : _tasks.Max(t => t.Order) + 1;
 
-    private void TaskFilterText_Changed(object? sender, TextChangedEventArgs e) { if (TasksWorkspacePanel.IsVisible) RenderTasks(); }
+    // Typing can arrive before the first load: rendering then would judge the open view on empty data.
+    private void TaskFilterText_Changed(object? sender, TextChangedEventArgs e) { if (TasksWorkspacePanel.IsVisible && _tasksLoadedRoot == WorkspaceRoot) RenderTasks(); }
     private async void AddTask_Click(object? sender, RoutedEventArgs e) => await AddTaskAsync();
     private async void TaskDetails_Click(object? sender, RoutedEventArgs e) => await EditTaskAsync(null);
     private async void NewTaskBox_KeyDown(object? sender, KeyEventArgs e)

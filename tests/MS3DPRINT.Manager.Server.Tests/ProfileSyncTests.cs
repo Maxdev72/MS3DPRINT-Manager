@@ -2,6 +2,7 @@ using MS3DPRINT.Manager.Core.Clients;
 using MS3DPRINT.Manager.Core.Projects;
 using MS3DPRINT.Manager.Core.Remote;
 using MS3DPRINT.Manager.Core.Storage;
+using MS3DPRINT.Manager.Core.Tasks;
 using MS3DPRINT.Manager.Core.Workspace;
 
 namespace MS3DPRINT.Manager.Server.Tests;
@@ -91,6 +92,45 @@ public sealed class ProfileSyncTests
         var kept = store.LoadAll().Single(p => p.Id == project.Id);
         Assert.Equal(ProjectStatus.InProgress, kept.Status);
         Assert.Equal("Imprimer", Assert.Single(ProjectTasks.Items(kept)).Title);
+    }
+
+    [Fact]
+    public async Task Independent_tasks_go_both_ways_and_a_removal_is_not_undone()
+    {
+        using var host = new ServerFixture();
+        host.CreateOwner();
+        var local = Path.Combine(host.Root, "pc");
+        var (_, project) = MigrationTests.Seed(local);
+        CopyTree(local, host.Workspace);
+        using var http = new HttpClient(host.Server.CreateHandler()) { BaseAddress = new Uri("https://localhost") };
+        var remote = new RemoteWorkspaceClient(http, http.BaseAddress);
+        await remote.LoginAsync("owner", host.Password);
+        Task<ProfileSyncResult> Run() => Task.Run(async () => await RemoteTaskSync.RunAsync(local, await remote.GetTasksAsync(), t => remote.PutTaskAsync(t)));
+        var store = new TaskStore(new WorkspaceMetadataPaths(local));
+
+        // A task without project, and one linked to a project, both made on the PC.
+        var free = store.Create(WorkTask.New("Commander PLA", 1) with { List = "Achats", Priority = ProjectPriority.High });
+        store.Create(WorkTask.New("Livrer", 2) with { ProjectId = project.Id, ClientId = project.ClientId, Steps = [new(Guid.NewGuid(), "Emballer")] });
+        Assert.Equal(new ProfileSyncResult(0, 2, 0), await Run());
+        Assert.Equal(2, (await remote.GetTasksAsync()).Count);
+        Assert.Equal(new ProfileSyncResult(0, 0, 0), await Run());
+
+        // Changed elsewhere (server copy newer) comes back to the PC.
+        var server = (await remote.GetTasksAsync()).Single(t => t.Id == free.Id);
+        await remote.PutTaskAsync(server with { Title = "Commander PLA noir", UpdatedAt = server.UpdatedAt.AddSeconds(5) });
+        Assert.Equal(new ProfileSyncResult(1, 0, 0), await Run());
+        Assert.Equal("Commander PLA noir", store.Find(free.Id)!.Title);
+
+        // Removed on the PC: the server keeps the removal, and the next sync does not bring it back.
+        store.Remove(store.Find(free.Id)!);
+        Assert.Equal(new ProfileSyncResult(0, 1, 0), await Run());
+        Assert.True((await remote.GetTasksAsync()).Single(t => t.Id == free.Id).IsDeleted);
+        Assert.Equal(new ProfileSyncResult(0, 0, 0), await Run());
+        Assert.Single(store.LoadActive());
+
+        // An older copy sent to the server is ignored: the server answers with the one it keeps.
+        var kept = await remote.PutTaskAsync(server);
+        Assert.True(kept.IsDeleted);
     }
 
     private static void CopyTree(string from, string to)

@@ -4,6 +4,7 @@ using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using MS3DPRINT.Manager.Core.Projects;
+using MS3DPRINT.Manager.Core.Tasks;
 using MS3DPRINT.Manager.Core.Workspace;
 using MS3DPRINT.Manager.Desktop;
 using MS3DPRINT.Manager.Desktop.Dashboard;
@@ -12,133 +13,136 @@ namespace MS3DPRINT.Manager.Core.Tests.Estimates;
 
 public sealed partial class EstimateUiTests
 {
+    private async Task<MainWindow> OpenTasksPage()
+    {
+        var owner = await Open(); owner.Show();
+        Invoke(owner, "ShowWorkspace", "Tâches"); await (Task)Invoke(owner, "LoadTasksAsync")!;
+        Dispatcher.UIThread.RunJobs(); owner.UpdateLayout();
+        return owner;
+    }
+
+    private static async Task<ConfirmRemovalWindow> WaitForOwnedConfirmation(MainWindow owner)
+    {
+        for (var attempt = 0; attempt < 200; attempt++)
+        {
+            Dispatcher.UIThread.RunJobs();
+            if (owner.OwnedWindows.OfType<ConfirmRemovalWindow>().FirstOrDefault() is { } dialog) return dialog;
+            await Task.Delay(10);
+        }
+        throw new TimeoutException("Confirmation attendue : ConfirmRemovalWindow");
+    }
+
+    private static void Settle(MainWindow owner) { Dispatcher.UIThread.RunJobs(); owner.UpdateLayout(); }
+    private static StackPanel TaskListOf(MainWindow owner) => owner.FindControl<StackPanel>("TaskList")!;
+    private static Button TaskView(MainWindow owner, string label) => owner.FindControl<StackPanel>("TaskViewList")!.Children.OfType<Button>().Single(b => AutomationProperties.GetName(b) == label);
+
     [Fact]
-    public Task Project_tracking_adds_checks_edits_reorders_and_reopens_tasks() => Run(async () =>
+    public Task Quick_add_reads_the_text_and_files_the_task_in_the_open_view() => Run(async () =>
     {
         new WorkspaceClientCreator().CreateIndividual(_root, "Fabrice", "Romby", "FR");
-        var client = new WorkspaceClientReader().Load(_root).Single();
-        new WorkspaceProjectCreator().CreateTracked(_root, client, 2026, "Pièce vélo", ProjectPriority.High);
-        var p = new WorkspaceProjectReader().Load(_root).Single();
-        var store = new ProjectProfileStore(new WorkspaceMetadataPaths(_root));
-        var profile = ProjectTasks.Add(store, p.Profile!, "Modéliser la pièce", null);
-        ProjectTasks.Add(store, profile, "Envoyer le modèle au client", "Attendre son accord avant impression");
-        var owner = await Open(); owner.Show();
+        new WorkspaceProjectCreator().CreateTracked(_root, new WorkspaceClientReader().Load(_root).Single(), 2026, "Pièce vélo");
+        var store = new TaskStore(new WorkspaceMetadataPaths(_root));
+        var owner = await OpenTasksPage();
         try
         {
-            Invoke(owner, "ShowWorkspace", "Tâches"); await (Task)Invoke(owner, "LoadTasksAsync", (object?)null)!;
-            Dispatcher.UIThread.RunJobs(); owner.UpdateLayout();
-            var list = owner.FindControl<StackPanel>("TaskList")!;
             var input = owner.FindControl<TextBox>("NewTaskBox")!;
-            input.Text = "Livrer les pièces";
-            // Without a project the task is refused and the text stays.
+            input.Text = "Commander PLA noir demain !haute #Achats";
             await (Task)Invoke(owner, "AddTaskAsync")!;
-            Assert.Equal(2, store.LoadAll().Single().Tasks!.Count);
-            Assert.Equal("Livrer les pièces", input.Text);
-            owner.FindControl<ComboBox>("NewTaskProject")!.SelectedIndex = 0;
-            await (Task)Invoke(owner, "AddTaskAsync")!;
-            await WaitForProjectTaskCount(store, 3);
-            await Task.Delay(100); Dispatcher.UIThread.RunJobs(); owner.UpdateLayout();
-            var first = list.GetVisualDescendants().OfType<CheckBox>().Single(c => AutomationProperties.GetName(c) == "Terminer : Modéliser la pièce");
+            var task = Assert.Single(store.LoadActive());
+            Assert.Equal(("Commander PLA noir", DateOnly.FromDateTime(DateTime.Today).AddDays(1), ProjectPriority.High, "Achats", (Guid?)null),
+                (task.Title, task.DueDate!.Value, task.Priority, task.List, task.ProjectId));
             Assert.Equal("", input.Text);
-            input.Text = "Brouillon à garder";
-            first.IsChecked = true;
-            for (var i=0;i<60 && !store.LoadAll().Single().Tasks![0].IsCompleted;i++) await Task.Delay(20);
-            Assert.True(store.LoadAll().Single().Tasks![0].IsCompleted);
-            await Task.Delay(100); Dispatcher.UIThread.RunJobs(); owner.UpdateLayout();
-            Assert.Equal("Brouillon à garder",input.Text);
-            // A completed task leaves the list until « Afficher les terminées » is ticked.
-            Assert.DoesNotContain(list.GetVisualDescendants().OfType<CheckBox>(), c => AutomationProperties.GetName(c) == "Rouvrir : Modéliser la pièce");
-            Assert.Contains(list.GetVisualDescendants().OfType<TextBlock>(), t => t.Text?.EndsWith("1 / 3 faites") == true);
-            owner.FindControl<CheckBox>("ShowCompletedTasks")!.IsChecked = true; Dispatcher.UIThread.RunJobs(); owner.UpdateLayout();
-            Assert.Contains(list.GetVisualDescendants().OfType<CheckBox>(), c => AutomationProperties.GetName(c) == "Rouvrir : Modéliser la pièce");
-            foreach (var width in new[]{960d,1440d}) { owner.Width=width; await Task.Delay(280); CaptureDraftUi(owner,"tasks-page-"+width); }
-            list.GetVisualDescendants().OfType<Button>().Single(b=>AutomationProperties.GetName(b)=="Modifier : Envoyer le modèle au client").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            var dialog = await WaitForDialog<ProjectTaskWindow>(owner);
-            var body=owner.FindControl<Border>("SidePanelBody")!;
-            IdentityControl<TextBox>(body,"Texte de la tâche").Text="Faire valider le modèle";
-            DialogAction(owner,"Enregistrer");
-            for(var i=0;i<60 && store.LoadAll().Single().Tasks![1].Title!="Faire valider le modèle";i++) await Task.Delay(20);
-            Assert.Equal("Faire valider le modèle",store.LoadAll().Single().Tasks![1].Title);
-            Assert.Equal("Attendre son accord avant impression",store.LoadAll().Single().Tasks![1].Notes);
-            await Task.Delay(100); Dispatcher.UIThread.RunJobs(); owner.UpdateLayout();
-            var moving=(Task<bool>)Invoke(owner,"MoveProjectTaskAsync",new WorkspaceProjectReader().Load(_root).Single(),store.LoadAll().Single().Tasks![2],-1)!;
-            Assert.True(await moving);
-            Assert.Equal("Livrer les pièces",store.LoadAll().Single().Tasks![1].Title);
-            await (Task)Invoke(owner,"LoadTasksAsync",(object?)null)!;
-            Assert.Equal(3,store.LoadAll().Single().Tasks!.Count);
-            Assert.Equal(ProjectStatus.Quote,store.LoadAll().Single().Status);
+            Settle(owner);
+            // The new list shows on the left; typing there files the task in it, without date.
+            TaskView(owner, "Achats").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Settle(owner);
+            input.Text = "Filament TPU";
+            await (Task)Invoke(owner, "AddTaskAsync")!;
+            Assert.Equal("Achats", store.LoadActive().Single(t => t.Title == "Filament TPU").List);
+            // « Aujourd’hui » gives today's date to a task typed there.
+            TaskView(owner, "Aujourd’hui").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Settle(owner);
+            input.Text = "Nettoyer le plateau";
+            await (Task)Invoke(owner, "AddTaskAsync")!;
+            Assert.Equal(DateOnly.FromDateTime(DateTime.Today), store.LoadActive().Single(t => t.Title == "Nettoyer le plateau").DueDate);
+            Settle(owner);
+            Assert.Contains(TaskListOf(owner).GetVisualDescendants().OfType<CheckBox>(), c => AutomationProperties.GetName(c) == "Terminer : Nettoyer le plateau");
+            TaskView(owner, "Toutes").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Settle(owner);
+            foreach (var width in new[] { 960d, 1440d }) { owner.Width = width; await Task.Delay(280); CaptureDraftUi(owner, "tasks-page-" + width); }
+
+            // Checking a task moves it to « Terminées ».
+            TaskListOf(owner).GetVisualDescendants().OfType<CheckBox>().Single(c => AutomationProperties.GetName(c) == "Terminer : Filament TPU").IsChecked = true;
+            for (var i = 0; i < 100 && store.LoadActive().Single(t => t.Title == "Filament TPU").CompletedAt is null; i++) await Task.Delay(20);
+            await Task.Delay(80); Settle(owner);
+            Assert.DoesNotContain(TaskListOf(owner).GetVisualDescendants().OfType<CheckBox>(), c => AutomationProperties.GetName(c)?.EndsWith("Filament TPU") == true);
+            TaskView(owner, "Terminées").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Settle(owner);
+            Assert.Contains(TaskListOf(owner).GetVisualDescendants().OfType<CheckBox>(), c => AutomationProperties.GetName(c) == "Rouvrir : Filament TPU");
         }
         finally { CloseInvoiceTestPanel(owner); owner.Close(); }
     });
 
-    private static async Task WaitForProjectTaskCount(ProjectProfileStore store,int count)
-    {
-        for(var i=0;i<100 && store.LoadAll().Single().Tasks?.Count!=count;i++) await Task.Delay(20);
-        Assert.Equal(count,store.LoadAll().Single().Tasks!.Count);
-    }
-
     [Fact]
-    public Task Project_tracking_searches_notes_hides_completed_and_confirms_removal() => Run(async () =>
+    public Task Task_form_links_a_project_adds_steps_and_removal_asks_first() => Run(async () =>
     {
-        new WorkspaceClientCreator().CreateIndividual(_root,"Camille","Suivi","CS");
-        var client=new WorkspaceClientReader().Load(_root).Single();
-        new WorkspaceProjectCreator().CreateTracked(_root,client,2026,"Support",ProjectPriority.Medium);
-        new WorkspaceProjectCreator().CreateTracked(_root,client,2026,"Autre projet");
-        var store=new ProjectProfileStore(new WorkspaceMetadataPaths(_root));
-        var profile=ProjectTasks.Add(store,store.LoadAll().Single(p=>p.ProjectName=="Support"),"Relancer","Prévoir mardi");
-        profile=ProjectTasks.Add(store,profile,"Déjà fait",null);
-        ProjectTasks.SetCompleted(store,profile,profile.Tasks![1].Id,true);
-        var owner=await Open();owner.Show();
+        new WorkspaceClientCreator().CreateIndividual(_root, "Camille", "Suivi", "CS");
+        new WorkspaceProjectCreator().CreateTracked(_root, new WorkspaceClientReader().Load(_root).Single(), 2026, "Support");
+        var project = new WorkspaceProjectReader().Load(_root).Single().Profile!;
+        var store = new TaskStore(new WorkspaceMetadataPaths(_root));
+        store.Create(WorkTask.New("Relancer", 0));
+        var owner = await OpenTasksPage();
         try
         {
-            Invoke(owner,"ShowWorkspace","Tâches");await (Task)Invoke(owner,"LoadTasksAsync",(object?)null)!;
-            var list=owner.FindControl<StackPanel>("TaskList")!;
-            owner.FindControl<TextBox>("TaskFilterBox")!.Text="mardi";
-            Dispatcher.UIThread.RunJobs();owner.UpdateLayout();
-            Assert.Single(list.Children);
-            Assert.DoesNotContain(list.GetVisualDescendants().OfType<Button>(),b=>AutomationProperties.GetName(b)=="Modifier : Déjà fait");
-            var menu=list.GetVisualDescendants().OfType<Button>().Single(b=>AutomationProperties.GetName(b)=="Actions de la tâche : Relancer");
-            var flyout=Assert.IsType<Flyout>(menu.Tag);
-            var remove=((StackPanel)((Border)flyout.Content!).Child!).Children.OfType<Button>().Single(b=>b.Content is StackPanel content && content.Children.OfType<TextBlock>().Any(t=>t.Text=="Retirer la tâche"));
-            remove.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            await WaitForDialog<ConfirmRemovalWindow>(owner);
-            Assert.Equal(2,store.LoadAll().Single(p=>p.ProjectName=="Support").Tasks!.Count);
-            DialogAction(owner,"Annuler");await Task.Delay(50);
-            Assert.Equal(2,store.LoadAll().Single(p=>p.ProjectName=="Support").Tasks!.Count);
-            remove.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            await WaitForDialog<ConfirmRemovalWindow>(owner);DialogAction(owner,"Confirmer le retrait");
-            for(var i=0;i<100 && store.LoadAll().Single(p=>p.ProjectName=="Support").Tasks!.Count!=1;i++)await Task.Delay(20);
-            Assert.Single(store.LoadAll().Single(p=>p.ProjectName=="Support").Tasks!);
+            TaskListOf(owner).GetVisualDescendants().OfType<Button>().Single(b => AutomationProperties.GetName(b) == "Modifier : Relancer").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            await WaitForDialog<TaskWindow>(owner);
+            var body = owner.FindControl<Border>("SidePanelBody")!;
+            IdentityControl<TextBox>(body, "Tâche").Text = "Relancer le client";
+            IdentityControl<ComboBox>(body, "Projet").SelectedIndex = 1;
+            Assert.False(IdentityControl<ComboBox>(body, "Client").IsEnabled);
+            var step = IdentityControl<TextBox>(body, "Nouvelle sous-tâche");
+            step.Text = "Envoyer le devis";
+            step.RaiseEvent(new Avalonia.Input.KeyEventArgs { RoutedEvent = Avalonia.Input.InputElement.KeyDownEvent, Key = Avalonia.Input.Key.Enter });
+            DialogAction(owner, "Enregistrer");
+            for (var i = 0; i < 100 && store.LoadActive().Single().ProjectId is null; i++) await Task.Delay(20);
+            var saved = store.LoadActive().Single();
+            Assert.Equal(("Relancer le client", (Guid?)project.Id, (Guid?)project.ClientId), (saved.Title, saved.ProjectId, saved.ClientId));
+            Assert.Equal("Envoyer le devis", Assert.Single(saved.Steps!).Title);
+            await Task.Delay(80); Settle(owner);
+            // The project now has its own view on the left.
+            TaskView(owner, "Support").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Settle(owner);
+
+            TaskListOf(owner).GetVisualDescendants().OfType<Button>().Single(b => AutomationProperties.GetName(b) == "Modifier : Relancer le client").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            await WaitForDialog<TaskWindow>(owner);
+            body = owner.FindControl<Border>("SidePanelBody")!;
+            body.GetVisualDescendants().OfType<Button>().Single(b => b.Content is StackPanel c && c.Children.OfType<TextBlock>().Any(t => t.Text == "Retirer")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            // The task form is already in the side panel: the confirmation opens as its own window.
+            (await WaitForOwnedConfirmation(owner)).Close(false); await Task.Delay(50);
+            Assert.Single(store.LoadActive());
+            body.GetVisualDescendants().OfType<Button>().Single(b => b.Content is StackPanel c && c.Children.OfType<TextBlock>().Any(t => t.Text == "Retirer")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            (await WaitForOwnedConfirmation(owner)).Close(true);
+            for (var i = 0; i < 100 && store.LoadActive().Count != 0; i++) await Task.Delay(20);
+            Assert.Empty(store.LoadActive());
+            Assert.True(Assert.Single(store.LoadAll()).IsDeleted);
         }
-        finally { CloseInvoiceTestPanel(owner);owner.Close(); }
+        finally { CloseInvoiceTestPanel(owner); owner.Close(); }
     });
 
     [Fact]
-    public Task Task_editor_keeps_the_draft_when_another_edit_changes_the_project() => Run(async () =>
+    public Task Task_form_keeps_the_draft_when_the_task_changed_elsewhere() => Run(async () =>
     {
-        new WorkspaceClientCreator().CreateIndividual(_root,"Camille","Conflit","CC");
-        var client=new WorkspaceClientReader().Load(_root).Single();
-        new WorkspaceProjectCreator().CreateTracked(_root,client,2026,"Support");
-        var store=new ProjectProfileStore(new WorkspaceMetadataPaths(_root));
-        var original=ProjectTasks.Add(store,store.LoadAll().Single(),"Relancer",null);
-        var owner=await Open();owner.Show();
+        var store = new TaskStore(new WorkspaceMetadataPaths(_root));
+        var original = store.Create(WorkTask.New("Relancer", 0));
+        var owner = await OpenTasksPage();
         try
         {
-            Invoke(owner,"ShowWorkspace","Tâches");await (Task)Invoke(owner,"LoadTasksAsync",(object?)null)!;
-            var list=owner.FindControl<StackPanel>("TaskList")!;
-            Dispatcher.UIThread.RunJobs();owner.UpdateLayout();
-            list.GetVisualDescendants().OfType<Button>().Single(b=>AutomationProperties.GetName(b)=="Modifier : Relancer").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            await WaitForDialog<ProjectTaskWindow>(owner);
-            var body=owner.FindControl<Border>("SidePanelBody")!;
-            IdentityControl<TextBox>(body,"Texte de la tâche").Text="Relancer vendredi";
-            store.Update(original with { Notes="Autre modification" },original.UpdatedAt);
-            DialogAction(owner,"Enregistrer");await Task.Delay(180);
-            Assert.Equal("Relancer vendredi",IdentityControl<TextBox>(body,"Texte de la tâche").Text);
-            Assert.Contains(body.GetVisualDescendants().OfType<TextBlock>(),t=>t.IsVisible && t.Text?.Contains("modifiée depuis son ouverture")==true);
-            Assert.Equal("Relancer",store.LoadAll().Single().Tasks![0].Title);
-            Assert.Equal("Autre modification",store.LoadAll().Single().Notes);
-            DialogAction(owner,"Annuler");
+            TaskListOf(owner).GetVisualDescendants().OfType<Button>().Single(b => AutomationProperties.GetName(b) == "Modifier : Relancer").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            await WaitForDialog<TaskWindow>(owner);
+            var body = owner.FindControl<Border>("SidePanelBody")!;
+            IdentityControl<TextBox>(body, "Tâche").Text = "Relancer vendredi";
+            store.Update(original with { Notes = "Autre modification" });
+            DialogAction(owner, "Enregistrer"); await Task.Delay(180);
+            Assert.Equal("Relancer vendredi", IdentityControl<TextBox>(body, "Tâche").Text);
+            Assert.Contains(body.GetVisualDescendants().OfType<TextBlock>(), t => t.IsVisible && t.Text?.Contains("modifiée ailleurs") == true);
+            Assert.Equal(("Relancer", "Autre modification"), (store.Find(original.Id)!.Title, store.Find(original.Id)!.Notes));
+            DialogAction(owner, "Annuler");
         }
-        finally { CloseInvoiceTestPanel(owner);owner.Close(); }
+        finally { CloseInvoiceTestPanel(owner); owner.Close(); }
     });
 }
