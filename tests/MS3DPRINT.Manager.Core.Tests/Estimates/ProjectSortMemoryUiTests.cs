@@ -11,12 +11,13 @@ namespace MS3DPRINT.Manager.Core.Tests.Estimates;
 public sealed partial class EstimateUiTests
 {
     [Theory]
-    [InlineData(4, true)]
-    [InlineData(4, false)]
+    [InlineData(5, true)]
+    [InlineData(5, false)]
     [InlineData(0, false)]
     [InlineData(1, true)]
     [InlineData(2, false)]
     [InlineData(3, true)]
+    [InlineData(4, false)]
     public Task Project_sort_is_saved_on_selection_and_restored_after_reopening(int column, bool ascending) => Run(async () =>
     {
         new WorkspaceClientCreator().CreateIndividual(_root, "Camille", "Tri", "CT");
@@ -25,7 +26,7 @@ public sealed partial class EstimateUiTests
         new WorkspaceProjectCreator().CreateTracked(_root, client, 2026, "Alpha", priority: ProjectPriority.Low);
         var owner = await Open(); owner.Show();
         string[] expected;
-        Button SortButton(MainWindow window) => column == 4 ? Field<Button>(window, "_projectPrioritySortButton")
+        Button SortButton(MainWindow window) => column == 5 ? Field<Button>(window, "_projectPrioritySortButton")
             : window.FindControl<StackPanel>("ProjectList")!.GetVisualDescendants().OfType<Button>()
                 .Where(b => b.Classes.Contains("sort-head")).ElementAt(column);
         string[] Order(MainWindow window) => window.FindControl<StackPanel>("ProjectList")!.GetVisualDescendants().OfType<Button>()
@@ -53,7 +54,7 @@ public sealed partial class EstimateUiTests
             Assert.Equal(column, Field<int>(reopened, "_projectSortColumn"));
             Assert.Equal(ascending, Field<bool>(reopened, "_projectSortAscending"));
             Assert.Equal(expected, Order(reopened));
-            if (column == 4) Assert.Contains("selected", SortButton(reopened).Classes);
+            if (column == 5) Assert.Contains("selected", SortButton(reopened).Classes);
             else Assert.Contains("active", SortButton(reopened).Classes);
         }
         finally { reopened.Close(); }

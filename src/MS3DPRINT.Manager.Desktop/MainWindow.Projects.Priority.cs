@@ -24,8 +24,8 @@ public partial class MainWindow
         _projectPriorityFilterBox.SelectionChanged += (_, _) => { _projectPriorityFilter = (_projectPriorityFilterBox.SelectedItem as PriorityFilterChoice)?.Value; RenderProjects(); };
         _projectPrioritySortButton.Click += (_, _) =>
         {
-            _projectSortAscending = _projectSortColumn != 4 || !_projectSortAscending;
-            _projectSortColumn = 4; SaveWindowPreferences(); RenderProjects();
+            _projectSortAscending = _projectSortColumn != PrioritySortColumn || !_projectSortAscending;
+            _projectSortColumn = PrioritySortColumn; SaveWindowPreferences(); RenderProjects();
         };
         var filters = new WrapPanel { ItemSpacing = 12, LineSpacing = 8 };
         filters.Children.Add(_projectPriorityFilterBox); filters.Children.Add(_projectPrioritySortButton);
@@ -36,8 +36,8 @@ public partial class MainWindow
 
     private void UpdatePrioritySortButton()
     {
-        _projectPrioritySortButton.Content = Icons.Label("IconFlag", _projectSortColumn == 4 ? _projectSortAscending ? "Priorité : haute d’abord" : "Priorité : basse d’abord" : "Trier par priorité");
-        _projectPrioritySortButton.Classes.Set("selected", _projectSortColumn == 4);
+        _projectPrioritySortButton.Content = Icons.Label("IconFlag", _projectSortColumn == PrioritySortColumn ? _projectSortAscending ? "Priorité : haute d’abord" : "Priorité : basse d’abord" : "Trier par priorité");
+        _projectPrioritySortButton.Classes.Set("selected", _projectSortColumn == PrioritySortColumn);
     }
 
     private async Task<MS3DPRINT.Manager.Core.Clients.ClientSummary?> EnsurePriorityClientAsync(MS3DPRINT.Manager.Core.Clients.ClientSummary client, ProjectPriority priority, DateOnly? dueDate = null)

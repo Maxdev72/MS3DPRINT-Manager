@@ -115,7 +115,7 @@ public partial class MainWindow
             Avalonia.Automation.AutomationProperties.SetName(open, "Ouvrir " + project.ProjectName);
             var edit = ServerAction("Modifier la fiche", () => EditServerProjectAsync(project.Id), true);
             var heading = new StackPanel { Spacing = 4, Children = { CreateCompactTableCell(project.ProjectName, prominent: true), CreateCompactTableCell(project.Reference, accent: true) } };
-            ProjectList.Children.Add(CreateActionRow(ProjectRowColumns, open, CreateOverflowActions(edit), heading, CreateCompactTableCell(ServerClientName(project.ClientId)), CreateStatusBadge(ServerStatus(project.Status)), CreateCompactTableCell(project.DueDate?.ToString("dd/MM/yyyy") ?? "Sans échéance")));
+            ProjectList.Children.Add(CreateActionRow(ProjectRowColumns, open, CreateOverflowActions(edit), heading, CreateCompactTableCell(ServerClientName(project.ClientId)), CreateStatusBadge(ServerStatus(project.Status)), CreateCompactTableCell(project.DueDate?.ToString("dd/MM/yyyy") ?? "Sans échéance"), CreateCreatedCell(null)));
         }
     }
 

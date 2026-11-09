@@ -312,7 +312,7 @@ public partial class MainWindow
     }
 
     /// <summary>Project, client, status, due date, actions.</summary>
-    private const string ProjectRowColumns = "3*,1.4*,170,110,84";
+    private const string ProjectRowColumns = "3*,1.4*,170,110,100,84";
 
     private const string TrashRowColumns = "2*,*,130";
 

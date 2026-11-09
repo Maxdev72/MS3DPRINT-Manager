@@ -198,7 +198,7 @@ public partial class MainWindow
         projects = SortProjects(projects);
         if (_projectCalendarView) { RenderProjectCalendar(projects); return; }
         if (_projectTrackingView) { RenderProjectTracking(projects); return; }
-        PagedRows.Render(ProjectList, projects, CreateProjectRow, () => CreateSortableHeader(ProjectRowColumns, ["PROJET", "CLIENT", "STATUT", "ÉCHÉANCE", "ACTIONS"], _projectSortColumn, _projectSortAscending, column =>
+        PagedRows.Render(ProjectList, projects, CreateProjectRow, () => CreateSortableHeader(ProjectRowColumns, ["PROJET", "CLIENT", "STATUT", "ÉCHÉANCE", "CRÉÉ LE", "ACTIONS"], _projectSortColumn, _projectSortAscending, column =>
         {
             _projectSortAscending = _projectSortColumn != column || !_projectSortAscending;
             _projectSortColumn = column;
@@ -221,7 +221,8 @@ public partial class MainWindow
                 CreateProjectNameCell(project),
                 CreateProjectClientCell(project.ClientTitle()),
                 CreateStatusPicker(project),
-                CreateDueDateCell(project));
+                CreateDueDateCell(project),
+                CreateCreatedCell(project.Profile?.CreatedAt));
             AddProjectQuickEdit(row, project);
             return row;
     }
@@ -337,9 +338,16 @@ public partial class MainWindow
         return text;
     }
 
+    /// <summary>The priority sort has no column: it comes from the flag button above the list.</summary>
+    private const int PrioritySortColumn = 5;
+
+    private static Control CreateCreatedCell(DateTimeOffset? created) => created is { } date
+        ? new TextBlock { Text = date.ToLocalTime().ToString("dd/MM/yyyy"), Classes = { "muted" }, VerticalAlignment = VerticalAlignment.Center }
+        : new TextBlock { Text = "—", Classes = { "faint" }, VerticalAlignment = VerticalAlignment.Center };
+
     private ProjectSummary[] SortProjects(ProjectSummary[] projects)
     {
-        if (_projectSortColumn == 4)
+        if (_projectSortColumn == PrioritySortColumn)
             return projects.OrderBy(project => project.Priority == ProjectPriority.None ? 3 : _projectSortAscending ? 3 - (int)project.Priority : (int)project.Priority - 1)
                 .ThenBy(project => project.Reference, StringComparer.OrdinalIgnoreCase).ToArray();
         if (_projectSortColumn < 0) return projects;
@@ -348,6 +356,7 @@ public partial class MainWindow
             1 => projects.OrderBy(project => project.ClientTitle(), StringComparer.CurrentCultureIgnoreCase),
             2 => projects.OrderBy(project => project.StatusLabel switch { "A_FAIRE" => 0, "EN_COURS" => 1, _ => 2 }),
             3 => projects.OrderBy(project => project.Profile?.DueDate is null).ThenBy(project => project.Profile?.DueDate),
+            4 => projects.OrderBy(project => project.Profile?.CreatedAt is null).ThenBy(project => project.Profile?.CreatedAt).ThenBy(project => project.Reference, StringComparer.OrdinalIgnoreCase),
             _ => projects.OrderBy(project => project.Title(), StringComparer.CurrentCultureIgnoreCase)
         };
         return (_projectSortAscending ? ordered : ordered.Reverse()).ToArray();

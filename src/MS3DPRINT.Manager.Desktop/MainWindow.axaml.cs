@@ -75,7 +75,7 @@ public partial class MainWindow : Window
         {
             Width = Math.Max(MinWidth, saved.Width);
             Height = Math.Max(MinHeight, saved.Height);
-            if (saved.ProjectSortColumn is >= -1 and <= 4)
+            if (saved.ProjectSortColumn is >= -1 and <= PrioritySortColumn)
             {
                 _projectSortColumn = saved.ProjectSortColumn;
                 _projectSortAscending = saved.ProjectSortAscending;
