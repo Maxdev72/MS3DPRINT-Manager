@@ -251,6 +251,14 @@
   <Style Selector="Button.task-view:pointerover /template/ ContentPresenter"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /></Style>
   <Style Selector="Button.task-view.selected /template/ ContentPresenter"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /></Style>
   <Style Selector="Button.task-view.selected TextBlock"><Setter Property="FontWeight" Value="SemiBold" /></Style>
+  <Style Selector="Border.task-row.selected"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="CornerRadius" Value="6" /></Style>
+  <Style Selector="Border.task-detail"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" /><Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="10" /></Style>
+  <Style Selector="Border.task-detail TextBox, Border.task-detail ComboBox, Border.task-detail AutoCompleteBox, Border.task-detail CalendarDatePicker"><Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /></Style>
+  <Style Selector="Border.task-detail ComboBox:disabled /template/ Border#Background"><Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" /></Style>
+  <Style Selector="Border.task-chip"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" /><Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="12" /><Setter Property="Padding" Value="10,3" /></Style>
+  <Style Selector="Border.task-hint"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="CornerRadius" Value="8" /></Style>
+  <Style Selector="Button.task-group"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /><Setter Property="Padding" Value="4,4" /></Style>
+  <Style Selector="Button.task-group:pointerover /template/ ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
   <Style Selector="Border.project-task-row"><Setter Property="BorderThickness" Value="0,0,0,1" /><Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" /></Style>
   <Style Selector="Border.project-task-row Button.task-row-action">
     <Setter Property="Background" Value="Transparent" />

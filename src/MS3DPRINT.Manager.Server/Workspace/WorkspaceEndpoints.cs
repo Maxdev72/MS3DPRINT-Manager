@@ -38,6 +38,9 @@ public static class WorkspaceEndpoints
         // Independent tasks sync by date: the latest copy wins, so sending the same task twice is harmless.
         group.MapPut("/tasks/{id:guid}", (Guid id, MS3DPRINT.Manager.Core.Tasks.WorkTask input, CommandStore receipts, WorkspaceReader reader)
             => receipts.Read(() => reader.MergeTask(id, input)));
+        group.MapGet("/task-lists", (CommandStore receipts, WorkspaceReader reader) => receipts.Read(() => Results.Ok(reader.ReadTaskLists())));
+        group.MapPut("/task-lists", (MS3DPRINT.Manager.Core.Tasks.TaskListEntry[] input, CommandStore receipts, WorkspaceReader reader)
+            => receipts.Read(() => reader.MergeTaskLists(input)));
         group.MapGet("/commands/{id:guid}", (Guid id, CommandStore receipts) => id == Guid.Empty ? Results.BadRequest() : receipts.Receipt(id) is { } receipt ? Results.Ok(receipt) : Results.NotFound());
         group.MapPost("/clients", (CreateClientCommand input, HttpRequest request, CommandStore receipts, WorkspaceCommands commands)
             => receipts.Execute(input.CommandId, request, input, () => commands.Create(input)));

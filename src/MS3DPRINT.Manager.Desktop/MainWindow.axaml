@@ -168,25 +168,28 @@
         </Grid>
       </Border>
       <Border x:Name="TasksWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="panel">
-        <Grid ColumnDefinitions="220,*" ColumnSpacing="24">
+        <Grid ColumnDefinitions="210,*,Auto" ColumnSpacing="20">
           <ScrollViewer HorizontalScrollBarVisibility="Disabled"><StackPanel x:Name="TaskViewList" Spacing="2" Margin="0,0,8,0" /></ScrollViewer>
-          <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" RowSpacing="14">
+          <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" RowSpacing="12">
             <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="14">
-              <TextBlock x:Name="TaskViewTitle" Classes="section-title" FontSize="22" VerticalAlignment="Center" />
+              <TextBlock x:Name="TaskViewTitle" Classes="section-title" FontSize="22" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
               <TextBlock x:Name="TasksSummary" Grid.Column="1" Classes="caption" VerticalAlignment="Center" />
-              <Border Grid.Column="2" Classes="search-box" Height="36" Width="240"><Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"><Path Classes="icon" Data="{StaticResource IconSearch}" /><TextBox x:Name="TaskFilterBox" Grid.Column="1" Classes="search-input" PlaceholderText="Rechercher…" TextChanged="TaskFilterText_Changed" AutomationProperties.Name="Rechercher une tâche" /></Grid></Border>
+              <Border Grid.Column="2" Classes="search-box" Height="36" Width="220"><Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"><Path Classes="icon" Data="{StaticResource IconSearch}" /><TextBox x:Name="TaskFilterBox" Grid.Column="1" Classes="search-input" PlaceholderText="Rechercher · Ctrl+F" TextChanged="TaskFilterText_Changed" AutomationProperties.Name="Rechercher une tâche" /></Grid></Border>
             </Grid>
-            <StackPanel x:Name="TaskAddArea" Grid.Row="1" Spacing="6">
-              <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                <TextBox x:Name="NewTaskBox" MaxLength="600" KeyDown="NewTaskBox_KeyDown" AutomationProperties.Name="Ajouter une tâche" />
+            <StackPanel x:Name="TaskAddArea" Grid.Row="1" Spacing="8">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <TextBox x:Name="NewTaskBox" MaxLength="600" KeyDown="NewTaskBox_KeyDown" TextChanged="NewTaskBox_TextChanged" AutomationProperties.Name="Ajouter une tâche" ToolTip.Tip="Entrée pour ajouter · N pour revenir ici · @projet +client #liste !haute demain" />
                 <Button Grid.Column="1" Classes="primary-action" Click="AddTask_Click" AutomationProperties.Name="Ajouter la tâche"><StackPanel Orientation="Horizontal" Spacing="6"><Path Classes="icon icon-sm" Data="{StaticResource IconPlus}" /><TextBlock Text="Ajouter" /></StackPanel></Button>
-                <Button Grid.Column="2" Click="TaskDetails_Click" AutomationProperties.Name="Nouvelle tâche détaillée" ToolTip.Tip="Nouvelle tâche avec tous ses champs"><StackPanel Orientation="Horizontal" Spacing="6"><Path Classes="icon icon-sm" Data="{StaticResource IconEdit}" /><TextBlock Text="Détaillée" /></StackPanel></Button>
               </Grid>
+              <WrapPanel x:Name="TaskQuickPreview" ItemSpacing="6" LineSpacing="6" />
             </StackPanel>
             <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
-              <StackPanel x:Name="TaskList" HorizontalAlignment="Stretch" Spacing="0" Margin="0,0,10,0" />
+              <StackPanel x:Name="TaskList" HorizontalAlignment="Stretch" Spacing="0" Margin="0,0,10,0" Focusable="True" />
             </ScrollViewer>
           </Grid>
+          <Border x:Name="TaskDetailHost" Grid.Column="2" Width="340" IsVisible="False" Classes="task-detail">
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled"><StackPanel x:Name="TaskDetail" Spacing="14" Margin="16" /></ScrollViewer>
+          </Border>
         </Grid>
       </Border>
       <Border x:Name="ClientsWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="panel">

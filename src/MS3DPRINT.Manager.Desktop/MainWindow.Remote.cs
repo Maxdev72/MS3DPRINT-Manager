@@ -221,7 +221,12 @@ public partial class MainWindow
         // An older server has no task list yet: tasks simply stay on this PC until it is updated.
         try { server = await connection.ReadAsync(client => client.GetTasksAsync()); }
         catch (RemoteWorkspaceException) { return new(0, 0, 0); }
-        return await Task.Run(() => MS3DPRINT.Manager.Core.Tasks.RemoteTaskSync.RunAsync(root, server, task => connection.ReadAsync(client => client.PutTaskAsync(task))));
+        var tasks = await Task.Run(() => MS3DPRINT.Manager.Core.Tasks.RemoteTaskSync.RunAsync(root, server, task => connection.ReadAsync(client => client.PutTaskAsync(task))));
+        IReadOnlyList<MS3DPRINT.Manager.Core.Tasks.TaskListEntry> lists;
+        try { lists = await connection.ReadAsync(client => client.GetTaskListsAsync()); }
+        catch (RemoteWorkspaceException) { return tasks; }
+        var listed = await Task.Run(() => MS3DPRINT.Manager.Core.Tasks.RemoteTaskSync.RunListsAsync(root, lists, all => connection.ReadAsync(client => client.PutTaskListsAsync(all))));
+        return new(tasks.Pulled + listed.Pulled, tasks.Pushed + listed.Pushed, tasks.Failed + listed.Failed);
     }
     private async void ServerLogin_Click(object? sender, RoutedEventArgs e) => await LoginServerAsync();
     private bool _serverLoginDismissed;

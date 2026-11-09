@@ -131,6 +131,17 @@ public sealed class ProfileSyncTests
         // An older copy sent to the server is ignored: the server answers with the one it keeps.
         var kept = await remote.PutTaskAsync(server);
         Assert.True(kept.IsDeleted);
+
+        // Lists, empty ones included, follow the same rule.
+        var lists = new TaskListStore(new WorkspaceMetadataPaths(local));
+        lists.Add("Entretien");
+        Task<ProfileSyncResult> RunLists() => Task.Run(async () => await RemoteTaskSync.RunListsAsync(local, await remote.GetTaskListsAsync(), all => remote.PutTaskListsAsync(all)));
+        Assert.Equal(1, (await RunLists()).Pushed);
+        Assert.Equal(["Entretien"], (await remote.GetTaskListsAsync()).Select(l => l.Name));
+        lists.Remove("Entretien");
+        await RunLists();
+        Assert.NotNull((await remote.GetTaskListsAsync()).Single().DeletedAt);
+        Assert.Equal(new ProfileSyncResult(0, 0, 0), await RunLists());
     }
 
     private static void CopyTree(string from, string to)

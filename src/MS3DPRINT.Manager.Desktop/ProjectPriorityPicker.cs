@@ -30,6 +30,8 @@ public sealed class ProjectPriorityPicker : StackPanel
     private readonly List<(Button Button, ProjectPriority Priority)> _choices = [];
     private readonly TextBlock _hint = new() { Classes = { "muted" }, FontSize = 13 };
     private ProjectPriority _value;
+    /// <summary>Raised when the user picks a priority (not when code sets <see cref="Value"/>).</summary>
+    public event Action<ProjectPriority>? Changed;
     public ProjectPriority Value
     {
         get => _value;
@@ -54,7 +56,7 @@ public sealed class ProjectPriorityPicker : StackPanel
             var button = new Button { Content = ProjectPriorityVisual.Flag(priority), Classes = { "priority-choice" }, Width = 44, MinHeight = 42 };
             ToolTip.SetTip(button, ProjectPriorityVisual.Text(priority));
             Avalonia.Automation.AutomationProperties.SetName(button, ProjectPriorityVisual.Text(priority));
-            button.Click += (_, _) => Value = priority;
+            button.Click += (_, _) => { Value = priority; Changed?.Invoke(priority); };
             _choices.Add((button, priority)); options.Children.Add(button);
         }
         Children.Add(options); Children.Add(_hint);

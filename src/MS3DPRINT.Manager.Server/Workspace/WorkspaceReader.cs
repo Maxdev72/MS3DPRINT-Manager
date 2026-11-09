@@ -21,6 +21,17 @@ public sealed class WorkspaceReader(ServerStorage storage)
 
     public IReadOnlyList<WorkTask> ReadTasks() => new TaskStore(new WorkspaceMetadataPaths(storage.WorkspaceRoot)).LoadAll();
 
+    public IReadOnlyList<TaskListEntry> ReadTaskLists() => new TaskListStore(new WorkspaceMetadataPaths(storage.WorkspaceRoot)).LoadAll();
+
+    /// <summary>Merges list names by date and returns every list the server holds afterwards.</summary>
+    public IResult MergeTaskLists(TaskListEntry[]? input)
+    {
+        if (input is null || input.Length > 500) return Results.BadRequest();
+        var store = new TaskListStore(new WorkspaceMetadataPaths(storage.WorkspaceRoot));
+        store.Merge(input);
+        return Results.Ok(store.LoadAll());
+    }
+
     /// <summary>Keeps the latest copy and returns the one the server holds afterwards.</summary>
     public IResult MergeTask(Guid id, WorkTask? input)
     {

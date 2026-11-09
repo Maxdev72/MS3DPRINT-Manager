@@ -20,10 +20,39 @@ public sealed class TaskCoreTests : IDisposable
     [InlineData("Imprimer support aujourd'hui !moyenne", "Imprimer support", "2026-11-09", ProjectPriority.Medium, null)]
     [InlineData("Idée de produit", "Idée de produit", null, ProjectPriority.None, null)]
     [InlineData("demain", "demain", null, ProjectPriority.None, null)]
+    [InlineData("Graisser les axes dans 3 jours", "Graisser les axes", "2026-11-12", ProjectPriority.None, null)]
+    [InlineData("Inventaire semaine prochaine", "Inventaire", "2026-11-16", ProjectPriority.None, null)]
+    [InlineData("Déclarer CA fin du mois !h", "Déclarer CA", "2026-11-30", ProjectPriority.High, null)]
+    [InlineData("Salon 15 nov", "Salon", "2026-11-15", ProjectPriority.None, null)]
+    [InlineData("Renouveler domaine 3 janvier", "Renouveler domaine", "2027-01-03", ProjectPriority.None, null)]
+    [InlineData("Appeler lundi prochain", "Appeler", "2026-11-16", ProjectPriority.None, null)]
+    [InlineData("Imprimer 2 pièces", "Imprimer 2 pièces", null, ProjectPriority.None, null)]
     public void Quick_add_reads_dates_priority_and_list(string text, string title, string? due, ProjectPriority priority, string? list)
     {
         var parsed = TaskQuickAdd.Parse(text, Monday);
         Assert.Equal(new QuickTask(title, due is null ? null : DateOnly.Parse(due), priority, list), parsed);
+    }
+
+    [Fact]
+    public void Quick_add_keeps_the_typed_project_and_client_names()
+    {
+        var parsed = TaskQuickAdd.Parse("Livrer @pièce_vélo +Dupont demain", Monday);
+        Assert.Equal(("Livrer", "pièce vélo", "Dupont", (DateOnly?)Monday.AddDays(1)), (parsed.Title, parsed.Project, parsed.Client, parsed.DueDate));
+    }
+
+    [Fact]
+    public void Lists_stay_when_empty_and_a_removal_wins_over_an_older_copy()
+    {
+        var lists = new TaskListStore(new WorkspaceMetadataPaths(_root));
+        lists.Add("Achats"); lists.Add("Entretien");
+        Assert.Equal(["Achats", "Entretien"], lists.ActiveNames());
+        var before = lists.LoadAll().Single(e => e.Name == "Achats");
+        lists.Remove("achats");
+        Assert.Equal(["Entretien"], lists.ActiveNames());
+        Assert.Equal(0, lists.Merge([before]));
+        Assert.Equal(["Entretien"], lists.ActiveNames());
+        Assert.Equal(1, lists.Merge([new TaskListEntry("Atelier", DateTimeOffset.UtcNow)]));
+        Assert.Equal(["Atelier", "Entretien"], lists.ActiveNames());
     }
 
     [Fact]

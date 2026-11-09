@@ -32,4 +32,16 @@ public static class RemoteTaskSync
         }
         return new ProfileSyncResult(pulled, pushed, failed);
     }
+
+    /// <summary>Lists (empty ones included): merge the server's, then send ours when the server lacks a newer state.</summary>
+    public static async Task<ProfileSyncResult> RunListsAsync(string root, IReadOnlyList<TaskListEntry> server, Func<IReadOnlyList<TaskListEntry>, Task<IReadOnlyList<TaskListEntry>>> put)
+    {
+        var store = new TaskListStore(new WorkspaceMetadataPaths(root));
+        var pulled = store.Merge(server);
+        var remote = server.Where(e => e is not null).GroupBy(e => e.Name, StringComparer.CurrentCultureIgnoreCase).ToDictionary(g => g.Key, g => g.Max(e => e.UpdatedAt), StringComparer.CurrentCultureIgnoreCase);
+        var local = store.LoadAll();
+        if (!local.Any(e => !remote.TryGetValue(e.Name, out var at) || at < e.UpdatedAt)) return new(pulled, 0, 0);
+        try { pulled += store.Merge(await put(local).ConfigureAwait(false)); return new(pulled, 1, 0); }
+        catch (RemoteWorkspaceException) { return new(pulled, 0, 1); }
+    }
 }
