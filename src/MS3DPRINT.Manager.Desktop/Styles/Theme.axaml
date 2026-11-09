@@ -20,6 +20,7 @@
       <SolidColorBrush x:Key="TextBrush" Color="#F5F9FF" />
       <SolidColorBrush x:Key="MutedTextBrush" Color="#B1C2D9" />
       <SolidColorBrush x:Key="FaintTextBrush" Color="#A5BBD3" />
+      <SolidColorBrush x:Key="PlaceholderBrush" Color="#7D91AA" />
       <!-- Accent and states -->
       <SolidColorBrush x:Key="AccentBrush" Color="#76B8FF" />
       <SolidColorBrush x:Key="BrandBlueBrush" Color="#245CFF" />
@@ -193,7 +194,7 @@
 
   <!-- Inputs -->
   <Style Selector="TextBox">
-    <Setter Property="PlaceholderForeground" Value="{DynamicResource MutedTextBrush}" />
+    <Setter Property="PlaceholderForeground" Value="{DynamicResource PlaceholderBrush}" />
     <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
@@ -209,6 +210,8 @@
     <Setter Property="CaretBrush" Value="{DynamicResource TextBrush}" />
   </Style>
   <Style Selector="TextBox:disabled"><Setter Property="Opacity" Value="0.75" /></Style>
+  <!-- Examples in empty fields must never read as values already typed. -->
+  <Style Selector="TextBox /template/ TextBlock#PART_Placeholder"><Setter Property="FontStyle" Value="Italic" /></Style>
   <Style Selector="TextBox:not(:disabled) /template/ TextBlock#PART_Placeholder, ComboBox:not(:disabled) /template/ TextBlock">
     <!-- Fluent halves placeholder opacity; keep the chosen text contrast on dark inputs. -->
     <Setter Property="Opacity" Value="1" />
@@ -225,7 +228,7 @@
     <Setter Property="BorderBrush" Value="{DynamicResource FocusBorderBrush}" />
   </Style>
   <Style Selector="ComboBox">
-    <Setter Property="PlaceholderForeground" Value="{DynamicResource MutedTextBrush}" />
+    <Setter Property="PlaceholderForeground" Value="{DynamicResource PlaceholderBrush}" />
     <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />

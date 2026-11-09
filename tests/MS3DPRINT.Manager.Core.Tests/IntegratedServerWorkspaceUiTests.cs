@@ -281,8 +281,9 @@ public sealed class IntegratedServerWorkspaceUiTests
                 try
                 {
                     Assert.False(window.IsServerWorkspace);
-                    Assert.Contains("Données PC conservées", window.FindControl<TextBlock>("WorkspaceSourceText")!.Text);
-                    Assert.Contains("ne les transfère pas", window.FindControl<TextBlock>("WorkspaceSourceText")!.Text);
+                    Assert.Equal("Atelier local · données PC", window.FindControl<TextBlock>("WorkspaceSourceText")!.Text);
+                    Assert.Contains("Données PC conservées", ToolTip.GetTip(window.FindControl<TextBlock>("WorkspaceSourceText")!) as string);
+                    Assert.Contains("ne les transfère pas", ToolTip.GetTip(window.FindControl<TextBlock>("WorkspaceSourceText")!) as string);
                     Assert.Equal(0, handler.Requests);
                     Assert.False(File.Exists(mode));
                     Assert.Equal(bytes, File.ReadAllBytes(source));

@@ -182,8 +182,8 @@
     <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
-    <Setter Property="Padding" Value="14,12" />
-    <Setter Property="MinHeight" Value="46" />
+    <Setter Property="Padding" Value="14,10" />
+    <Setter Property="MinHeight" Value="42" />
     <Setter Property="FontSize" Value="15" />
     <Setter Property="FontWeight" Value="Medium" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />

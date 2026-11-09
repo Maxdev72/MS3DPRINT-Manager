@@ -119,7 +119,7 @@ public partial class MainWindow
         LocalServerModeButton.IsVisible = !IsServerWorkspace;
         WorkspaceHeader.RowSpacing = IsServerWorkspace ? 14 : 0;
         var pcData = !IsServerWorkspace && WorkspaceStartupMode.HasLocalBusinessData(_workspaceLocation.Resolve());
-        WorkspaceSourceText.Text = IsServerWorkspace ? "Données serveur" : pcData ? "Données PC conservées ; ouvrir le serveur ne les transfère pas" : "Espace de travail local";
+        WorkspaceSourceText.Text = IsServerWorkspace ? "Données serveur" : pcData ? "Atelier local · données PC" : "Espace de travail local";
         ToolTip.SetTip(WorkspaceSourceText, pcData ? "Données PC conservées ; ouvrir le serveur ne les transfère pas. Le serveur peut être plus ancien." : WorkspaceSourceText.Text);
         WorkspaceModeButton.Content = IsServerWorkspace ? "Atelier local" : "Atelier serveur";
         // One action at a time: sign in while signed out, sign out while connected. Data refreshes on its own.

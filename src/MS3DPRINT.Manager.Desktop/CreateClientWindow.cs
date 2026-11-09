@@ -19,8 +19,8 @@ public sealed class CreateClientWindow : DialogWindow
     private readonly TextBox _firstName = new() { PlaceholderText = "Prénom" };
     private readonly TextBox _lastName = new() { PlaceholderText = "Nom" };
     private readonly TextBox _siret = new() { PlaceholderText = "14 chiffres" };
-    private readonly TextBox _email = new() { PlaceholderText = "contact@exemple.fr" };
-    private readonly TextBox _mobile = new() { PlaceholderText = "06 12 34 56 78" };
+    private readonly TextBox _email = new() { PlaceholderText = "ex. contact@exemple.fr" };
+    private readonly TextBox _mobile = new() { PlaceholderText = "ex. 06 12 34 56 78" };
     private readonly TextBox _address = new() { PlaceholderText = "Tapez pour rechercher l’adresse" };
     private readonly ListBox _companyResults = new() { IsVisible = false, MaxHeight = 240, Classes = { "lookup-suggestions" } };
     private readonly ListBox _addressResults = new() { IsVisible = false, MaxHeight = 200, Classes = { "lookup-suggestions" } };

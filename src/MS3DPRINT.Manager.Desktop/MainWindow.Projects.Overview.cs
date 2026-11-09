@@ -17,7 +17,12 @@ public partial class MainWindow
         var overviewRoot = WorkspaceRoot;
         var content = new StackPanel { Spacing = 18 };
         var heading = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
-        heading.Children.Add(new TextBlock { Text = "Suivi du projet", FontSize = 24, FontWeight = FontWeight.SemiBold, Classes = { "brand-heading" }, TextWrapping = TextWrapping.Wrap });
+        // The project's own name leads the sheet; reference and client right under it.
+        heading.Children.Add(new StackPanel { Spacing = 4, Children =
+        {
+            new TextBlock { Text = project.Title(), FontSize = 24, FontWeight = FontWeight.SemiBold, Classes = { "brand-heading" }, TextWrapping = TextWrapping.Wrap },
+            new TextBlock { Text = project.Reference + " · " + project.ClientTitle(), Classes = { "muted" }, TextWrapping = TextWrapping.Wrap }
+        } });
         var edit = new Button { Content = Icons.Label("IconEdit", "Modifier"), Tag = project, Classes = { "ghost" } };
         edit.Click += EditProject_Click; Grid.SetColumn(edit, 1); heading.Children.Add(edit);
         content.Children.Add(heading);
@@ -30,7 +35,6 @@ public partial class MainWindow
         facts.Children.Add(due);
         if (project.Profile is { } sheet)
             facts.Children.Add(new TextBlock { Text = $"Créé le {sheet.CreatedAt.ToLocalTime():dd/MM/yyyy}", Classes = { "muted" }, VerticalAlignment = VerticalAlignment.Center });
-        facts.Children.Add(new TextBlock { Text = project.ClientTitle(), Classes = { "muted" }, VerticalAlignment = VerticalAlignment.Center });
         content.Children.Add(facts);
         content.Children.Add(new TextBlock
         {

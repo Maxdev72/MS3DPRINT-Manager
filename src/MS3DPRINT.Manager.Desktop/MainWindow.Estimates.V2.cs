@@ -84,7 +84,7 @@ public partial class MainWindow
         } };
         _estimateConvertV2.Click += (_, _) => { _estimateEngineVersion = 2; UpdateEstimateVersion(); EstimateChanged(); };
         EstimateV2VersionHost.Children.Add(compatibility);
-        _estimatePrinter.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<PrinterChoice>((choice, _) => new TextBlock { Text = choice?.ToString(), TextWrapping = TextWrapping.Wrap });
+        _estimatePrinter.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<PrinterChoice>((choice, _) => new TextBlock { Text = choice?.ToString(), TextTrimming = TextTrimming.CharacterEllipsis });
         EstimateV2MachineHost.Children.Add(EstimateField("Imprimante utilisée", _estimatePrinter));
         var production = new StackPanel { Spacing = 10 };
         production.Children.Add(EstimateHint("Ensemble : 0 pièce par plateau signifie que les données couvrent toute la commande. Sinon, poids et durée décrivent un plateau complet, même le dernier partiellement rempli."));

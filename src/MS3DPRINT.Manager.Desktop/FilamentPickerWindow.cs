@@ -11,12 +11,10 @@ public static class FilamentChoiceVisual
     public static Control Create(FilamentProfile? filament)
     {
         if (filament is null) return new TextBlock();
-        var title = new TextBlock { Text = filament.Brand + " · " + filament.Name, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap };
-        var price = new TextBlock { Text = $"{filament.PricePerKg:0.00} €/kg", VerticalAlignment = VerticalAlignment.Top };
-        var heading = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
-        Grid.SetColumn(price, 1); heading.Children.Add(title); heading.Children.Add(price);
-        var details = filament.Material + (string.IsNullOrWhiteSpace(filament.Color) ? "" : " · " + filament.Color) + (filament.IsAbrasive ? " · Abrasif" : "");
-        return new StackPanel { Spacing = 3, Children = { heading, new TextBlock { Text = details, Classes = { "caption" }, TextWrapping = TextWrapping.Wrap } } };
+        // Never wrap, and the price on the second line: in a narrow box the name keeps the room it needs.
+        var title = new TextBlock { Text = filament.Brand + " · " + filament.Name, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis };
+        var details = $"{filament.PricePerKg:0.00} €/kg · " + filament.Material + (string.IsNullOrWhiteSpace(filament.Color) ? "" : " · " + filament.Color) + (filament.IsAbrasive ? " · Abrasif" : "");
+        return new StackPanel { Spacing = 3, Children = { title, new TextBlock { Text = details, Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis } } };
     }
 }
 

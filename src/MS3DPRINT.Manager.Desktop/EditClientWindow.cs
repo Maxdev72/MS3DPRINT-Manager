@@ -47,7 +47,7 @@ public sealed class EditClientWindow : DialogWindow
         _contactLastName = new TextBox { Text = profile.PrimaryContact.LastName ?? string.Empty, PlaceholderText = "Nom du contact" };
         _contactRole = new TextBox { Text = profile.PrimaryContact.Role ?? string.Empty, PlaceholderText = "Fonction" };
         _contactPhone = new TextBox { Text = profile.PrimaryContact.Phone ?? string.Empty, PlaceholderText = "Téléphone" };
-        _contactMobile = new TextBox { Text = profile.PrimaryContact.Mobile ?? string.Empty, PlaceholderText = "06 12 34 56 78" };
+        _contactMobile = new TextBox { Text = profile.PrimaryContact.Mobile ?? string.Empty, PlaceholderText = "ex. 06 12 34 56 78" };
         _contactEmail = new TextBox { Text = profile.PrimaryContact.Email ?? string.Empty, PlaceholderText = "E-mail" };
         var save = new Button { Content = "Enregistrer" };
         save.Click += (_, _) => Close(true);

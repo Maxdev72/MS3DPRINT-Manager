@@ -451,6 +451,19 @@ public partial class MainWindow
         _taskKeysHooked = true;
         // Tunnel: the page sees the keys before the focused button turns Space into a click.
         TasksWorkspacePanel.AddHandler(KeyDownEvent, TasksPanel_KeyDown, RoutingStrategies.Tunnel);
+        TasksWorkspacePanel.SizeChanged += (_, e) => ApplyTaskLayout(e.NewSize.Width);
+        ApplyTaskLayout(TasksWorkspacePanel.Bounds.Width);
+    }
+
+    /// <summary>Below ~1000 px the detail floats over the list instead of taking a third column, so the list keeps a usable width.</summary>
+    private void ApplyTaskLayout(double width)
+    {
+        var overlay = width > 0 && width < 1000;
+        Grid.SetColumn(TaskDetailHost, overlay ? 1 : 2);
+        Grid.SetColumnSpan(TaskDetailHost, overlay ? 2 : 1);
+        TaskDetailHost.HorizontalAlignment = overlay ? HorizontalAlignment.Right : HorizontalAlignment.Stretch;
+        TaskDetailHost.ZIndex = overlay ? 5 : 0;
+        TaskDetailHost.Classes.Set("floating", overlay);
     }
 
     private async void TasksPanel_KeyDown(object? sender, KeyEventArgs e)

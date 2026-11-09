@@ -9,7 +9,7 @@ namespace MS3DPRINT.Manager.Core.Tests.Estimates;
 public sealed partial class EstimateUiTests
 {
     [Fact]
-    public Task Notifications_are_at_the_top_right_below_the_global_search() => Run(async () =>
+    public Task Notifications_are_at_the_bottom_left_away_from_page_actions_and_side_panel() => Run(async () =>
     {
         var owner = await Open(); owner.Show();
         try
@@ -20,13 +20,13 @@ public sealed partial class EstimateUiTests
                 Invoke(owner, "Notify", "Nom du projet copié.", false);
                 await Task.Delay(180); Dispatcher.UIThread.RunJobs(); owner.UpdateLayout();
                 var host = owner.FindControl<StackPanel>("ToastHost")!;
-                var search = owner.FindControl<Border>("GlobalSearchContainer")!;
-                var top = host.TranslatePoint(default, owner)!.Value.Y;
-                var searchBottom = search.TranslatePoint(new Point(0, search.Bounds.Height), owner)!.Value.Y;
-                Assert.Equal(VerticalAlignment.Top, host.VerticalAlignment);
-                Assert.Equal(HorizontalAlignment.Right, host.HorizontalAlignment);
-                Assert.InRange(top - searchBottom, 0, 70);
-                CaptureDraftUi(owner, "notifications-top-right-" + width);
+                var origin = host.TranslatePoint(default, owner)!.Value;
+                Assert.Equal(VerticalAlignment.Bottom, host.VerticalAlignment);
+                Assert.Equal(HorizontalAlignment.Left, host.HorizontalAlignment);
+                // Clear of the page header (title, search, actions) and of the right-hand side panel.
+                Assert.True(origin.Y > owner.Bounds.Height / 2);
+                Assert.True(origin.X + host.Bounds.Width < owner.Bounds.Width - 420);
+                CaptureDraftUi(owner, "notifications-bottom-left-" + width);
             }
         }
         finally { owner.Close(); }
