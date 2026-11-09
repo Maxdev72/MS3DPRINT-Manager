@@ -50,6 +50,20 @@ public sealed partial class DesignTokenTests
         Assert.True(offenders.Length == 0, "Arrondi hors échelle — 6 pour les contrôles, 10 pour les cartes :\n" + string.Join("\n", offenders));
     }
 
+    [Fact]
+    public void Text_uses_three_weights_and_the_line_height_scale()
+    {
+        var offenders = SourceFiles().SelectMany(file =>
+        {
+            var text = File.ReadAllText(file);
+            var weights = HeavyOrLightWeight().Matches(text).Select(match => match.Value);
+            var lines = LiteralLineHeight().Matches(text).Select(match => match.Groups[1].Value)
+                .Where(value => !Ui.Text.LineHeights.Contains(double.Parse(value, CultureInfo.InvariantCulture)));
+            return weights.Concat(lines).Select(value => Path.GetFileName(file) + ": " + value);
+        }).ToArray();
+        Assert.True(offenders.Length == 0, "Graisse ou interligne hors échelle — Normal, Medium (contrôles) ou SemiBold (titres) ; interlignes 20, 22, 24, 28 :\n" + string.Join("\n", offenders));
+    }
+
     private static IEnumerable<string> OffGridValues(string file)
     {
         var text = File.ReadAllText(file);
@@ -80,6 +94,10 @@ public sealed partial class DesignTokenTests
     private static partial Regex AxamlSpacing();
     [GeneratedRegex(@"(?:\bCornerRadius=|Property=""CornerRadius"" Value=|x:Key=""\w*CornerRadius"">)""?([\d., ]+)[""<]")]
     private static partial Regex AxamlRadius();
+    [GeneratedRegex(@"FontWeight\.(?:Thin|ExtraLight|Light|Bold|ExtraBold|Black)\b|FontWeight=""(?:Thin|ExtraLight|Light|Bold|ExtraBold|Black)""|""FontWeight"" Value=""(?:Light|Bold|Black)""")]
+    private static partial Regex HeavyOrLightWeight();
+    [GeneratedRegex(@"LineHeight(?:\s*=\s*""?|"" Value="")(\d+(?:\.\d+)?)")]
+    private static partial Regex LiteralLineHeight();
     [GeneratedRegex(@"new (?:Avalonia\.)?CornerRadius\(([\d., ]+)\)")]
     private static partial Regex CodeRadius();
     [GeneratedRegex(@"new (?:Avalonia\.)?Thickness\(([-\d., ]+)\)")]

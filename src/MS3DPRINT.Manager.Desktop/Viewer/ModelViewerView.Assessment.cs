@@ -184,7 +184,7 @@ public sealed partial class ModelViewerView
             body.Children.Add(show);
         }
         var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 8 };
-        row.Children.Add(new TextBlock { Text = glyph, Foreground = brush, FontWeight = FontWeight.Bold, VerticalAlignment = VerticalAlignment.Top, Width = 14 });
+        row.Children.Add(new TextBlock { Text = glyph, Foreground = brush, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Top, Width = 14 });
         Grid.SetColumn(body, 1);
         row.Children.Add(body);
         return row;

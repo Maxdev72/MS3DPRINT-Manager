@@ -1970,6 +1970,11 @@ public sealed partial class EstimateUiTests : IDisposable
             demoProject = demoProject with { Profile = demoProject.Profile! with { Description = "Pièce de démonstration : vérifier les cotes avant de lancer la fabrication.", Notes = "Préparer un prototype pour validation client.", DueDate = DateOnly.FromDateTime(DateTime.Today.AddDays(4)) } };
             new EstimateStore(_root).Create(new EstimateProfile(Guid.NewGuid(), "Prototype · exemple de devis", "PLA", "Machine", new(MaterialCost: 10), new(10, 10, 42, 42), DateTimeOffset.UtcNow, ProjectReference: demoProject.Reference));
             await Capture("Projets", "LoadProjectDirectoryAsync", "project-detail.png", demoProject, demoProject.ProjectPath);
+            var demoClient = new MS3DPRINT.Manager.Desktop.Dashboard.WorkspaceClientReader().Load(_root).First(c => c.Profile is not null);
+            demoClient = demoClient with { Profile = demoClient.Profile! with { Address = "12 rue des Ateliers, 69000 Lyon", PrimaryContact = new("Camille", "Martin", null, "04 72 00 00 00", "contact@atelier.fr", "06 12 34 56 78") } };
+            await Capture("Clients", "LoadClientDetailAsync", "client-detail.png", demoClient);
+            var contacts = window.GetVisualDescendants().OfType<Grid>().Single(g => g.Classes.Contains("key-values"));
+            Assert.Equal(4, contacts.RowDefinitions.Count);
             Invoke(window, "ShowModelViewer", new object?[] { null });
             await Task.Delay(250); Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick();
             using (var viewer = window.CaptureRenderedFrame()) { Assert.NotNull(viewer); viewer.Save(Path.Combine(output, "viewer.png"), new Avalonia.Media.Imaging.PngBitmapEncoderOptions()); }

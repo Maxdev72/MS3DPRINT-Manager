@@ -80,7 +80,7 @@ public partial class MainWindow
                     button.Classes.Set("today", date == DateOnly.FromDateTime(DateTime.Today));
                     button.Classes.Set("has-deadline", day.Projects.Count > 0);
                     var content = new StackPanel { Spacing = 4 };
-                    content.Children.Add(new TextBlock { Text = date.Day.ToString(), FontWeight = date == DateOnly.FromDateTime(DateTime.Today) ? FontWeight.Bold : FontWeight.Normal });
+                    content.Children.Add(new TextBlock { Text = date.Day.ToString(), FontWeight = date == DateOnly.FromDateTime(DateTime.Today) ? FontWeight.SemiBold : FontWeight.Normal });
                     if (day.Projects.Count > 0)
                     {
                         content.Children.Add(new TextBlock { Text = $"{day.Projects.Count} échéance{(day.Projects.Count == 1 ? "" : "s")}", FontSize = Ui.Text.Micro, Foreground = (IBrush?)Application.Current?.FindResource("CyanBrush"), TextTrimming = TextTrimming.CharacterEllipsis });

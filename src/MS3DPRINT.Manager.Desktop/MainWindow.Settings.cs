@@ -160,7 +160,7 @@ public partial class MainWindow
         }
 
         // ---- workspace: the folder is shown as a field one can select from, and the three actions follow
-        var path = new SelectableTextBlock { Text = workspaceRoot, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, FontSize = Ui.Text.Body, LineHeight = 23 };
+        var path = new SelectableTextBlock { Text = workspaceRoot, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, FontSize = Ui.Text.Body, LineHeight = 22 };
         var pathField = new Border
         {
             Background = (IBrush?)Avalonia.Application.Current?.FindResource("SurfaceBrush"), CornerRadius = new Avalonia.CornerRadius(Ui.Radius.Control),

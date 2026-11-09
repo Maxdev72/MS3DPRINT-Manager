@@ -16,6 +16,9 @@ public static class Ui
         public const double Title = 20;    // panel titles, view titles
         public const double Page = 26;     // page titles, key figures
         public const double Display = 40;  // the single big number of a screen
+
+        /// <summary>Line heights for wrapped text: caption, body, section and title.</summary>
+        public static readonly double[] LineHeights = [20, 22, 24, 28];
     }
 
     /// <summary>Spacing steps on a 4 px grid: margins, paddings and gaps use only these.</summary>

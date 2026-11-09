@@ -74,7 +74,7 @@ public sealed class RevenueBatchWindow : DialogWindow
         var heading = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 12 };
         Avalonia.Automation.AutomationProperties.SetName(row.Selected, "Sélectionner la facture " + row.Invoice.Data.InvoiceNumber);
         heading.Children.Add(row.Selected);
-        var identity = new TextBlock { Text = title, TextWrapping = Avalonia.Media.TextWrapping.Wrap, FontSize = Ui.Text.Body, LineHeight = 21 };
+        var identity = new TextBlock { Text = title, TextWrapping = Avalonia.Media.TextWrapping.Wrap, FontSize = Ui.Text.Body, LineHeight = 22 };
         Grid.SetColumn(identity, 1); heading.Children.Add(identity);
         var preview = new Button { Content = Icons.Label("IconOpen", "Voir la facture"), Classes = { "ghost" } };
         var previewError = FormKit.ErrorText();

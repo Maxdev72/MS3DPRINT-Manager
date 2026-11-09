@@ -107,7 +107,7 @@ public partial class MainWindow
         void Fact(string label, string value, bool strong = false)
         {
             var left = new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center };
-            var right = new TextBlock { Text = value, FontWeight = strong ? FontWeight.Bold : FontWeight.Normal, FontSize = strong ? Ui.Text.Section : Ui.Text.Body, TextAlignment = TextAlignment.Right, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center };
+            var right = new TextBlock { Text = value, FontWeight = strong ? FontWeight.SemiBold : FontWeight.Normal, FontSize = strong ? Ui.Text.Section : Ui.Text.Body, TextAlignment = TextAlignment.Right, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center };
             var line = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*"), ColumnSpacing = 16, MinHeight = 36 };
             Grid.SetColumn(right, 1); line.Children.Add(left); line.Children.Add(right);
             facts.Children.Add(new Border { Child = line, BorderBrush = (IBrush?)Application.Current?.FindResource("SubtleBorderBrush"), BorderThickness = new Thickness(0, 0, 0, 1) });

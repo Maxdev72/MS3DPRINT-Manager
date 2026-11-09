@@ -78,7 +78,7 @@ public partial class MainWindow
         row.Children.Add(new StackPanel { Spacing = 4, Children =
         {
             new TextBlock { Text = title, FontWeight = FontWeight.SemiBold },
-            new TextBlock { Text = detail, Classes = { "muted" }, TextWrapping = TextWrapping.Wrap, FontSize = Ui.Text.Body, LineHeight = 21, FontWeight = FontWeight.Normal }
+            new TextBlock { Text = detail, Classes = { "muted" }, TextWrapping = TextWrapping.Wrap, FontSize = Ui.Text.Body, LineHeight = 22, FontWeight = FontWeight.Normal }
         } });
         var arrow = Icons.Glyph("IconArrowRight", 18); Grid.SetColumn(arrow, 1); row.Children.Add(arrow);
         return row;

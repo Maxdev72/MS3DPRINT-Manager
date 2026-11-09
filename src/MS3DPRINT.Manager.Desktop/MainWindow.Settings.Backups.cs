@@ -41,7 +41,7 @@ public partial class MainWindow
     private Border BuildBackupSettingsCard(string root, string status)
     {
         var documents = new CheckBox { Content = "Inclure les documents (STL, CAO, PDF, photos…)", IsChecked = true };
-        var last = new TextBlock { Text = status, TextWrapping = TextWrapping.Wrap, Classes = { "caption" }, LineHeight = 21 };
+        var last = new TextBlock { Text = status, TextWrapping = TextWrapping.Wrap, Classes = { "caption" }, LineHeight = 20 };
         Avalonia.Automation.AutomationProperties.SetLiveSetting(last, Avalonia.Automation.AutomationLiveSetting.Polite);
         var save = new Button { Content = Icons.Label("IconSave", "Créer une sauvegarde…", 16), Classes = { "primary-action" } };
         var restore = new Button { Content = Icons.Label("IconHistory", "Restaurer une copie…", 16) };
@@ -86,9 +86,9 @@ public partial class MainWindow
         var content = new StackPanel { Spacing = 16 };
         content.Children.Add(SettingsCardHeader("IconSave", "Sauvegarde et restauration", "Conservez une copie indépendante de vos clients, projets, devis, matières, imprimantes et réglages atelier."));
         content.Children.Add(documents);
-        content.Children.Add(new TextBlock { Text = "Avec documents : fichiers des dossiers gérés et corbeille inclus. Sans documents : données métier et arborescence uniquement, sans corbeille. Les réglages du poste (performances, fenêtre, emplacement actif) restent sur cet ordinateur.", TextWrapping = TextWrapping.Wrap, Classes = { "muted" }, FontSize = Ui.Text.Caption, LineHeight = 21 });
+        content.Children.Add(new TextBlock { Text = "Avec documents : fichiers des dossiers gérés et corbeille inclus. Sans documents : données métier et arborescence uniquement, sans corbeille. Les réglages du poste (performances, fenêtre, emplacement actif) restent sur cet ordinateur.", TextWrapping = TextWrapping.Wrap, Classes = { "muted" }, FontSize = Ui.Text.Caption, LineHeight = 20 });
         content.Children.Add(actions); content.Children.Add(last);
-        content.Children.Add(new TextBlock { Text = "Enregistrez vos saisies avant de lancer la sauvegarde et évitez de modifier les fichiers pendant la copie. Choisissez un emplacement hors de l’espace de travail ; l’archive ZIP n’est pas chiffrée.", TextWrapping = TextWrapping.Wrap, Classes = { "caption" }, LineHeight = 21 });
+        content.Children.Add(new TextBlock { Text = "Enregistrez vos saisies avant de lancer la sauvegarde et évitez de modifier les fichiers pendant la copie. Choisissez un emplacement hors de l’espace de travail ; l’archive ZIP n’est pas chiffrée.", TextWrapping = TextWrapping.Wrap, Classes = { "caption" }, LineHeight = 20 });
         return new Border { Classes = { "card-raised" }, Padding = new Thickness(24, 24), Child = content };
     }
 

@@ -56,7 +56,7 @@ public partial class MainWindow
                 var detail = new TextBlock
                 {
                     Text = $"{proposal.Reason}\nProposé : {proposal.Destination.RelativeDirectory.Replace('\\', '/')}/{proposal.Destination.FileName}",
-                    Classes = { "muted" }, TextWrapping = TextWrapping.Wrap, FontSize = Ui.Text.Body, LineHeight = 21
+                    Classes = { "muted" }, TextWrapping = TextWrapping.Wrap, FontSize = Ui.Text.Body, LineHeight = 22
                 };
                 var accept = new Button { Content = Icons.Label("IconMove", "Classer"), Classes = { "primary-action" }, Tag = proposal };
                 var ignore = new Button { Content = "Ignorer", Classes = { "ghost" }, Tag = proposal };

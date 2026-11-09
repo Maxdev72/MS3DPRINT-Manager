@@ -32,7 +32,7 @@ toute nouvelle valeur en dur (les `Setter` de marge des feuilles de style resten
 |---|---|
 | Espacement | 4 · 8 · 12 · 16 · 24 · 32 · 48 — aucune autre marge ni aucun autre écart |
 | Texte | 12 (pastilles) · 13 (secondaire) · 14 (courant) · 16 (section) · 20 (titre de panneau) · 26 (titre de page, chiffre clé) · 40 (total du devis) |
-| Graisse | normale · semi-grasse — pas d’autre |
+| Graisse | normale · moyenne (contrôles) · semi-grasse (titres) — pas d’autre |
 | Arrondis | 6 (contrôles) · 10 (cartes) · 999 (pastilles) |
 | Hauteurs | 36 (contrôle compact) · 40 (contrôle) · 48 (ligne de tableau) |
 | Surfaces | fond · surface · surface relevée · survol · sélection |
@@ -69,7 +69,10 @@ Ordre choisi pour livrer tôt ce qui sert le plus, une étape = une livraison :
    Fichiers — toutes sur `ListToolbar` + `DataTable`. — faite le 9 novembre 2026 pour la barre (Projets et Clients
    gardent leur barre d’origine, déjà conforme) ; lignes à 56 px ; arrondis du code vérifiés.
 5. **Fiches et formulaires** : fiche projet, fiche client, panneaux latéraux et
-   les 46 fenêtres de dialogue sur `Field` / `Section`.
+   les 46 fenêtres de dialogue sur `Field` / `Section`. — faite le 9 novembre 2026 : les 46 fenêtres
+   passaient déjà par `DialogWindow.Layout` et `FormKit.Field` ; en-tête, formulaire et pied alignés à 32 px ;
+   graisses Normal · Medium (contrôles) · SemiBold (titres), interlignes 20 · 22 · 24 · 28, vérifiés par test ;
+   `KeyValueList` pour les coordonnées de la fiche client, « Modifier » en haut à droite comme sur la fiche projet.
 6. **Pages métier** : Accueil, Tâches, Estimations, Recettes, Achats, Paramètres.
 
 ## Vérification à chaque étape

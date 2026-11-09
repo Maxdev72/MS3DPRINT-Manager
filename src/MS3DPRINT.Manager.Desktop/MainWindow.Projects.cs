@@ -227,7 +227,7 @@ public partial class MainWindow
 
     private static Control CreateProjectClientCell(string name)
     {
-        var label = new TextBlock { Text = name, FontSize = Ui.Text.Body, LineHeight = 19, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis };
+        var label = new TextBlock { Text = name, FontSize = Ui.Text.Body, LineHeight = 20, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis };
         ToolTip.SetTip(label, name);
         return label;
     }

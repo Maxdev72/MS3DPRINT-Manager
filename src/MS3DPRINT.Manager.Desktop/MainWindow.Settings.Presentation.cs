@@ -82,7 +82,7 @@ public partial class MainWindow
             button.Content = new StackPanel { Spacing = 4, Children =
             {
                 heading,
-                new TextBlock { Text = detail, Classes = { "settings-nav-detail", "muted" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap, FontSize = Ui.Text.Caption, LineHeight = 18 }
+                new TextBlock { Text = detail, Classes = { "settings-nav-detail", "muted" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap, FontSize = Ui.Text.Caption, LineHeight = 20 }
             } };
             Avalonia.Automation.AutomationProperties.SetName(button, title);
         }

@@ -59,7 +59,7 @@ public abstract class DialogWindow : Window
         close.Click += (_, _) => Close(false);
         var headerGrid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 16, Children = { headings, close } };
         Grid.SetColumn(close, 1);
-        var header = new Border { Padding = new Thickness(32, 24, 24, 24), BorderBrush = (IBrush?)Application.Current?.FindResource("SubtleBorderBrush"), BorderThickness = new Thickness(0, 0, 0, 1), Child = headerGrid };
+        var header = new Border { Padding = new Thickness(32, 24), BorderBrush = (IBrush?)Application.Current?.FindResource("SubtleBorderBrush"), BorderThickness = new Thickness(0, 0, 0, 1), Child = headerGrid };
         var form = new StackPanel { Margin = new Thickness(32, 24, 32, 24), Spacing = 24 };
         foreach (var control in body) form.Children.Add(control);
 
@@ -68,7 +68,7 @@ public abstract class DialogWindow : Window
             Background = (IBrush?)Application.Current?.FindResource("SidebarBrush"),
             BorderBrush = (IBrush?)Application.Current?.FindResource("SubtleBorderBrush"),
             BorderThickness = new Thickness(0, 1, 0, 0),
-            Padding = new Thickness(24, 16),
+            Padding = new Thickness(32, 16),
             Child = actions
         };
         var root = new Grid { RowDefinitions = new RowDefinitions("Auto,*,Auto"), Classes = { "dialog-form" } };

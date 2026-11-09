@@ -412,7 +412,7 @@
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
   <Style Selector="Border.estimate-form Button.scope-choice TextBlock"><Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" /></Style>
-  <Style Selector="Border.estimate-summary TextBlock.muted, Border.estimate-status TextBlock"><Setter Property="LineHeight" Value="21" /></Style>
+  <Style Selector="Border.estimate-summary TextBlock.muted, Border.estimate-status TextBlock"><Setter Property="LineHeight" Value="20" /></Style>
   <Style Selector="Border.estimate-status">
     <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" />
     <Setter Property="CornerRadius" Value="6" />
@@ -421,7 +421,7 @@
   <Style Selector="Border.estimate-status TextBlock"><Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" /><Setter Property="FontWeight" Value="Medium" /></Style>
   <Style Selector="Border.estimate-status.warning"><Setter Property="Background" Value="{DynamicResource WarningSoftBrush}" /></Style>
   <Style Selector="Border.estimate-status.warning TextBlock"><Setter Property="Foreground" Value="{DynamicResource WarningBrush}" /></Style>
-  <Style Selector="Grid.workshop-form TextBlock.muted"><Setter Property="LineHeight" Value="21" /></Style>
+  <Style Selector="Grid.workshop-form TextBlock.muted"><Setter Property="LineHeight" Value="20" /></Style>
   <Style Selector="TextBlock.estimate-group-title"><Setter Property="FontSize" Value="{DynamicResource FontSizeSection}" /><Setter Property="FontWeight" Value="SemiBold" /><Setter Property="Margin" Value="0,24,0,12" /></Style>
 
   <!-- Estimator disclosures use the application's surfaces, including Fluent's nested header states. -->

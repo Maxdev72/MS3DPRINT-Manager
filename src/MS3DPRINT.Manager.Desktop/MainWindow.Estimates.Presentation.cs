@@ -117,7 +117,7 @@ public partial class MainWindow
     private static Control EstimateResultRow(string label, string value, bool strong = false)
     {
         var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 16, Margin = new Thickness(0, 8) };
-        row.Children.Add(new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap, LineHeight = 21, FontWeight = strong ? FontWeight.SemiBold : FontWeight.Normal,
+        row.Children.Add(new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap, LineHeight = 22, FontWeight = strong ? FontWeight.SemiBold : FontWeight.Normal,
             Foreground = (IBrush?)Application.Current?.FindResource(strong ? "TextBrush" : "MutedTextBrush") });
         var amount = new TextBlock { Text = value, FontSize = strong ? Ui.Text.Section : Ui.Text.Body, FontWeight = strong ? FontWeight.SemiBold : FontWeight.Normal, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxWidth = 230 };
         Grid.SetColumn(amount, 1); row.Children.Add(amount);

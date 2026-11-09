@@ -204,25 +204,27 @@ public partial class MainWindow
         SetBreadcrumb(("Clients", GoToClientsAsync), (client.Title(), null));
 
         var card = new StackPanel { Spacing = 16 };
-        card.Children.Add(new TextBlock { Text = client.Title(), FontSize = Ui.Text.Page, FontWeight = FontWeight.SemiBold, Classes = { "brand-heading" }, TextWrapping = TextWrapping.Wrap });
-        card.Children.Add(new TextBlock { Text = $"{client.ProfileLabel} · {client.ClientCode} · {client.ProjectCount} projet(s)", Classes = { "muted" } });
-        if (client.Profile?.PrimaryContact is { } contact)
-        {
-            var lines = new List<string>();
-            if (!string.IsNullOrWhiteSpace(contact.Mobile)) lines.Add("Portable : " + contact.Mobile);
-            if (!string.IsNullOrWhiteSpace(contact.Phone)) lines.Add("Téléphone : " + contact.Phone);
-            if (!string.IsNullOrWhiteSpace(contact.Email)) lines.Add("E-mail : " + contact.Email);
-            if (lines.Count > 0) card.Children.Add(new TextBlock { Text = string.Join(Environment.NewLine, lines), TextWrapping = TextWrapping.Wrap, LineHeight = 24 });
-        }
-        if (!string.IsNullOrWhiteSpace(client.Profile?.Address)) card.Children.Add(new TextBlock { Text = client.Profile.Address, TextWrapping = TextWrapping.Wrap });
-        if (!string.IsNullOrWhiteSpace(client.Profile?.Notes)) card.Children.Add(EstimateSection("Notes du client", "Informations enregistrées dans la fiche", new TextBlock { Text = client.Profile.Notes, TextWrapping = TextWrapping.Wrap, LineHeight = 22 }));
-        var edit = new Button { Content = Icons.Label("IconEdit", "Modifier la fiche"), Tag = client };
+        // Same heading as the project sheet: name and summary on the left, Modifier on the right.
+        var edit = new Button { Content = Icons.Label("IconEdit", "Modifier la fiche"), Tag = client, Classes = { "ghost" }, VerticalAlignment = VerticalAlignment.Top };
         edit.Click += EditClient_Click;
+        Grid.SetColumn(edit, 1);
+        card.Children.Add(new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12, Children =
+        {
+            new StackPanel { Spacing = 4, Children =
+            {
+                new TextBlock { Text = client.Title(), FontSize = Ui.Text.Page, FontWeight = FontWeight.SemiBold, Classes = { "brand-heading" }, TextWrapping = TextWrapping.Wrap },
+                new TextBlock { Text = $"{client.ProfileLabel} · {client.ClientCode} · {client.ProjectCount} projet(s)", Classes = { "muted" }, TextWrapping = TextWrapping.Wrap }
+            } },
+            edit
+        } });
+        var contact = client.Profile?.PrimaryContact;
+        card.Children.Add(KeyValueList.Create([("Portable", contact?.Mobile), ("Téléphone", contact?.Phone), ("E-mail", contact?.Email), ("Adresse", client.Profile?.Address)]));
+        if (!string.IsNullOrWhiteSpace(client.Profile?.Notes)) card.Children.Add(EstimateSection("Notes du client", "Informations enregistrées dans la fiche", new TextBlock { Text = client.Profile.Notes, TextWrapping = TextWrapping.Wrap, LineHeight = 22 }));
         var changeCode = new Button { Content = Icons.Label("IconRename", "Changer le code"), Tag = client };
         changeCode.Click += ChangeClientCode_Click;
         var newProject = new Button { Content = Icons.Label("IconPlus", "Nouveau projet"), Tag = client, Classes = { "primary-action" } };
         newProject.Click += CreateProjectForClient_Click;
-        card.Children.Add(new WrapPanel { ItemSpacing = 12, LineSpacing = 12, Children = { newProject, edit, changeCode } });
+        card.Children.Add(new WrapPanel { ItemSpacing = 12, LineSpacing = 12, Children = { newProject, changeCode } });
         ClientList.Children.Add(new Border { Classes = { "client-overview" }, Child = card });
         try
         {
