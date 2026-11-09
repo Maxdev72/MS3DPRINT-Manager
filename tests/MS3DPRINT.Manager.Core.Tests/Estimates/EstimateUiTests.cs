@@ -269,7 +269,7 @@ public sealed partial class EstimateUiTests : IDisposable
                 return new ProjectSummary("Client de démonstration", _root, _root, profile.Reference, "Projet", profile);
             }).ToArray();
             var dashboard = new MS3DPRINT.Manager.Desktop.Dashboard.WorkspaceDashboard(1, 4, 0, 4, 0, projects, projects, 0, 0) { WorkQueue = projects };
-            Invoke(owner, "BuildWorkQueue", dashboard); Invoke(owner, "BuildAttention", dashboard);
+            Invoke(owner, "BuildWorkQueue", dashboard); Invoke(owner, "BuildAttention", dashboard with { WorkQueue = [] });
             foreach (var name in new[] { "RecentProjectsList", "AttentionList" })
             {
                 var rows = owner.FindControl<StackPanel>(name)!.Children.OfType<Button>().ToArray();

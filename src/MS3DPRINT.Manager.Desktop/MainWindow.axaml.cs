@@ -204,10 +204,21 @@ public partial class MainWindow : Window
             ProjectCountText.Text = dashboard.ProjectCount.ToString();
             QuoteCountText.Text = dashboard.QuoteCount.ToString();
             InProgressCountText.Text = dashboard.InProgressCount.ToString();
-            NavProjectsCount.Text = dashboard.ProjectCount.ToString();
-            NavProjectsBadge.IsVisible = dashboard.ProjectCount > 0;
-            NavClientsCount.Text = dashboard.ClientCount.ToString();
-            NavClientsBadge.IsVisible = dashboard.ClientCount > 0;
+            // Menu counts show what asks for action, not totals: late projects, sheets to complete, tasks due.
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            // shortcut: counts late projects among the dashboard lists (5 + 4 entries); exact unless more than 9 projects are late at once.
+            var lateProjects = dashboard.WorkQueue.Concat(dashboard.Deadlines).DistinctBy(p => p.Reference)
+                .Count(p => p.Profile is { DueDate: { } due, Status: not MS3DPRINT.Manager.Core.Projects.ProjectStatus.Completed } && due < today && !p.IsArchived);
+            NavProjectsCount.Text = lateProjects.ToString();
+            NavProjectsBadge.IsVisible = lateProjects > 0;
+            NavProjectsBadge.Classes.Set("warning", true);
+            ToolTip.SetTip(NavProjectsBadge, "Projets en retard");
+            NavClientsCount.Text = dashboard.IncompleteClients.ToString();
+            NavClientsBadge.IsVisible = dashboard.IncompleteClients > 0;
+            ToolTip.SetTip(NavClientsBadge, "Fiches client à compléter");
+            var dueTasks = dashboard.Tasks.Count(t => !t.IsCompleted && t.DueDate <= today);
+            NavTasksCount.Text = dueTasks.ToString();
+            NavTasksBadge.IsVisible = dueTasks > 0;
             BuildWorkQueue(dashboard);
             BuildAttention(dashboard);
             await LoadRecentFilesAsync();

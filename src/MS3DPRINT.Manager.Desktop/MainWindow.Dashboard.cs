@@ -110,7 +110,25 @@ public partial class MainWindow
     private void BuildAttention(WorkspaceDashboard dashboard)
     {
         AttentionList.Children.Clear();
-        foreach (var project in dashboard.Deadlines)
+        // Ma journée: tasks due today or late first, then deadlines the « À reprendre » list does not already show.
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        foreach (var task in dashboard.Tasks.Where(t => !t.IsCompleted && t.DueDate <= today)
+                     .OrderBy(t => t.DueDate).ThenByDescending(t => (int)t.Priority).Take(5))
+        {
+            var late = task.DueDate < today;
+            var labels = new StackPanel { Spacing = 2 };
+            labels.Children.Add(new TextBlock { Text = task.Title, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis });
+            var when = new TextBlock { Text = late ? $"En retard · {task.DueDate:dd/MM}" : "Aujourd’hui", Classes = { "caption" } };
+            if (late) when.Foreground = (IBrush?)Avalonia.Application.Current?.FindResource("WarningBrush") ?? Brushes.Orange;
+            labels.Children.Add(when);
+            var open = new Button { Classes = { "workspace-card" }, MinHeight = 48, Padding = new Avalonia.Thickness(12, 8), Content = labels, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch };
+            Avalonia.Automation.AutomationProperties.SetName(open, "Tâche : " + task.Title);
+            var id = task.Id;
+            open.Click += (_, _) => OpenTodayTasks(id);
+            AttentionList.Children.Add(open);
+        }
+        var shown = dashboard.WorkQueue.Select(p => p.Reference).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var project in dashboard.Deadlines.Where(p => !shown.Contains(p.Reference)))
         {
             var (text, variant) = ProjectDeadlineLabel(project);
             var row = new StackPanel { Spacing = 6 };
@@ -140,7 +158,16 @@ public partial class MainWindow
             AddShortcut(dashboard.IncompleteClients == 1 ? "1 fiche client à compléter" : $"{dashboard.IncompleteClients} fiches client à compléter", "Clients", "Fiche à compléter");
 
         if (AttentionList.Children.Count == 0)
-            AttentionList.Children.Add(new TextBlock { Text = "Rien d’urgent : toutes les fiches sont à jour et aucune échéance n’est enregistrée.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap });
+            AttentionList.Children.Add(new TextBlock { Text = "Rien de prévu aujourd’hui, et toutes les fiches sont à jour.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap });
+    }
+
+    /// <summary>A task of « Ma journée » opens the Tâches page on that view, the task selected.</summary>
+    private void OpenTodayTasks(Guid? task)
+    {
+        if (NavigationButtons().FirstOrDefault(button => button.Tag as string == "Tâches") is not { } target) return;
+        _taskView = MS3DPRINT.Manager.Core.Tasks.TaskViews.Today;
+        _selectedTaskId = task;
+        NavigationButton_Click(target, new RoutedEventArgs());
     }
 
     private async Task OpenFilteredAsync(string destination, string filterTag)

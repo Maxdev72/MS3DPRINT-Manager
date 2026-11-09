@@ -34,7 +34,7 @@
             <TextBlock Text="ACTIVITÉ" Classes="overline nav-label" Margin="14,0,0,8" />
             <Button Classes="nav-item selected" Tag="Accueil" Click="NavigationButton_Click" AutomationProperties.Name="Accueil"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconHome}" /><TextBlock Classes="nav-label" Text="Accueil" /></StackPanel></Button>
             <Button Classes="nav-item" Tag="Projets" Click="NavigationButton_Click" AutomationProperties.Name="Projets"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"><Path Classes="icon" Data="{StaticResource IconProjects}" /><TextBlock Grid.Column="1" Classes="nav-label" Text="Projets" /><Border x:Name="NavProjectsBadge" Grid.Column="2" Classes="badge nav-label" IsVisible="False"><TextBlock x:Name="NavProjectsCount" Text="0" /></Border></Grid></Button>
-            <Button Classes="nav-item" Tag="Tâches" Click="NavigationButton_Click" AutomationProperties.Name="Tâches"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconProjectTasks}" /><TextBlock Classes="nav-label" Text="Tâches" /></StackPanel></Button>
+            <Button Classes="nav-item" Tag="Tâches" Click="NavigationButton_Click" AutomationProperties.Name="Tâches"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"><Path Classes="icon" Data="{StaticResource IconProjectTasks}" /><TextBlock Grid.Column="1" Classes="nav-label" Text="Tâches" /><Border x:Name="NavTasksBadge" Grid.Column="2" Classes="badge warning nav-label" IsVisible="False" ToolTip.Tip="Tâches en retard ou prévues aujourd’hui"><TextBlock x:Name="NavTasksCount" Text="0" /></Border></Grid></Button>
             <Button Classes="nav-item" Tag="Clients" Click="NavigationButton_Click" AutomationProperties.Name="Clients"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"><Path Classes="icon" Data="{StaticResource IconClients}" /><TextBlock Grid.Column="1" Classes="nav-label" Text="Clients" /><Border x:Name="NavClientsBadge" Grid.Column="2" Classes="badge nav-label" IsVisible="False"><TextBlock x:Name="NavClientsCount" Text="0" /></Border></Grid></Button>
             <Button Classes="nav-item" Tag="Estimations" Click="NavigationButton_Click" AutomationProperties.Name="Estimations"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconEstimates}" /><TextBlock Classes="nav-label" Text="Estimations" /></StackPanel></Button>
             <Button Classes="nav-item" Tag="Recettes" Click="NavigationButton_Click" AutomationProperties.Name="Recettes"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconBook}" /><TextBlock Classes="nav-label" Text="Recettes" /></StackPanel></Button>
@@ -63,7 +63,7 @@
           </Border>
           <StackPanel x:Name="FooterNavigation">
             <Button x:Name="LocalServerModeButton" Classes="nav-item" Click="WorkspaceMode_Click" IsVisible="False" AutomationProperties.Name="Atelier serveur" ToolTip.Tip="Ouvrir l’atelier serveur indépendant"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconProjects}" /><TextBlock Classes="nav-label" Text="Atelier serveur" /></StackPanel></Button>
-            <Button x:Name="NotificationCenterButton" Classes="nav-item" Click="NotificationCenter_Click" AutomationProperties.Name="Notifications"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconHistory}" /><TextBlock Classes="nav-label" Text="Notifications" /><TextBlock x:Name="NotificationCount" Classes="nav-label" FontWeight="SemiBold" Foreground="{DynamicResource CyanBrush}" IsVisible="False" /></StackPanel></Button>
+            <Button x:Name="NotificationCenterButton" Classes="nav-item" Click="NotificationCenter_Click" AutomationProperties.Name="Notifications"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconHistory}" /><TextBlock Classes="nav-label" Text="Notifications" /><Border Classes="badge nav-label" IsVisible="{Binding IsVisible, ElementName=NotificationCount}"><TextBlock x:Name="NotificationCount" FontWeight="SemiBold" IsVisible="False" /></Border></StackPanel></Button>
             <Button Classes="nav-item" Tag="Paramètres" Click="NavigationButton_Click" AutomationProperties.Name="Paramètres"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconSettings}" /><TextBlock Classes="nav-label" Text="Paramètres" /></StackPanel></Button>
           </StackPanel>
         </StackPanel>
@@ -98,16 +98,15 @@
         </StackPanel>
       </Grid>
       <Border x:Name="DashboardStats" Grid.Row="1" Classes="workbench-banner">
-        <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="22" ColumnSpacing="22">
+        <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="14" ColumnSpacing="22">
           <Grid ColumnDefinitions="Auto,*" ColumnSpacing="18">
-            <Canvas Width="64" Height="64" VerticalAlignment="Center" IsHitTestVisible="False">
+            <Canvas Width="64" Height="64" VerticalAlignment="Center" IsHitTestVisible="False" IsVisible="False">
               <Path Classes="brand-layer layer-bottom" Data="M6 36 32 22 58 36 32 50Z" />
               <Path Classes="brand-layer" Data="M6 26 32 12 58 26 32 40Z" />
               <Path Classes="brand-layer layer-top" Data="M6 16 32 2 58 16 32 30Z" />
             </Canvas>
             <StackPanel Grid.Column="1" Spacing="7" VerticalAlignment="Center">
-              <TextBlock Classes="brand-heading" FontSize="34" TextWrapping="Wrap"><Run Text="De l’idée à la " /><Run Text="pièce." Foreground="{DynamicResource CyanBrush}" /></TextBlock>
-              <TextBlock Text="Vos clients, vos projets et votre production, au même endroit." Classes="muted" TextWrapping="Wrap" LineHeight="21" />
+              <TextBlock Classes="brand-heading" FontSize="26" TextWrapping="Wrap"><Run Text="De l’idée à la " /><Run Text="pièce." Foreground="{DynamicResource CyanBrush}" /></TextBlock>
             </StackPanel>
           </Grid>
           <StackPanel Grid.Column="1" Spacing="10" Width="212" VerticalAlignment="Center">
@@ -135,7 +134,7 @@
         <Border Grid.Column="1" Classes="card">
           <ScrollViewer HorizontalScrollBarVisibility="Disabled">
           <StackPanel Spacing="14">
-            <TextBlock Text="À surveiller" Classes="section-title" />
+            <TextBlock Text="Ma journée" Classes="section-title" />
             <StackPanel x:Name="AttentionList" Spacing="8" />
             <Border Height="1" Background="{DynamicResource SubtleBorderBrush}" Margin="0,4" />
             <TextBlock Text="Fichiers récents" Classes="card-title" />

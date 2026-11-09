@@ -125,7 +125,10 @@ public partial class MainWindow
             var trash = new Button { Content = Icons.Label("IconTrash", "Corbeille"), Tag = filament, Classes = { "menu-destructive" } }; trash.Click += TrashFilament_Click;
             var color = string.IsNullOrWhiteSpace(filament.Color) ? string.Empty : $" · {filament.Color}";
             var material = new StackPanel { Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
-            material.Children.Add(CreateCompactTableCell($"{filament.Material}{color}"));
+            var materialLine = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+            if (FilamentSwatch(filament.Color) is { } swatch) materialLine.Children.Add(swatch);
+            materialLine.Children.Add(CreateCompactTableCell($"{filament.Material}{color}"));
+            material.Children.Add(materialLine);
             var badges = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
             foreach (var variant in FilamentCatalogSearch.Variants(filament.Material)) badges.Children.Add(new Border { Classes = { "badge", "info" }, Child = new TextBlock { Text = variant } });
             if (filament.IsAbrasive) badges.Children.Add(new Border { Classes = { "badge", "warning" }, Child = new TextBlock { Text = "Abrasif" } });
@@ -147,5 +150,24 @@ public partial class MainWindow
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         { Notify(exception.Message, error: true); }
+    }
+
+    private static readonly Dictionary<string, string> FilamentColors = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["noir"] = "#1B1B1B", ["blanc"] = "#F4F4F4", ["gris"] = "#8A8F98", ["argent"] = "#C0C4CA", ["rouge"] = "#D93A3A", ["bleu"] = "#2F6FD6",
+        ["vert"] = "#3BA55C", ["jaune"] = "#F2C230", ["orange"] = "#F08A24", ["violet"] = "#8A4FD8", ["rose"] = "#E66BA8", ["marron"] = "#7A4A2A",
+        ["beige"] = "#D8C3A0", ["or"] = "#D4AF37", ["naturel"] = "#E8DFC8", ["transparent"] = "#00000000"
+    };
+
+    /// <summary>A small dot in the filament's colour when the name (first word) or a #RRGGBB code is recognised.</summary>
+    private static Control? FilamentSwatch(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return null;
+        var text = name.Trim();
+        var key = text.StartsWith('#') ? text : text.Split(' ', '-', '/')[0];
+        var hex = key.StartsWith('#') ? key : FilamentColors.GetValueOrDefault(key);
+        if (hex is null || !Color.TryParse(hex, out var parsed)) return null;
+        return new Border { Width = 12, Height = 12, CornerRadius = new Avalonia.CornerRadius(6), Background = new SolidColorBrush(parsed), BorderThickness = new Avalonia.Thickness(1),
+            BorderBrush = (IBrush?)Avalonia.Application.Current?.FindResource("ControlBorderBrush"), VerticalAlignment = VerticalAlignment.Center };
     }
 }

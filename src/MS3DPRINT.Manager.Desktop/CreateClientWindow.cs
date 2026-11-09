@@ -24,7 +24,7 @@ public sealed class CreateClientWindow : DialogWindow
     private readonly TextBox _address = new() { PlaceholderText = "Tapez pour rechercher l’adresse" };
     private readonly ListBox _companyResults = new() { IsVisible = false, MaxHeight = 240, Classes = { "lookup-suggestions" } };
     private readonly ListBox _addressResults = new() { IsVisible = false, MaxHeight = 200, Classes = { "lookup-suggestions" } };
-    private readonly TextBlock _codePreview = new() { FontWeight = Avalonia.Media.FontWeight.SemiBold };
+    private readonly TextBlock _codePreview = new() { Classes = { "caption" } };
     private readonly IReadOnlyList<string> _usedCodes;
     private readonly TextBlock _status = new() { FontSize = 12, IsVisible = false, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _error = FormKit.ErrorText();
@@ -118,9 +118,21 @@ public sealed class CreateClientWindow : DialogWindow
             _addressResults.SelectedItem = null;
         };
 
+        // Two plain choices instead of a lone « Client particulier » box; the box stays as the single source of truth.
+        var professional = new Button { Content = "Professionnel", Classes = { "filter-chip" }, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center };
+        var individual = new Button { Content = "Particulier", Classes = { "filter-chip" }, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center };
+        void ShowKind() { professional.Classes.Set("selected", !IsIndividual); individual.Classes.Set("selected", IsIndividual); }
+        professional.Click += (_, _) => _individual.IsChecked = false;
+        individual.Click += (_, _) => _individual.IsChecked = true;
+        _individual.IsCheckedChanged += (_, _) => ShowKind();
+        _individual.IsVisible = false;
+        ShowKind();
+        var kind = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*"), ColumnSpacing = 8, Children = { professional, individual } };
+        Grid.SetColumn(individual, 1);
+
         Layout(existingClient is null ? "Nouveau client" : "Compléter la fiche client",
             existingClient is null ? "Un code client est attribué automatiquement à la création." : "Le dossier et les fichiers existants sont conservés.",
-            [_codePreview, _individual, FormKit.Field("Nom de l’entreprise", _name), _companyResults,
+            [FormKit.Field("Type de client", kind), _individual, FormKit.Field("Nom de l’entreprise", _name), _codePreview, _companyResults,
              FormKit.Field("Prénom", _firstName), FormKit.Field("Nom", _lastName),
              FormKit.Field("SIRET (optionnel)", _siret),
              FormKit.Field("E-mail", _email), FormKit.Field("Portable", _mobile),
