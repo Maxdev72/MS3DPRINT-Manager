@@ -341,7 +341,7 @@ public sealed class ModelBrowserView : UserControl
         go.Click += (_, _) => Submit(_startInput.Text);
         var inputBox = new Border
         {
-            Classes = { "search-box" }, Height = 60, MaxWidth = 700, CornerRadius = new CornerRadius(14), HorizontalAlignment = HorizontalAlignment.Stretch,
+            Classes = { "search-box" }, Height = 60, MaxWidth = 700, CornerRadius = new CornerRadius(Ui.Radius.Card), HorizontalAlignment = HorizontalAlignment.Stretch,
             Child = new Grid
             {
                 ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 12,
@@ -585,7 +585,7 @@ public sealed class ModelBrowserView : UserControl
         var label = new TextBlock { Text = title, MaxWidth = 150, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
         var close = new Button { Content = Icons.Glyph("IconClose", 12), Classes = { "tab-close" } };
         Describe(close, "Fermer l’onglet (Ctrl+W)");
-        var dot = new Border { Width = 7, Height = 7, CornerRadius = new CornerRadius(4), VerticalAlignment = VerticalAlignment.Center, IsVisible = false, Background = (IBrush?)Application.Current?.FindResource("AccentBrush") };
+        var dot = new Border { Width = 7, Height = 7, CornerRadius = new CornerRadius(Ui.Radius.Pill), VerticalAlignment = VerticalAlignment.Center, IsVisible = false, Background = (IBrush?)Application.Current?.FindResource("AccentBrush") };
         var header = new Button { Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { label, dot, close } }, Classes = { "browser-tab", "sleeping" } };
         AutomationProperties.SetName(header, "Onglet " + title);
         var tab = new BrowserTab { Header = header, Site = site, Address = uri, LoadingDot = dot, Heavy = ModelSearchSite.Defaults.Any(known => known.Name == site && known.Heavy) };
@@ -605,7 +605,7 @@ public sealed class ModelBrowserView : UserControl
     /// <summary>The bar joins the selected tab: square at the corner under the tabs, rounded all round when there are none.</summary>
     private void UpdateToolbarShape()
     {
-        _toolbar.CornerRadius = _tabRow.IsVisible ? new CornerRadius(0, 8, 8, 8) : new CornerRadius(8);
+        _toolbar.CornerRadius = _tabRow.IsVisible ? new CornerRadius(0, Ui.Radius.Control, Ui.Radius.Control, Ui.Radius.Control) : new CornerRadius(Ui.Radius.Control);
         // before the first search the start page has its own search box: the bar would only repeat it
         _toolbar.IsVisible = _tabRow.IsVisible;
     }

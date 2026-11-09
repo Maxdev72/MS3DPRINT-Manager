@@ -185,9 +185,9 @@ public sealed partial class ModelViewerView : UserControl
             var color = Color.Parse(hex);
             var swatch = new Button
             {
-                Tag = hex, Width = 32, Height = 32, MinWidth = 32, MinHeight = 32, Padding = new Thickness(4), CornerRadius = new CornerRadius(16),
+                Tag = hex, Width = 32, Height = 32, MinWidth = 32, MinHeight = 32, Padding = new Thickness(4), CornerRadius = new CornerRadius(Ui.Radius.Pill),
                 Background = Brushes.Transparent, BorderThickness = new Thickness(2),
-                Content = new Border { Width = 20, Height = 20, CornerRadius = new CornerRadius(10), Background = new SolidColorBrush(color) }
+                Content = new Border { Width = 20, Height = 20, CornerRadius = new CornerRadius(Ui.Radius.Pill), Background = new SolidColorBrush(color) }
             };
             ToolTip.SetTip(swatch, name);
             AutomationProperties.SetName(swatch, "Couleur " + name.ToLowerInvariant());
@@ -930,7 +930,7 @@ public sealed partial class ModelViewerView : UserControl
         ApplyComparison();
     }
 
-    private static Control LegendDot(Color color) => new Border { Width = 12, Height = 12, CornerRadius = new CornerRadius(6), Background = new SolidColorBrush(color), VerticalAlignment = VerticalAlignment.Center };
+    private static Control LegendDot(Color color) => new Border { Width = 12, Height = 12, CornerRadius = new CornerRadius(Ui.Radius.Pill), Background = new SolidColorBrush(color), VerticalAlignment = VerticalAlignment.Center };
 
     /// <summary>Builds the legend and the table of differences for the loaded pair.</summary>
     private void RebuildComparison()

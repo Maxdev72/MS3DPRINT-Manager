@@ -163,7 +163,7 @@ public partial class MainWindow
         var path = new SelectableTextBlock { Text = workspaceRoot, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, FontSize = Ui.Text.Body, LineHeight = 23 };
         var pathField = new Border
         {
-            Background = (IBrush?)Avalonia.Application.Current?.FindResource("SurfaceBrush"), CornerRadius = new Avalonia.CornerRadius(8),
+            Background = (IBrush?)Avalonia.Application.Current?.FindResource("SurfaceBrush"), CornerRadius = new Avalonia.CornerRadius(Ui.Radius.Control),
             BorderBrush = (IBrush?)Avalonia.Application.Current?.FindResource("SubtleBorderBrush"), BorderThickness = new Avalonia.Thickness(1), Padding = new Avalonia.Thickness(12, 12),
             Child = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 12, Children = { Icons.Glyph("IconProjects", 18), path } }
         };

@@ -66,7 +66,8 @@ Ordre choisi pour livrer tôt ce qui sert le plus, une étape = une livraison :
 3. **Coque** : menu de gauche, en-tête de page, recherche globale, notifications. — faite le 9 novembre 2026
    (sélection douce, arrondis 6 / 10 vérifiés par test, champs et recherche à 40 px).
 4. **Listes** : Projets, Clients, Filaments, Imprimantes, Collections, Corbeille,
-   Fichiers — toutes sur `ListToolbar` + `DataTable`.
+   Fichiers — toutes sur `ListToolbar` + `DataTable`. — faite le 9 novembre 2026 pour la barre (Projets et Clients
+   gardent leur barre d’origine, déjà conforme) ; lignes à 56 px ; arrondis du code vérifiés.
 5. **Fiches et formulaires** : fiche projet, fiche client, panneaux latéraux et
    les 46 fenêtres de dialogue sur `Field` / `Section`.
 6. **Pages métier** : Accueil, Tâches, Estimations, Recettes, Achats, Paramètres.

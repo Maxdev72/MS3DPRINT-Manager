@@ -45,16 +45,9 @@ public sealed partial class FileBrowserView : StackPanel
         refresh.Click += async (_, _) => { refresh.IsEnabled = false; try { await reload(); } finally { refresh.IsEnabled = true; } };
         void Reset() { SearchInput.Text = ""; FamilyInput.SelectedItem = FileFamily.All; SearchInput.Focus(); }
         clear.Click += (_, _) => Reset();
-        var filters = new Grid { ColumnDefinitions = new ColumnDefinitions("*,180,Auto,Auto"), RowDefinitions = new RowDefinitions("Auto,Auto"), ColumnSpacing = 8, RowSpacing = 8 };
-        Grid.SetColumn(FamilyInput, 1); Grid.SetColumn(clear, 2); Grid.SetColumn(refresh, 3);
-        filters.Children.Add(SearchInput); filters.Children.Add(FamilyInput); filters.Children.Add(clear); filters.Children.Add(refresh);
-        filters.SizeChanged += (_, _) =>
-        {
-            var narrow = filters.Bounds.Width < 620;
-            Grid.SetColumnSpan(SearchInput, narrow ? 4 : 1);
-            Grid.SetRow(FamilyInput, narrow ? 1 : 0); Grid.SetColumn(FamilyInput, narrow ? 0 : 1); Grid.SetColumnSpan(FamilyInput, narrow ? 2 : 1);
-            Grid.SetRow(clear, narrow ? 1 : 0); Grid.SetRow(refresh, narrow ? 1 : 0);
-        };
+        // Same toolbar as every list: search and format on the left, refresh on the right; it wraps on narrow panes.
+        FamilyInput.Width = 180;
+        var filters = ListToolbar.Create([ListToolbar.Search(SearchInput), FamilyInput, clear], [refresh]);
         Children.Add(filters); Children.Add(StatusLabel); InitializeSelection(filters); Children.Add(Rows);
         void FiltersChanged() { ClearSelection(); _restorePage = null; _restoreOffset = null; Render(); }
         SearchInput.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) FiltersChanged(); };
@@ -102,6 +95,7 @@ public sealed partial class FileBrowserView : StackPanel
             var query = SearchInput.Text ?? "";
             var matches = FileCatalogFilter.Filter(_entries, query, family);
             _clear.IsEnabled = query.Length > 0 || family != FileFamily.All;
+            _clear.IsVisible = _clear.IsEnabled;
             var files = matches.Count(e => !e.IsDirectory); var folders = matches.Count - files;
             StatusLabel.Text = _loading ? $"Lecture du dossier… {_entries.Count:N0} éléments reçus · résultats partiels" :
                 matches.Count == 0 ? (_entries.Count == 0 ? "Ce dossier est vide." : "Aucun résultat dans ce dossier.") :

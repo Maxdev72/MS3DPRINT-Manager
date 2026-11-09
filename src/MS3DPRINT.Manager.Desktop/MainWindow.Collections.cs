@@ -49,6 +49,8 @@ public partial class MainWindow
             if (!IsWorkspaceLoadCurrent(load)) return;
             // Empty: the empty state already offers « Nouvelle collection »; one button is enough.
             CollectionCreateButton.IsVisible = collections.Count > 0;
+            var shown = _collectionCategoryFilter.Length > 0 ? collections.Count(item => CollectionCategory(workspaceRoot, item) == _collectionCategoryFilter) : collections.Count;
+            _collectionPageSummary.Text = shown == 0 ? "" : shown == 1 ? "1 collection" : $"{shown} collections";
             if (collections.Count == 0) { CollectionList.Children.Add(CreateEmptyState("IconCollections", "Aucune collection", "Regroupez vos modèles 3D, vos produits et vos fournisseurs.", "Nouvelle collection", CreateCollection_Click)); return; }
             if (_collectionCategoryFilter.Length > 0)
                 collections = collections.Where(item => CollectionCategory(workspaceRoot, item) == _collectionCategoryFilter).ToArray();

@@ -78,7 +78,7 @@ public partial class MainWindow
         var stack = new StackPanel { Spacing = 8, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Avalonia.Thickness(0, 32) };
         var icon = new Avalonia.Controls.Shapes.Path { Classes = { "icon", "icon-accent" }, Width = 30, Height = 30 };
         if (Avalonia.Application.Current?.TryFindResource(iconKey, out var geometry) == true && geometry is Geometry data) icon.Data = data;
-        stack.Children.Add(new Border { Classes = { "icon-chip" }, Width = 56, Height = 56, CornerRadius = new Avalonia.CornerRadius(14), HorizontalAlignment = HorizontalAlignment.Center, Child = icon });
+        stack.Children.Add(new Border { Classes = { "icon-chip" }, Width = 56, Height = 56, CornerRadius = new Avalonia.CornerRadius(Ui.Radius.Card), HorizontalAlignment = HorizontalAlignment.Center, Child = icon });
         stack.Children.Add(new TextBlock { Text = title, Classes = { "card-title" }, HorizontalAlignment = HorizontalAlignment.Center });
         stack.Children.Add(new TextBlock { Text = message, Classes = { "caption" }, HorizontalAlignment = HorizontalAlignment.Center, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxWidth = 360 });
         if (actionLabel is not null && action is not null)
@@ -103,7 +103,7 @@ public partial class MainWindow
         var detail = new SelectableTextBlock { Text = exception.Message, TextWrapping = TextWrapping.Wrap, MaxWidth = 560, FontSize = Ui.Text.Caption };
         var detailBox = new Border
         {
-            IsVisible = false, Padding = new Avalonia.Thickness(12), CornerRadius = new Avalonia.CornerRadius(4),
+            IsVisible = false, Padding = new Avalonia.Thickness(12), CornerRadius = new Avalonia.CornerRadius(Ui.Radius.Control),
             Background = (IBrush?)Avalonia.Application.Current?.FindResource("RaisedSurfaceBrush"),
             Child = detail
         };
@@ -214,7 +214,7 @@ public partial class MainWindow
         const double size = MS3DPRINT.Manager.Desktop.Viewer.ModelThumbnails.PreviewSize;
         var picture = new Avalonia.Controls.Image { Width = size, Height = size, Stretch = Stretch.Uniform };
         var waiting = new TextBlock { Text = "Aperçu en cours…", Classes = { "caption" }, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-        var frame = new Border { Width = size, Height = size, CornerRadius = new Avalonia.CornerRadius(8), ClipToBounds = true, Background = new SolidColorBrush(Color.FromRgb(0x0E, 0x15, 0x22)), Child = new Panel { Children = { waiting, picture } } };
+        var frame = new Border { Width = size, Height = size, CornerRadius = new Avalonia.CornerRadius(Ui.Radius.Control), ClipToBounds = true, Background = new SolidColorBrush(Color.FromRgb(0x0E, 0x15, 0x22)), Child = new Panel { Children = { waiting, picture } } };
         var caption = new TextBlock { Text = title, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = size };
         // the whole name cell answers, not only the picture and the words
         if (row is Panel panel) panel.Background = Brushes.Transparent;
@@ -275,7 +275,7 @@ public partial class MainWindow
     private static Control CreateActionRow(string columns, Button? open, Button? actions, params Control[] cells)
     {
         var columnCount = columns.Split(',').Length;
-        var row = new Grid { Classes = { "workspace-row" }, ColumnDefinitions = new ColumnDefinitions(columns), ColumnSpacing = 16, Margin = new Avalonia.Thickness(16, 0), MinHeight = 60 };
+        var row = new Grid { Classes = { "workspace-row" }, ColumnDefinitions = new ColumnDefinitions(columns), ColumnSpacing = 16, Margin = new Avalonia.Thickness(16, 0), MinHeight = 56 };
         // Match the full-width hit target while keeping the columns inset from the edges.
         var background = new Border { Classes = { "workspace-row-background" }, Margin = new Avalonia.Thickness(-16, 0), IsHitTestVisible = false };
         Grid.SetColumnSpan(background, columnCount);
@@ -346,7 +346,7 @@ public partial class MainWindow
                 Background = (IBrush?)Avalonia.Application.Current?.FindResource("SurfaceBrush"),
                 BorderBrush = (IBrush?)Avalonia.Application.Current?.FindResource("BorderBrush"),
                 BorderThickness = new Avalonia.Thickness(1),
-                CornerRadius = new Avalonia.CornerRadius(8),
+                CornerRadius = new Avalonia.CornerRadius(Ui.Radius.Control),
                 Padding = new Avalonia.Thickness(8),
                 Child = menu
             }

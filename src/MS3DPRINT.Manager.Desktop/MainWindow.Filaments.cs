@@ -167,7 +167,7 @@ public partial class MainWindow
         var key = text.StartsWith('#') ? text : text.Split(' ', '-', '/')[0];
         var hex = key.StartsWith('#') ? key : FilamentColors.GetValueOrDefault(key);
         if (hex is null || !Color.TryParse(hex, out var parsed)) return null;
-        return new Border { Width = 12, Height = 12, CornerRadius = new Avalonia.CornerRadius(6), Background = new SolidColorBrush(parsed), BorderThickness = new Avalonia.Thickness(1),
+        return new Border { Width = 12, Height = 12, CornerRadius = new Avalonia.CornerRadius(Ui.Radius.Pill), Background = new SolidColorBrush(parsed), BorderThickness = new Avalonia.Thickness(1),
             BorderBrush = (IBrush?)Avalonia.Application.Current?.FindResource("ControlBorderBrush"), VerticalAlignment = VerticalAlignment.Center };
     }
 }

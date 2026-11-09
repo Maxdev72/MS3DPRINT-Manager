@@ -57,7 +57,7 @@ public sealed class DownloadDialog : DialogWindow
         // the licence reminder is a calm note of its own, not a paragraph under the heading
         var licence = new Border
         {
-            Background = (IBrush?)Application.Current?.FindResource("WarningSoftBrush"), CornerRadius = new CornerRadius(8), Padding = new Thickness(12, 8),
+            Background = (IBrush?)Application.Current?.FindResource("WarningSoftBrush"), CornerRadius = new CornerRadius(Ui.Radius.Control), Padding = new Thickness(12, 8),
             Child = new Grid
             {
                 ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 12,
@@ -82,7 +82,7 @@ public sealed class DownloadDialog : DialogWindow
             var size = new TextBlock { Text = SizeText(file.Length), Classes = { "muted" }, VerticalAlignment = VerticalAlignment.Center, MinWidth = 52, TextAlignment = TextAlignment.Right };
             var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,Auto,*,Auto,Auto"), ColumnSpacing = 12, Children = { box, Icons.Glyph("IconCube", 18), name, format, size } };
             Grid.SetColumn(grid.Children[1], 1); Grid.SetColumn(name, 2); Grid.SetColumn(format, 3); Grid.SetColumn(size, 4);
-            var row = new Border { Padding = new Thickness(8, 8), CornerRadius = new CornerRadius(8), Child = grid };
+            var row = new Border { Padding = new Thickness(8, 8), CornerRadius = new CornerRadius(Ui.Radius.Control), Child = grid };
             _files.Add((file, box, row));
             _rows.Children.Add(row);
         }

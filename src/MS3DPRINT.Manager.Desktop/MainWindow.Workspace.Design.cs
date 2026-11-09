@@ -10,6 +10,7 @@ public partial class MainWindow
     private readonly TextBlock _printerPageSummary = WorkspaceSummary();
     private readonly TextBlock _filamentPageSummary = WorkspaceSummary();
     private readonly TextBlock _trashPageSummary = WorkspaceSummary();
+    private readonly TextBlock _collectionPageSummary = WorkspaceSummary();
 
     private static TextBlock WorkspaceSummary() => new()
     {
@@ -35,7 +36,8 @@ public partial class MainWindow
             Grid.SetRow(filamentScroll, 1);
         }
         FilamentFamily.Width = 220;
-        DecorateInventoryPage(TrashWorkspacePanel, "Éléments supprimés", _trashPageSummary, null);
+        UseListToolbar(TrashWorkspacePanel, [], _trashPageSummary, null);
+        UseListToolbar(CollectionsWorkspacePanel, [ListToolbar.Detach(CollectionFilters)], _collectionPageSummary, "Nouvelle collection");
         foreach (var panel in new[] { ProjectsWorkspacePanel, ClientsWorkspacePanel, CollectionsWorkspacePanel, FilamentsWorkspacePanel, PrintersWorkspacePanel, RevenuesWorkspacePanel, PurchasesWorkspacePanel, TrashWorkspacePanel, FolderWorkspacePanel })
             panel.Classes.Add("workspace-sheet");
     }
@@ -54,15 +56,18 @@ public partial class MainWindow
     }
 
     /// <summary>Replaces a page's first toolbar row with the shared <see cref="ListToolbar"/>, keeping its creation button.</summary>
-    private static void UseListToolbar(Border page, IEnumerable<Control> left, TextBlock count, string actionLabel)
+    private static void UseListToolbar(Border page, IEnumerable<Control> left, TextBlock count, string? actionLabel)
     {
         if (page.Child is not Grid { Children: [Grid old, ..] } layout) return;
+        var left0 = left.ToArray();
         var action = old.Children.OfType<StackPanel>().LastOrDefault()?.Children.OfType<Button>().LastOrDefault();
-        if (action is null) return;
-        action.Content = Icons.Label("IconPlus", actionLabel, 16);
-        Avalonia.Automation.AutomationProperties.SetName(action, actionLabel);
+        if (actionLabel is not null && action is not null)
+        {
+            action.Content = Icons.Label("IconPlus", actionLabel, 16);
+            Avalonia.Automation.AutomationProperties.SetName(action, actionLabel);
+        }
         count.TextWrapping = TextWrapping.NoWrap;
-        var toolbar = ListToolbar.Create(left, [count, ListToolbar.Detach(action)]);
+        var toolbar = ListToolbar.Create(left0, actionLabel is not null && action is not null ? [count, ListToolbar.Detach(action)] : [count]);
         Grid.SetRow(toolbar, Grid.GetRow(old));
         layout.Children[layout.Children.IndexOf(old)] = toolbar;
     }

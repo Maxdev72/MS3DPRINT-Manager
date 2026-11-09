@@ -38,11 +38,11 @@ public sealed partial class DesignTokenTests
     }
 
     [Fact]
-    public void Style_sheets_use_only_the_two_corner_radii()
+    public void Screens_use_only_the_two_corner_radii_and_pills()
     {
         var allowed = new[] { 0, Ui.Radius.Control, Ui.Radius.Card, Ui.Radius.Pill };
-        var offenders = SourceFiles().Where(file => file.EndsWith(".axaml", StringComparison.Ordinal))
-            .SelectMany(file => AxamlRadius().Matches(File.ReadAllText(file))
+        var offenders = SourceFiles()
+            .SelectMany(file => (file.EndsWith(".axaml", StringComparison.Ordinal) ? AxamlRadius() : CodeRadius()).Matches(File.ReadAllText(file))
                 .SelectMany(match => match.Groups[1].Value.Split([' ', ','], StringSplitOptions.RemoveEmptyEntries))
                 .Where(value => !allowed.Contains(double.Parse(value, CultureInfo.InvariantCulture)))
                 .Select(value => Path.GetFileName(file) + ": " + value))
@@ -80,6 +80,8 @@ public sealed partial class DesignTokenTests
     private static partial Regex AxamlSpacing();
     [GeneratedRegex(@"(?:\bCornerRadius=|Property=""CornerRadius"" Value=|x:Key=""\w*CornerRadius"">)""?([\d., ]+)[""<]")]
     private static partial Regex AxamlRadius();
+    [GeneratedRegex(@"new (?:Avalonia\.)?CornerRadius\(([\d., ]+)\)")]
+    private static partial Regex CodeRadius();
     [GeneratedRegex(@"new (?:Avalonia\.)?Thickness\(([-\d., ]+)\)")]
     private static partial Regex CodeThickness();
     [GeneratedRegex(@"\b(?:Spacing|ColumnSpacing|RowSpacing|ItemSpacing|LineSpacing)\s*=\s*(-?\d+(?:\.\d+)?)\b")]
