@@ -77,7 +77,7 @@ public sealed class TaskCoreTests : IDisposable
     {
         var project = Guid.NewGuid();
         WorkTask T(string title, int? days, ProjectPriority p = ProjectPriority.None, string? list = null, Guid? projectId = null, bool done = false)
-            => WorkTask.New(title, 0) with { DueDate = days is { } d ? Monday.AddDays(d) : null, Priority = p, List = list, ProjectId = projectId, CompletedAt = done ? DateTimeOffset.UtcNow : null };
+            => WorkTask.New(title, 0) with { DueDate = days is { } d ? Monday.AddDays(d) : null, Priority = p, List = list, ProjectId = projectId, CompletedAt = done ? new DateTimeOffset(Monday.ToDateTime(new TimeOnly(12, 0))) : null };
         var tasks = new[]
         {
             T("En retard", -2), T("Aujourd'hui basse", 0, ProjectPriority.Low), T("Aujourd'hui haute", 0, ProjectPriority.High),
@@ -85,11 +85,13 @@ public sealed class TaskCoreTests : IDisposable
             T("Faite", 0, done: true), WorkTask.New("Retirée", 0) with { DeletedAt = DateTimeOffset.UtcNow }
         };
         var groups = TaskViews.Group(TaskViews.All, tasks, Monday);
-        Assert.Equal(["En retard", "Aujourd’hui", "Demain", "7 prochains jours", "Plus tard", "Sans date"], groups.Select(g => g.Title));
+        Assert.Equal(["En retard", "Aujourd’hui", "Demain", "7 prochains jours", "Plus tard", "Sans date", "Terminées"], groups.Select(g => g.Title));
+        Assert.Equal("Faite", groups[^1].Tasks.Single().Title);
         Assert.Equal(["Aujourd'hui haute", "Aujourd'hui basse"], groups[1].Tasks.Select(t => t.Title));
         Assert.Equal(3, TaskViews.Count(TaskViews.Today, tasks, Monday));
         Assert.Equal(5, TaskViews.Count(TaskViews.Week, tasks, Monday));
-        Assert.Equal(["En retard", "Aujourd'hui basse", "Aujourd'hui haute", "Plus tard", "Sans date"], tasks.Where(t => TaskViews.Shows(TaskViews.Inbox, t, Monday)).Select(t => t.Title));
+        Assert.Equal(["En retard", "Aujourd'hui basse", "Aujourd'hui haute", "Plus tard", "Sans date", "Faite"], tasks.Where(t => TaskViews.Shows(TaskViews.Inbox, t, Monday)).Select(t => t.Title));
+        Assert.Equal(5, TaskViews.Count(TaskViews.Inbox, tasks, Monday));
         Assert.Equal("Demain", Assert.Single(tasks, t => TaskViews.Shows(TaskViews.ListView("achats"), t, Monday)).Title);
         Assert.Equal("Semaine", Assert.Single(tasks, t => TaskViews.Shows(TaskViews.ProjectView(project), t, Monday)).Title);
         Assert.Equal("Faite", Assert.Single(TaskViews.Group(TaskViews.Done, tasks, Monday)).Tasks.Single().Title);

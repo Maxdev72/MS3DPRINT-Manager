@@ -68,11 +68,13 @@ public sealed partial class EstimateUiTests
             TaskView(owner, "Toutes").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Settle(owner);
             foreach (var width in new[] { 960d, 1440d }) { owner.Width = width; await Task.Delay(280); CaptureDraftUi(owner, "tasks-page-" + width); }
 
-            // Checking a task moves it to « Terminées ».
+            // A checked task stays in its view, struck through under « Terminées », and is listed in the « Terminées » view.
             TaskListOf(owner).GetVisualDescendants().OfType<CheckBox>().Single(c => AutomationProperties.GetName(c) == "Terminer : Filament TPU").IsChecked = true;
-            for (var i = 0; i < 100 && store.LoadActive().Single(t => t.Title == "Filament TPU").CompletedAt is null; i++) await Task.Delay(20);
-            await Task.Delay(80); Settle(owner);
-            Assert.DoesNotContain(TaskListOf(owner).GetVisualDescendants().OfType<CheckBox>(), c => AutomationProperties.GetName(c)?.EndsWith("Filament TPU") == true);
+            // Wait for the page to show the saved state, not a fixed delay: the suite runs under load.
+            for (var i = 0; i < 250 && !TaskListOf(owner).GetVisualDescendants().OfType<CheckBox>().Any(c => AutomationProperties.GetName(c) == "Rouvrir : Filament TPU"); i++) { await Task.Delay(20); Settle(owner); }
+            Assert.NotNull(store.LoadActive().Single(t => t.Title == "Filament TPU").CompletedAt);
+            Assert.Contains(TaskListOf(owner).GetVisualDescendants().OfType<CheckBox>(), c => AutomationProperties.GetName(c) == "Rouvrir : Filament TPU");
+            Assert.Contains(TaskListOf(owner).GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "Terminées · 1");
             TaskView(owner, "Terminées").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Settle(owner);
             Assert.Contains(TaskListOf(owner).GetVisualDescendants().OfType<CheckBox>(), c => AutomationProperties.GetName(c) == "Rouvrir : Filament TPU");
         }
@@ -100,7 +102,7 @@ public sealed partial class EstimateUiTests
             step.Text = "Envoyer le devis";
             step.RaiseEvent(new Avalonia.Input.KeyEventArgs { RoutedEvent = Avalonia.Input.InputElement.KeyDownEvent, Key = Avalonia.Input.Key.Enter });
             DialogAction(owner, "Enregistrer");
-            for (var i = 0; i < 100 && store.LoadActive().Single().ProjectId is null; i++) await Task.Delay(20);
+            for (var i = 0; i < 100 && store.LoadActive().SingleOrDefault()?.ProjectId is null; i++) await Task.Delay(20);
             var saved = store.LoadActive().Single();
             Assert.Equal(("Relancer le client", (Guid?)project.Id, (Guid?)project.ClientId), (saved.Title, saved.ProjectId, saved.ClientId));
             Assert.Equal("Envoyer le devis", Assert.Single(saved.Steps!).Title);

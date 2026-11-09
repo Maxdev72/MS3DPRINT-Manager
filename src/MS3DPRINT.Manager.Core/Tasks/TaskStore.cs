@@ -74,6 +74,17 @@ public sealed class TaskStore
 
     private static WorkTask? TryRead(string path)
     {
+        // A file being replaced by a save or a sync is briefly locked: read it again rather than hide the task.
+        for (var attempt = 0; ; attempt++)
+        {
+            try { return ReadOnce(path); }
+            catch (IOException) when (attempt < 4 && File.Exists(path)) { Thread.Sleep(25); }
+            catch (IOException) { return null; }
+        }
+    }
+
+    private static WorkTask? ReadOnce(string path)
+    {
         try
         {
             WorkspacePathSafety.EnsureNoLinks(path);
@@ -83,7 +94,7 @@ public sealed class TaskStore
             WorkTask.Validate(task);
             return task;
         }
-        catch (Exception e) when (e is JsonException or IOException or UnauthorizedAccessException or ArgumentException) { return null; }
+        catch (Exception e) when (e is JsonException or UnauthorizedAccessException or ArgumentException) { return null; }
     }
 
     private string FilePath(Guid id) => Path.Combine(_directory, id + ".json");

@@ -13,11 +13,12 @@ public static class TaskViews
     {
         if (task.IsDeleted) return false;
         if (view == Done) return task.IsCompleted;
-        if (task.IsCompleted) return false;
+        // A checked task stays where it was; in the date views only for the day it was checked.
+        var checkedToday = task.CompletedAt is { } at && DateOnly.FromDateTime(at.ToLocalTime().DateTime) == today;
         return view switch
         {
-            Today => task.DueDate is { } d && d <= today,
-            Week => task.DueDate is { } w && w <= today.AddDays(7),
+            Today => task.IsCompleted ? checkedToday : task.DueDate is { } d && d <= today,
+            Week => task.IsCompleted ? checkedToday : task.DueDate is { } w && w <= today.AddDays(7),
             Inbox => task.List is null && task.ProjectId is null,
             All => true,
             _ when view.StartsWith("list:", StringComparison.Ordinal) => string.Equals(task.List, view[5..], StringComparison.CurrentCultureIgnoreCase),
@@ -29,7 +30,8 @@ public static class TaskViews
     /// <summary>Open tasks by due date, the most urgent first; finished ones by completion, newest first.</summary>
     public static IReadOnlyList<TaskGroup> Group(string view, IEnumerable<WorkTask> tasks, DateOnly today, string? search = null)
     {
-        var shown = tasks.Where(t => Shows(view, t, today) && Matches(t, search)).ToArray();
+        var all = tasks.Where(t => Shows(view, t, today) && Matches(t, search)).ToArray();
+        var shown = view == Done ? all : all.Where(t => !t.IsCompleted).ToArray();
         if (view == Done) return shown.Length == 0 ? [] : [new("Terminées", shown.OrderByDescending(t => t.CompletedAt).ToArray())];
         static IReadOnlyList<WorkTask> Sort(IEnumerable<WorkTask> items) => items.OrderByDescending(t => (int)t.Priority).ThenBy(t => t.DueDate).ThenBy(t => t.Order).ToArray();
         var groups = new List<TaskGroup>();
@@ -44,13 +46,16 @@ public static class TaskViews
         Add("7 prochains jours", t => t.DueDate > today.AddDays(1) && t.DueDate <= today.AddDays(7));
         Add("Plus tard", t => t.DueDate > today.AddDays(7));
         Add("Sans date", t => t.DueDate is null);
+        var done = all.Where(t => t.IsCompleted).OrderByDescending(t => t.CompletedAt).ToArray();
+        if (view != Done && done.Length > 0) groups.Add(new("Terminées", done));
         return groups;
     }
 
     public static IReadOnlyList<string> Lists(IEnumerable<WorkTask> tasks) => tasks.Where(t => !t.IsDeleted && t.List is not null)
         .Select(t => t.List!).Distinct(StringComparer.CurrentCultureIgnoreCase).Order(StringComparer.CurrentCultureIgnoreCase).ToArray();
 
-    public static int Count(string view, IEnumerable<WorkTask> tasks, DateOnly today) => tasks.Count(t => Shows(view, t, today));
+    /// <summary>Tasks still to do in a view; for « Terminées », the checked ones.</summary>
+    public static int Count(string view, IEnumerable<WorkTask> tasks, DateOnly today) => tasks.Count(t => Shows(view, t, today) && (view == Done) == t.IsCompleted);
 
     /// <summary>The first open task of a project, for the dashboard « prochaine tâche ».</summary>
     public static WorkTask? Next(IEnumerable<WorkTask> tasks, Guid projectId) => tasks

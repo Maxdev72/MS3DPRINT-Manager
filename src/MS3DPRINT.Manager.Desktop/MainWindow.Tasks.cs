@@ -141,7 +141,7 @@ public partial class MainWindow
             { RenderTasks(); Notify(error, error: true); }
         };
         var title = new TextBlock { Text = task.Title, TextWrapping = TextWrapping.Wrap };
-        if (task.IsCompleted) { title.Classes.Add("faint"); title.TextDecorations = TextDecorations.Strikethrough; }
+        if (task.IsCompleted) { title.Classes.Add("faint"); title.TextDecorations = new TextDecorationCollection { new TextDecoration { Location = TextDecorationLocation.Strikethrough } }; }
         var facts = new WrapPanel { ItemSpacing = 12, LineSpacing = 4 };
         if (task.DueDate is { } due)
         {

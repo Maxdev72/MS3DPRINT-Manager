@@ -233,6 +233,31 @@
     <Setter Property="Padding" Value="12,8" />
     <Setter Property="MinHeight" Value="42" />
   </Style>
+  <!-- Date fields (DateBox): same surface, border and text as the other inputs, in both themes. -->
+  <Style Selector="CalendarDatePicker">
+    <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="12,10" />
+    <Setter Property="MinHeight" Value="42" />
+    <Setter Property="FontSize" Value="15" />
+  </Style>
+  <Style Selector="CalendarDatePicker /template/ Border#Background, CalendarDatePicker:pointerover /template/ Border#Background, CalendarDatePicker:focus-within /template/ Border#Background">
+    <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
+  </Style>
+  <Style Selector="CalendarDatePicker:pointerover /template/ Border#Background"><Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Style>
+  <Style Selector="CalendarDatePicker:focus-within /template/ Border#Background"><Setter Property="BorderBrush" Value="{DynamicResource FocusBorderBrush}" /></Style>
+  <Style Selector="CalendarDatePicker /template/ TextBox#PART_TextBox">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="CalendarDatePicker /template/ TextBox#PART_TextBox /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="CalendarDatePicker /template/ Button#PART_Button"><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /><Setter Property="Margin" Value="0,0,8,0" /></Style>
+  <Style Selector="CalendarDatePicker /template/ Button#PART_Button:pointerover"><Setter Property="Foreground" Value="{DynamicResource CyanBrush}" /></Style>
   <Style Selector="CheckBox">
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
     <Setter Property="FontSize" Value="14" />
