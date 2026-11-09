@@ -61,8 +61,10 @@ public sealed class RemoteProfileSync(string workspaceRoot)
             if (createClient is null || _refused.Contains((local.Id, local.UpdatedAt, default))) continue;
             try
             {
-                await createClient(new(Guid.NewGuid(), local.Kind, local.ClientCode, local.CompanyName, local.FirstName, local.LastName,
+                var created = await createClient(new(Guid.NewGuid(), local.Kind, local.ClientCode, local.CompanyName, local.FirstName, local.LastName,
                     local.Address, local.Notes, local.PrimaryContact, local.Id, local.FolderName, local.Siret)).ConfigureAwait(false);
+                // An older server ignores the Id and makes its own copy: stop instead of creating more.
+                if (created.Id != local.Id) { _refused.Add((local.Id, local.UpdatedAt, default)); failed++; continue; }
                 onServer.Add(local.Id);
                 pushed++;
             }
@@ -111,6 +113,7 @@ public sealed class RemoteProfileSync(string workspaceRoot)
             {
                 var created = await createProject(new(Guid.NewGuid(), local.ClientId, local.ProjectName, local.CreatedAt.Year, local.DueDate,
                     local.Description, local.Priority, local.Id, local.Reference, local.FolderName)).ConfigureAwait(false);
+                if (created.Id != local.Id) { _refused.Add((local.Id, local.UpdatedAt, default)); failed++; continue; }
                 // The server starts a project at "À faire" without notes or tasks: send the rest of the sheet at once,
                 // otherwise the next pass would see the server as newer and wipe them on the PC.
                 var detail = await updateProject(local.Id, new(Guid.NewGuid(), created.UpdatedAt, local.Status, local.DueDate, local.Description,
