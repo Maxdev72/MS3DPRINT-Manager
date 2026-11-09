@@ -13,7 +13,7 @@ public partial class MainWindow
         try { company = new RevenueHeaderStore(root).Load(); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Text.Json.JsonException or ArgumentException)
         { company = new(); Notify("Les informations de l’entreprise ne peuvent pas être lues : " + e.Message, error: true); }
-        var edit = new Button { Content = Icons.Label("IconEdit", "Modifier", 16), Classes = { "primary-action" }, HorizontalAlignment = HorizontalAlignment.Left };
+        var edit = new Button { Content = Icons.Label("IconEdit", "Modifier", 16), HorizontalAlignment = HorizontalAlignment.Left };
         edit.Click += EditRevenueHeader_Click;
         static string Value(string text) => string.IsNullOrWhiteSpace(text) ? "À renseigner" : text.Trim();
         var values = new StackPanel { Spacing = 0, Children =

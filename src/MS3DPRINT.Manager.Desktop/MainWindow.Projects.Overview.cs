@@ -59,6 +59,8 @@ public partial class MainWindow
         var duplicate = new Button { Content = Icons.Label("IconCopy", "Dupliquer"), Tag = project };
         duplicate.Click += DuplicateProject_Click; actions.Children.Add(duplicate);
         var copy = CreateOverflowActions(CreateProjectCopyActions(project));
+        // Same look as its neighbours: the overflow trigger style is meant for the « … » icon only.
+        copy.Classes.Remove("icon-action");
         copy.Content = Icons.Label("IconCopy", "Copier");
         Avalonia.Automation.AutomationProperties.SetName(copy, "Copier les informations du projet");
         ToolTip.SetTip(copy, "Copier le nom, la référence ou le chemin du projet");

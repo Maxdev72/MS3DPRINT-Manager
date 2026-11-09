@@ -235,7 +235,7 @@ public partial class MainWindow
     /// <summary>The status of a project in the list; clicking it offers the three statuses, without opening the sheet.</summary>
     private Control CreateStatusPicker(ProjectSummary project)
     {
-        var options = new[] { (ProjectStatus.Quote, "À faire · 0 %"), (ProjectStatus.InProgress, "En cours · 50 %"), (ProjectStatus.Completed, "Terminé · 100 %") }
+        var options = new[] { (ProjectStatus.Quote, "À faire"), (ProjectStatus.InProgress, "En cours"), (ProjectStatus.Completed, "Terminé") }
             .Select(option =>
             {
                 var button = new Button { Content = option.Item2 };

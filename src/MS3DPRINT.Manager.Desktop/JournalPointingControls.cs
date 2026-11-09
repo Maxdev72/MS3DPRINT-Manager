@@ -71,7 +71,7 @@ internal sealed class JournalPointingControls
             UpdateSelection();
         };
         _selectionChecks.Add(all);
-        var header = Columns(all, tableHeader, new TextBlock { Text = "POINTÉ", Classes = { "caption" }, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
+        var header = Columns(all, tableHeader, new TextBlock { Text = "Pointé", Classes = { "caption" }, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
         var body = new StackPanel { Spacing = 8, Margin = new Thickness(0, 12, 0, 8), Children = { Filters, summary, batch, header } };
         if (warning is not null) body.Children.Insert(0, warning);
         if (!active.Any(i => Includes(i.Id)) && _filter != 0)
@@ -97,7 +97,7 @@ internal sealed class JournalPointingControls
         if (item.IsCancelled) point = new TextBlock { Text = "—", Classes = { "faint" }, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
         else
         {
-            var check = new CheckBox { IsChecked = item.PointedAt is not null, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            var check = new CheckBox { Classes = { "pointing" }, IsChecked = item.PointedAt is not null, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
             AutomationProperties.SetName(check, "Pointage de : " + item.Label);
             ToolTip.SetTip(check, item.PointedAt is { } at ? $"Vérifié sur le relevé le {at:dd/MM/yyyy à HH:mm} · Décocher pour dépointer" : "Cocher après vérification sur le relevé bancaire");
             check.IsCheckedChanged += async (_, _) =>

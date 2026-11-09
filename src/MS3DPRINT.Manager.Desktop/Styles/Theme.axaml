@@ -261,6 +261,9 @@
   </Style>
   <Style Selector="CalendarDatePicker /template/ Button#PART_Button"><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /><Setter Property="Margin" Value="0,0,8,0" /></Style>
   <Style Selector="CalendarDatePicker /template/ Button#PART_Button:pointerover"><Setter Property="Foreground" Value="{DynamicResource CyanBrush}" /></Style>
+  <!-- Pointing (bank reconciliation) reads apart from row selection: green once pointed. -->
+  <Style Selector="CheckBox.pointing:checked /template/ Border#NormalRectangle"><Setter Property="Background" Value="{DynamicResource SuccessBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}" /></Style>
+  <Style Selector="CheckBox.pointing:checked:pointerover /template/ Border#NormalRectangle"><Setter Property="Background" Value="{DynamicResource SuccessBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}" /></Style>
   <Style Selector="CheckBox">
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
     <Setter Property="FontSize" Value="14" />

@@ -66,7 +66,7 @@ public partial class MainWindow
 
         var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
         row.Children.Add(ring);
-        row.Children.Add(new TextBlock { Text = $"{percent} %", MinWidth = 34, Classes = { "caption" }, VerticalAlignment = VerticalAlignment.Center });
+        // The percentage only restated the status (0 / 50 / 100); the ring and the badge say it.
         row.Children.Add(CreateStatusBadge(project.StatusLabel));
         ToolTip.SetTip(row, $"Avancement : {percent} %");
         return row;

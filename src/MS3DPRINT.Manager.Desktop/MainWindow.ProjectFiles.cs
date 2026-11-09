@@ -55,7 +55,7 @@ public partial class MainWindow
             else await LoadProjectDirectoryAsync(project, new ProjectWorkspaceBrowser().Parent(project.ProjectPath, directory));
         };
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right };
-        var createFolder = new Button { Content = Icons.Label("IconPlus", "Nouveau dossier"), Tag = (Project: project, Directory: directory), Classes = { "primary-action" } };
+        var createFolder = new Button { Content = Icons.Label("IconPlus", "Nouveau dossier"), Tag = (Project: project, Directory: directory) };
         createFolder.Click += CreateProjectFolder_Click;
         var import = new Button { Content = Icons.Label("IconUpload", "Importer des fichiers"), Tag = (Project: project, Directory: directory), HorizontalAlignment = HorizontalAlignment.Left };
         import.Click += ImportProjectFile_Click;

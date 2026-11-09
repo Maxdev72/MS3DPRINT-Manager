@@ -126,7 +126,7 @@ public partial class MainWindow
         }
 
         clients = SortClients(clients);
-        PagedRows.Render(ClientList, clients, CreateClientRow, () => CreateSortableHeader(ClientRowColumns, ["CLIENT", "CODE", "FICHE", "PROJETS", "ACTIONS"], _clientSortColumn, _clientSortAscending, column =>
+        PagedRows.Render(ClientList, clients, CreateClientRow, () => CreateSortableHeader(ClientRowColumns, ["CLIENT", "CODE", "TYPE", "PROJETS", "ACTIONS"], _clientSortColumn, _clientSortAscending, column =>
         {
             _clientSortAscending = _clientSortColumn != column || !_clientSortAscending;
             _clientSortColumn = column;

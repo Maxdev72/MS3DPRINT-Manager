@@ -15,7 +15,9 @@ public sealed partial class FileBrowserView
     {
         var heading = new TextBlock { Text = "Glissez vos fichiers ici pour les importer", FontWeight = FontWeight.SemiBold };
         var folderName = Path.GetFileName(Path.TrimEndingDirectorySeparator(directory));
-        var destination = new TextBlock { Text = $"Destination : « {(folderName.Length == 0 ? directory : folderName)} » · {directory}", Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis };
+        // The folder name is enough on screen; the full path stays in the tooltip.
+        var destination = new TextBlock { Text = $"Destination : « {(folderName.Length == 0 ? directory : folderName)} »", Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis };
+        ToolTip.SetTip(destination, directory);
         ToolTip.SetTip(destination, directory);
         AutomationProperties.SetName(destination, "Destination de l’import : " + directory);
         var labels = new StackPanel { Spacing = 4, Children = { heading, destination } };

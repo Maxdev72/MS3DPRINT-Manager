@@ -66,6 +66,8 @@ public partial class MainWindow
         var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 20, MinHeight = 44 };
         row.Children.Add(new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center });
         var amount = new TextBlock { Text = value, FontSize = 16, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxWidth = 230, TextAlignment = TextAlignment.Right };
+        // An empty value reads as a gap to fill, not as a value: muted, regular weight.
+        if (value is "À renseigner" or "Non surveillé") { amount.FontWeight = FontWeight.Normal; amount.FontStyle = FontStyle.Italic; amount.Classes.Add("muted"); }
         Grid.SetColumn(amount, 1); row.Children.Add(amount);
         return new Border { BorderBrush = (IBrush?)Avalonia.Application.Current?.FindResource("SubtleBorderBrush"), BorderThickness = new Avalonia.Thickness(0, 0, 0, 1), Child = row };
     }

@@ -2009,7 +2009,8 @@ public sealed partial class EstimateUiTests : IDisposable
             await Capture("Projets", "LoadProjectsAsync", "projects-compact.png");
             var filters = window.FindControl<WrapPanel>("ProjectStatusFilters")!;
             var create = window.FindControl<StackPanel>("ProjectsPanelActions")!.Children.OfType<Button>().Last();
-            Assert.True(filters.Bounds.Width > 500);
+            // Every status chip on one line, not squeezed into a column.
+            Assert.Single(filters.Children.OfType<Button>().Select(b => b.TranslatePoint(default, window)!.Value.Y).Distinct());
             Assert.True(create.Bounds.Width >= 100);
             Assert.True(filters.TranslatePoint(default, window)!.Value.Y >= create.TranslatePoint(default, window)!.Value.Y + create.Bounds.Height);
             await Capture("Projets", "LoadProjectDirectoryAsync", "project-detail-compact.png", demoProject, demoProject.ProjectPath);

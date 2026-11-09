@@ -105,6 +105,8 @@ public partial class MainWindow
     {
         if (!_filamentCatalogReady || !string.Equals(_filamentCatalogRoot, WorkspaceRoot, StringComparison.OrdinalIgnoreCase)) return;
         FilamentList.Children.Clear();
+        // « Effacer » only when there is something to clear.
+        FilamentClearButton.IsVisible = !string.IsNullOrWhiteSpace(FilamentSearch.Text) || FilamentFamily.SelectedIndex > 0;
         var filaments = FilamentCatalogSearch.Filter(_allFilaments, FilamentSearch.Text, FilamentFamily.SelectedItem as string);
         var errors = _filamentReadErrors;
         _filamentPageSummary.Text = filaments.Count == _allFilaments.Count ? $"{filaments.Count} référence{(filaments.Count > 1 ? "s" : "")} · tarifs au kilogramme" : $"{filaments.Count} sur {_allFilaments.Count} références · tarifs au kilogramme";

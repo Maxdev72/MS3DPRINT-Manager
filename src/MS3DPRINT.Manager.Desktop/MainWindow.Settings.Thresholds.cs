@@ -20,7 +20,7 @@ public partial class MainWindow
         try { thresholds = new ActivityThresholdStore(root).Load(); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Text.Json.JsonException or ArgumentException)
         { thresholds = new(); Notify("Les seuils d’activité ne peuvent pas être lus : " + e.Message, error: true); }
-        var edit = new Button { Content = Icons.Label("IconEdit", "Modifier", 16), Classes = { "primary-action" }, HorizontalAlignment = HorizontalAlignment.Left };
+        var edit = new Button { Content = Icons.Label("IconEdit", "Modifier", 16), HorizontalAlignment = HorizontalAlignment.Left };
         edit.Click += EditThresholds_Click;
         static string Value(decimal? amount) => amount is { } v ? RevenueExporter.Money(v) + " / an" : "Non surveillé";
         var values = new StackPanel { Spacing = 0, Children =

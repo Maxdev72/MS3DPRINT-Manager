@@ -27,10 +27,12 @@ public partial class MainWindow
             _projectSortAscending = _projectSortColumn != PrioritySortColumn || !_projectSortAscending;
             _projectSortColumn = PrioritySortColumn; SaveWindowPreferences(); RenderProjects();
         };
-        var filters = new WrapPanel { ItemSpacing = 12, LineSpacing = 8 };
+        var filters = new WrapPanel { ItemSpacing = 12, LineSpacing = 8, VerticalAlignment = VerticalAlignment.Center };
         filters.Children.Add(_projectPriorityFilterBox); filters.Children.Add(_projectPrioritySortButton);
-        ProjectFilterBar.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-        Grid.SetRow(filters, 2); Grid.SetColumnSpan(filters, 3); ProjectFilterBar.Children.Add(filters);
+        // Status chips, priority and sort share one line (they wrap on narrow windows) instead of stacking three rows above the list.
+        ProjectFilterBar.Children.Remove(ProjectStatusFilters);
+        var line = new WrapPanel { ItemSpacing = 20, LineSpacing = 8, Children = { ProjectStatusFilters, filters } };
+        Grid.SetRow(line, 1); Grid.SetColumnSpan(line, 3); ProjectFilterBar.Children.Add(line);
         UpdatePrioritySortButton();
     }
 
@@ -60,6 +62,7 @@ public partial class MainWindow
         button.Classes.Add("project-priority");
         button.Classes.Add("interactive-cell");
         button.Content = label ? ProjectPriorityVisual.Label(project.Priority) : ProjectPriorityVisual.Flag(project.Priority);
+        if (label) button.FontSize = 14;
         button.HorizontalAlignment = HorizontalAlignment.Left;
         ToolTip.SetTip(button, ProjectPriorityVisual.Text(project.Priority) + " · Modifier");
         Avalonia.Automation.AutomationProperties.SetName(button, ProjectPriorityVisual.Text(project.Priority) + " · " + project.Title());
