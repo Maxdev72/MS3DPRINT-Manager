@@ -6,12 +6,13 @@ namespace MS3DPRINT.Manager.Core.Remote;
 
 public sealed record CreateClientCommand(Guid CommandId, ClientKind Kind, string ClientCode,
     string? CompanyName, string? FirstName, string? LastName, string? Address,
-    string? Notes, PrimaryContact Contact);
+    string? Notes, PrimaryContact Contact, Guid? Id = null, string? FolderName = null, string? Siret = null);
 public sealed record UpdateClientCommand(Guid CommandId, DateTimeOffset ExpectedUpdatedAt,
     ClientKind Kind, string? CompanyName, string? FirstName, string? LastName,
     string? Address, string? Notes, PrimaryContact Contact);
 public sealed record CreateProjectCommand(Guid CommandId, Guid ClientId, string ProjectName,
-    int Year, DateOnly? DueDate, string? Description, ProjectPriority Priority);
+    int Year, DateOnly? DueDate, string? Description, ProjectPriority Priority,
+    Guid? Id = null, string? Reference = null, string? FolderName = null);
 public sealed record UpdateProjectCommand(Guid CommandId, DateTimeOffset ExpectedUpdatedAt,
     ProjectStatus Status, DateOnly? DueDate, string? Description, string? Notes, ProjectPriority Priority,
     IReadOnlyList<ProjectTask>? Tasks = null);

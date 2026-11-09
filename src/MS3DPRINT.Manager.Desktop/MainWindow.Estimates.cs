@@ -364,7 +364,7 @@ public partial class MainWindow
     {
         var name = EstimateName.Text?.Trim() is { Length: > 0 } typed && typed != "Nouvelle estimation" ? typed : null;
         string? reference = null, folder = null;
-        if (IsServerWorkspace)
+        if (CreatesOnServer)
         {
             var known = ServerProjects.Select(p => p.Id).ToHashSet();
             await EditServerProjectAsync(null, suggestedName: name);

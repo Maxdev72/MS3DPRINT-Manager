@@ -42,7 +42,7 @@ public partial class MainWindow
 
     private async void CreateProject_Click(object? sender, RoutedEventArgs e)
     {
-        if (IsServerWorkspace) { await EditServerProjectAsync(null); return; }
+        if (CreatesOnServer) { await EditServerProjectAsync(null); return; }
         var root = WorkspaceRoot;
         var clients = await Task.Run(() => new WorkspaceClientReader().Load(root));
         var dialog = new CreateProjectWindow(clients);

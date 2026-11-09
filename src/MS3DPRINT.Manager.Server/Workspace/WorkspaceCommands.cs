@@ -29,9 +29,15 @@ public sealed class WorkspaceCommands
     {
         ValidateClient(command.Kind, command.CompanyName, command.FirstName, command.LastName, command.Address, command.Notes, command.Contact);
         var code = NormalizeRequired(command.ClientCode, 32);
-        if (_clients.LoadAll().Any(existing => string.Equals(NameNormalizer.Normalize(existing.ClientCode), code, StringComparison.Ordinal)))
+        Text(command.Siret, 32);
+        if (command.Id == Guid.Empty) throw new ArgumentException();
+        var existingClients = _clients.LoadAll();
+        if (command.Id is { } id && existingClients.Any(existing => existing.Id == id))
+            return new(409, new { error = "Ce client existe déjà sur le serveur." });
+        if (existingClients.Any(existing => string.Equals(NameNormalizer.Normalize(existing.ClientCode), code, StringComparison.Ordinal)))
             return new(409, new { error = "Ce code est déjà attribué à un autre client. Choisissez un code différent." });
-        var folder = NormalizeRequired(command.Kind == ClientKind.Professional ? command.CompanyName : string.Join(" ", command.FirstName, command.LastName), 200);
+        // A client created in Manager keeps its folder name; the website derives it from the name.
+        var folder = command.FolderName ?? NormalizeRequired(command.Kind == ClientKind.Professional ? command.CompanyName : string.Join(" ", command.FirstName, command.LastName), 200);
         Portable(folder);
         if (folder is "00_CLIENT" or "99_ARCHIVES") throw new ArgumentException();
         var relative = "01_CLIENTS/" + folder;
@@ -41,9 +47,9 @@ public sealed class WorkspaceCommands
         var registry = Path.Combine(_paths.MetadataDirectory, "client-codes");
         EnsureTreeWithoutLinks(registry);
         var now = DateTimeOffset.UtcNow;
-        var profile = new ClientProfile(Guid.NewGuid(), command.Kind, folder, code, Clean(command.CompanyName),
+        var profile = new ClientProfile(command.Id ?? Guid.NewGuid(), command.Kind, folder, code, Clean(command.CompanyName),
             Clean(command.FirstName), Clean(command.LastName), Clean(command.Address), Clean(command.Notes), command.Contact,
-            now, now, RelativePath: relative);
+            now, now, Clean(command.Siret), relative);
         return new(201, Detail(new ClientCreationService(_root, new FolderTreeService(), _clients, new ClientCodeRegistry(registry)).Create(profile)));
     }
 
@@ -84,9 +90,34 @@ public sealed class WorkspaceCommands
                 prefixes[prefix] = prefix;
             }
         }
+        if (command.Id is not null || command.Reference is not null || command.FolderName is not null)
+            return Import(command, client, clientPath, template.Paths);
         var created = new ProjectCreationService(new FolderTreeService()).CreateWithProfile(summary, command.Year,
             command.ProjectName, _projects, command.DueDate, Clean(command.Description), command.Priority);
         return new(201, Detail(created.Profile));
+    }
+
+    /// <summary>A project created in Manager arrives with its own Id, reference and folder, so both sides name it alike.</summary>
+    private CommandResult Import(CreateProjectCommand command, ClientProfile client, string clientPath, IReadOnlyList<string> template)
+    {
+        if (command.Id is not { } id || id == Guid.Empty || command.FolderName is not { } folder) throw new ArgumentException();
+        if (command.Reference is not { Length: > 0 and <= 64 } reference) throw new ArgumentException();
+        Portable(folder); Portable(reference);
+        if (folder is "00_CLIENT" or "99_ARCHIVES") throw new ArgumentException();
+        var existing = _projects.LoadAll();
+        if (existing.Any(p => p.Id == id)) return new(409, new { error = "Ce projet existe déjà sur le serveur." });
+        if (existing.Any(p => string.Equals(p.Reference, reference, StringComparison.OrdinalIgnoreCase)))
+            return new(409, new { error = "Cette référence de projet est déjà utilisée sur le serveur." });
+        var destination = Path.Combine(clientPath, folder);
+        WorkspacePathSafety.EnsureNoLinks(destination);
+        // The folder may already be there (copied files without a sheet): keep it and only add the sheet.
+        if (!Directory.Exists(destination)) new FolderTreeService().CreateTree(destination, template);
+        var now = DateTimeOffset.UtcNow;
+        var profile = new ProjectProfile(id, client.Id, client.ClientCode, reference, folder, command.ProjectName.Trim(),
+            ProjectStatus.Quote, now, command.DueDate, Clean(command.Description), null, now,
+            Path.GetRelativePath(_root, destination).Replace('\\', '/'), command.Priority);
+        _projects.Create(profile);
+        return new(201, Detail(profile));
     }
 
     public CommandResult Update(Guid id, UpdateProjectCommand command)

@@ -24,7 +24,7 @@ public partial class MainWindow
 
     private async void CreateClient_Click(object? sender, RoutedEventArgs e)
     {
-        if (IsServerWorkspace) { await EditServerClientAsync(null); return; }
+        if (CreatesOnServer) { await EditServerClientAsync(null); return; }
         var root = WorkspaceRoot;
         var usedCodes = await Task.Run(() => new WorkspaceClientCreator().UsedCodes(root));
         var dialog = new CreateClientWindow(usedCodes: usedCodes);

@@ -12,7 +12,8 @@ public sealed record ProfileSyncResult(int Pulled, int Pushed, int Failed)
 /// <summary>
 /// Keeps the PC sheets and the server's in step for the items both know (same Id): project status, deadline,
 /// priority, description, notes and tasks; client details. The most recently changed side wins.
-/// Folders, files and items that exist on one side only are left to the synchronization assistant.
+/// Items are created in Manager, then sent: a client or project the server does not know yet is created there
+/// with the same Id, code, reference and folder name. Items that exist on the server only are left alone.
 /// </summary>
 public sealed class RemoteProfileSync(string workspaceRoot)
 {
@@ -22,7 +23,9 @@ public sealed class RemoteProfileSync(string workspaceRoot)
 
     public async Task<ProfileSyncResult> RunAsync(IReadOnlyList<ClientResponse> serverClients, IReadOnlyList<ProjectResponse> serverProjects,
         Func<Guid, UpdateClientCommand, Task<ClientDetailResponse>> updateClient,
-        Func<Guid, UpdateProjectCommand, Task<ProjectDetailResponse>> updateProject)
+        Func<Guid, UpdateProjectCommand, Task<ProjectDetailResponse>> updateProject,
+        Func<CreateClientCommand, Task<ClientDetailResponse>>? createClient = null,
+        Func<CreateProjectCommand, Task<ProjectDetailResponse>>? createProject = null)
     {
         int pulled = 0, pushed = 0, failed = 0;
         var clients = new ClientProfileStore(_paths);
@@ -50,6 +53,21 @@ public sealed class RemoteProfileSync(string workspaceRoot)
             }
             catch (RemoteWorkspaceException e) when (e.Kind is RemoteFailure.Rejected or RemoteFailure.Conflict)
             { if (e.Kind == RemoteFailure.Rejected) _refused.Add((local.Id, local.UpdatedAt, server.UpdatedAt)); failed++; }
+        }
+        var onServer = serverClients.Select(c => c.Id).ToHashSet();
+        // shortcut: a client deleted by hand on the server comes back from the PC; the server has no client deletion yet.
+        foreach (var local in localClients.Values.Where(c => !onServer.Contains(c.Id)))
+        {
+            if (createClient is null || _refused.Contains((local.Id, local.UpdatedAt, default))) continue;
+            try
+            {
+                await createClient(new(Guid.NewGuid(), local.Kind, local.ClientCode, local.CompanyName, local.FirstName, local.LastName,
+                    local.Address, local.Notes, local.PrimaryContact, local.Id, local.FolderName, local.Siret)).ConfigureAwait(false);
+                onServer.Add(local.Id);
+                pushed++;
+            }
+            catch (RemoteWorkspaceException e) when (e.Kind is RemoteFailure.Rejected or RemoteFailure.Conflict)
+            { _refused.Add((local.Id, local.UpdatedAt, default)); failed++; }
         }
 
         var projects = new ProjectProfileStore(_paths);
@@ -84,6 +102,24 @@ public sealed class RemoteProfileSync(string workspaceRoot)
             }
             catch (RemoteWorkspaceException e) when (e.Kind is RemoteFailure.Rejected or RemoteFailure.Conflict)
             { if (e.Kind == RemoteFailure.Rejected) _refused.Add((local.Id, local.UpdatedAt, server.UpdatedAt)); failed++; }
+        }
+        var projectsOnServer = serverProjects.Select(p => p.Id).ToHashSet();
+        foreach (var local in localProjects.Values.Where(p => !projectsOnServer.Contains(p.Id) && onServer.Contains(p.ClientId)))
+        {
+            if (createProject is null || _refused.Contains((local.Id, local.UpdatedAt, default))) continue;
+            try
+            {
+                var created = await createProject(new(Guid.NewGuid(), local.ClientId, local.ProjectName, local.CreatedAt.Year, local.DueDate,
+                    local.Description, local.Priority, local.Id, local.Reference, local.FolderName)).ConfigureAwait(false);
+                // The server starts a project at "À faire" without notes or tasks: send the rest of the sheet at once,
+                // otherwise the next pass would see the server as newer and wipe them on the PC.
+                var detail = await updateProject(local.Id, new(Guid.NewGuid(), created.UpdatedAt, local.Status, local.DueDate, local.Description,
+                    local.Notes, local.Priority, ProjectTasks.Items(local))).ConfigureAwait(false);
+                Save(() => projects.Update(local with { UpdatedAt = detail.UpdatedAt }, local.UpdatedAt));
+                pushed++;
+            }
+            catch (RemoteWorkspaceException e) when (e.Kind is RemoteFailure.Rejected or RemoteFailure.Conflict)
+            { _refused.Add((local.Id, local.UpdatedAt, default)); failed++; }
         }
         return new(pulled, pushed, failed);
     }

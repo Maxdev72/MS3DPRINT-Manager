@@ -9,6 +9,8 @@ namespace MS3DPRINT.Manager.Desktop;
 public partial class MainWindow
 {
     public bool IsServerWorkspace { get; private set; }
+    /// <summary>Clients and projects are created on the PC, then sent by the sync; the server forms remain for a PC without the workspace folder.</summary>
+    private bool CreatesOnServer => IsServerWorkspace && !Directory.Exists(WorkspaceRoot);
     private RemoteWorkspaceConnection? _serverConnection;
     private HttpClient _serverHttp = null!;
     private RemoteWorkspaceCache _serverCache = null!;
@@ -207,7 +209,9 @@ public partial class MainWindow
         var sync = _profileSync!;
         return await Task.Run(() => sync.RunAsync(copy.Clients, copy.Projects,
             (id, command) => connection.ExecuteAsync(command.CommandId, client => client.UpdateClientAsync(id, command)),
-            (id, command) => connection.ExecuteAsync(command.CommandId, client => client.UpdateProjectAsync(id, command))));
+            (id, command) => connection.ExecuteAsync(command.CommandId, client => client.UpdateProjectAsync(id, command)),
+                command => connection.ExecuteAsync(command.CommandId, client => client.CreateClientAsync(command)),
+                command => connection.ExecuteAsync(command.CommandId, client => client.CreateProjectAsync(command))));
     }
     private async void ServerLogin_Click(object? sender, RoutedEventArgs e) => await LoginServerAsync();
     private bool _serverLoginDismissed;
