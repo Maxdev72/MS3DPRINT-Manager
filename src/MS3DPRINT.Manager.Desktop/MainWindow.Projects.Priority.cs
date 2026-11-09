@@ -40,9 +40,10 @@ public partial class MainWindow
         _projectPrioritySortButton.Classes.Set("selected", _projectSortColumn == 4);
     }
 
-    private async Task<MS3DPRINT.Manager.Core.Clients.ClientSummary?> EnsurePriorityClientAsync(MS3DPRINT.Manager.Core.Clients.ClientSummary client, ProjectPriority priority)
+    private async Task<MS3DPRINT.Manager.Core.Clients.ClientSummary?> EnsurePriorityClientAsync(MS3DPRINT.Manager.Core.Clients.ClientSummary client, ProjectPriority priority, DateOnly? dueDate = null)
     {
-        if (client.Profile is not null || priority == ProjectPriority.None) return client;
+        // Priority and due date live in the project sheet, which needs a client sheet.
+        if (client.Profile is not null || priority == ProjectPriority.None && dueDate is null) return client;
         var profile = await CompleteClientProfileAsync(client);
         return profile is null ? null : client with { Profile = profile };
     }

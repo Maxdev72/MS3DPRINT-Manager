@@ -57,7 +57,7 @@ public sealed partial class EstimateUiTests
         try
         {
             Dispatcher.UIThread.RunJobs(); owner.UpdateLayout(); var body = owner.FindControl<Border>("SidePanelBody")!;
-            Assert.Equal("26/10/2026", IdentityControl<TextBox>(body, "Date d’encaissement").Text);
+            Assert.Equal(new DateOnly(2026, 10, 26), IdentityControl<MS3DPRINT.Manager.Desktop.DateBox>(body, "Date d’encaissement").Date);
             var amount = IdentityControl<TextBox>(body, "Montant encaissé"); Assert.Equal("30,00", amount.Text);
             amount.Text = "20"; MixedGoods(body).Text = "7,50"; Dispatcher.UIThread.RunJobs();
             Assert.Equal(RevenueExporter.Money(12.5m), MixedServices(body).Text);

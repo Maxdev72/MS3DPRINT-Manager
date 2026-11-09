@@ -11,7 +11,7 @@ namespace MS3DPRINT.Manager.Desktop;
 /// <summary>Entry of one purchase in the purchase register.</summary>
 public sealed class PurchaseEntryWindow : DialogWindow
 {
-    private readonly TextBox _date = new() { PlaceholderText = "jj/mm/aaaa" };
+    private readonly DateBox _date = new();
     private readonly ComboBox _supplier = new() { IsEditable = true, PlaceholderText = "Nom du fournisseur" };
     private readonly TextBox _label = new() { PlaceholderText = "Ex. Bobines PLA, inserts laiton" };
     private readonly TextBox _amount = new() { PlaceholderText = "Montant payé" };
@@ -33,7 +33,7 @@ public sealed class PurchaseEntryWindow : DialogWindow
     {
         _existing = existing;
         Title = existing is null ? "Enregistrer un achat" : "Corriger un achat"; Width = 520; Height = existing is null ? 780 : 880; MinWidth = 440;
-        _date.Text = today.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
+        _date.Date = today;
         _supplier.ItemsSource = suppliers;
         var attach = new Button { Content = Icons.Label("IconUpload", existing is null ? "Lire un justificatif (PDF, image)…" : "Remplacer le justificatif…", 16) };
         attach.Click += async (_, _) => await PickDocumentAsync();
@@ -52,7 +52,7 @@ public sealed class PurchaseEntryWindow : DialogWindow
         {
             body.Insert(0, FormKit.Field("Motif de la correction", _correctionReason, hint: "Les valeurs d’origine et ce motif restent consultables dans l’historique de la ligne."));
             _correctionReason.TextChanged += (_, _) => FormKit.ClearError(_error);
-            _date.Text = existing.PurchasedOn.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture); _supplier.Text = existing.Supplier; _label.Text = existing.Label;
+            _date.Date = existing.PurchasedOn; _supplier.Text = existing.Supplier; _label.Text = existing.Label;
             _amount.Text = existing.Amount.ToString("0.00", CultureInfo.GetCultureInfo("fr-FR"));
             var methods = RevenueEntryWindow.PaymentMethods.Contains(existing.PaymentMethod) ? RevenueEntryWindow.PaymentMethods : RevenueEntryWindow.PaymentMethods.Append(existing.PaymentMethod).ToArray();
             _payment.ItemsSource = methods; _payment.SelectedItem = existing.PaymentMethod;
@@ -62,7 +62,8 @@ public sealed class PurchaseEntryWindow : DialogWindow
         Layout(existing is null ? "Enregistrer un achat" : "Corriger un achat",
             existing is null ? "Notez chaque achat à sa date, avec la facture du fournisseur comme justificatif." : "La ligne garde son historique : rien n’est effacé, la correction et son motif sont ajoutés au registre.",
             body, save);
-        foreach (var field in new[] { _date, _label, _amount, _reference, _project }) field.TextChanged += (_, _) => FormKit.ClearError(_error);
+        _date.SelectedDateChanged += (_, _) => FormKit.ClearError(_error);
+        foreach (var field in new[] { _label, _amount, _reference, _project }) field.TextChanged += (_, _) => FormKit.ClearError(_error);
         DocumentReadingUi.EnableDrop(this, path => _ = LoadDocumentAsync(path));
         KeyDown += async (_, e) => { if (e.Key == Avalonia.Input.Key.V && e.KeyModifiers == Avalonia.Input.KeyModifiers.Control && FocusManager?.GetFocusedElement() is not TextBox) { e.Handled = true; await PasteDocumentAsync(); } };
     }
@@ -90,7 +91,7 @@ public sealed class PurchaseEntryWindow : DialogWindow
         { _document.Text = head + "Lecture impossible (" + exception.Message + "). Saisissez les informations à la main."; return; }
         if (reading.IsEmpty) { _document.Text = head + DocumentReadingUi.Describe(reading, DocumentDirection.Purchase); return; }
         if (reading.Party is { } supplier && reading.Direction != DocumentDirection.Revenue) _supplier.Text = supplier.Value;
-        if (reading.Date is { } date && date.Value <= DateOnly.FromDateTime(DateTime.Today)) _date.Text = date.Value.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
+        if (reading.Date is { } date && date.Value <= DateOnly.FromDateTime(DateTime.Today)) _date.Date = date.Value;
         if (reading.TotalTtc is { } total) _amount.Text = DocumentReadingUi.Money(total.Value);
         if (reading.Number is { } number) _reference.Text = number.Value;
         else if (reading.Date is { } day && string.IsNullOrWhiteSpace(_reference.Text)) _reference.Text = $"Ticket du {day.Value:dd/MM/yyyy}";
@@ -103,8 +104,8 @@ public sealed class PurchaseEntryWindow : DialogWindow
     {
         if (_existing is not null && string.IsNullOrWhiteSpace(_correctionReason.Text))
         { FormKit.ShowError(_error, _correctionReason, "Indiquez le motif de la correction."); return; }
-        if (!DateOnly.TryParseExact(_date.Text?.Trim(), "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
-        { FormKit.ShowError(_error, _date, "Saisissez la date au format jj/mm/aaaa."); return; }
+        if (_date.Date is not { } date)
+        { FormKit.ShowError(_error, _date, "Choisissez la date."); return; }
         if (date > DateOnly.FromDateTime(DateTime.Today)) { FormKit.ShowError(_error, _date, "La date d’achat ne peut pas être dans le futur."); return; }
         if (_existing is not null && date.Year != _existing.PurchasedOn.Year)
         { FormKit.ShowError(_error, _date, $"La date doit rester en {_existing.PurchasedOn.Year}. Pour changer d’année, annulez l’achat puis saisissez-le à nouveau."); return; }

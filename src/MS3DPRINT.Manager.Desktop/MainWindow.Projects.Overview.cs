@@ -28,6 +28,8 @@ public partial class MainWindow
         var due = new Button { Content = project.Profile?.DueDate is { } date ? $"Échéance · {date:dd/MM/yyyy}" : "Définir une échéance", Tag = project, Classes = { "ghost" }, Padding = new Thickness(8, 4) };
         due.Click += EditProject_Click;
         facts.Children.Add(due);
+        if (project.Profile is { } sheet)
+            facts.Children.Add(new TextBlock { Text = $"Créé le {sheet.CreatedAt.ToLocalTime():dd/MM/yyyy}", Classes = { "muted" }, VerticalAlignment = VerticalAlignment.Center });
         facts.Children.Add(new TextBlock { Text = project.ClientTitle(), Classes = { "muted" }, VerticalAlignment = VerticalAlignment.Center });
         content.Children.Add(facts);
         content.Children.Add(new TextBlock

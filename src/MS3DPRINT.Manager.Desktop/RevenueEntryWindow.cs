@@ -21,7 +21,7 @@ public sealed class RevenueEntryWindow : DialogWindow
     private static readonly (string Label, RevenueNature Nature)[] Natures =
         [("Prestation de services", RevenueNature.Services), ("Vente de marchandises", RevenueNature.Goods), ("Mixte (marchandises et prestations)", RevenueNature.Mixed)];
 
-    private readonly TextBox _date = new() { PlaceholderText = "jj/mm/aaaa" };
+    private readonly DateBox _date = new();
     private readonly ComboBox _client = new() { IsEditable = true, PlaceholderText = "Nom du client (facultatif)" };
     private readonly TextBox _label = new() { PlaceholderText = "Ex. Impression de 12 supports" };
     private readonly TextBox _amount = new() { PlaceholderText = "Montant encaissé" };
@@ -45,7 +45,7 @@ public sealed class RevenueEntryWindow : DialogWindow
     {
         _existing = existing;
         Title = existing is null ? "Enregistrer un encaissement" : "Corriger un encaissement"; Width = 520; Height = existing is null ? 860 : 960; MinWidth = 440;
-        _date.Text = today.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
+        _date.Date = today;
         _client.ItemsSource = clientNames;
         _goods.IsVisible = false;
         _nature.SelectionChanged += (_, _) => { _goods.IsVisible = SelectedNature == RevenueNature.Mixed; FormKit.ClearError(_error); };
@@ -72,7 +72,8 @@ public sealed class RevenueEntryWindow : DialogWindow
         Layout(existing is null ? "Enregistrer un encaissement" : "Corriger un encaissement",
             existing is null ? "Notez le paiement à sa date de réception, pas à la date de la facture." : "La ligne garde son historique : rien n’est effacé, la correction et son motif sont ajoutés au livre.",
             body, save);
-        foreach (var field in new[] { _date, _label, _amount, _goods, _invoice, _project }) field.TextChanged += (_, _) => FormKit.ClearError(_error);
+        _date.SelectedDateChanged += (_, _) => FormKit.ClearError(_error);
+        foreach (var field in new[] { _label, _amount, _goods, _invoice, _project }) field.TextChanged += (_, _) => FormKit.ClearError(_error);
         if (invoicePdf is not null) Opened += (_, _) => LoadInvoice(invoicePdf);
         DocumentReadingUi.EnableDrop(this, LoadInvoice);
         KeyDown += async (_, e) => { if (e.Key == Avalonia.Input.Key.V && e.KeyModifiers == Avalonia.Input.KeyModifiers.Control && FocusManager?.GetFocusedElement() is not TextBox) { e.Handled = true; await PasteInvoiceAsync(); } };
@@ -80,7 +81,7 @@ public sealed class RevenueEntryWindow : DialogWindow
 
     private void Fill(RevenueEntry entry)
     {
-        _date.Text = entry.ReceivedOn.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
+        _date.Date = entry.ReceivedOn;
         _client.Text = entry.ClientName; _label.Text = entry.Label; _amount.Text = entry.Amount.ToString("0.00", French);
         _nature.SelectedIndex = Math.Max(0, Array.FindIndex(Natures, n => n.Nature == entry.Nature));
         _goods.IsVisible = entry.Nature == RevenueNature.Mixed;
@@ -138,8 +139,8 @@ public sealed class RevenueEntryWindow : DialogWindow
     {
         if (_existing is not null && string.IsNullOrWhiteSpace(_correctionReason.Text))
         { FormKit.ShowError(_error, _correctionReason, "Indiquez le motif de la correction."); return; }
-        if (!DateOnly.TryParseExact(_date.Text?.Trim(), "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
-        { FormKit.ShowError(_error, _date, "Saisissez la date au format jj/mm/aaaa."); return; }
+        if (_date.Date is not { } date)
+        { FormKit.ShowError(_error, _date, "Choisissez la date."); return; }
         if (date > DateOnly.FromDateTime(DateTime.Today))
         { FormKit.ShowError(_error, _date, "La date d’encaissement ne peut pas être dans le futur."); return; }
         if (_existing is not null && date.Year != _existing.ReceivedOn.Year)

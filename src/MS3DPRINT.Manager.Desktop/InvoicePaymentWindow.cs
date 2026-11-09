@@ -9,7 +9,7 @@ public sealed class InvoicePaymentWindow : DialogWindow
 {
     private readonly InvoiceReceivable _invoice;
     private readonly DateOnly _today;
-    private readonly TextBox _date = new();
+    private readonly DateBox _date = new();
     private readonly TextBox _amount = new();
     private readonly TextBox _goods = new() { PlaceholderText = "Part du paiement en marchandises" };
     private readonly TextBlock _services = new() { TextWrapping = Avalonia.Media.TextWrapping.Wrap };
@@ -22,7 +22,7 @@ public sealed class InvoicePaymentWindow : DialogWindow
     {
         _invoice = invoice; _today = today;
         Title = "Enregistrer un paiement"; Width = 520; Height = 800; MinWidth = 440;
-        _date.Text = today.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
+        _date.Date = today;
         _amount.Text = invoice.Remaining.ToString("0.00", CultureInfo.GetCultureInfo("fr-FR"));
         _nature.SelectedIndex = invoice.Invoice.Data.Nature is { } nature ? Array.IndexOf(Natures, nature) : -1;
         var summary = new TextBlock
@@ -43,7 +43,7 @@ public sealed class InvoicePaymentWindow : DialogWindow
         _nature.SelectionChanged += (_, _) => { FormKit.ClearError(_error); UpdateSplit(); };
         _amount.TextChanged += (_, _) => { FormKit.ClearError(_error); UpdateSplit(); };
         _goods.TextChanged += (_, _) => { FormKit.ClearError(_error); UpdateSplit(); };
-        _date.TextChanged += (_, _) => FormKit.ClearError(_error);
+        _date.SelectedDateChanged += (_, _) => FormKit.ClearError(_error);
         UpdateSplit();
     }
 
@@ -57,8 +57,8 @@ public sealed class InvoicePaymentWindow : DialogWindow
 
     private void Save()
     {
-        if (!DateOnly.TryParseExact(_date.Text?.Trim(), "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date) || date > _today)
-        { FormKit.ShowError(_error, _date, "Indiquez la date réelle d’encaissement au format jj/mm/aaaa, sans date future."); return; }
+        if (_date.Date is not { } date || date > _today)
+        { FormKit.ShowError(_error, _date, "Indiquez la date réelle d’encaissement sans date future."); return; }
         if (!ReadMoney(_amount.Text, out var amount) || amount <= 0 || amount > _invoice.Remaining)
         { FormKit.ShowError(_error, _amount, "Le montant doit être positif et ne pas dépasser le reste à encaisser."); return; }
         if (_nature.SelectedIndex < 0) { FormKit.ShowError(_error, _nature, "Choisissez la nature de ce paiement."); return; }

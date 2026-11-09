@@ -29,7 +29,7 @@ public sealed partial class EstimateUiTests
             var previews = body.GetVisualDescendants().OfType<Button>().Where(b => AutomationProperties.GetName(b)?.StartsWith("Voir la facture ") == true).ToArray();
             Assert.Equal(2, previews.Length);
             var check = body.GetVisualDescendants().OfType<CheckBox>().First(); check.IsChecked = true;
-            var date = body.GetVisualDescendants().OfType<TextBox>().First(t => AutomationProperties.GetName(t) == "Date d’encaissement"); date.Text = "09/10/2026";
+            var date = body.GetVisualDescendants().OfType<MS3DPRINT.Manager.Desktop.DateBox>().First(t => AutomationProperties.GetName(t) == "Date d’encaissement"); date.Date = new DateOnly(2026, 10, 9);
             var choices = body.GetVisualDescendants().OfType<ComboBox>().Take(2).ToArray();
             choices[0].SelectedIndex = 1; choices[1].SelectedItem = "Carte bancaire";
             foreach (var preview in previews)
@@ -38,7 +38,7 @@ public sealed partial class EstimateUiTests
                 preview.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             }
             Assert.Equal(invoices.Select(i => i.FilePath), paths);
-            Assert.True(check.IsChecked); Assert.Equal("09/10/2026", date.Text);
+            Assert.True(check.IsChecked); Assert.Equal(new DateOnly(2026, 10, 9), date.Date); Dispatcher.UIThread.RunJobs(); Assert.Equal("09/10/2026", date.GetVisualDescendants().OfType<TextBox>().Single().Text);
             Assert.Equal(1, choices[0].SelectedIndex); Assert.Equal("Carte bancaire", choices[1].SelectedItem);
             Assert.False(shown.IsCompleted); Assert.Empty(dialog.Result);
             Assert.Empty(new RevenueJournal(_root).Years());

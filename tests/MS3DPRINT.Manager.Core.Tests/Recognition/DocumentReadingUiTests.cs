@@ -42,7 +42,7 @@ public sealed class DocumentReadingUiTests : IDisposable
         {
             await window.LoadDocumentAsync(_file);
             Assert.Equal("14,40", Box(window, "Montant payé").Text);
-            Assert.Equal("24/10/2026", Box(window, "jj/mm/aaaa").Text);
+            Assert.Equal(new DateOnly(2026, 10, 24), window.GetVisualDescendants().OfType<MS3DPRINT.Manager.Desktop.DateBox>().Single().Date);
             Assert.Equal("004512", Box(window, "Numéro de facture ou de commande").Text);
             Assert.Equal(_file, window.SourceDocumentPath);
             Assert.Contains(window.GetVisualDescendants().OfType<TextBlock>(), t => t.Text?.Contains("Document lu") == true);

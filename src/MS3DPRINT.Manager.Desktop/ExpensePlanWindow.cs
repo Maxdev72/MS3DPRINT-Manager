@@ -14,8 +14,8 @@ public sealed class ExpensePlanWindow : DialogWindow
     private readonly TextBox _organization = new() { MaxLength = 250 };
     private readonly TextBox _label = new() { MaxLength = 500 };
     private readonly TextBox _amount = new() { PlaceholderText = "35,08" };
-    private readonly TextBox _first = new() { PlaceholderText = "JJ/MM/AAAA" };
-    private readonly TextBox _end = new() { PlaceholderText = "JJ/MM/AAAA" };
+    private readonly DateBox _first = new();
+    private readonly DateBox _end = new(placeholder: "Aucune");
     private readonly TextBox _last = new() { PlaceholderText = "Même montant si vide" };
     private readonly ComboBox _mode = new() { ItemsSource = new[] { "Fiche simple", "Tableau bancaire" }, SelectedIndex = 0 };
     private readonly ComboBox _frequency = new() { ItemsSource = new[] { "Mensuelle", "Trimestrielle", "Annuelle" }, SelectedIndex = 0 };
@@ -35,12 +35,12 @@ public sealed class ExpensePlanWindow : DialogWindow
         Width = 590; Height = 820; MinWidth = 440;
         _organization.Text = original?.Organization; _label.Text = original?.Label;
         _amount.Text = original?.RegularAmount.ToString("0.00", CultureInfo.GetCultureInfo("fr-FR"));
-        _first.Text = (original?.FirstDueOn ?? DateOnly.FromDateTime(DateTime.Today)).ToString("dd/MM/yyyy");
-        _end.Text = original?.EndOn?.ToString("dd/MM/yyyy"); _last.Text = original?.LastAmount?.ToString("0.00", CultureInfo.GetCultureInfo("fr-FR"));
+        _first.Date = original?.FirstDueOn ?? DateOnly.FromDateTime(DateTime.Today);
+        _end.Date = original?.EndOn; _last.Text = original?.LastAmount?.ToString("0.00", CultureInfo.GetCultureInfo("fr-FR"));
         _frequency.SelectedIndex = original?.IntervalMonths switch { 3 => 1, 12 => 2, _ => 0 };
         var manual = new StackPanel { Spacing = 16, Children = {
             FormKit.Field("Montant habituel", _amount, "€"), FormKit.Field("Fréquence", _frequency),
-            FormKit.Field("Première échéance restante", _first, hint: "JJ/MM/AAAA. Les paiements antérieurs ne sont pas recréés."),
+            FormKit.Field("Première échéance restante", _first, hint: "Les paiements antérieurs ne sont pas recréés."),
             FormKit.Field("Dernière échéance", _end, hint: kind == ExpensePlanKind.Financing ? "Obligatoire pour un financement." : "Facultative : vide pour une charge sans fin connue."),
             FormKit.Field("Dernier montant (facultatif)", _last, "€") } };
         var import = new Button { Content = "Importer un CSV…", Classes = { "ghost" }, HorizontalAlignment = HorizontalAlignment.Left };
@@ -83,7 +83,7 @@ public sealed class ExpensePlanWindow : DialogWindow
             [FormKit.Field("Organisme", _organization), FormKit.Field("Équipement ou libellé", _label), modeField, manual, source, preview, _error, _previewRows], confirm);
     }
 
-    private string Fingerprint() => string.Join("\0", _organization.Text, _label.Text, _amount.Text, _first.Text, _end.Text, _last.Text, _frequency.SelectedIndex, _mode.SelectedIndex, _table.Text);
+    private string Fingerprint() => string.Join("\0", _organization.Text, _label.Text, _amount.Text, _first.Date, _end.Date, _last.Text, _frequency.SelectedIndex, _mode.SelectedIndex, _table.Text);
     private void ShowError(string message)
     {
         _error.Text = message; _error.IsVisible = true;
@@ -100,9 +100,9 @@ public sealed class ExpensePlanWindow : DialogWindow
             else
             {
                 if (!ExpenseScheduleImport.Amount(_amount.Text, out var amount) || amount <= 0) throw new ArgumentException("Saisissez un montant habituel positif, au centime.");
-                if (!ExpenseScheduleImport.Date(_first.Text, out var first)) throw new ArgumentException("Vérifiez la première échéance (JJ/MM/AAAA).");
+                if (_first.Date is not { } first) throw new ArgumentException("Choisissez la première échéance.");
                 DateOnly? end = null; decimal? last = null;
-                if (!string.IsNullOrWhiteSpace(_end.Text)) { if (!ExpenseScheduleImport.Date(_end.Text, out var date)) throw new ArgumentException("Vérifiez la dernière échéance."); end = date; }
+                end = _end.Date;
                 if (!string.IsNullOrWhiteSpace(_last.Text)) { if (!ExpenseScheduleImport.Amount(_last.Text, out var value) || value <= 0) throw new ArgumentException("Vérifiez le dernier montant."); last = value; }
                 if (end is null && last is not null) throw new ArgumentException("Un dernier montant nécessite une date de fin.");
                 p = ExpensePlans.Create(_id, _kind, _organization.Text ?? "", _label.Text ?? "", amount, first, _frequency.SelectedIndex switch { 1 => 3, 2 => 12, _ => 1 }, end, last);

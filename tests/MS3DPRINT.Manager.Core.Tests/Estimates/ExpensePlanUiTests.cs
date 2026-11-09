@@ -25,8 +25,8 @@ public sealed partial class EstimateUiTests
             IdentityControl<TextBox>(body,"Organisme").Text="FLOA";
             IdentityControl<TextBox>(body,"Équipement ou libellé").Text="Tablette";
             IdentityControl<TextBox>(body,"Montant habituel").Text="35,08";
-            IdentityControl<TextBox>(body,"Première échéance restante").Text="05/11/2026";
-            IdentityControl<TextBox>(body,"Dernière échéance").Text="05/09/2028";
+            IdentityControl<MS3DPRINT.Manager.Desktop.DateBox>(body,"Première échéance restante").Date=new DateOnly(2026,11,5);
+            IdentityControl<MS3DPRINT.Manager.Desktop.DateBox>(body,"Dernière échéance").Date=new DateOnly(2028,9,5);
             IdentityControl<TextBox>(body,"Dernier montant (facultatif)").Text="34,99";
             DialogAction(owner,"Prévisualiser");
             owner.Width=960;await Task.Delay(280);CaptureDraftUi(owner,"expense-plan-form-960");

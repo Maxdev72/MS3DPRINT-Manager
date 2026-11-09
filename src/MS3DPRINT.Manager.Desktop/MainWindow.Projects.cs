@@ -51,11 +51,11 @@ public partial class MainWindow
             try
             {
                 var projectName = dialog.ProjectName;
-                var priority = dialog.Priority;
-                var trackedClient = await EnsurePriorityClientAsync(client, priority);
+                var (priority, dueDate) = (dialog.Priority, dialog.DueDate);
+                var trackedClient = await EnsurePriorityClientAsync(client, priority, dueDate);
                 if (trackedClient is null) return;
                 BeginBusy();
-                try { await Task.Run(() => new WorkspaceProjectCreator().CreateTracked(root, trackedClient, DateTime.Today.Year, projectName, priority)); }
+                try { await Task.Run(() => new WorkspaceProjectCreator().CreateTracked(root, trackedClient, DateTime.Today.Year, projectName, priority, dueDate)); }
                 finally { EndBusy(); }
                 PageTitle.Text = "Projets";
                 Notify("Projet créé.");
@@ -77,11 +77,11 @@ public partial class MainWindow
         try
         {
             var projectName = dialog.ProjectName;
-            var priority = dialog.Priority;
-            var trackedClient = await EnsurePriorityClientAsync(selected, priority);
+            var (priority, dueDate) = (dialog.Priority, dialog.DueDate);
+            var trackedClient = await EnsurePriorityClientAsync(selected, priority, dueDate);
             if (trackedClient is null) return;
             var root = WorkspaceRoot;
-            await Task.Run(() => new WorkspaceProjectCreator().CreateTracked(root, trackedClient, DateTime.Today.Year, projectName, priority));
+            await Task.Run(() => new WorkspaceProjectCreator().CreateTracked(root, trackedClient, DateTime.Today.Year, projectName, priority, dueDate));
             Notify("Projet créé.");
             await LoadClientDetailAsync(trackedClient with { ProjectCount = trackedClient.ProjectCount + 1 });
         }

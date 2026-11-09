@@ -16,7 +16,7 @@ public sealed class RevenueBatchWindow : DialogWindow
     {
         public required InvoiceCandidate Invoice { get; init; }
         public required CheckBox Selected { get; init; }
-        public required TextBox Date { get; init; }
+        public required DateBox Date { get; init; }
         public required ComboBox Nature { get; init; }
         public required ComboBox Payment { get; init; }
         public TextBox Goods { get; } = new() { PlaceholderText = "Montant en euros" };
@@ -52,7 +52,7 @@ public sealed class RevenueBatchWindow : DialogWindow
             {
                 Invoice = invoice,
                 Selected = new CheckBox { VerticalAlignment = VerticalAlignment.Center },
-                Date = new TextBox { Text = (data.IssuedOn ?? today).ToString("dd/MM/yyyy", CultureInfo.InvariantCulture), MinWidth = 120 },
+                Date = new DateBox(data.IssuedOn ?? today) { MinWidth = 120 },
                 Nature = new ComboBox { ItemsSource = Natures.Select(n => n.Label).ToArray(), MinWidth = 140, PlaceholderText = "À choisir" },
                 Payment = new ComboBox { ItemsSource = RevenueEntryWindow.PaymentMethods, SelectedIndex = 0, MinWidth = 150 }
             };
@@ -122,8 +122,8 @@ public sealed class RevenueBatchWindow : DialogWindow
         {
             var data = row.Invoice.Data;
             var label = data.InvoiceNumber!;
-            if (!DateOnly.TryParseExact(row.Date.Text?.Trim(), "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
-            { FormKit.ShowError(row.Error, row.Date, $"{label} : saisissez la date au format jj/mm/aaaa."); return; }
+            if (row.Date.Date is not { } date)
+            { FormKit.ShowError(row.Error, row.Date, $"{label} : choisissez la date d’encaissement."); return; }
             if (date > _today) { FormKit.ShowError(row.Error, row.Date, $"{label} : la date d’encaissement ne peut pas être dans le futur."); return; }
             if (row.Nature.SelectedIndex < 0) { FormKit.ShowError(row.Error, row.Nature, $"{label} : choisissez la nature (prestation, marchandises ou mixte)."); return; }
             var nature = Natures[row.Nature.SelectedIndex].Nature;

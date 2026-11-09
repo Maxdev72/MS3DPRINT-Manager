@@ -377,10 +377,10 @@ public partial class MainWindow
             if (!await dialog.ShowDialog<bool>(this) || dialog.Client is not { } client) return;
             try
             {
-                var priority = dialog.Priority; var projectName = dialog.ProjectName;
-                if (await EnsurePriorityClientAsync(client, priority) is not { } tracked) return;
+                var priority = dialog.Priority; var projectName = dialog.ProjectName; var dueDate = dialog.DueDate;
+                if (await EnsurePriorityClientAsync(client, priority, dueDate) is not { } tracked) return;
                 BeginBusy();
-                try { folder = (await Task.Run(() => new WorkspaceProjectCreator().CreateTracked(root, tracked, DateTime.Today.Year, projectName, priority))).FolderName; }
+                try { folder = (await Task.Run(() => new WorkspaceProjectCreator().CreateTracked(root, tracked, DateTime.Today.Year, projectName, priority, dueDate))).FolderName; }
                 finally { EndBusy(); }
             }
             catch (Exception exception) when (exception is ArgumentException or IOException or InvalidOperationException)

@@ -12,10 +12,12 @@ public sealed class CreateProjectWindow : DialogWindow
     private readonly TextBlock _error = FormKit.ErrorText();
     public ClientSummary? Client => FormKit.SelectedClient(_clients);
     public string ProjectName => _name.Text?.Trim() ?? string.Empty;
+    private readonly CalendarDatePicker _due = new() { FirstDayOfWeek = DayOfWeek.Monday, PlaceholderText = "Aucune", HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch };
+    public DateOnly? DueDate => _due.SelectedDate is { } date ? DateOnly.FromDateTime(date) : null;
 
     public CreateProjectWindow(IReadOnlyList<ClientSummary> clients, ClientSummary? preselected = null, string? suggestedName = null)
     {
-        Title = "Créer un projet"; Width = 520; Height = 560; MinWidth = 400;
+        Title = "Créer un projet"; Width = 520; Height = 640; MinWidth = 400;
         _clients = FormKit.ClientSearch(clients);
         string? hint = "Saisissez un nom ou un code, puis choisissez le client dans les résultats.";
         if (preselected is not null)
@@ -34,7 +36,8 @@ public sealed class CreateProjectWindow : DialogWindow
             Close(true);
         };
         Layout("Nouveau projet", "La référence du projet est attribuée automatiquement.",
-            [FormKit.Field("Client", _clients, hint: hint), FormKit.Field("Nom du projet", _name), FormKit.Field("Priorité", _priority), _error], create);
+            [FormKit.Field("Client", _clients, hint: hint), FormKit.Field("Nom du projet", _name), FormKit.Field("Priorité", _priority),
+             FormKit.Field("Échéance de traitement", _due, hint: "Facultatif. Le projet apparaît au calendrier et dans les alertes."), _error], create);
         Opened += (_, _) => (preselected is null ? (Control)_clients : _name).Focus();
     }
 }
