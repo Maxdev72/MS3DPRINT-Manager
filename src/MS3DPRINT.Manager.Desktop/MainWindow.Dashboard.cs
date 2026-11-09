@@ -8,6 +8,7 @@ using Avalonia.Threading;
 using Avalonia.Platform.Storage;
 using MS3DPRINT.Manager.Core.Clients;
 using MS3DPRINT.Manager.Core.Files;
+using MS3DPRINT.Manager.Core.Tasks;
 using MS3DPRINT.Manager.Core.Projects;
 using MS3DPRINT.Manager.Core.Printers;
 using MS3DPRINT.Manager.Core.Estimates;
@@ -58,8 +59,8 @@ public partial class MainWindow
         }
         foreach (var project in projects)
         {
-            var tasks = ProjectTasks.Items(project.Profile);
-            var nextTask = ProjectTasks.Next(project.Profile);
+            IReadOnlyList<WorkTask> tasks = project.Profile is { } profile ? dashboard.Tasks.Where(t => t.ProjectId == profile.Id).ToArray() : [];
+            var nextTask = project.Profile is { } owner ? TaskViews.Next(tasks, owner.Id) : null;
             var actionText = nextTask is not null ? "Prochaine tâche : " + nextTask.Title
                 : tasks.Count > 0 ? "Toutes les tâches sont terminées · vérifier le projet"
                 : project.Profile is null ? "Compléter la fiche du projet"

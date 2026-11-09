@@ -146,6 +146,8 @@
       <StreamGeometry x:Key="IconGrip">M8 5h1 M15 5h1 M8 12h1 M15 12h1 M8 19h1 M15 19h1</StreamGeometry>
       <StreamGeometry x:Key="IconProjectList">M4 5h2v2H4Z M10 6h10 M4 11h2v2H4Z M10 12h10 M4 17h2v2H4Z M10 18h10</StreamGeometry>
       <StreamGeometry x:Key="IconProjectTasks">M3 5l2 2 4-4 M12 5h9 M3 12l2 2 4-4 M12 12h9 M4 19h3 M12 19h9</StreamGeometry>
+      <StreamGeometry x:Key="IconToday">M4 6h16v14H4z M4 10h16 M8 3v4 M16 3v4 M11 14h2v2h-2z</StreamGeometry>
+      <StreamGeometry x:Key="IconInbox">M3 13h5l2 3h4l2-3h5 M5 5h14l2 8v6H3v-6z</StreamGeometry>
       <StreamGeometry x:Key="IconProjectCalendar">M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2Z M7 2v4 M17 2v4 M3 9h18 M7 13h2 M13 13h2 M7 17h2 M13 17h2</StreamGeometry>
       <StreamGeometry x:Key="IconMore">M6 12h.01 M12 12h.01 M18 12h.01</StreamGeometry>
       <StreamGeometry x:Key="IconArrowLeft">M19 12H5 M11 6l-6 6 6 6</StreamGeometry>

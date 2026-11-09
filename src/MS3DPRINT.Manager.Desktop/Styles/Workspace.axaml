@@ -247,6 +247,10 @@
   <Style Selector="CalendarDayButton:inactive:not(:today) > TextBlock, CalendarButton:inactive:not(:selected) > TextBlock"><Setter Property="Foreground" Value="{DynamicResource FaintTextBrush}" /></Style>
   <Style Selector="CalendarDayButton:focus-visible /template/ Border#Border, CalendarButton:focus-visible /template/ Border#Border"><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /></Style>
   <Style Selector="CalendarItem /template/ Button#PART_HeaderButton"><Setter Property="FontSize" Value="16" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
+  <Style Selector="Button.task-view"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /><Setter Property="Padding" Value="10,8" /><Setter Property="CornerRadius" Value="6" /></Style>
+  <Style Selector="Button.task-view:pointerover /template/ ContentPresenter"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /></Style>
+  <Style Selector="Button.task-view.selected /template/ ContentPresenter"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /></Style>
+  <Style Selector="Button.task-view.selected TextBlock"><Setter Property="FontWeight" Value="SemiBold" /></Style>
   <Style Selector="Border.project-task-row"><Setter Property="BorderThickness" Value="0,0,0,1" /><Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" /></Style>
   <Style Selector="Border.project-task-row Button.task-row-action">
     <Setter Property="Background" Value="Transparent" />
@@ -258,8 +262,6 @@
   <Style Selector="Border.project-task-row Button.task-row-action:focus-visible">
     <Setter Property="Background" Value="{DynamicResource CyanSoftBrush}" />
   </Style>
-  <Style Selector="Border.project-task-row.drop-before"><Setter Property="BorderThickness" Value="0,2,0,1" /><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /></Style>
-  <Style Selector="Border.project-task-row.drop-after"><Setter Property="BorderThickness" Value="0,0,0,2" /><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /></Style>
   <!-- Project views are primary navigation, visually stronger than the catalogue filters. -->
   <Style Selector="Window.workbench-ui StackPanel#ProjectViewTabs Button.filter-chip">
     <Setter Property="FontSize" Value="16" />

@@ -42,6 +42,8 @@ public partial class MainWindow
         if (!string.IsNullOrWhiteSpace(project.Profile?.Notes))
             content.Children.Add(EstimateSection("Notes de l’atelier", "Informations internes au projet", new TextBlock { Text = project.Profile.Notes, TextWrapping = TextWrapping.Wrap, LineHeight = 22 }));
 
+        if (BuildProjectTasksSection(project) is { } tasks) content.Children.Add(tasks);
+
         var actions = new WrapPanel { ItemSpacing = 10, LineSpacing = 10 };
         var estimate = new Button { Content = Icons.Label("IconEstimates", "Préparer une estimation"), Classes = { "primary-action" } };
         estimate.Click += async (_, _) => await StartProjectEstimateAsync(project);

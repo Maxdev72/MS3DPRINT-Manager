@@ -1,5 +1,6 @@
 using MS3DPRINT.Manager.Core.Clients;
 using MS3DPRINT.Manager.Core.Projects;
+using MS3DPRINT.Manager.Core.Tasks;
 using MS3DPRINT.Manager.Core.Workspace;
 
 namespace MS3DPRINT.Manager.Desktop.Dashboard;
@@ -16,6 +17,7 @@ public sealed record WorkspaceDashboard(
     int IncompleteClients)
 {
     public IReadOnlyList<ProjectSummary> WorkQueue { get; init; } = [];
+    public IReadOnlyList<WorkTask> Tasks { get; init; } = [];
 }
 
 /// <summary>Reads the existing workspace without changing its files or metadata.</summary>
@@ -60,6 +62,11 @@ public sealed class WorkspaceDashboardReader
             recent,
             deadlines,
             projects.Count(project => project.Profile is null),
-            clients.Count(client => client.Profile is null)) { WorkQueue = workQueue };
+            clients.Count(client => client.Profile is null))
+        {
+            WorkQueue = workQueue,
+            // Checklists not yet moved out of their project sheet still count until the « Tâches » page moves them.
+            Tasks = new TaskStore(paths).LoadActive().Concat(projects.Where(p => p.Profile is not null).SelectMany(p => TaskMigration.Legacy(p.Profile!))).DistinctBy(t => t.Id).ToArray()
+        };
     }
 }

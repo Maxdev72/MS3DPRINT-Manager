@@ -73,7 +73,7 @@ public partial class MainWindow
     }
     private async Task OpenGuidedMigrationAsync()
     {
-        if (IsServerWorkspace || _migrationOpen || _busy != 0 || _panel is not null || _pendingOperations.Count != 0 || _estimateDraftAutoSaving || _mobilePublishing != 0 || _projectTaskBusy || _backupPickerActive) return;
+        if (IsServerWorkspace || _migrationOpen || _busy != 0 || _panel is not null || _pendingOperations.Count != 0 || _estimateDraftAutoSaving || _mobilePublishing != 0 || _taskBusy || _backupPickerActive) return;
         if (!FlushEstimateDraft()) return;
         var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(WorkspaceRoot));
         var generation = _serverGeneration;
