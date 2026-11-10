@@ -47,7 +47,6 @@ internal sealed class JournalPointingControls
 
     public Control Header(Control tableHeader, Control? warning = null)
     {
-        if (tableHeader is Border { Child: Grid table }) table.ColumnSpacing = 12;
         var active = _items.Values.Where(item => !item.IsCancelled).ToArray();
         var checkedItems = active.Where(item => item.PointedAt is not null).ToArray();
         var pending = active.Where(item => item.PointedAt is null).ToArray();
@@ -71,7 +70,8 @@ internal sealed class JournalPointingControls
             UpdateSelection();
         };
         _selectionChecks.Add(all);
-        var header = Columns(all, tableHeader, new TextBlock { Text = "Pointé", Classes = { "caption" }, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
+        var pointHeading = new TextBlock { Text = "Pointé", FontSize = Ui.Text.Caption, FontWeight = Avalonia.Media.FontWeight.SemiBold, Classes = { "faint" }, HorizontalAlignment = HorizontalAlignment.Center };
+        var header = tableHeader is Border { Child: Grid table } ? Columns(all, table, pointHeading, tableHeader) : tableHeader;
         var body = new StackPanel { Spacing = 8, Margin = new Thickness(0, 12, 0, 8), Children = { Filters, summary, batch, header } };
         if (warning is not null) body.Children.Insert(0, warning);
         if (!active.Any(i => Includes(i.Id)) && _filter != 0)
@@ -81,7 +81,6 @@ internal sealed class JournalPointingControls
 
     public Control Row(Control row, Guid id)
     {
-        if (row is Grid table) table.ColumnSpacing = 12;
         var item = _items[id];
         var select = new CheckBox { Tag = id, IsEnabled = !item.IsCancelled, IsChecked = _selected.Contains(id), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
         AutomationProperties.SetName(select, "Sélectionner pour le pointage : " + item.Label);
@@ -112,7 +111,7 @@ internal sealed class JournalPointingControls
             };
             point = check;
         }
-        return Columns(select, row, point);
+        return (row as Grid ?? (row as Border)?.Child as Grid) is { } grid ? Columns(select, grid, point, row) : row;
     }
 
     private void UpdateSelection()
@@ -131,11 +130,21 @@ internal sealed class JournalPointingControls
         finally { _updating = false; }
     }
 
-    private static Grid Columns(Control select, Control content, Control point)
+    /// <summary>Adds the selection and « Pointé » columns to the table's own grid, so headings, cells and the row line span them all.</summary>
+    private static Control Columns(Control select, Grid table, Control point, Control result)
     {
-        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("32,*,72") };
-        Grid.SetColumn(content, 1); Grid.SetColumn(point, 2);
-        grid.Children.Add(select); grid.Children.Add(content); grid.Children.Add(point);
-        return grid;
+        var count = table.ColumnDefinitions.Count;
+        foreach (var child in table.Children)
+        {
+            // Full-width backgrounds and hit targets keep spanning the whole row; cells move one column right.
+            if (Grid.GetColumnSpan(child) >= count) Grid.SetColumnSpan(child, count + 2);
+            else Grid.SetColumn(child, Grid.GetColumn(child) + 1);
+        }
+        table.ColumnDefinitions.Insert(0, new ColumnDefinition(32, GridUnitType.Pixel));
+        table.ColumnDefinitions.Add(new ColumnDefinition(72, GridUnitType.Pixel));
+        table.ColumnSpacing = Ui.Space.S3;
+        Grid.SetColumn(point, count + 1);
+        table.Children.Add(select); table.Children.Add(point);
+        return result;
     }
 }

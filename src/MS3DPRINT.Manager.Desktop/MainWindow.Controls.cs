@@ -140,7 +140,7 @@ public partial class MainWindow
     // one look for every list header, sortable or not: the size of the sort buttons (Button.sort-head), the faint colour, the same padding
     private const double HeaderFontSize = Ui.Text.Caption;
 
-    private static readonly Avalonia.Thickness HeaderPadding = new(14, 12);
+    private static readonly Avalonia.Thickness HeaderPadding = new(Ui.Space.S4, Ui.Space.S3); // same inset as the rows below
 
     /// <summary>Header whose labels are buttons: click to sort, click again to reverse. The last heading (actions) is not sortable.</summary>
     private static Border CreateSortableHeader(string columns, string[] headings, int active, bool ascending, Action<int> onSort)

@@ -13,11 +13,9 @@ public partial class MainWindow
     private readonly Dictionary<Border, string> _settingsIndex = new();
     private static Control SettingsCardHeader(string icon, string title, string description, Control? action = null)
     {
-        var heading = new StackPanel { Spacing = 8 };
-        heading.Children.Add(new TextBlock { Text = title, Classes = { "card-title" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
-        if (!string.IsNullOrEmpty(description)) heading.Children.Add(new TextBlock { Text = description, Classes = { "muted" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap, FontSize = Ui.Text.Body, LineHeight = 22 });
+        var heading = new TextBlock { Text = title, Classes = { "card-title" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center };
         var grid = new Grid { Classes = { "settings-card-heading" }, ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), RowDefinitions = new RowDefinitions("Auto,Auto"), ColumnSpacing = 12, RowSpacing = 12 };
-        var glyph = Icons.Glyph(icon, 21); glyph.VerticalAlignment = VerticalAlignment.Top; glyph.Margin = new Thickness(0, 4, 0, 0);
+        var glyph = Icons.Glyph(icon, 21); glyph.VerticalAlignment = VerticalAlignment.Center;
         glyph.Classes.Add("settings-heading-icon");
         Grid.SetColumn(heading, 1); grid.Children.Add(glyph); grid.Children.Add(heading);
         if (action is not null)
@@ -26,12 +24,14 @@ public partial class MainWindow
             grid.SizeChanged += (_, _) =>
             {
                 var narrow = grid.Bounds.Width < 600;
-                Grid.SetRow(action, narrow ? 1 : 0); Grid.SetColumn(action, narrow ? 1 : 2);
-                Grid.SetColumnSpan(action, narrow ? 2 : 1);
+                Grid.SetRow(action, narrow ? 1 : 0); Grid.SetColumn(action, narrow ? 0 : 2);
+                Grid.SetColumnSpan(action, narrow ? 3 : 1);
                 action.HorizontalAlignment = HorizontalAlignment.Left;
             };
         }
-        return grid;
+        if (string.IsNullOrEmpty(description)) return grid;
+        // The description starts at the card's edge, like the content under it, not under the title.
+        return new StackPanel { Spacing = Ui.Space.S2, Children = { grid, new TextBlock { Text = description, Classes = { "muted" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap, FontSize = Ui.Text.Body, LineHeight = 22 } } };
     }
 
     private void SettingsSearch_Changed(object? sender, TextChangedEventArgs e)

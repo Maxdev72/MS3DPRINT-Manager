@@ -73,7 +73,10 @@ Ordre choisi pour livrer tôt ce qui sert le plus, une étape = une livraison :
    passaient déjà par `DialogWindow.Layout` et `FormKit.Field` ; en-tête, formulaire et pied alignés à 32 px ;
    graisses Normal · Medium (contrôles) · SemiBold (titres), interlignes 20 · 22 · 24 · 28, vérifiés par test ;
    `KeyValueList` pour les coordonnées de la fiche client, « Modifier » en haut à droite comme sur la fiche projet.
-6. **Pages métier** : Accueil, Tâches, Estimations, Recettes, Achats, Paramètres.
+6. **Pages métier** : Accueil, Tâches, Estimations, Recettes, Achats, Paramètres. — faite le 10 novembre 2026 :
+   en-têtes de tableau au même retrait (16 px) que les lignes ; dans Recettes et Achats, sélection et « Pointé »
+   dans la grille du tableau (ligne et titres sur toute la largeur) ; dans Paramètres, la description d’une carte
+   part du bord, comme son contenu. Accueil, Tâches et Estimations relus sans écart à corriger.
 
 ## Vérification à chaque étape
 
