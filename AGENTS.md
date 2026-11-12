@@ -22,6 +22,19 @@ Préférence explicite de l’utilisateur, enregistrée le 7 octobre 2026 :
   Si un fichier est verrouillé, demander la fermeture normale du logiciel ;
   ne pas forcer l’arrêt au risque de perdre des modifications.
 
+## Installeur et mise à jour silencieuse (12 novembre 2026)
+
+Demande explicite : le logiciel Windows s'installe (Setup.exe) et se met à jour
+seul, en silence. Cela remplace la livraison d'un exe portable.
+
+- Livrable Windows : `outputs/velopack/MS3DPRINTManager-win-Setup.exe`, produit par
+  `scripts/publish-windows-installer.ps1 -Version X.Y.Z` (Velopack, `vpk`).
+- Les mises à jour sont les fichiers de `outputs/velopack` publiés dans une release
+  GitHub `vX.Y.Z` de `Maxdev72/MS3DPRINT-Manager` ; publier demande l'accord de l'utilisateur.
+- Incrémenter la version à chaque livraison. L'application installée télécharge
+  en arrière-plan et installe à la fermeture (`Program.UpdateInBackgroundAsync`).
+- Linux reste l'archive `.tar.gz`.
+
 ## Confirmation des suppressions
 
 Préférence explicite de l’utilisateur : toute action utilisateur de suppression,

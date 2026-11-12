@@ -294,6 +294,8 @@ public partial class MainWindow : Window
         if (--_busy <= 0) { _busy = 0; BusyBar.IsVisible = false; }
     }
 
+    public void NotifyInfo(string message) => Notify(message);
+
     /// <summary>Short feedback bubble below the search in the top-right corner; it fades away on its own.</summary>
     private void Notify(string message, bool error = false)
     {
