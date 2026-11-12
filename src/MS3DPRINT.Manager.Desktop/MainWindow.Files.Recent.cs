@@ -45,7 +45,7 @@ public partial class MainWindow
                 RecentFilesList.Children.Add(new TextBlock { Text = "Vos fichiers ouverts apparaîtront ici pour les retrouver rapidement.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap });
                 return;
             }
-            var shown = 6;
+            var shown = 4;
             void Render()
             {
                 RecentFilesList.Children.Clear();

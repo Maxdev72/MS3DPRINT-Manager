@@ -40,7 +40,8 @@
   <Style Selector="Window.compact Image.compact-brand"><Setter Property="IsVisible" Value="True" /></Style>
 
   <Style Selector="Border.workbench-banner"><Setter Property="Background" Value="{DynamicResource WorkbenchBrush}" /><Setter Property="CornerRadius" Value="6" /><Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" /><Setter Property="BorderThickness" Value="1" /><Setter Property="Padding" Value="24" /></Style>
-  <Style Selector="Button.dashboard-stage"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderBrush" Value="Transparent" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Padding" Value="16,12" /></Style>
+  <Style Selector="Button.dashboard-stage"><Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="BorderBrush" Value="Transparent" /><Setter Property="CornerRadius" Value="6" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Padding" Value="24,16" /></Style>
+  <Style Selector="Button.dashboard-stage TextBlock.metric"><Setter Property="FontSize" Value="{DynamicResource FontSizeDisplay}" /></Style>
   <Style Selector="Button.dashboard-stage:pointerover"><Setter Property="Background" Value="{DynamicResource CyanSoftBrush}" /></Style>
   <Style Selector="Button.dashboard-stage TextBlock"><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Style>
   <Style Selector="Button.dashboard-stage TextBlock.caption"><Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /><Setter Property="FontWeight" Value="Normal" /></Style>

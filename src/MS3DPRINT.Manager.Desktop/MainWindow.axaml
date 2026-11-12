@@ -99,7 +99,7 @@
       </Grid>
       <Border x:Name="DashboardStats" Grid.Row="1" Classes="workbench-banner">
         <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="16" ColumnSpacing="24">
-          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
+          <Grid ColumnDefinitions="Auto,*">
             <Canvas Width="64" Height="64" VerticalAlignment="Center" IsHitTestVisible="False" IsVisible="False">
               <Path Classes="brand-layer layer-bottom" Data="M6 36 32 22 58 36 32 50Z" />
               <Path Classes="brand-layer" Data="M6 26 32 12 58 26 32 40Z" />
@@ -107,16 +107,17 @@
             </Canvas>
             <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center">
               <TextBlock Classes="brand-heading" FontSize="{DynamicResource FontSizePage}" TextWrapping="Wrap"><Run Text="De l’idée à la " /><Run Text="pièce." Foreground="{DynamicResource CyanBrush}" /></TextBlock>
+              <TextBlock Text="Suivez chaque projet, du devis à la livraison." Classes="caption" TextWrapping="Wrap" />
             </StackPanel>
           </Grid>
           <StackPanel Grid.Column="1" Spacing="12" Width="212" VerticalAlignment="Center">
             <Button x:Name="DashboardNewProject" Classes="primary-action" Click="CreateProject_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"><Path Classes="icon" Data="{StaticResource IconPlus}" /><TextBlock Grid.Column="1" Text="Nouveau projet" /><Path Grid.Column="2" Classes="icon action-arrow" Data="{StaticResource IconArrowRight}" /></Grid></Button>
             <Button x:Name="DashboardNewEstimate" Click="DashboardEstimate_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconEstimates}" /><TextBlock Text="Préparer un devis" /></StackPanel></Button>
           </StackPanel>
-          <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="*,*,*" ColumnSpacing="12">
-            <Button Classes="dashboard-stage" Tag="" Click="DashboardStage_Click"><Grid ColumnDefinitions="Auto,*" ColumnSpacing="16"><TextBlock x:Name="ProjectCountText" Text="—" Classes="metric brand-heading" /><StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center"><TextBlock Text="Projets" FontWeight="SemiBold" /><TextBlock Text="Ouvrir tous les dossiers" Classes="caption" TextWrapping="Wrap" /></StackPanel></Grid></Button>
-            <Button Grid.Column="1" Classes="dashboard-stage" Tag="A_FAIRE" Click="DashboardStage_Click"><Grid ColumnDefinitions="Auto,*" ColumnSpacing="16"><TextBlock x:Name="QuoteCountText" Text="—" Classes="metric brand-heading" Foreground="{DynamicResource WarningBrush}" /><StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center"><TextBlock Text="À préparer" FontWeight="SemiBold" /><TextBlock Text="Projets à démarrer" Classes="caption" TextWrapping="Wrap" /></StackPanel></Grid></Button>
-            <Button Grid.Column="2" Classes="dashboard-stage" Tag="EN_COURS" Click="DashboardStage_Click"><Grid ColumnDefinitions="Auto,*" ColumnSpacing="16"><TextBlock x:Name="InProgressCountText" Text="—" Classes="metric brand-heading" Foreground="{DynamicResource CyanBrush}" /><StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center"><TextBlock Text="En fabrication" FontWeight="SemiBold" /><TextBlock Text="Voir les projets en cours" Classes="caption" TextWrapping="Wrap" /></StackPanel></Grid></Button>
+          <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="*,*,*" ColumnSpacing="16">
+            <Button Classes="dashboard-stage" Tag="" Click="DashboardStage_Click"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16"><TextBlock x:Name="ProjectCountText" Text="—" Classes="metric brand-heading" /><StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center"><TextBlock Text="Projets" FontWeight="SemiBold" /><TextBlock Text="Ouvrir tous les dossiers" Classes="caption" TextWrapping="Wrap" /></StackPanel><Path Grid.Column="2" Classes="icon icon-sm action-arrow" Data="{StaticResource IconArrowRight}" VerticalAlignment="Center" /></Grid></Button>
+            <Button Grid.Column="1" Classes="dashboard-stage" Tag="A_FAIRE" Click="DashboardStage_Click"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16"><TextBlock x:Name="QuoteCountText" Text="—" Classes="metric brand-heading" Foreground="{DynamicResource WarningBrush}" /><StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center"><TextBlock Text="À préparer" FontWeight="SemiBold" /><TextBlock Text="Projets à démarrer" Classes="caption" TextWrapping="Wrap" /></StackPanel><Path Grid.Column="2" Classes="icon icon-sm action-arrow" Data="{StaticResource IconArrowRight}" VerticalAlignment="Center" /></Grid></Button>
+            <Button Grid.Column="2" Classes="dashboard-stage" Tag="EN_COURS" Click="DashboardStage_Click"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16"><TextBlock x:Name="InProgressCountText" Text="—" Classes="metric brand-heading" Foreground="{DynamicResource CyanBrush}" /><StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center"><TextBlock Text="En fabrication" FontWeight="SemiBold" /><TextBlock Text="Voir les projets en cours" Classes="caption" TextWrapping="Wrap" /></StackPanel><Path Grid.Column="2" Classes="icon icon-sm action-arrow" Data="{StaticResource IconArrowRight}" VerticalAlignment="Center" /></Grid></Button>
           </Grid>
         </Grid>
       </Border>

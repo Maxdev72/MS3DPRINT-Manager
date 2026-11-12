@@ -44,7 +44,7 @@ public sealed class WorkspaceDashboardReader
             .ThenByDescending(project => project.Priority)
             .ThenBy(project => project.Status == ProjectStatus.InProgress ? 0 : 1)
             .ThenByDescending(project => project.Profile?.UpdatedAt ?? DateTimeOffset.MinValue)
-            .Take(5).ToArray();
+            .Take(7).ToArray();
 
         var deadlines = projects
             .Where(project => !project.IsArchived && project.Profile is { DueDate: not null } profile && profile.Status != ProjectStatus.Completed)

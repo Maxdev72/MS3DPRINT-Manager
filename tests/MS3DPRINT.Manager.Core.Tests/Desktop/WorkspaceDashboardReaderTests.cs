@@ -29,7 +29,7 @@ public sealed class WorkspaceDashboardReaderTests
             }
             new MS3DPRINT.Manager.Core.Workspace.EntityManagementService(root).ArchiveProject(new WorkspaceProjectReader().Load(root).Single(p => p.Profile!.ProjectName == "Archivé haute"));
             var dashboard = new WorkspaceDashboardReader().Load(root);
-            Assert.Equal(new[] { "En retard", "Aujourd’hui haute", "Aujourd’hui basse", "Haute sans date", "Fabrication" }, dashboard.WorkQueue.Select(p => p.Profile!.ProjectName));
+            Assert.Equal(new[] { "En retard", "Aujourd’hui haute", "Aujourd’hui basse", "Haute sans date", "Fabrication", "Sans priorité" }, dashboard.WorkQueue.Select(p => p.Profile!.ProjectName));
             Assert.Equal(new[] { "En retard", "Aujourd’hui haute", "Aujourd’hui basse" }, dashboard.Deadlines.Select(p => p.Profile!.ProjectName));
         }
         finally { Directory.Delete(root, true); }
