@@ -11,6 +11,11 @@ internal static class Program
     {
         // Installer/updater hooks: must run first (handles --veloapp-* arguments, may exit).
         Velopack.VelopackApp.Build().Run();
+        // One Manager per user session: a second one could not hold the remote cache and would run without its server connection.
+        using var single = new Mutex(false, @"Local\MS3DPRINT-Manager-single-instance");
+        bool owned;
+        try { owned = single.WaitOne(1500); } catch (AbandonedMutexException) { owned = true; }
+        if (!owned) { FocusRunningInstance(); return; }
         // Before any settings store is created: bring the preferences once kept next to the executable into the profile.
         try { MS3DPRINT.Manager.Core.Storage.LegacySettingsMigration.Run(MS3DPRINT.Manager.Core.Storage.ApplicationPaths.LegacyDataDirectory, MS3DPRINT.Manager.Core.Storage.ApplicationPaths.DataDirectory); }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { ErrorLog.Write(exception); }
@@ -33,6 +38,24 @@ internal static class Program
         _ = Task.Run(UpdateInBackgroundAsync);
         DesktopApplication.BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
+
+    private static void FocusRunningInstance()
+    {
+        using var current = System.Diagnostics.Process.GetCurrentProcess();
+        foreach (var other in System.Diagnostics.Process.GetProcessesByName(current.ProcessName))
+        {
+            using (other)
+            {
+                if (other.Id == current.Id || other.MainWindowHandle == IntPtr.Zero) continue;
+                ShowWindow(other.MainWindowHandle, 9); // SW_RESTORE
+                SetForegroundWindow(other.MainWindowHandle);
+                return;
+            }
+        }
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr window, int command);
+    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr window);
 
     /// <summary>Silent update: download in the background, install when the user closes the app. Does nothing when not installed (portable build) or offline.</summary>
     private static async Task UpdateInBackgroundAsync()
