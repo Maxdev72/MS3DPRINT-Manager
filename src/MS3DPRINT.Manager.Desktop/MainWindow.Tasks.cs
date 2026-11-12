@@ -318,17 +318,17 @@ public partial class MainWindow
         if (task.List is { } list && !_taskView.StartsWith("list:")) facts.Children.Add(new TextBlock { Text = "#" + list, Classes = { "caption" } });
         if (task.Steps is { Count: > 0 } steps) facts.Children.Add(new TextBlock { Text = $"{steps.Count(s => s.IsCompleted)}/{steps.Count}", Classes = { "caption" } });
         if (!string.IsNullOrWhiteSpace(task.Notes)) { var note = Icons.Glyph("IconEdit", 12); ToolTip.SetTip(note, task.Notes); facts.Children.Add(note); }
-        var text = new StackPanel { Spacing = 4, VerticalAlignment = VerticalAlignment.Center, Children = { title } };
-        if (facts.Children.Count > 0) text.Children.Add(facts);
+        var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { title } };
+        facts.VerticalAlignment = VerticalAlignment.Center; facts.IsHitTestVisible = false;
         var open = new Button { Content = text, Tag = task.Id, Classes = { "task-row-action" }, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch };
         AutomationProperties.SetName(open, "Modifier : " + task.Title);
         open.Click += (_, _) => SelectTask(task.Id);
         var flag = ProjectPriorityVisual.Flag(task.Priority);
         flag.VerticalAlignment = VerticalAlignment.Center; flag.IsVisible = task.Priority != ProjectPriority.None;
         ToolTip.SetTip(flag, ProjectPriorityVisual.Text(task.Priority));
-        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 12, MinHeight = 46 };
-        Grid.SetColumn(open, 1); Grid.SetColumn(flag, 2);
-        row.Children.Add(check); row.Children.Add(open); row.Children.Add(flag);
+        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto,Auto"), ColumnSpacing = 12, MinHeight = 40 };
+        Grid.SetColumn(open, 1); Grid.SetColumn(facts, 2); Grid.SetColumn(flag, 3);
+        row.Children.Add(check); row.Children.Add(open); row.Children.Add(facts); row.Children.Add(flag);
         var border = new Border { Child = row, Tag = task.Id, Classes = { "project-task-row", "task-row" }, Padding = new Thickness(8, 0, 12, 0) };
         border.Classes.Set("selected", task.Id == _selectedTaskId);
         return border;
@@ -355,6 +355,7 @@ public partial class MainWindow
     {
         TaskQuickPreview.Children.Clear();
         if (_newTaskError is not null) _newTaskError.IsVisible = false;
+        AddTaskButton.IsVisible = !string.IsNullOrWhiteSpace(NewTaskBox.Text);
         if (string.IsNullOrWhiteSpace(NewTaskBox.Text)) return;
         var today = TaskToday;
         var quick = TaskQuickAdd.Parse(NewTaskBox.Text, today);
@@ -464,6 +465,7 @@ public partial class MainWindow
         TaskDetailHost.HorizontalAlignment = overlay ? HorizontalAlignment.Right : HorizontalAlignment.Stretch;
         TaskDetailHost.ZIndex = overlay ? 5 : 0;
         TaskDetailHost.Classes.Set("floating", overlay);
+        TaskDetailEmpty.IsVisible = !overlay && !TaskDetailHost.IsVisible;
     }
 
     private async void TasksPanel_KeyDown(object? sender, KeyEventArgs e)
@@ -492,6 +494,7 @@ public partial class MainWindow
     private void RenderTaskDetail()
     {
         TaskDetail.Children.Clear();
+        TaskDetailEmpty.IsVisible = SelectedTask is null && !TaskDetailHost.Classes.Contains("floating");
         if (SelectedTask is not { } task) { TaskDetailHost.IsVisible = false; return; }
         TaskDetailHost.IsVisible = true;
         var id = task.Id;
