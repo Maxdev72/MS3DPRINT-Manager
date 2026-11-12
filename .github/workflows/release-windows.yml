@@ -1,0 +1,22 @@
+# Push a tag like v1.0.1: GitHub builds the installer and publishes the release; installed apps update silently.
+name: release-windows
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { global-json-file: global.json }
+      - run: dotnet tool install -g vpk
+      - run: |
+          $v = '${{ github.ref_name }}'.TrimStart('v')
+          dotnet publish src/MS3DPRINT.Manager.Windows.App -c Release -r win-x64 --self-contained true -p:Version=$v -o publish
+          # previous release first, so delta packages are built (fails harmlessly on the very first release)
+          vpk download github --repoUrl https://github.com/${{ github.repository }} --token ${{ secrets.GITHUB_TOKEN }}
+          vpk pack --packId MS3DPRINTManager --packTitle "MS3DPRINT Manager" --packVersion $v --packDir publish --mainExe MS3DPRINT.Manager.Windows.App.exe --icon src/MS3DPRINT.Manager.Windows.App/Assets/app-icon.ico
+          vpk upload github --repoUrl https://github.com/${{ github.repository }} --token ${{ secrets.GITHUB_TOKEN }} --tag ${{ github.ref_name }} --publish --releaseName "MS3DPRINT Manager $v"

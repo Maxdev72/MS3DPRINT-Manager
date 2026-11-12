@@ -1,5 +1,6 @@
 # Builds the installer (Setup.exe) and the update packages with Velopack.
 # Usage: scripts\publish-windows-installer.ps1 -Version 1.0.1
+# Normally unnecessary: pushing a v* tag runs .github/workflows/release-windows.yml, which does all this.
 # Then upload everything in outputs\velopack to a GitHub release tagged v<Version>: installed apps pick it up and update silently.
 param([Parameter(Mandatory)][string]$Version)
 $ErrorActionPreference = 'Stop'
