@@ -188,8 +188,8 @@ public sealed partial class EstimateUiTests : IDisposable
         try
         {
             foreach (var name in new[] { "_previous", "_next", "_print" }) PreviewField<Button>(name).IsVisible = true;
-            PreviewField<TextBlock>("_pageText").IsVisible = true;
-            PreviewField<TextBlock>("_pageText").Text = "1000 / 9999";
+            PreviewField<TextBlock>("_pageTotal").IsVisible = true;
+            PreviewField<TextBlock>("_pageTotal").Text = "/ 9999";
             foreach (var width in new[] { 520d, 960d })
             {
                 preview.Width = width; await Task.Delay(180); Dispatcher.UIThread.RunJobs(); preview.UpdateLayout();
@@ -200,19 +200,45 @@ public sealed partial class EstimateUiTests : IDisposable
                 }
                 CaptureDraftUi(preview, "document-toolbar-" + width);
             }
-            Assert.Equal("Agrandir le document", Avalonia.Automation.AutomationProperties.GetName(PreviewField<Button>("_zoomIn")));
-            Assert.Equal("Réduire le document", Avalonia.Automation.AutomationProperties.GetName(PreviewField<Button>("_zoomOut")));
+            Assert.StartsWith("Agrandir le document", Avalonia.Automation.AutomationProperties.GetName(PreviewField<Button>("_zoomIn")));
+            Assert.StartsWith("Réduire le document", Avalonia.Automation.AutomationProperties.GetName(PreviewField<Button>("_zoomOut")));
             var before = PreviewField<TextBlock>("_zoomText").Text;
             PreviewField<Button>("_zoomIn").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Assert.NotEqual(before, PreviewField<TextBlock>("_zoomText").Text);
         }
         finally
         {
-            var previous = PreviewField<Image>("_image").Source as Avalonia.Media.Imaging.Bitmap;
+            var view = ((System.Collections.IList)PreviewField<object>("_views"))[0]!;
+            Image Picture() => (Image)view.GetType().GetProperty("Picture")!.GetValue(view)!;
+            var previous = Picture().Source as Avalonia.Media.Imaging.Bitmap;
             preview.Close();
-            Assert.Null(PreviewField<Image>("_image").Source);
+            Assert.Null(Picture().Source);
             if (previous is not null) { using var output = new MemoryStream(); Assert.ThrowsAny<Exception>(() => previous.Save(output, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default)); }
         }
+    });
+
+    [Fact]
+    public Task Pdf_preview_lists_every_page_and_finds_text() => Run(async () =>
+    {
+        var path = Path.Combine(_root, "preview-search.pdf");
+        var lines = new[] { new MS3DPRINT.Manager.Core.Revenues.PdfLine(["Facture", "Imprimante résine"]), new MS3DPRINT.Manager.Core.Revenues.PdfLine(["Total", "128,50"]) };
+        File.WriteAllBytes(path, MS3DPRINT.Manager.Core.Revenues.SimplePdfWriter.Write("Registre", ["Test"], new MS3DPRINT.Manager.Core.Revenues.PdfLine(["Libellé", "Montant"]), lines, [40, 300], [30, 20]));
+        var preview = new MS3DPRINT.Manager.Windows.App.DocumentPreviewWindow(path);
+        T Field<T>(string name) => (T)preview.GetType().GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(preview)!;
+        preview.Show();
+        try
+        {
+            for (var wait = 0; wait < 50 && !Field<bool>("_wordsLoaded"); wait++) { await Task.Delay(100); Dispatcher.UIThread.RunJobs(); }
+            Assert.True(Field<bool>("_wordsLoaded"));
+            Assert.NotEmpty((System.Collections.IList)Field<object>("_views"));
+            var box = Field<TextBox>("_searchBox");
+            preview.GetType().GetMethod("ToggleSearch", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(preview, [true]);
+            box.Text = "RESINE"; Dispatcher.UIThread.RunJobs();
+            Assert.Equal("1 / 1", Field<TextBlock>("_searchCount").Text);
+            box.Text = "introuvable"; Dispatcher.UIThread.RunJobs();
+            Assert.Equal("Aucun résultat", Field<TextBlock>("_searchCount").Text);
+        }
+        finally { preview.Close(); }
     });
 
     [Fact]

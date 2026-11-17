@@ -67,6 +67,21 @@ public sealed class WindowsOcrEngine : IOcrEngine
         return results;
     }
 
+    /// <summary>Words with their position (pixels) in the picture, to place selectable text over a scanned page. One plain reading of the picture as it is.</summary>
+    public async Task<(IReadOnlyList<MS3DPRINT.Manager.Core.Recognition.OcrWord> Words, int Width, int Height)> RecognizeWordsAsync(byte[] image)
+    {
+        if (_engine is null || image.Length == 0) return ([], 0, 0);
+        using var stream = new InMemoryRandomAccessStream();
+        await stream.WriteAsync(image.AsBuffer());
+        stream.Seek(0);
+        var decoder = await BitmapDecoder.CreateAsync(stream);
+        var longSide = Math.Min(Math.Max(decoder.OrientedPixelWidth, decoder.OrientedPixelHeight), (uint)OcrEngine.MaxImageDimension);
+        using var bitmap = await DecodeAsync(decoder, longSide, Math.Max(decoder.OrientedPixelWidth, decoder.OrientedPixelHeight));
+        var result = await _engine.RecognizeAsync(bitmap);
+        var words = result.Lines.SelectMany(l => l.Words).Select(w => new MS3DPRINT.Manager.Core.Recognition.OcrWord(w.Text, w.BoundingRect.X, w.BoundingRect.Y, w.BoundingRect.Width, w.BoundingRect.Height)).ToList();
+        return (words, bitmap.PixelWidth, bitmap.PixelHeight);
+    }
+
     private async Task Add(List<OcrText> results, SoftwareBitmap bitmap, string variant)
     {
         var text = await Recognize(bitmap);
