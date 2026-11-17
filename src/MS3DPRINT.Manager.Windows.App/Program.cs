@@ -57,7 +57,7 @@ internal static class Program
     [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr window, int command);
     [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr window);
 
-    /// <summary>Silent update: download in the background, install when the user closes the app. Does nothing when not installed (portable build) or offline.</summary>
+    /// <summary>Update on request: when a version is available, ask the user; on yes download, install and restart. Does nothing when not installed (portable build) or offline.</summary>
     private static async Task UpdateInBackgroundAsync()
     {
         try
@@ -66,13 +66,20 @@ internal static class Program
             if (!manager.IsInstalled) return;
             var update = await manager.CheckForUpdatesAsync();
             if (update is null) return;
-            await manager.DownloadUpdatesAsync(update);
-            manager.WaitExitThenApplyUpdates(update, silent: true, restart: false);
-            var message = $"Mise à jour {update.TargetFullRelease.Version} prête : elle s'installera à la fermeture du logiciel.";
-            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            // The main window appears a moment after startup; wait for it (at most a minute) to ask the question.
+            MainWindow? window = null;
+            for (var attempt = 0; attempt < 60 && window is null; attempt++)
             {
-                if ((Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow is MainWindow window) window.NotifyInfo(message);
-            });
+                window = await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow as MainWindow);
+                if (window is null) await Task.Delay(1000);
+            }
+            if (window is null) return;
+            var version = update.TargetFullRelease.Version.ToString();
+            var accepted = await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => new ConfirmUpdateWindow(version).ShowDialog<bool>(window));
+            if (!accepted) return;
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => window.NotifyInfo("Téléchargement de la mise à jour…"));
+            await manager.DownloadUpdatesAsync(update);
+            manager.ApplyUpdatesAndRestart(update);
         }
         catch (Exception exception) { ErrorLog.Write(exception); }
     }
