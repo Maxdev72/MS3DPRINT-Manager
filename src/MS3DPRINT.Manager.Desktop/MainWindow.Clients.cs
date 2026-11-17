@@ -146,10 +146,29 @@ public partial class MainWindow
             var trash = new Button { Content = Icons.Label("IconTrash", "Corbeille"), Tag = client, Classes = { "menu-destructive" } }; trash.Click += TrashClient_Click;
             var kindVariant = client.IsProfileMissing ? "warning" : client.Kind == ClientKind.Individual ? "neutral" : "info";
             return CreateActionRow(ClientRowColumns, open, CreateOverflowActions(folder, edit, code, rename, move, trash),
-                CreateCompactTableCell(client.Title(), prominent: true),
+                CreateClientNameCell(client),
                 CreateCompactTableCell(string.IsNullOrWhiteSpace(client.ClientCode) ? "—" : client.ClientCode, accent: true),
                 new Border { Classes = { "badge", kindVariant }, Child = new TextBlock { Text = client.ProfileLabel } },
-                CreateCompactTableCell(client.ProjectCount switch { 0 => "Aucun projet", 1 => "1 projet", var count => $"{count} projets" }));
+                CreateClientProjectCountCell(client.ProjectCount));
+    }
+
+    /// <summary>The client name with, under it, how to reach them (email, else phone), so the list answers « who is it, how do I call them » without opening the sheet.</summary>
+    private static Control CreateClientNameCell(ClientSummary client)
+    {
+        var name = CreateCompactTableCell(client.Title(), prominent: true);
+        var contact = client.Profile?.PrimaryContact;
+        var how = new[] { contact?.Email, contact?.Mobile, contact?.Phone }.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+        if (how is null) return name;
+        var line = new TextBlock { Text = how, Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis };
+        return new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center, Children = { name, line } };
+    }
+
+    /// <summary>« Aucun projet » is quiet: a list of mostly empty counts should not look like a list of results.</summary>
+    private static Control CreateClientProjectCountCell(int count)
+    {
+        var cell = CreateCompactTableCell(count switch { 0 => "Aucun projet", 1 => "1 projet", _ => $"{count} projets" });
+        if (count == 0) cell.Classes.Add("faint");
+        return cell;
     }
 
     private void ClientFilterText_Changed(object? sender, TextChangedEventArgs e)

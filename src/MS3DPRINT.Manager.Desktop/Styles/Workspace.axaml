@@ -191,6 +191,10 @@
   <Style Selector="Grid.workspace-row Button.table-row:pointerover, Grid.workspace-row Button.table-row:pressed">
     <Setter Property="Background" Value="Transparent" />
   </Style>
+  <!-- the template's own hover fill is a flat grey that hid the row's blue background; the row background draws the hover alone -->
+  <Style Selector="Grid.workspace-row Button.table-row:pointerover /template/ ContentPresenter#PART_ContentPresenter, Grid.workspace-row Button.table-row:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
   <Style Selector="Border.search-box">
     <Setter Property="CornerRadius" Value="6" />
     <Setter Property="Transitions"><Transitions><BrushTransition Property="BorderBrush" Duration="0:0:0.14" /><BrushTransition Property="Background" Duration="0:0:0.14" /></Transitions></Setter>
