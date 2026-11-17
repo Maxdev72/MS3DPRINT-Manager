@@ -242,10 +242,15 @@ public partial class MainWindow
     /// <summary>The status of a project in the list; clicking it offers the three statuses, without opening the sheet.</summary>
     private Control CreateStatusPicker(ProjectSummary project)
     {
-        var options = new[] { (ProjectStatus.Quote, "À faire"), (ProjectStatus.InProgress, "En cours"), (ProjectStatus.Completed, "Terminé") }
+        var current = project.StatusLabel switch { "TERMINE" => ProjectStatus.Completed, "EN_COURS" => ProjectStatus.InProgress, _ => ProjectStatus.Quote };
+        // Say what each status means; Terminé also archives the folder, which would otherwise be a surprise.
+        var options = new[] { (ProjectStatus.Quote, "À faire", "devis, préparation"), (ProjectStatus.InProgress, "En cours", "fabrication, livraison"), (ProjectStatus.Completed, "Terminé", "archive le dossier du projet") }
             .Select(option =>
             {
-                var button = new Button { Content = option.Item2 };
+                var text = new StackPanel { Spacing = 2 };
+                text.Children.Add(new TextBlock { Text = option.Item2 + (option.Item1 == current ? " · actuel" : ""), FontWeight = option.Item1 == current ? FontWeight.SemiBold : FontWeight.Normal });
+                text.Children.Add(new TextBlock { Text = option.Item3, Classes = { "caption" } });
+                var button = new Button { Content = text };
                 button.Click += async (_, _) => await SetProjectStatusAsync(project, option.Item1);
                 return button;
             }).ToArray();
@@ -254,9 +259,9 @@ public partial class MainWindow
         var pill = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
         pill.Children.Add(CreateStatusBadge(project.StatusLabel)); pill.Children.Add(Icons.Glyph("IconChevronDown", 12));
         ToolTip.SetTip(pill, $"Avancement : {project.ProgressPercent} %");
-        var picker = new Button { Content = pill, Classes = { "ghost", "interactive-cell" }, BorderThickness = new Avalonia.Thickness(0), Padding = new Avalonia.Thickness(8, 4), HorizontalAlignment = HorizontalAlignment.Left,
+        var picker = new Button { Content = pill, Classes = { "ghost", "status-picker", "interactive-cell" }, BorderThickness = new Avalonia.Thickness(0), Padding = new Avalonia.Thickness(8, 4), HorizontalAlignment = HorizontalAlignment.Left,
             Margin = new Avalonia.Thickness(-8, 0, 0, 0) }; // Align the ring with the STATUT heading despite the button padding.
-        ToolTip.SetTip(picker, "Changer le statut");
+        ToolTip.SetTip(picker, "Changer le statut (À faire, En cours, Terminé)");
         Avalonia.Automation.AutomationProperties.SetName(picker, "Changer le statut de " + project.Reference);
         picker.Click += (_, _) => menu.ShowAt(picker);
         return picker;

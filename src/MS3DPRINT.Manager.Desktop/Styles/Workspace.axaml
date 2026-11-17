@@ -172,7 +172,7 @@
   <Style Selector="Button.priority-choice"><Setter Property="Padding" Value="12" /><Setter Property="CornerRadius" Value="6" /><Setter Property="Background" Value="Transparent" /><Setter Property="BorderBrush" Value="Transparent" /></Style>
   <Style Selector="Button.priority-choice.selected"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource FocusBorderBrush}" /></Style>
   <Style Selector="Button.project-priority"><Setter Property="Padding" Value="8" /><Setter Property="MinWidth" Value="32" /><Setter Property="MinHeight" Value="36" /><Setter Property="Background" Value="Transparent" /><Setter Property="BorderBrush" Value="Transparent" /></Style>
-  <Style Selector="Button.priority-choice:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.project-priority:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Button.priority-choice:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.project-priority:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.status-picker:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.status-picker:pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource FocusBorderBrush}" />
   </Style>
