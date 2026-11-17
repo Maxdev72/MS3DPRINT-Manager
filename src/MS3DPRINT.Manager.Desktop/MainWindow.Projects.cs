@@ -118,6 +118,7 @@ public partial class MainWindow
         ProjectsPanelActions.IsVisible = true;
         ProjectsPanelHeader.IsVisible = true;
         ProjectFilterBar.IsVisible = true;
+        if (ProjectFilterBar.Parent is Grid page) page.RowSpacing = Ui.Space.S3;
         ProjectFilterBar.IsEnabled = false;
         ProjectsPanelSubtitle.Text = "Chargement des projets…";
 

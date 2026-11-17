@@ -33,6 +33,7 @@ public partial class MainWindow
         ProjectsPanelActions.IsVisible = false;
         ProjectsPanelHeader.IsVisible = false;
         ProjectFilterBar.IsVisible = false;
+        if (ProjectFilterBar.Parent is Grid page) page.RowSpacing = 0;
         var toolbar = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), Margin = new Avalonia.Thickness(0, 0, 0, 8) };
         var origin = _projectOriginClient;
         var back = new Button { Content = Icons.Label("IconArrowLeft", directory != project.ProjectPath ? "Dossier parent" : origin is null ? "Retour aux projets" : "Retour au client"), Classes = { "ghost" }, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left };
@@ -60,9 +61,21 @@ public partial class MainWindow
         import.Click += ImportProjectFile_Click;
         toolbar.Children.Add(back);
         ProjectList.Children.Add(toolbar);
+        // At the root of the project the files take the wide column and the sheet sits beside them; in a sub-folder only the files show.
+        var filesTitle = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = Ui.Space.S2, Margin = new Avalonia.Thickness(0, 8, 0, 4) };
+        var fileActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = Ui.Space.S2, Children = { createFolder, import } };
+        Grid.SetColumn(fileActions, 1);
+        filesTitle.Children.Add(new TextBlock { Text = "Fichiers du projet", FontSize = Ui.Text.Section, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center });
+        filesTitle.Children.Add(fileActions);
+        var files = new StackPanel { Spacing = 12 };
+        StackPanel filesHost = ProjectList;
         if (directory == project.ProjectPath)
-            AddProjectOverview(project);
-        ProjectList.Children.Add(new TextBlock { Text = "Fichiers du projet", FontSize = Ui.Text.Section, FontWeight = FontWeight.SemiBold, Margin = new Avalonia.Thickness(0, 8, 0, 4) });
+        {
+            files.Children.Add(filesTitle);
+            ProjectList.Children.Add(BuildProjectLayout(project, files));
+            filesHost = files;
+        }
+        else ProjectList.Children.Add(filesTitle);
 
         var trail = new List<(string Label, Func<Task>? Go)>();
         if (origin is null) trail.Add(("Projets", GoToProjectsAsync));
@@ -84,9 +97,47 @@ public partial class MainWindow
             }
         }
         SetBreadcrumb(trail.ToArray());
-        var reading = LoadFileBrowserAsync(ProjectList, project.ProjectPath, directory, project, () => LoadProjectDirectoryAsync(project, directory), [createFolder, import]);
+        var reading = LoadFileBrowserAsync(filesHost, project.ProjectPath, directory, project, () => LoadProjectDirectoryAsync(project, directory));
         // History is ready once the view is installed; its input lock must not cover disk I/O.
         if (!_replayingNavigation) await reading;
+    }
+
+    private const double ProjectSideWidth = 360;
+    private const double ProjectTwoColumnsFrom = 1000;
+
+    /// <summary>The files (left, wide) and the project sheet (right) side by side; on a narrow window the sheet goes above the files.</summary>
+    private Control BuildProjectLayout(ProjectSummary project, Control files)
+    {
+        var sheet = (Border)BuildProjectOverview(project);
+        // The column has its own rule on the left: no card edges of the stand-alone sheet.
+        sheet.BorderThickness = new Avalonia.Thickness(0); sheet.Padding = new Avalonia.Thickness(0); sheet.Margin = new Avalonia.Thickness(0);
+        var side = new Border { Child = sheet, BorderBrush = (IBrush?)Avalonia.Application.Current?.FindResource("SubtleBorderBrush") };
+        var layout = new Grid { ColumnSpacing = Ui.Space.S6, RowSpacing = Ui.Space.S5 };
+        layout.Children.Add(files); layout.Children.Add(side);
+        bool? narrow = null;
+        void Arrange(double width)
+        {
+            var isNarrow = width < ProjectTwoColumnsFrom;
+            if (narrow == isNarrow) return;
+            narrow = isNarrow;
+            layout.ColumnDefinitions.Clear(); layout.RowDefinitions.Clear();
+            if (isNarrow)
+            {
+                layout.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+                layout.RowDefinitions.Add(new RowDefinition(GridLength.Auto)); layout.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+                Grid.SetRow(side, 0); Grid.SetColumn(side, 0); Grid.SetRow(files, 1); Grid.SetColumn(files, 0);
+                side.BorderThickness = new Avalonia.Thickness(0, 0, 0, 1); side.Padding = new Avalonia.Thickness(0, 0, 0, Ui.Space.S5);
+            }
+            else
+            {
+                layout.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star)); layout.ColumnDefinitions.Add(new ColumnDefinition(ProjectSideWidth, GridUnitType.Pixel));
+                Grid.SetRow(files, 0); Grid.SetColumn(files, 0); Grid.SetRow(side, 0); Grid.SetColumn(side, 1);
+                side.BorderThickness = new Avalonia.Thickness(1, 0, 0, 0); side.Padding = new Avalonia.Thickness(Ui.Space.S5, 0, 0, 0);
+            }
+        }
+        Arrange(ProjectTwoColumnsFrom);
+        layout.SizeChanged += (_, e) => Arrange(e.NewSize.Width);
+        return layout;
     }
 
     private async void CreateProjectFolder_Click(object? sender, RoutedEventArgs e)

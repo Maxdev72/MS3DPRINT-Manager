@@ -18,14 +18,25 @@ public partial class MainWindow
         var content = new StackPanel { Spacing = 16 };
         // The name, reference and client are already the page heading: the sheet starts with the facts.
 
-        var facts = new WrapPanel { Orientation = Orientation.Horizontal, ItemSpacing = 24, LineSpacing = 12 };
-        facts.Children.Add(CreateProjectStatusCell(project));
-        facts.Children.Add(CreateProjectPriorityButton(project, label: true));
-        var due = new Button { Content = project.Profile?.DueDate is { } date ? $"Échéance · {date:dd/MM/yyyy}" : "Définir une échéance", Tag = project, Classes = { "ghost" }, Padding = new Thickness(8, 4) };
+        // Each fact has its label, so the column reads as a form and not as a row of loose words.
+        static Control Fact(string label, Control value)
+        {
+            var name = new TextBlock { Text = label, Classes = { "muted" }, VerticalAlignment = VerticalAlignment.Center };
+            value.VerticalAlignment = VerticalAlignment.Center; value.HorizontalAlignment = HorizontalAlignment.Left;
+            if (value is Button) value.Margin = new Thickness(-Ui.Space.S2, 0, 0, 0); // the text of a button lines up with the plain values
+            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("96,*"), MinHeight = 36, Children = { name, value } };
+            Grid.SetColumn(value, 1);
+            return row;
+        }
+        var facts = new StackPanel { Spacing = 4 };
+        facts.Children.Add(Fact("Statut", CreateProjectStatusCell(project)));
+        facts.Children.Add(Fact("Priorité", CreateProjectPriorityButton(project, label: true)));
+        var due = new Button { Content = project.Profile?.DueDate is { } date ? $"{date:dd/MM/yyyy}" : "Définir", Tag = project, Classes = { "ghost" }, Padding = new Thickness(8, 4) };
         due.Click += EditProject_Click;
-        facts.Children.Add(due);
+        Avalonia.Automation.AutomationProperties.SetName(due, project.Profile?.DueDate is null ? "Définir une échéance" : "Modifier l’échéance");
+        facts.Children.Add(Fact("Échéance", due));
         if (project.Profile is { } sheet)
-            facts.Children.Add(new TextBlock { Text = $"Créé le {sheet.CreatedAt.ToLocalTime():dd/MM/yyyy}", Classes = { "muted" }, VerticalAlignment = VerticalAlignment.Center });
+            facts.Children.Add(Fact("Créé le", new TextBlock { Text = $"{sheet.CreatedAt.ToLocalTime():dd/MM/yyyy}" }));
         content.Children.Add(facts);
         content.Children.Add(new TextBlock
         {
@@ -34,17 +45,12 @@ public partial class MainWindow
                 : project.Profile.Description,
             TextWrapping = TextWrapping.Wrap, FontSize = Ui.Text.Body, LineHeight = 24, Classes = { "muted" }
         });
-        if (!string.IsNullOrWhiteSpace(project.Profile?.Notes))
-            content.Children.Add(EstimateSection("Notes de l’atelier", "Informations internes au projet", new TextBlock { Text = project.Profile.Notes, TextWrapping = TextWrapping.Wrap, LineHeight = 22 }));
 
-        if (BuildProjectTasksSection(project) is { } tasks) content.Children.Add(tasks);
-
-        var actions = new WrapPanel { ItemSpacing = 12, LineSpacing = 12 };
-        var estimate = new Button { Content = Icons.Label("IconEstimates", "Préparer une estimation"), Classes = { "primary-action" } };
+        var estimate = new Button { Content = Icons.Label("IconEstimates", "Préparer une estimation"), Classes = { "primary-action" }, HorizontalAlignment = HorizontalAlignment.Stretch };
         estimate.Click += async (_, _) => await StartProjectEstimateAsync(project);
         var folder = new Button { Content = Icons.Label("IconOpen", "Ouvrir le dossier"), Tag = project.ProjectPath };
         folder.Click += OpenFolder_Click;
-        var collect = new Button { Content = Icons.Label("IconBook", "Enregistrer un encaissement") };
+        var collect = new Button { Content = Icons.Label("IconBook", "Enregistrer un encaissement"), HorizontalAlignment = HorizontalAlignment.Stretch };
         collect.Click += async (_, _) => await RecordProjectCollectionAsync(project);
         // Two actions that move the project forward stay visible; everything else sits in one menu.
         var edit = new Button { Content = Icons.Label("IconEdit", "Modifier la fiche"), Tag = project };
@@ -54,7 +60,13 @@ public partial class MainWindow
         var more = CreateOverflowActions([edit, folder, .. CreateProjectCopyActions(project), duplicate]);
         Avalonia.Automation.AutomationProperties.SetName(more, "Autres actions du projet");
         ToolTip.SetTip(more, "Modifier la fiche, ouvrir le dossier, copier, dupliquer");
-        actions.Children.Add(estimate); actions.Children.Add(collect); actions.Children.Add(more); content.Children.Add(actions);
+        var secondary = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 8, Children = { collect, more } };
+        Grid.SetColumn(more, 1);
+        content.Children.Add(new StackPanel { Spacing = 8, Children = { estimate, secondary } });
+
+        if (!string.IsNullOrWhiteSpace(project.Profile?.Notes))
+            content.Children.Add(EstimateSection("Notes de l’atelier", "Informations internes au projet", new TextBlock { Text = project.Profile.Notes, TextWrapping = TextWrapping.Wrap, LineHeight = 22 }));
+        if (BuildProjectTasksSection(project) is { } tasks) content.Children.Add(tasks);
 
         content.Children.Add(BuildClassificationSection(project));
         content.Children.Add(BuildProjectBalanceSection(project));

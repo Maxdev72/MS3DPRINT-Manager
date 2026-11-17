@@ -79,9 +79,7 @@ public partial class MainWindow
                     await RefreshAsync();
                 };
                 var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center, Children = { accept, ignore } };
-                var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 16, Children = { new StackPanel { Spacing = 4, Children = { name, detail } }, buttons } };
-                Grid.SetColumn(buttons, 1);
-                list.Children.Add(row);
+                list.Children.Add(new StackPanel { Spacing = 8, Children = { new StackPanel { Spacing = 4, Children = { name, detail } }, buttons } });
             }
         }
 
