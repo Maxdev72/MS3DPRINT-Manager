@@ -16,16 +16,7 @@ public partial class MainWindow
     {
         var overviewRoot = WorkspaceRoot;
         var content = new StackPanel { Spacing = 16 };
-        var heading = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
-        // The project's own name leads the sheet; reference and client right under it.
-        heading.Children.Add(new StackPanel { Spacing = 4, Children =
-        {
-            new TextBlock { Text = project.Title(), FontSize = Ui.Text.Page, FontWeight = FontWeight.SemiBold, Classes = { "brand-heading" }, TextWrapping = TextWrapping.Wrap },
-            new TextBlock { Text = project.Reference + " · " + project.ClientTitle(), Classes = { "muted" }, TextWrapping = TextWrapping.Wrap }
-        } });
-        var edit = new Button { Content = Icons.Label("IconEdit", "Modifier"), Tag = project, Classes = { "ghost" } };
-        edit.Click += EditProject_Click; Grid.SetColumn(edit, 1); heading.Children.Add(edit);
-        content.Children.Add(heading);
+        // The name, reference and client are already the page heading: the sheet starts with the facts.
 
         var facts = new WrapPanel { Orientation = Orientation.Horizontal, ItemSpacing = 24, LineSpacing = 12 };
         facts.Children.Add(CreateProjectStatusCell(project));
@@ -55,16 +46,15 @@ public partial class MainWindow
         folder.Click += OpenFolder_Click;
         var collect = new Button { Content = Icons.Label("IconBook", "Enregistrer un encaissement") };
         collect.Click += async (_, _) => await RecordProjectCollectionAsync(project);
-        actions.Children.Add(estimate); actions.Children.Add(collect); actions.Children.Add(folder); content.Children.Add(actions);
-        var duplicate = new Button { Content = Icons.Label("IconCopy", "Dupliquer"), Tag = project };
-        duplicate.Click += DuplicateProject_Click; actions.Children.Add(duplicate);
-        var copy = CreateOverflowActions(CreateProjectCopyActions(project));
-        // Same look as its neighbours: the overflow trigger style is meant for the « … » icon only.
-        copy.Classes.Remove("icon-action");
-        copy.Content = Icons.Label("IconCopy", "Copier");
-        Avalonia.Automation.AutomationProperties.SetName(copy, "Copier les informations du projet");
-        ToolTip.SetTip(copy, "Copier le nom, la référence ou le chemin du projet");
-        actions.Children.Add(copy);
+        // Two actions that move the project forward stay visible; everything else sits in one menu.
+        var edit = new Button { Content = Icons.Label("IconEdit", "Modifier la fiche"), Tag = project };
+        edit.Click += EditProject_Click;
+        var duplicate = new Button { Content = Icons.Label("IconCopy", "Dupliquer le projet"), Tag = project };
+        duplicate.Click += DuplicateProject_Click;
+        var more = CreateOverflowActions([edit, folder, .. CreateProjectCopyActions(project), duplicate]);
+        Avalonia.Automation.AutomationProperties.SetName(more, "Autres actions du projet");
+        ToolTip.SetTip(more, "Modifier la fiche, ouvrir le dossier, copier, dupliquer");
+        actions.Children.Add(estimate); actions.Children.Add(collect); actions.Children.Add(more); content.Children.Add(actions);
 
         content.Children.Add(BuildClassificationSection(project));
         content.Children.Add(BuildProjectBalanceSection(project));

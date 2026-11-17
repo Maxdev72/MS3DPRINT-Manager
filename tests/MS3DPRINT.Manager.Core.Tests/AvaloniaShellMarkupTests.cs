@@ -195,7 +195,8 @@ public sealed class AvaloniaShellMarkupTests
         var styles = File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "MS3DPRINT.Manager.Desktop", "Styles", "Controls.axaml"));
 
         Assert.Contains("var toolbar = new Grid", source, StringComparison.Ordinal);
-        Assert.Contains("Grid.SetColumn(actions, 1)", source, StringComparison.Ordinal);
+        // the folder commands sit in the file toolbar, next to the search
+        Assert.Contains("[createFolder, import]", source, StringComparison.Ordinal);
         Assert.Contains("Classes = { \"primary-action\" }", source, StringComparison.Ordinal);
         Assert.Contains("Button.primary-action", styles, StringComparison.Ordinal);
     }

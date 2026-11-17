@@ -54,16 +54,11 @@ public partial class MainWindow
             }
             else await LoadProjectDirectoryAsync(project, new ProjectWorkspaceBrowser().Parent(project.ProjectPath, directory));
         };
-        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right };
         var createFolder = new Button { Content = Icons.Label("IconPlus", "Nouveau dossier"), Tag = (Project: project, Directory: directory) };
         createFolder.Click += CreateProjectFolder_Click;
         var import = new Button { Content = Icons.Label("IconUpload", "Importer des fichiers"), Tag = (Project: project, Directory: directory), HorizontalAlignment = HorizontalAlignment.Left };
         import.Click += ImportProjectFile_Click;
-        actions.Children.Add(createFolder);
-        actions.Children.Add(import);
-        Grid.SetColumn(actions, 1);
         toolbar.Children.Add(back);
-        toolbar.Children.Add(actions);
         ProjectList.Children.Add(toolbar);
         if (directory == project.ProjectPath)
             AddProjectOverview(project);
@@ -89,7 +84,7 @@ public partial class MainWindow
             }
         }
         SetBreadcrumb(trail.ToArray());
-        var reading = LoadFileBrowserAsync(ProjectList, project.ProjectPath, directory, project, () => LoadProjectDirectoryAsync(project, directory));
+        var reading = LoadFileBrowserAsync(ProjectList, project.ProjectPath, directory, project, () => LoadProjectDirectoryAsync(project, directory), [createFolder, import]);
         // History is ready once the view is installed; its input lock must not cover disk I/O.
         if (!_replayingNavigation) await reading;
     }

@@ -180,12 +180,11 @@ public partial class MainWindow
         newFolder.Click += CreateWorkspaceFolder_Click;
         var importFile = new Button { Content = Icons.Label("IconUpload", "Importer des fichiers") };
         importFile.Click += ImportWorkspaceFile_Click;
-        var toolbar = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 8, Margin = new Avalonia.Thickness(0, 0, 0, 8) };
-        Grid.SetColumn(newFolder, 1); Grid.SetColumn(importFile, 2);
-        toolbar.Children.Add(back); toolbar.Children.Add(newFolder); toolbar.Children.Add(importFile);
+        var toolbar = new Grid { ColumnDefinitions = new ColumnDefinitions("*"), Margin = new Avalonia.Thickness(0, 0, 0, 8) };
+        toolbar.Children.Add(back);
         FolderWorkspaceList.Children.Add(toolbar);
         FolderWorkspaceList.Spacing = 12;
-        var reading = LoadFileBrowserAsync(FolderWorkspaceList, root, directory, null, LoadFolderWorkspaceAsync);
+        var reading = LoadFileBrowserAsync(FolderWorkspaceList, root, directory, null, LoadFolderWorkspaceAsync, [newFolder, importFile]);
         if (!_replayingNavigation) await reading;
     }
 }

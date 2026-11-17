@@ -23,11 +23,13 @@ public sealed partial class EstimateUiTests
             var clipboard = Assert.IsAssignableFrom<IClipboard>(owner.Clipboard);
             var sheet = Assert.IsType<Border>(Invoke(owner, "BuildProjectOverview", project));
             var copy = Assert.Single(sheet.GetVisualDescendants().OfType<Button>()
-                .Where(b => Avalonia.Automation.AutomationProperties.GetName(b) == "Copier les informations du projet"));
+                .Where(b => Avalonia.Automation.AutomationProperties.GetName(b) == "Autres actions du projet"));
             var flyout = Assert.IsType<Flyout>(copy.Tag);
             var menu = Assert.IsAssignableFrom<Control>(flyout.Content);
-            var buttons = menu.GetVisualDescendants().OfType<Button>().ToArray();
-            Assert.Equal(4, buttons.Length);
+            var menuButtons = menu.GetVisualDescendants().OfType<Button>().ToArray();
+            // Modifier la fiche, Ouvrir le dossier, the four copies, Dupliquer le projet
+            Assert.Equal(7, menuButtons.Length);
+            var buttons = menuButtons.Skip(2).Take(4).ToArray();
             var expected = new[] { project.Title(), project.Reference, project.Title() + " — " + project.Reference, project.ProjectPath };
             for (var index = 0; index < buttons.Length; index++)
             {

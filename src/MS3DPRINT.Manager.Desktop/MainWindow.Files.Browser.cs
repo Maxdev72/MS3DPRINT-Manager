@@ -27,7 +27,7 @@ public partial class MainWindow
         _fileReadCancellation?.Cancel(); _fileReadCancellation = null;
     }
 
-    private async Task LoadFileBrowserAsync(StackPanel host, string browseRoot, string directory, ProjectSummary? project, Func<Task> reload)
+    private async Task LoadFileBrowserAsync(StackPanel host, string browseRoot, string directory, ProjectSummary? project, Func<Task> reload, IReadOnlyList<Control>? actions = null)
     {
         // The caller cancels before clearing its host so scroll state is still available.
         var root = WorkspaceRoot;
@@ -35,7 +35,7 @@ public partial class MainWindow
         foreach (var oldKey in _fileBrowserStates.Keys.Where(k => k.Root != key.Item1).ToArray()) _fileBrowserStates.Remove(oldKey);
         using var cancellation = new CancellationTokenSource();
         _fileReadCancellation = cancellation;
-        var browser = BuildFileBrowser([], directory, project, reload, _fileBrowserStates.GetValueOrDefault(key), loading: true);
+        var browser = BuildFileBrowser([], directory, project, reload, _fileBrowserStates.GetValueOrDefault(key), loading: true, actions: actions);
         _activeFileBrowser = browser; _activeFileBrowserKey = key;
         host.Children.Add(browser);
         bool Current() => !cancellation.IsCancellationRequested && ReferenceEquals(_fileReadCancellation, cancellation)
@@ -70,7 +70,7 @@ public partial class MainWindow
     }
 
     private FileBrowserView BuildFileBrowser(IReadOnlyList<ProjectFileEntry> entries, string directory, ProjectSummary? project, Func<Task> reload,
-        FileBrowserState? state = null, bool loading = false)
+        FileBrowserState? state = null, bool loading = false, IReadOnlyList<Control>? actions = null)
     {
         var browser = new FileBrowserView(entries, entry =>
         {
@@ -87,8 +87,8 @@ public partial class MainWindow
                 if (ThreeDFileSupport.IsPreviewable(entry.FullPath)) AttachLargePreview(open, entry.FullPath, entry.Name);
             }
             return CreateActionRow(FileRowColumns, open, CreateOverflowActions(EntryActions(new(project, directory, entry.FullPath), !entry.IsDirectory)),
-                CreateFileNameCell(entry), CreateCompactTableCell(entry.TypeLabel), CreateCompactTableCell(entry.IsDirectory ? "—" : entry.SizeLabel));
-        }, () => CreateCompactTableHeader(FileRowColumns, "NOM", "FORMAT", "TAILLE", "ACTIONS"), reload, state, loading);
+                CreateFileNameCell(entry), CreateCompactTableCell(entry.IsDirectory ? "" : entry.TypeLabel), CreateCompactTableCell(entry.IsDirectory ? "" : entry.SizeLabel));
+        }, () => CreateCompactTableHeader(FileRowColumns, "NOM", "FORMAT", "TAILLE", "ACTIONS"), reload, state, loading, actions);
         var root = WorkspaceRoot;
         browser.MoveSelectionRequested = paths => RunFileBatchAsync(browser, root, directory, paths, FileBatchOperation.Move, reload);
         browser.TrashSelectionRequested = paths => RunFileBatchAsync(browser, root, directory, paths, FileBatchOperation.Trash, reload);
@@ -108,7 +108,8 @@ public partial class MainWindow
     private static Control CreateFileNameCell(ProjectFileEntry entry)
     {
         var grid = (Grid)CreateNameCell(entry.IsDirectory ? "IconProjects" : "IconFile", entry.Name, entry.IsDirectory, entry.IsDirectory ? null : entry.FullPath);
-        if (grid.Children.LastOrDefault() is TextBlock name)
+        // A folder is obviously openable: no hint under its name, no format and no size.
+        if (!entry.IsDirectory && grid.Children.LastOrDefault() is TextBlock name)
         {
             grid.Children.Remove(name);
             var hint = entry.IsDirectory ? "Ouvrir le dossier" : ThreeDFileSupport.IsPreviewable(entry.FullPath) ? "Aperçu 3D" :

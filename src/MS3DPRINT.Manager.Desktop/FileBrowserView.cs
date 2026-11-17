@@ -26,7 +26,7 @@ public sealed partial class FileBrowserView : StackPanel
     public TextBlock StatusLabel { get; } = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
 
     public FileBrowserView(IReadOnlyList<ProjectFileEntry> entries, Func<ProjectFileEntry, Control> row, Func<Control> header, Func<Task> reload,
-        FileBrowserState? state = null, bool loading = false)
+        FileBrowserState? state = null, bool loading = false, IReadOnlyList<Control>? actions = null)
     {
         _entries = new(entries); _row = row; _header = header; _loading = loading;
         _restorePage = state?.Page; _restoreOffset = state?.Offset;
@@ -47,7 +47,7 @@ public sealed partial class FileBrowserView : StackPanel
         clear.Click += (_, _) => Reset();
         // Same toolbar as every list: search and format on the left, refresh on the right; it wraps on narrow panes.
         FamilyInput.Width = 180;
-        var filters = ListToolbar.Create([ListToolbar.Search(SearchInput), FamilyInput, clear], [refresh]);
+        var filters = ListToolbar.Create([ListToolbar.Search(SearchInput), FamilyInput, clear], [.. actions ?? [], refresh]);
         Children.Add(filters); Children.Add(StatusLabel); InitializeSelection(filters); Children.Add(Rows);
         void FiltersChanged() { ClearSelection(); _restorePage = null; _restoreOffset = null; Render(); }
         SearchInput.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) FiltersChanged(); };
