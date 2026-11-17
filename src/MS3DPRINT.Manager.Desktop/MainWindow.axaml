@@ -39,6 +39,7 @@
             <Button Classes="nav-item" Tag="Estimations" Click="NavigationButton_Click" AutomationProperties.Name="Estimations"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconEstimates}" /><TextBlock Classes="nav-label" Text="Estimations" /></StackPanel></Button>
             <Button Classes="nav-item" Tag="Recettes" Click="NavigationButton_Click" AutomationProperties.Name="Recettes"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconBook}" /><TextBlock Classes="nav-label" Text="Recettes" /></StackPanel></Button>
             <Button Classes="nav-item" Tag="Achats" Click="NavigationButton_Click" AutomationProperties.Name="Achats"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconCart}" /><TextBlock Classes="nav-label" Text="Achats" /></StackPanel></Button>
+            <Button Classes="nav-item" Tag="Documents" Click="NavigationButton_Click" AutomationProperties.Name="Documents"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconProjects}" /><TextBlock Classes="nav-label" Text="Documents" /></StackPanel></Button>
             <TextBlock Text="ATELIER" Classes="overline nav-label" Margin="16,12,0,4" />
             <Button Classes="nav-item" Tag="Imprimantes" Click="NavigationButton_Click" AutomationProperties.Name="Imprimantes"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconPrinters}" /><TextBlock Classes="nav-label" Text="Imprimantes" /></StackPanel></Button>
             <Button Classes="nav-item" Tag="Filaments" Click="NavigationButton_Click" AutomationProperties.Name="Filaments"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconFilaments}" /><TextBlock Classes="nav-label" Text="Filaments" /></StackPanel></Button>
@@ -356,6 +357,9 @@
       <Border x:Name="ModelSearchWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="panel" />
       <Border x:Name="TrashWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="panel">
         <Grid RowDefinitions="Auto,*" RowSpacing="16"><Grid ColumnDefinitions="*,Auto"><StackPanel /></Grid><ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel x:Name="TrashList" HorizontalAlignment="Stretch" Spacing="0" Margin="0,0,12,0" /></ScrollViewer></Grid>
+      </Border>
+      <Border x:Name="DocumentsWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="panel">
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel x:Name="DocumentsList" HorizontalAlignment="Stretch" Spacing="0" Margin="0,0,12,0" /></ScrollViewer>
       </Border>
       <Border x:Name="SettingsWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="panel">
         <Grid x:Name="SettingsLayout" ColumnDefinitions="204,*" RowDefinitions="Auto,Auto,Auto,*" ColumnSpacing="24" RowSpacing="24">

@@ -350,6 +350,7 @@ public partial class MainWindow : Window
         ["Filaments"] = "Votre stock de matières et leurs coûts.",
         ["Estimations"] = "Calculez un prix de vente à partir de vos coûts réels.",
         ["Achats"] = "Registre chronologique de vos achats de matières et fournitures, avec leurs justificatifs.",
+        ["Documents"] = "Administratif, comptabilité, commercial : les documents de votre entreprise.",
         ["Recettes"] = "Registre chronologique de vos encaissements, avec exports pour la déclaration.",
         ["Imprimantes"] = "Votre parc machines et leurs coûts horaires.",
         ["Modèles 3D"] = "Cherchez un modèle sur plusieurs sites à la fois, dans des onglets.",

@@ -49,6 +49,7 @@ public partial class MainWindow
         RevenuesWorkspacePanel.IsVisible = destination == "Recettes";
         PurchasesWorkspacePanel.IsVisible = destination == "Achats";
         ModelSearchWorkspacePanel.IsVisible = destination == "Modèles 3D";
+        DocumentsWorkspacePanel.IsVisible = destination == "Documents";
         TrashWorkspacePanel.IsVisible = destination == "Corbeille";
         SettingsWorkspacePanel.IsVisible = destination == "Paramètres";
         FolderWorkspacePanel.IsVisible = false;
@@ -58,7 +59,7 @@ public partial class MainWindow
         RevealWorkspace(destination switch
         {
             "Projets" => ProjectsWorkspacePanel, "Tâches" => TasksWorkspacePanel, "Clients" => ClientsWorkspacePanel, "Collections" => CollectionsWorkspacePanel,
-            "Filaments" => FilamentsWorkspacePanel, "Estimations" => EstimatesWorkspacePanel, "Imprimantes" => PrintersWorkspacePanel, "Recettes" => RevenuesWorkspacePanel, "Achats" => PurchasesWorkspacePanel,
+            "Filaments" => FilamentsWorkspacePanel, "Estimations" => EstimatesWorkspacePanel, "Imprimantes" => PrintersWorkspacePanel, "Recettes" => RevenuesWorkspacePanel, "Achats" => PurchasesWorkspacePanel, "Documents" => DocumentsWorkspacePanel,
             "Modèles 3D" => ModelSearchWorkspacePanel, "Corbeille" => TrashWorkspacePanel, "Paramètres" => SettingsWorkspacePanel, _ => DashboardContent
         });
         _selectedNavigationButton = NavigationButtons().FirstOrDefault(button => button.Tag as string == destination);
@@ -163,6 +164,8 @@ public partial class MainWindow
                 await LoadRevenuesAsync();
             else if (destination == "Achats")
                 await LoadPurchasesAsync();
+            else if (destination == "Documents")
+                await LoadDocumentsAsync();
             else if (printersVisible)
                 await LoadPrintersAsync();
             else if (trashVisible)
@@ -188,7 +191,7 @@ public partial class MainWindow
         {
             "Projets" => LoadProjectsAsync(), "Tâches" => LoadTasksAsync(), "Clients" => LoadClientsAsync(), "Collections" => LoadCollectionsAsync(),
             "Filaments" => LoadFilamentsAsync(), "Imprimantes" => LoadPrintersAsync(), "Recettes" => LoadRevenuesAsync(),
-            "Achats" => LoadPurchasesAsync(), "Corbeille" => LoadTrashAsync(), _ => null
+            "Achats" => LoadPurchasesAsync(), "Documents" => LoadDocumentsAsync(), "Corbeille" => LoadTrashAsync(), _ => null
         };
         if (reload is not null) await reload;
     }
