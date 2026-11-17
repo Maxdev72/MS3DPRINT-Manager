@@ -64,6 +64,8 @@ public sealed class ModelBrowserView : UserControl
     private readonly ContentControl _omniIcon = new() { VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBox _omnibox = new() { PlaceholderText = "Rechercher un modèle 3D ou saisir une adresse", VerticalAlignment = VerticalAlignment.Center };
     private readonly Button _sitesButton = new() { MinHeight = 36 };
+    private readonly TextBox _queryBox = new() { PlaceholderText = "Mot-clé pour tous les sites", VerticalAlignment = VerticalAlignment.Center };
+    private readonly ScrollViewer _tabScroll = new() { HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled };
     private readonly Border _sitePanel = new() { Classes = { "card-raised" }, IsVisible = false };
     private readonly Border _toolbar = new() { Classes = { "browser-toolbar" } };
     private readonly StackPanel _tabStrip = new() { Orientation = Orientation.Horizontal, Spacing = 2 };
@@ -112,8 +114,10 @@ public sealed class ModelBrowserView : UserControl
 
     public ModelBrowserView()
     {
-        foreach (var site in ModelSearchSite.Defaults)
-            if (site.Name is "Thangs" or "Printables" or "MakerWorld") _selected.Add(site.Name);
+        foreach (var name in LoadSelection()) _selected.Add(name);
+        if (_selected.Count == 0)
+            foreach (var site in ModelSearchSite.Defaults)
+                if (site.Name is "Thangs" or "Printables" or "MakerWorld") _selected.Add(site.Name);
 
         PrepareDownloads();
 
@@ -155,21 +159,46 @@ public sealed class ModelBrowserView : UserControl
         ToolTip.SetTip(_sitesButton, "Choisir les sites interrogés par une recherche");
         AutomationProperties.SetName(_sitesButton, "Choisir les sites");
 
+        // the keyword stays here while the address box follows the page: one place to change the search for every site
+        _queryBox.Classes.Add("search-input");
+        AutomationProperties.SetName(_queryBox, "Mot-clé à chercher sur tous les sites cochés");
+        ToolTip.SetTip(_queryBox, "Entrée : relance la recherche sur tous les sites cochés");
+        _queryBox.KeyDown += (_, e) =>
+        {
+            if (e.Key != Key.Enter) return;
+            if (!string.IsNullOrWhiteSpace(_queryBox.Text)) SearchSelectedSites(_queryBox.Text.Trim());
+            e.Handled = true;
+        };
+        var queryBorder = new Border
+        {
+            Classes = { "search-box" }, Height = 36, Width = 240,
+            Child = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 8, Children = { Icons.Glyph("IconSearch", 17), _queryBox } }
+        };
+        Grid.SetColumn(_queryBox, 1);
         var bar = new Grid
         {
-            ColumnDefinitions = new ColumnDefinitions("Auto,Auto,Auto,*,Auto,Auto"), ColumnSpacing = 4,
-            Children = { _back, _forward, _reload, omniBorder, _sitesButton, _external }
+            ColumnDefinitions = new ColumnDefinitions("Auto,Auto,Auto,Auto,*,Auto,Auto"), ColumnSpacing = 4,
+            Children = { _back, _forward, _reload, queryBorder, omniBorder, _sitesButton, _external }
         };
-        Grid.SetColumn(_forward, 1); Grid.SetColumn(_reload, 2); Grid.SetColumn(omniBorder, 3); Grid.SetColumn(_sitesButton, 4); Grid.SetColumn(_external, 5);
+        Grid.SetColumn(_forward, 1); Grid.SetColumn(_reload, 2); Grid.SetColumn(queryBorder, 3); Grid.SetColumn(omniBorder, 4); Grid.SetColumn(_sitesButton, 5); Grid.SetColumn(_external, 6);
+        queryBorder.Margin = new Thickness(4, 0, 0, 0);
         omniBorder.Margin = new Thickness(4, 0);
         _toolbar.Child = bar;
 
         // ---- tabs ----
         _tabStrip.Children.Add(_newTab);
-        _tabRow.Children.Add(new ScrollViewer
-        {
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled, Content = _tabStrip
-        });
+        // No bar over the tabs: the wheel and two arrows scroll them, and the shown tab always scrolls into view.
+        _tabScroll.Content = _tabStrip;
+        _tabScroll.PointerWheelChanged += (_, e) => { ScrollTabs(-e.Delta.Y * 90); e.Handled = true; };
+        var tabsLeft = new Button { Content = Icons.Glyph("IconArrowLeft", 14), Classes = { "tool" }, IsVisible = false };
+        var tabsRight = new Button { Content = Icons.Glyph("IconArrowRight", 14), Classes = { "tool" }, IsVisible = false };
+        Describe(tabsLeft, "Onglets précédents"); Describe(tabsRight, "Onglets suivants");
+        tabsLeft.Click += (_, _) => ScrollTabs(-240);
+        tabsRight.Click += (_, _) => ScrollTabs(240);
+        _tabScroll.ScrollChanged += (_, _) => tabsLeft.IsVisible = tabsRight.IsVisible = _tabScroll.Extent.Width > _tabScroll.Viewport.Width + 1;
+        _tabRow.ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto");
+        Grid.SetColumn(tabsLeft, 1); Grid.SetColumn(tabsRight, 2);
+        _tabRow.Children.Add(_tabScroll); _tabRow.Children.Add(tabsLeft); _tabRow.Children.Add(tabsRight);
 
         // ---- site panel (once a search is made) and start page (before) ----
         _sitePanel.Child = BuildChooser();
@@ -432,6 +461,32 @@ public sealed class ModelBrowserView : UserControl
     {
         if (!_selected.Remove(name)) _selected.Add(name);
         UpdateSelectionUi();
+        SaveSelection();
+    }
+
+    private void ScrollTabs(double delta) => _tabScroll.Offset = new Vector(Math.Max(0, _tabScroll.Offset.X + delta), 0);
+
+    private static string SelectionFile => Path.Combine(MS3DPRINT.Manager.Core.Storage.ApplicationPaths.DataDirectory, "model-search-sites.json");
+
+    /// <summary>The sites ticked last time, so a choice of fifteen sites is made once. Unknown names and unreadable files give an empty list (defaults apply).</summary>
+    private static List<string> LoadSelection()
+    {
+        try
+        {
+            var names = JsonSerializer.Deserialize<List<string>>(File.ReadAllText(SelectionFile)) ?? [];
+            return names.Where(name => ModelSearchSite.Defaults.Any(site => site.Name == name)).ToList();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException) { return []; }
+    }
+
+    private void SaveSelection()
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(SelectionFile)!);
+            File.WriteAllText(SelectionFile, JsonSerializer.Serialize(_selected.Order().ToList()));
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { /* the choice just is not remembered */ }
     }
 
     private void SetAllSites(bool selected)
@@ -439,6 +494,7 @@ public sealed class ModelBrowserView : UserControl
         foreach (var site in ModelSearchSite.Defaults)
             if (selected) _selected.Add(site.Name); else _selected.Remove(site.Name);
         UpdateSelectionUi();
+        SaveSelection();
     }
 
     private void UpdateSelectionUi()
@@ -499,6 +555,7 @@ public sealed class ModelBrowserView : UserControl
             return;
         }
 
+        _queryBox.Text = text;
         BrowserTab? first = null;
         var behind = new List<BrowserTab>();
         foreach (var site in chosen)
