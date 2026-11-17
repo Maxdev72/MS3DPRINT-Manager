@@ -127,6 +127,7 @@ public partial class MainWindow : Window
     {
         EnsureOnScreen();
         UpdateCentralWorkspaceWidth(Bounds.Width);
+        StartUpdateChecks();
         var shortcut = 1;
         // Ctrl+1 to Ctrl+9, then Ctrl+0 for the tenth page
         foreach (var navigation in NavigationButtons().Take(10))

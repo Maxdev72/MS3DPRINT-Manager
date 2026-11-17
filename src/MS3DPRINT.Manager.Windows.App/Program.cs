@@ -35,7 +35,7 @@ internal static class Program
         MS3DPRINT.Manager.Core.Recognition.DocumentReader.Rasterizer = new MS3DPRINT.Manager.Windows.WindowsPdfRasterizer();
         DesktopApplication.RemoteSessionStoreFactory = () => new MS3DPRINT.Manager.Windows.Remote.WindowsRemoteSessionStore();
         DesktopApplication.ReduceMotion = !ClientAreaAnimationsEnabled();
-        _ = Task.Run(UpdateInBackgroundAsync);
+        ConfigureUpdates();
         DesktopApplication.BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
 
@@ -57,31 +57,23 @@ internal static class Program
     [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr window, int command);
     [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr window);
 
-    /// <summary>Update on request: when a version is available, ask the user; on yes download, install and restart. Does nothing when not installed (portable build) or offline.</summary>
-    private static async Task UpdateInBackgroundAsync()
+    /// <summary>Update through Velopack, only when installed by Setup.exe; the application decides when to check and always asks before installing.</summary>
+    private static void ConfigureUpdates()
     {
-        try
+        var manager = new Velopack.UpdateManager(new Velopack.Sources.GithubSource("https://github.com/Maxdev72/MS3DPRINT-Manager", null, false));
+        if (!manager.IsInstalled) return;
+        Velopack.UpdateInfo? pending = null;
+        UpdateService.Check = async () =>
         {
-            var manager = new Velopack.UpdateManager(new Velopack.Sources.GithubSource("https://github.com/Maxdev72/MS3DPRINT-Manager", null, false));
-            if (!manager.IsInstalled) return;
-            var update = await manager.CheckForUpdatesAsync();
-            if (update is null) return;
-            // The main window appears a moment after startup; wait for it (at most a minute) to ask the question.
-            MainWindow? window = null;
-            for (var attempt = 0; attempt < 60 && window is null; attempt++)
-            {
-                window = await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow as MainWindow);
-                if (window is null) await Task.Delay(1000);
-            }
-            if (window is null) return;
-            var version = update.TargetFullRelease.Version.ToString();
-            var accepted = await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => new ConfirmUpdateWindow(version).ShowDialog<bool>(window));
-            if (!accepted) return;
-            Avalonia.Threading.Dispatcher.UIThread.Post(() => window.NotifyInfo("Téléchargement de la mise à jour…"));
-            await manager.DownloadUpdatesAsync(update);
-            manager.ApplyUpdatesAndRestart(update);
-        }
-        catch (Exception exception) { ErrorLog.Write(exception); }
+            pending = await manager.CheckForUpdatesAsync();
+            return pending?.TargetFullRelease.Version.ToString();
+        };
+        UpdateService.InstallAndRestart = async () =>
+        {
+            if (pending is null) return;
+            await manager.DownloadUpdatesAsync(pending);
+            manager.ApplyUpdatesAndRestart(pending);
+        };
     }
 
     /// <summary>Windows "Show animations" setting (Settings > Accessibility > Visual effects).</summary>

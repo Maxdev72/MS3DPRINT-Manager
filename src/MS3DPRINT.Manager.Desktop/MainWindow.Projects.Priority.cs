@@ -12,7 +12,7 @@ public partial class MainWindow
 {
     private sealed record PriorityFilterChoice(ProjectPriority? Value);
     private ProjectPriority? _projectPriorityFilter;
-    private readonly ComboBox _projectPriorityFilterBox = new() { Width = 230 };
+    private readonly ComboBox _projectPriorityFilterBox = new() { Width = 200, MinHeight = 36 };
     private readonly Button _projectPrioritySortButton = new() { Classes = { "ghost" } };
 
     private void InitializeProjectPriorities()

@@ -196,13 +196,20 @@ public partial class MainWindow
 
         projects = SortProjects(projects);
         if (_projectCalendarView) { RenderProjectCalendar(projects); return; }
-        PagedRows.Render(ProjectList, projects, CreateProjectRow, () => CreateSortableHeader(ProjectRowColumns, ["PROJET", "CLIENT", "STATUT", "ÉCHÉANCE", "CRÉÉ LE", "ACTIONS"], _projectSortColumn, _projectSortAscending, column =>
+        PagedRows.Render(ProjectList, projects, CreateProjectRow, () => AlignWithName(CreateSortableHeader(ProjectRowColumns, ["PROJET", "CLIENT", "STATUT", "ÉCHÉANCE", "CRÉÉ LE", "ACTIONS"], _projectSortColumn, _projectSortAscending, column =>
         {
             _projectSortAscending = _projectSortColumn != column || !_projectSortAscending;
             _projectSortColumn = column;
             SaveWindowPreferences();
             RenderProjects();
-        }), (WorkspaceRoot, text, _projectStatusFilter, _projectPriorityFilter, _projectSortColumn, _projectSortAscending));
+        })), (WorkspaceRoot, text, _projectStatusFilter, _projectPriorityFilter, _projectSortColumn, _projectSortAscending));
+    }
+
+    /// <summary>The first heading sits above the project name, not above the priority flag that precedes it.</summary>
+    private static Border AlignWithName(Border header)
+    {
+        if (header.Child is Grid { Children: [var first, ..] }) first.Margin = new Avalonia.Thickness(Ui.Space.S6 + Ui.Space.S2, 0, 0, 0);
+        return header;
     }
 
     private Control CreateProjectRow(ProjectSummary project)
@@ -243,7 +250,11 @@ public partial class MainWindow
                 return button;
             }).ToArray();
         var menu = (Flyout)CreateOverflowActions(PlacementMode.BottomEdgeAlignedLeft, options).Tag!;
-        var picker = new Button { Content = CreateProjectStatusCell(project), Classes = { "ghost", "interactive-cell" }, BorderThickness = new Avalonia.Thickness(0), Padding = new Avalonia.Thickness(8, 4), HorizontalAlignment = HorizontalAlignment.Left,
+        // The list shows the status pill alone (the sheet keeps the progress ring); the chevron says it opens a menu.
+        var pill = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
+        pill.Children.Add(CreateStatusBadge(project.StatusLabel)); pill.Children.Add(Icons.Glyph("IconChevronDown", 12));
+        ToolTip.SetTip(pill, $"Avancement : {project.ProgressPercent} %");
+        var picker = new Button { Content = pill, Classes = { "ghost", "interactive-cell" }, BorderThickness = new Avalonia.Thickness(0), Padding = new Avalonia.Thickness(8, 4), HorizontalAlignment = HorizontalAlignment.Left,
             Margin = new Avalonia.Thickness(-8, 0, 0, 0) }; // Align the ring with the STATUT heading despite the button padding.
         ToolTip.SetTip(picker, "Changer le statut");
         Avalonia.Automation.AutomationProperties.SetName(picker, "Changer le statut de " + project.Reference);
