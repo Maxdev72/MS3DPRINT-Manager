@@ -18,13 +18,12 @@ public sealed partial class FileBrowserView
         // The folder name is enough on screen; the full path stays in the tooltip.
         var destination = new TextBlock { Text = $"Destination : « {(folderName.Length == 0 ? directory : folderName)} »", Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis };
         ToolTip.SetTip(destination, directory);
-        ToolTip.SetTip(destination, directory);
         AutomationProperties.SetName(destination, "Destination de l’import : " + directory);
         var labels = new StackPanel { Spacing = 4, Children = { heading, destination } };
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 12 };
         grid.Children.Add(Icons.Glyph("IconUpload", 18)); Grid.SetColumn(labels, 1); grid.Children.Add(labels);
-        var target = new Border { Child = grid, Classes = { "file-drop-target" }, Padding = new Thickness(12, 8), MinHeight = 48 };
-        Children.Insert(0, target);
+        var target = new Border { Child = grid, Classes = { "file-drop-target" }, Padding = new Thickness(12, 8), MinHeight = 48, IsVisible = false };
+        Children.Insert(0, target); // shown only while files are dragged over the list
         Background = Brushes.Transparent;
         DragDrop.SetAllowDrop(this, true);
         var importing = false;
@@ -32,7 +31,7 @@ public sealed partial class FileBrowserView
         bool Ready() => !importing && !_loading && SearchInput.IsEnabled && Rows.IsEnabled && IsEffectivelyVisible && available();
         void Reset()
         {
-            target.Classes.Remove("drag-active"); target.Classes.Remove("drop-refused");
+            target.IsVisible = false; target.Classes.Remove("drag-active"); target.Classes.Remove("drop-refused");
             heading.Text = "Glissez vos fichiers ici pour les importer";
             cachedTransfer = null; cachedPaths = [];
         }
@@ -56,7 +55,7 @@ public sealed partial class FileBrowserView
             var ready = Ready();
             var accepts = ready && cachedPaths.Length > 0 && (e.DragEffects & DragDropEffects.Copy) != 0;
             e.DragEffects = accepts ? DragDropEffects.Copy : DragDropEffects.None; e.Handled = true;
-            target.Classes.Set("drag-active", accepts); target.Classes.Set("drop-refused", !accepts);
+            target.IsVisible = true; target.Classes.Set("drag-active", accepts); target.Classes.Set("drop-refused", !accepts);
             heading.Text = accepts ? $"Relâchez pour importer {cachedPaths.Length} fichier(s)" :
                 !ready ? "Import indisponible pendant le traitement ou la confirmation" : "Déposez uniquement des fichiers locaux à copier";
         }

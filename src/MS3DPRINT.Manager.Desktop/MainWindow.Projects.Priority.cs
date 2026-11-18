@@ -72,6 +72,12 @@ public partial class MainWindow
     private async Task SetProjectPriorityAsync(ProjectSummary project, ProjectPriority priority)
     {
         if (project.Priority == priority) return;
+        await UpdateProjectProfileAsync(project, profile => profile with { Priority = priority }, ProjectPriorityVisual.Text(priority) + " enregistrée.");
+    }
+
+    /// <summary>Saves one change to the project sheet (completing the sheet first when the project has none), then redraws the project.</summary>
+    private async Task UpdateProjectProfileAsync(ProjectSummary project, Func<ProjectProfile, ProjectProfile> change, string message)
+    {
         var root = WorkspaceRoot;
         try
         {
@@ -84,13 +90,54 @@ public partial class MainWindow
                 if (clientProfile is null) return;
                 profile = await Task.Run(() => new WorkspaceProjectCreator().CompleteExisting(root, project, clientProfile, DisplayNames.Format(project.ProjectName)));
             }
-            var updated = await Task.Run(() => new ProjectProfileStore(new WorkspaceMetadataPaths(root)).Update(profile with { Priority = priority }, profile.UpdatedAt));
+            var updated = await Task.Run(() => new ProjectProfileStore(new WorkspaceMetadataPaths(root)).Update(change(profile), profile.UpdatedAt));
             if (!string.Equals(root, WorkspaceRoot, StringComparison.OrdinalIgnoreCase)) return;
-            Notify(ProjectPriorityVisual.Text(priority) + " enregistrée.");
+            Notify(message);
             if (_projectListMode) await LoadProjectsAsync();
             else await LoadProjectDirectoryAsync(project with { Profile = updated }, project.ProjectPath);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         { Notify(exception.Message, error: true); }
+    }
+
+    private static string StatusName(ProjectStatus status) => status switch { ProjectStatus.InProgress => "En cours", ProjectStatus.Completed => "Terminé", _ => "À faire" };
+
+    /// <summary>The status of the project sheet; a click offers the three statuses.</summary>
+    private Button CreateProjectStatusButton(ProjectSummary project)
+    {
+        var options = Enum.GetValues<ProjectStatus>().Select(status =>
+        {
+            var option = new Button { Content = StatusName(status) };
+            option.Click += async (_, _) =>
+            {
+                if (project.Profile?.Status == status) return;
+                await UpdateProjectProfileAsync(project, profile => profile with { Status = status }, "Statut « " + StatusName(status) + " » enregistré.");
+            };
+            return option;
+        }).ToArray();
+        var button = CreateOverflowActions(options);
+        button.Classes.Add("interactive-cell");
+        button.Content = CreateProjectStatusCell(project);
+        button.HorizontalAlignment = HorizontalAlignment.Left;
+        ToolTip.SetTip(button, "Changer le statut");
+        Avalonia.Automation.AutomationProperties.SetName(button, "Statut : " + project.StatusLabel + " · Modifier");
+        return button;
+    }
+
+    /// <summary>A written note kept with the project, edited in place.</summary>
+    private Control CreateProjectNote(ProjectSummary project)
+    {
+        var saved = project.Profile?.Notes ?? string.Empty;
+        var box = new TextBox { Text = saved, PlaceholderText = "Écrire une note sur ce projet…", AcceptsReturn = true, TextWrapping = Avalonia.Media.TextWrapping.Wrap, MinHeight = 90, MaxLength = 10000 };
+        Avalonia.Automation.AutomationProperties.SetName(box, "Note du projet");
+        var save = new Button { Content = "Enregistrer la note", Classes = { "primary-action" }, HorizontalAlignment = HorizontalAlignment.Right, IsVisible = false };
+        box.TextChanged += (_, _) => save.IsVisible = (box.Text ?? string.Empty).Trim() != saved.Trim();
+        save.Click += async (_, _) =>
+        {
+            var text = (box.Text ?? string.Empty).Trim();
+            await UpdateProjectProfileAsync(project, profile => profile with { Notes = text.Length == 0 ? null : text }, "Note enregistrée.");
+        };
+        // A plain block, not a collapsible section: the note is always at hand.
+        return new StackPanel { Spacing = 8, Children = { new TextBlock { Text = "Note du projet", FontSize = Ui.Text.Body, FontWeight = Avalonia.Media.FontWeight.SemiBold }, box, save } };
     }
 }

@@ -29,7 +29,7 @@ public partial class MainWindow
             return row;
         }
         var facts = new StackPanel { Spacing = 4 };
-        facts.Children.Add(Fact("Statut", CreateProjectStatusCell(project)));
+        facts.Children.Add(Fact("Statut", CreateProjectStatusButton(project)));
         facts.Children.Add(Fact("Priorité", CreateProjectPriorityButton(project, label: true)));
         var due = new Button { Content = project.Profile?.DueDate is { } date ? $"{date:dd/MM/yyyy}" : "Définir", Tag = project, Classes = { "ghost" }, Padding = new Thickness(8, 4) };
         due.Click += EditProject_Click;
@@ -64,8 +64,7 @@ public partial class MainWindow
         Grid.SetColumn(more, 1);
         content.Children.Add(new StackPanel { Spacing = 8, Children = { estimate, secondary } });
 
-        if (!string.IsNullOrWhiteSpace(project.Profile?.Notes))
-            content.Children.Add(EstimateSection("Notes de l’atelier", "Informations internes au projet", new TextBlock { Text = project.Profile.Notes, TextWrapping = TextWrapping.Wrap, LineHeight = 22 }));
+        content.Children.Add(CreateProjectNote(project));
         if (BuildProjectTasksSection(project) is { } tasks) content.Children.Add(tasks);
 
         content.Children.Add(BuildClassificationSection(project));

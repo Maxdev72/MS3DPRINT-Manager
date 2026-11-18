@@ -138,6 +138,8 @@ public partial class MainWindow : Window
             using var icon = Avalonia.Platform.AssetLoader.Open(new Uri("avares://MS3DPRINT.Manager.Desktop/Assets/app-icon.png"));
             _tray = new TrayIcon { Icon = new WindowIcon(icon), ToolTipText = "MS3DPRINT Manager", Menu = new NativeMenu { open, quit } };
             _tray.Clicked += (_, _) => RestoreFromTray();
+            // A TrayIcon built in code is only shown once it belongs to the application.
+            TrayIcon.SetIcons(Application.Current!, new TrayIcons { _tray });
         }
         _tray.IsVisible = true;
         Hide();
