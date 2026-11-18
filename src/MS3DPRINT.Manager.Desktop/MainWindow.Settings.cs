@@ -262,6 +262,9 @@ public partial class MainWindow
         about.Add(checkUpdate);
         about.Add(new TextBlock { Text = "Le logiciel recherche aussi une mise à jour au démarrage, puis toutes les 6 heures. Il demande toujours avant d’installer.", Classes = { "caption" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
         about.Add(changelog);
+        var closeChoice = new Button { Content = "Redemander à la fermeture : réduire ou quitter", HorizontalAlignment = HorizontalAlignment.Left };
+        closeChoice.Click += (_, _) => AskCloseAgain();
+        about.Add(closeChoice);
         var licenses = new Button { Content = Icons.Label("IconInfo", "Identité visuelle et licences", 16), HorizontalAlignment = HorizontalAlignment.Left };
         licenses.Click += async (_, _) => await new BrandResourcesWindow().ShowDialog<bool>(this);
         about.Add(licenses);

@@ -73,6 +73,7 @@ public partial class MainWindow : Window
         if (DesktopApplication.ReduceMotion) Classes.Add("reduce-motion");
         if (_placement.Load() is { } saved)
         {
+            _closeAction = saved.CloseAction is "quit" or "tray" ? saved.CloseAction : null;
             Width = Math.Max(MinWidth, saved.Width);
             Height = Math.Max(MinHeight, saved.Height);
             if (saved.ProjectSortColumn is >= -1 and <= PrioritySortColumn)
@@ -105,14 +106,50 @@ public partial class MainWindow : Window
 
     private bool _closeConfirmed;
 
+    /// <summary>What the close button does once the user has chosen: "quit" or "tray"; null asks again.</summary>
+    private string? _closeAction;
+    private TrayIcon? _tray;
+
     private async Task ConfirmCloseAsync()
     {
-        switch (await ConfirmCloseWindow.AskAsync(this))
+        if (_closeAction is null)
         {
-            case true: _closeConfirmed = true; Close(); _closeConfirmed = false; break; // reset if the draft handler refused
-            case false: WindowState = WindowState.Minimized; break;
+            if (await ConfirmCloseWindow.AskAsync(this) is not { } quit) return;
+            _closeAction = quit ? "quit" : "tray";
+            SaveWindowPreferences();
         }
+        if (_closeAction == "quit") QuitApplication();
+        else MinimizeToTray();
     }
+
+    private void QuitApplication()
+    {
+        _closeConfirmed = true; Close(); _closeConfirmed = false; // reset if the draft handler refused
+    }
+
+    /// <summary>Hides the window behind an icon of the notification area (bottom right of the taskbar); a plain minimize where there is no such area.</summary>
+    private void MinimizeToTray()
+    {
+        if (!OperatingSystem.IsWindows()) { WindowState = WindowState.Minimized; return; }
+        if (_tray is null)
+        {
+            var open = new NativeMenuItem("Ouvrir MS3DPRINT Manager"); open.Click += (_, _) => RestoreFromTray();
+            var quit = new NativeMenuItem("Quitter"); quit.Click += (_, _) => { RestoreFromTray(); QuitApplication(); };
+            using var icon = Avalonia.Platform.AssetLoader.Open(new Uri("avares://MS3DPRINT.Manager.Desktop/Assets/app-icon.png"));
+            _tray = new TrayIcon { Icon = new WindowIcon(icon), ToolTipText = "MS3DPRINT Manager", Menu = new NativeMenu { open, quit } };
+            _tray.Clicked += (_, _) => RestoreFromTray();
+        }
+        _tray.IsVisible = true;
+        Hide();
+    }
+
+    private void RestoreFromTray()
+    {
+        if (_tray is not null) _tray.IsVisible = false;
+        Show(); WindowState = WindowState.Normal; Activate();
+    }
+
+    private void AskCloseAgain() { _closeAction = null; SaveWindowPreferences(); Notify("Le logiciel redemandera quoi faire à la fermeture."); }
 
     private PixelPoint? _normalPosition;
     private bool _positionRestored;
@@ -124,7 +161,7 @@ public partial class MainWindow : Window
             WindowState == WindowState.Maximized,
             (WindowState == WindowState.Normal ? Position : _normalPosition)?.X,
             (WindowState == WindowState.Normal ? Position : _normalPosition)?.Y,
-            _projectSortColumn, _projectSortAscending));
+            _projectSortColumn, _projectSortAscending, _closeAction));
 
     /// <summary>Puts the window back on a visible monitor when its saved place is no longer reachable.</summary>
     private void EnsureOnScreen()

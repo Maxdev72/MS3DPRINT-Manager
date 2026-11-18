@@ -10,18 +10,19 @@ public sealed class ConfirmCloseWindow : DialogWindow
 
     public ConfirmCloseWindow()
     {
-        Title = "Fermer le logiciel"; Width = 500; Height = 300; MinWidth = 440;
-        var minimize = new Button { Content = "Réduire" };
+        Title = "Fermer le logiciel"; Width = 560; Height = 330; MinWidth = 440;
+        var minimize = new Button { Content = "Réduire près de l’horloge" };
         minimize.Click += (_, _) => Close(true);
         var quit = new Button { Content = "Quitter" };
         quit.Click += (_, _) => { Quit = true; Close(true); };
-        Layout("Fermer MS3DPRINT Manager ?", "Quitter arrête le logiciel et la synchronisation. Réduire le garde ouvert dans la barre des tâches.", [], minimize, extraAction: quit);
+        Layout("Fermer MS3DPRINT Manager ?", "Quitter arrête le logiciel et la synchronisation. Réduire le garde ouvert près de l’horloge (zone de notification). Ce choix est mémorisé ; vous pourrez le changer dans Paramètres → Application.", [], minimize, extraAction: quit);
     }
 
     /// <summary>Returns true to quit, false to minimize, null when cancelled.</summary>
     public static async Task<bool?> AskAsync(Window owner)
     {
         var dialog = new ConfirmCloseWindow();
-        return await dialog.ShowDialog<bool>(owner) ? dialog.Quit : null;
+        // bool? keeps it a real window (a bool result would open it in the tall side panel).
+        return await dialog.ShowDialog<bool?>(owner) == true ? dialog.Quit : null;
     }
 }

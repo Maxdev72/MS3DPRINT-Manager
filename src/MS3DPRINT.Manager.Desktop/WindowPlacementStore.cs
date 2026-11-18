@@ -5,7 +5,7 @@ namespace MS3DPRINT.Manager.Desktop;
 
 /// <summary>Size, state and (when known) top-left corner in screen pixels of the main window; a file written before positions were kept has none.</summary>
 public sealed record WindowPlacement(double Width, double Height, bool Maximized, int? X = null, int? Y = null,
-    int ProjectSortColumn = -1, bool ProjectSortAscending = true);
+    int ProjectSortColumn = -1, bool ProjectSortAscending = true, string? CloseAction = null);
 
 /// <summary>Local window preferences: size, state, position and project sort order between launches.</summary>
 public sealed class WindowPlacementStore(string? path = null)
