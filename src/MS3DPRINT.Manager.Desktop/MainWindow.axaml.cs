@@ -62,6 +62,7 @@ public partial class MainWindow : Window
     {
         ConfigureWorkspaceMode(http, cache, modePreferencePath, sessions, useHostDefaults);
         InitializeComponent();
+        foreach (var filter in new[] { ProjectFilterBox, TaskFilterBox, ClientFilterBox }) ListToolbar.AddClearButton((Grid)filter.Parent!, filter);
         InitializeNotifications();
         InitializeShellPresentation();
         InitializeFilamentFilters();

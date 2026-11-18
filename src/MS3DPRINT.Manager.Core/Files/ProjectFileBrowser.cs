@@ -35,6 +35,25 @@ public sealed class ProjectFileBrowser
         cancellationToken.ThrowIfCancellationRequested();
     }
 
+    /// <summary>
+    /// Every file below a directory, sub-folders included, without the folders themselves. The name carries the path
+    /// relative to <paramref name="currentDirectory"/>, so the list shows where each file sits and a search matches folder names too.
+    /// </summary>
+    public IEnumerable<ProjectFileEntry> EnumerateAll(string projectRoot, string currentDirectory, CancellationToken cancellationToken = default)
+    {
+        var start = Path.TrimEndingDirectorySeparator(Path.GetFullPath(currentDirectory));
+        return Walk(currentDirectory).Select(entry => entry with { Name = Path.GetRelativePath(start, entry.FullPath) });
+
+        IEnumerable<ProjectFileEntry> Walk(string directory)
+        {
+            foreach (var entry in Enumerate(projectRoot, directory, cancellationToken))
+            {
+                if (!entry.IsDirectory) { yield return entry; continue; }
+                foreach (var inner in Walk(entry.FullPath)) yield return inner;
+            }
+        }
+    }
+
     public string GetParentDirectory(string projectRoot, string currentDirectory)
     {
         var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(projectRoot));

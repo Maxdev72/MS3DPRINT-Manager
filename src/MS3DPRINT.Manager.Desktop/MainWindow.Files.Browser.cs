@@ -11,6 +11,8 @@ namespace MS3DPRINT.Manager.Desktop;
 public partial class MainWindow
 {
     private const string FileRowColumns = "*,90,90,64";
+    /// <summary>Project files shown as one flat list of every file in every folder.</summary>
+    private bool _projectAllFiles;
     private CancellationTokenSource? _fileReadCancellation;
     private FileBrowserView? _activeFileBrowser;
     private (string Root, string Directory)? _activeFileBrowserKey;
@@ -47,7 +49,7 @@ public partial class MainWindow
                 var batch = new List<ProjectFileEntry>(500);
                 var first = true;
                 var sinceFlush = System.Diagnostics.Stopwatch.StartNew();
-                foreach (var entry in new ProjectFileBrowser().Enumerate(browseRoot, directory, cancellation.Token))
+                foreach (var entry in project is not null && _projectAllFiles ? new ProjectFileBrowser().EnumerateAll(browseRoot, directory, cancellation.Token) : new ProjectFileBrowser().Enumerate(browseRoot, directory, cancellation.Token))
                 {
                     batch.Add(entry);
                     if (batch.Count < (first ? 50 : 500) && sinceFlush.ElapsedMilliseconds < 100) continue;

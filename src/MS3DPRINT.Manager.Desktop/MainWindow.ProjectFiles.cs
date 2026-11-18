@@ -63,7 +63,11 @@ public partial class MainWindow
         ProjectList.Children.Add(toolbar);
         // At the root of the project the files take the wide column and the sheet sits beside them; in a sub-folder only the files show.
         var filesTitle = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = Ui.Space.S2, Margin = new Avalonia.Thickness(0, 8, 0, 4) };
-        var fileActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = Ui.Space.S2, Children = { createFolder, import } };
+        var flat = new Button { Content = Icons.Label("IconFile", "Tous les fichiers"), Classes = { "ghost" } };
+        flat.Classes.Set("selected", _projectAllFiles);
+        ToolTip.SetTip(flat, "Afficher tous les fichiers de tous les dossiers, sans ouvrir chaque dossier");
+        flat.Click += async (_, _) => { _projectAllFiles = !_projectAllFiles; await LoadProjectDirectoryAsync(project, directory); };
+        var fileActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = Ui.Space.S2, Children = { flat, createFolder, import } };
         Grid.SetColumn(fileActions, 1);
         filesTitle.Children.Add(new TextBlock { Text = "Fichiers du projet", FontSize = Ui.Text.Section, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center });
         filesTitle.Children.Add(fileActions);

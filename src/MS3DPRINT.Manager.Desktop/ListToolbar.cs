@@ -29,15 +29,24 @@ public static class ListToolbar
     {
         input.Classes.Add("search-input");
         var icon = Icons.Glyph("IconSearch", 16);
-        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = Ui.Space.S2 };
-        var clear = new Button { Content = Icons.Glyph("IconClose", 14), Classes = { "tool" }, IsVisible = false, Padding = new Thickness(4), MinWidth = 24, MinHeight = 24 };
+        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = Ui.Space.S2 };
+        Grid.SetColumn(input, 1);
+        grid.Children.Add(icon); grid.Children.Add(input);
+        AddClearButton(grid, input);
+        return new Border { Classes = { "search-box" }, Height = 40, Width = SearchWidth, Child = grid };
+    }
+
+    /// <summary>Adds the cross that empties a search field; it shows only while the field has text.</summary>
+    public static void AddClearButton(Grid grid, TextBox input)
+    {
+        grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+        var clear = new Button { Content = Icons.Glyph("IconClose", 14), Classes = { "tool" }, IsVisible = !string.IsNullOrEmpty(input.Text), Padding = new Thickness(4), MinWidth = 24, MinHeight = 24 };
         Avalonia.Automation.AutomationProperties.SetName(clear, "Effacer la recherche");
         ToolTip.SetTip(clear, "Effacer la recherche");
         clear.Click += (_, _) => { input.Text = ""; input.Focus(); };
         input.TextChanged += (_, _) => clear.IsVisible = !string.IsNullOrEmpty(input.Text);
-        Grid.SetColumn(input, 1); Grid.SetColumn(clear, 2);
-        grid.Children.Add(icon); grid.Children.Add(input); grid.Children.Add(clear);
-        return new Border { Classes = { "search-box" }, Height = 40, Width = SearchWidth, Child = grid };
+        Grid.SetColumn(clear, grid.ColumnDefinitions.Count - 1);
+        grid.Children.Add(clear);
     }
 
     /// <summary>Takes a control out of its current panel so it can join a toolbar.</summary>

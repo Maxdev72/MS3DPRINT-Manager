@@ -196,7 +196,7 @@ public sealed class AvaloniaShellMarkupTests
 
         Assert.Contains("var toolbar = new Grid", source, StringComparison.Ordinal);
         // the folder commands sit in the file toolbar, next to the search
-        Assert.Contains("Children = { createFolder, import }", source, StringComparison.Ordinal);
+        Assert.Contains("Children = { flat, createFolder, import }", source, StringComparison.Ordinal);
         Assert.Contains("Classes = { \"primary-action\" }", source, StringComparison.Ordinal);
         Assert.Contains("Button.primary-action", styles, StringComparison.Ordinal);
     }
