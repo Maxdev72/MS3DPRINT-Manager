@@ -91,7 +91,14 @@ public partial class MainWindow
         if (!isFile) return [rename, move, trash];
         var openWith = new Button { Content = Icons.Label("IconOpen", "Ouvrir avec…"), Tag = context.Path };
         openWith.Click += OpenWithFile_Click;
-        return [openWith, rename, move, trash];
+        var mail = new Button { Content = Icons.Label("IconOpen", "Joindre à un e-mail"), Tag = context.Path };
+        mail.Click += (_, _) => ComposeMail([context.Path]);
+        return [openWith, mail, rename, move, trash];
+    }
+
+    private void ComposeMail(IReadOnlyList<string> paths)
+    {
+        if (MailComposer.TryCompose(paths) is { } problem) Notify(problem, error: true);
     }
 
     private async void OpenFolder_Click(object? sender, RoutedEventArgs e)

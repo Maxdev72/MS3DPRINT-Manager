@@ -18,6 +18,7 @@ public sealed partial class FileBrowserView
     private bool _updatingSelection;
     public Func<IReadOnlyList<string>, Task>? MoveSelectionRequested { get; set; }
     public Func<IReadOnlyList<string>, Task>? TrashSelectionRequested { get; set; }
+    public Action<IReadOnlyList<string>>? MailSelectionRequested { get; set; }
 
     private void InitializeSelection(Control filters)
     {
@@ -25,6 +26,9 @@ public sealed partial class FileBrowserView
         var move = new Button { Content = Icons.Label("IconMove", "Déplacer"), Classes = { "ghost" } };
         var trash = new Button { Content = Icons.Label("IconTrash", "Corbeille"), Classes = { "danger" } };
         var clear = new Button { Content = "Désélectionner", Classes = { "ghost" } };
+        var mail = new Button { Content = Icons.Label("IconOpen", "Joindre à un e-mail"), Classes = { "ghost" } };
+        AutomationProperties.SetName(mail, "Joindre la sélection à un e-mail Thunderbird");
+        mail.Click += (_, _) => MailSelectionRequested?.Invoke(_selectedFiles.ToArray());
         AutomationProperties.SetName(move, "Déplacer la sélection");
         AutomationProperties.SetName(trash, "Mettre la sélection à la corbeille");
         AutomationProperties.SetName(clear, "Désélectionner les fichiers");
@@ -32,7 +36,7 @@ public sealed partial class FileBrowserView
         move.Click += async (_, _) => { if (MoveSelectionRequested is { } action) await action(_selectedFiles.ToArray()); };
         trash.Click += async (_, _) => { if (TrashSelectionRequested is { } action) await action(_selectedFiles.ToArray()); };
         clear.Click += (_, _) => { ClearSelection(); SearchInput.Focus(); };
-        _selectionBar.Children.Add(_selectionLabel); _selectionBar.Children.Add(move); _selectionBar.Children.Add(trash); _selectionBar.Children.Add(clear);
+        _selectionBar.Children.Add(_selectionLabel); _selectionBar.Children.Add(mail); _selectionBar.Children.Add(move); _selectionBar.Children.Add(trash); _selectionBar.Children.Add(clear);
         Children.Add(_selectionBar);
         InitializeFileKeyboard();
     }

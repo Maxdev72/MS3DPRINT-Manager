@@ -95,6 +95,7 @@ public partial class MainWindow
         bool Available() => ReferenceEquals(_activeFileBrowser, browser) && string.Equals(root, WorkspaceRoot, StringComparison.OrdinalIgnoreCase)
                 && _panel is null && !_importBatchActive && !_pendingOperations.Contains(root + "|files-batch");
         browser.FileCommandsAvailable = Available;
+        browser.MailSelectionRequested = ComposeMail;
         browser.RenameSelectionRequested = path => RenameProjectEntryAsync(new(project, directory, path));
         browser.ConfigureFileDrop(directory, Available,
             async paths =>

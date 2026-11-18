@@ -90,8 +90,28 @@ public partial class MainWindow : Window
             if (saved.Maximized) WindowState = WindowState.Maximized;
         }
         PositionChanged += (_, e) => { if (WindowState == WindowState.Normal) _normalPosition = e.Point; };
-        Closing += (_, _) => SaveWindowPreferences();
+        Closing += (_, e) =>
+        {
+            SaveWindowPreferences();
+            // Only the window's own close button asks; an update restart or Windows shutdown must not be blocked.
+            // Without a desktop lifetime (headless tests) nobody can answer the question.
+            if (_closeConfirmed || e.CloseReason != WindowCloseReason.WindowClosing
+                || Application.Current?.ApplicationLifetime is not Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime) return;
+            e.Cancel = true;
+            _ = ConfirmCloseAsync();
+        };
         Closed += (_, _) => { DisposeServerWorkspace(); _mobilePublishTimer?.Stop(); CancelFileRead(); _searchCancellation?.Cancel(); _searchCancellation?.Dispose(); _searchCancellation = null; };
+    }
+
+    private bool _closeConfirmed;
+
+    private async Task ConfirmCloseAsync()
+    {
+        switch (await ConfirmCloseWindow.AskAsync(this))
+        {
+            case true: _closeConfirmed = true; Close(); _closeConfirmed = false; break; // reset if the draft handler refused
+            case false: WindowState = WindowState.Minimized; break;
+        }
     }
 
     private PixelPoint? _normalPosition;

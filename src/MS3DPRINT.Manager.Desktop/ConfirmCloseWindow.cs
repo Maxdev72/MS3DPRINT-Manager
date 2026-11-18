@@ -1,0 +1,27 @@
+using Avalonia.Controls;
+
+namespace MS3DPRINT.Manager.Desktop;
+
+/// <summary>Asks what the close button should do: quit the software or only minimize it.</summary>
+public sealed class ConfirmCloseWindow : DialogWindow
+{
+    /// <summary>True when the user chose to quit; false for minimize.</summary>
+    public bool Quit { get; private set; }
+
+    public ConfirmCloseWindow()
+    {
+        Title = "Fermer le logiciel"; Width = 500; Height = 300; MinWidth = 440;
+        var minimize = new Button { Content = "Réduire" };
+        minimize.Click += (_, _) => Close(true);
+        var quit = new Button { Content = "Quitter" };
+        quit.Click += (_, _) => { Quit = true; Close(true); };
+        Layout("Fermer MS3DPRINT Manager ?", "Quitter arrête le logiciel et la synchronisation. Réduire le garde ouvert dans la barre des tâches.", [], minimize, extraAction: quit);
+    }
+
+    /// <summary>Returns true to quit, false to minimize, null when cancelled.</summary>
+    public static async Task<bool?> AskAsync(Window owner)
+    {
+        var dialog = new ConfirmCloseWindow();
+        return await dialog.ShowDialog<bool>(owner) ? dialog.Quit : null;
+    }
+}
