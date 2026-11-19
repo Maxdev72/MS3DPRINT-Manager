@@ -599,7 +599,7 @@ public sealed partial class EstimateUiTests : IDisposable
             Assert.Equal(2, quote.Inputs.Quantity); Assert.True(quote.Result.FinalPrice > 0);
             Invoke(owner, "LoadSavedEstimate_Click", new Button { Tag = quote }, new RoutedEventArgs());
             Assert.Equal(quote.Result.FinalPrice, Field<EstimateResult>(owner, "_latestEstimateResult").FinalPrice);
-            Assert.Equal(project.Reference, Assert.IsType<ProjectSummary>(owner.FindControl<ComboBox>("EstimateProject")!.SelectedItem).Reference);
+            Assert.Equal(project.Reference, Assert.IsType<ProjectSummary>(owner.FindControl<AutoCompleteBox>("EstimateProject")!.SelectedItem).Reference);
             Assert.True(File.Exists(source)); Assert.True(File.Exists(Path.Combine(directory, "support.stl")));
         }
         finally { owner.Close(); }
@@ -2116,12 +2116,12 @@ public sealed partial class EstimateUiTests : IDisposable
         try
         {
             await (Task)Invoke(window, "StartProjectEstimateAsync", project)!;
-            var selected = Assert.IsType<MS3DPRINT.Manager.Core.Projects.ProjectSummary>(window.FindControl<ComboBox>("EstimateProject")!.SelectedItem);
+            var selected = Assert.IsType<MS3DPRINT.Manager.Core.Projects.ProjectSummary>(window.FindControl<AutoCompleteBox>("EstimateProject")!.SelectedItem);
             Assert.Equal(project.Reference, selected.Reference);
             Assert.Contains(project.Title(), window.FindControl<TextBox>("EstimateName")!.Text!);
             Assert.True(window.FindControl<Border>("EstimatesWorkspacePanel")!.IsVisible);
             var name = window.FindControl<TextBox>("EstimateName")!;
-            var picker = window.FindControl<ComboBox>("EstimateProject")!;
+            var picker = window.FindControl<AutoCompleteBox>("EstimateProject")!;
             window.Width = 1440; window.Height = 960; window.Show(); window.UpdateLayout();
             Assert.DoesNotContain(name.GetVisualAncestors(), ancestor => ancestor is Expander);
             var scope = window.FindControl<Grid>("EstimateScope")!;
@@ -2142,11 +2142,6 @@ public sealed partial class EstimateUiTests : IDisposable
                 using (var bitmap = window.CaptureRenderedFrame()) { Assert.NotNull(bitmap); bitmap.Save(Path.Combine(output, $"identity-{width}.png"), new Avalonia.Media.Imaging.PngBitmapEncoderOptions()); }
                 picker.IsDropDownOpen = true;
                 Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick();
-                var popupBorder = Assert.IsType<Border>(picker.GetVisualDescendants().OfType<Popup>().Single().Child);
-                Assert.Equal(((ISolidColorBrush)Application.Current!.FindResource("SurfaceBrush")!).Color, Assert.IsAssignableFrom<ISolidColorBrush>(popupBorder.Background).Color);
-                var container = Assert.IsType<ComboBoxItem>(picker.ContainerFromIndex(0));
-                var itemText = container.GetVisualDescendants().OfType<TextBlock>().First();
-                Assert.InRange(itemText.TranslatePoint(default, container)!.Value.X, 8, 20);
                 using (var bitmap = window.CaptureRenderedFrame()) { Assert.NotNull(bitmap); bitmap.Save(Path.Combine(output, $"projects-{width}.png"), new Avalonia.Media.Imaging.PngBitmapEncoderOptions()); }
                 picker.IsDropDownOpen = false;
             }

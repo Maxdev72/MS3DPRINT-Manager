@@ -1,3 +1,4 @@
+using MS3DPRINT.Manager.Core.Projects;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -163,6 +164,12 @@ public partial class MainWindow
         EstimateHours.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) ReadEstimateDuration(); };
         foreach (var field in new[] { _estimateDurationHours, _estimateDurationMinutes })
             field.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) WriteEstimateDuration(); };
+        EstimateProject.TextSelector = (_, _) => EstimateProject.SelectedItem is ProjectSummary chosen ? chosen.Title() : string.Empty;
+        EstimateProject.ItemFilter = (text, item) => item is ProjectSummary p && (string.IsNullOrWhiteSpace(text)
+            || MatchesSettingText(p.Title(), text) || MatchesSettingText(p.Reference, text) || MatchesSettingText(p.ClientTitle(), text));
+        // an emptied field means "no project": otherwise the previous choice would silently stay attached
+        EstimateProject.TextChanged += (_, _) => { if (string.IsNullOrWhiteSpace(EstimateProject.Text) && EstimateProject.SelectedItem is not null) EstimateProject.SelectedItem = null; };
+        EstimateProject.GotFocus += (_, _) => { if (EstimateProject.SelectedItem is null) EstimateProject.IsDropDownOpen = true; };
         EstimateProject.SelectionChanged += (_, _) => { ArmEstimateSave(); UpdateEstimateQuickContext(); };
         EstimateName.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) { ArmEstimateSave(); UpdateEstimateQuickContext(); } };
         EstimatesWorkspacePanel.KeyDown += (_, e) =>
