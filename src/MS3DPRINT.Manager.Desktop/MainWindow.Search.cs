@@ -179,7 +179,32 @@ public partial class MainWindow
         DismissSearchResults();
         SearchBox.Text = string.Empty;
         if (result.Path.StartsWith("server:", StringComparison.Ordinal) && Guid.TryParse(result.Path["server:".Length..], out var serverId))
-        { await (result.Kind == MS3DPRINT.Manager.Core.Search.GlobalSearchResultKind.Client ? OpenServerClientAsync(serverId) : OpenServerProjectAsync(serverId)); return; }
+        {
+            // The server copy also lists items that already have a folder on this PC: open that local sheet.
+            var copy = _serverConnection?.Copy;
+            if (result.Kind == MS3DPRINT.Manager.Core.Search.GlobalSearchResultKind.Client)
+            {
+                var remote = copy?.Clients.FirstOrDefault(c => c.Id == serverId);
+                var local = remote is null ? null : _allClients.FirstOrDefault(c => string.Equals(c.ClientCode, remote.ClientCode, StringComparison.OrdinalIgnoreCase));
+                if (local is null) { await OpenServerClientAsync(serverId); return; }
+                ShowWorkspaceForDetail("Clients");
+                PageTitle.Text = "Clients";
+                PageSubtitle.Text = local.DisplayName;
+                await LoadClientDetailAsync(local);
+            }
+            else
+            {
+                var remote = copy?.Projects.FirstOrDefault(p => p.Id == serverId);
+                var local = remote is null ? null : _allProjects.FirstOrDefault(p => string.Equals(p.Reference, remote.Reference, StringComparison.OrdinalIgnoreCase));
+                if (local is null) { await OpenServerProjectAsync(serverId); return; }
+                _projectOriginClient = null;
+                ShowWorkspaceForDetail("Projets");
+                PageTitle.Text = local.Title();
+                PageSubtitle.Text = $"{local.Reference} · {local.ClientTitle()}";
+                await LoadProjectDirectoryAsync(local, local.ProjectPath);
+            }
+            return;
+        }
         if (result.Project is { } project)
         {
             _projectOriginClient = null;
