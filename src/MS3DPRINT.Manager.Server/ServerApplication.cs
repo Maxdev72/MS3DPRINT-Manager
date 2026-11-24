@@ -23,7 +23,7 @@ public static class ServerApplication
             foreach (var address in builder.Configuration.GetSection("Server:TrustedProxyAddresses").GetChildren())
                 options.KnownProxies.Add(IPAddress.Parse(address.Value ?? ""));
             options.ForwardLimit = 1;
-            options.ForwardedHeaders = options.KnownProxies.Count == 0 ? ForwardedHeaders.None : ForwardedHeaders.XForwardedProto;
+            options.ForwardedHeaders = options.KnownProxies.Count == 0 ? ForwardedHeaders.None : ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedFor;
         });
         builder.Services.AddSingleton<ServerStorage>();
         builder.Services.AddSingleton(TimeProvider.System);
@@ -47,7 +47,8 @@ public static class ServerApplication
         builder.Services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-            options.AddPolicy("login", _ => RateLimitPartition.GetFixedWindowLimiter("owner-login", _ => new FixedWindowRateLimiterOptions
+            // Per address: someone else's failed attempts must not lock the owner out.
+            options.AddPolicy("login", context => RateLimitPartition.GetFixedWindowLimiter(context.Connection.RemoteIpAddress?.ToString() ?? "", _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = 20, Window = TimeSpan.FromMinutes(1), QueueLimit = 0
             }));

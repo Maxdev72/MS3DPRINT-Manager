@@ -42,8 +42,9 @@ public sealed class TaskListStore
         var changed = 0;
         foreach (var entry in incoming.Where(e => e is not null && TaskListEntry.IsValidName(e.Name)))
         {
-            if (entries.TryGetValue(entry.Name, out var current) && current.UpdatedAt >= entry.UpdatedAt) continue;
-            entries[entry.Name] = entry with { Name = entry.Name.Trim() }; changed++;
+            var name = entry.Name.Trim();
+            if (entries.TryGetValue(name, out var current) && current.UpdatedAt >= entry.UpdatedAt) continue;
+            entries[name] = entry with { Name = name }; changed++;
         }
         if (changed > 0) Save(entries.Values);
         return changed;

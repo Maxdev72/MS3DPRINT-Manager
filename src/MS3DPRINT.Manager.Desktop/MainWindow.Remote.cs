@@ -287,11 +287,12 @@ public partial class MainWindow
         else if (ClientsWorkspacePanel.IsVisible && (_serverClientDetail is not null || _clientListMode)) RenderServerClients();
     }
 
+    private bool OperationInProgress() => _migrationOpen || _serverBusy || _serverFormOpen || _taskBusy || _panel is not null || _mobilePublishing != 0 || _estimateDraftAutoSaving || _busy != 0;
+
     private async void WorkspaceMode_Click(object? sender, RoutedEventArgs e) => await ChangeWorkspaceModeAsync();
     private Task ChangeWorkspaceModeAsync() => ChangeWorkspaceModeCoreAsync(null);
     private async Task ChangeWorkspaceModeCoreAsync(RemoteDeviceSession? migrationSession)
     {
-        bool OperationInProgress() => _migrationOpen || _serverBusy || _serverFormOpen || _taskBusy || _panel is not null || _mobilePublishing != 0 || _estimateDraftAutoSaving || _busy != 0;
         if (OperationInProgress())
         { Notify("Terminez l’opération ou fermez le formulaire avant de changer d’atelier."); return; }
         if (!IsServerWorkspace && !FlushEstimateDraft()) return;

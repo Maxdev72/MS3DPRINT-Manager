@@ -1,5 +1,6 @@
 using System.Net;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 
 namespace MS3DPRINT.Manager.Server.Tests;
@@ -23,6 +24,32 @@ public sealed class ServerBoundaryTests
             context.Request.Headers["X-Forwarded-Proto"] = "https";
         });
         Assert.Equal(expectedStatus, response.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Login_limit_applies_per_forwarded_address()
+    {
+        using var host = new ServerFixture();
+        using var configured = host.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, config) =>
+            config.AddInMemoryCollection(new Dictionary<string, string?> { ["Server:TrustedProxyAddresses:0"] = "192.0.2.10" })));
+        Task<HttpContext> Login(string client) => configured.Server.SendAsync(context =>
+        {
+            context.Connection.RemoteIpAddress = IPAddress.Parse("192.0.2.10");
+            context.Request.Scheme = "http";
+            context.Request.Method = "POST";
+            context.Request.Path = "/api/v1/auth/login";
+            context.Request.Headers["X-Forwarded-Proto"] = "https";
+            context.Request.Headers["X-Forwarded-For"] = client;
+            context.Request.Headers["X-MS3DFORGE-Client"] = "native";
+            context.Request.ContentType = "application/json";
+            var body = """{"name":"owner","password":"wrong"}"""u8.ToArray();
+            context.Request.ContentLength = body.Length;
+            context.Request.Body = new MemoryStream(body);
+        });
+        var status = 0;
+        for (var i = 0; i < 21; i++) status = (await Login("198.51.100.1")).Response.StatusCode;
+        Assert.Equal(429, status);
+        Assert.NotEqual(429, (await Login("198.51.100.2")).Response.StatusCode);
     }
 
     [Fact]

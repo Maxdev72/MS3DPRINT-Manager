@@ -68,12 +68,8 @@ internal static class Program
             pending = await manager.CheckForUpdatesAsync();
             return pending?.TargetFullRelease.Version.ToString();
         };
-        UpdateService.InstallAndRestart = async () =>
-        {
-            if (pending is null) return;
-            await manager.DownloadUpdatesAsync(pending);
-            manager.ApplyUpdatesAndRestart(pending);
-        };
+        UpdateService.Download = async () => { if (pending is not null) await manager.DownloadUpdatesAsync(pending); };
+        UpdateService.InstallAfterExit = () => { if (pending is not null) manager.WaitExitThenApplyUpdates(pending, silent: false, restart: true); };
     }
 
     /// <summary>Windows "Show animations" setting (Settings > Accessibility > Visual effects).</summary>

@@ -56,6 +56,17 @@ public sealed class TaskCoreTests : IDisposable
     }
 
     [Fact]
+    public void A_name_with_extra_spaces_merges_into_the_same_list()
+    {
+        var lists = new TaskListStore(new WorkspaceMetadataPaths(_root));
+        lists.Add("Achats");
+        Assert.Equal(1, lists.Merge([new TaskListEntry(" Achats ", DateTimeOffset.UtcNow.AddMinutes(1))]));
+        Assert.Single(lists.LoadAll());
+        lists.Add("Entretien"); // would throw on a duplicate name
+        Assert.Equal(["Achats", "Entretien"], lists.ActiveNames());
+    }
+
+    [Fact]
     public void Store_refuses_a_stale_edit_and_keeps_a_tombstone_after_removal()
     {
         var store = new TaskStore(new WorkspaceMetadataPaths(_root));

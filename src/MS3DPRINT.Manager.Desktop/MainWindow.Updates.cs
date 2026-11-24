@@ -10,8 +10,11 @@ public static class UpdateService
     /// <summary>Looks for a newer version: its number, or null when this one is the latest. Throws when the check fails.</summary>
     public static Func<Task<string?>>? Check { get; set; }
 
-    /// <summary>Downloads the version found by the last check, installs it and restarts the application.</summary>
-    public static Func<Task>? InstallAndRestart { get; set; }
+    /// <summary>Downloads the version found by the last check.</summary>
+    public static Func<Task>? Download { get; set; }
+
+    /// <summary>Starts the installer, which waits for the application to close normally, then installs and restarts it.</summary>
+    public static Action? InstallAfterExit { get; set; }
 }
 
 /// <summary>Update checks: once shortly after startup, every 6 hours, and on demand from the settings. Installing always asks first.</summary>
@@ -59,12 +62,22 @@ public partial class MainWindow
             if (!manual && (version == _declinedUpdate || !UpdateCheckMayInterrupt)) return;
             if (!await new ConfirmUpdateWindow(version).ShowDialog<bool>(this)) { _declinedUpdate = version; return; }
             Notify("Téléchargement de la mise à jour…");
-            try { await UpdateService.InstallAndRestart!(); }
+            try { await UpdateService.Download!(); }
             catch (Exception exception)
             {
                 ErrorLog.Write(exception);
-                Notify("La mise à jour n’a pas pu être installée. Réessayez plus tard.", error: true);
+                Notify("La mise à jour n’a pas pu être téléchargée. Réessayez plus tard.", error: true);
+                return;
             }
+            // Never cut an import or a save short: the download stays ready for a new try.
+            if (OperationInProgress())
+            {
+                Notify("Mise à jour prête. Terminez l’opération en cours, puis relancez-la depuis Paramètres → Application.");
+                return;
+            }
+            UpdateService.InstallAfterExit!();
+            // The normal close saves the estimate draft and the window position before the installer takes over.
+            QuitApplication();
         }
         finally { _updateBusy = false; }
     }
