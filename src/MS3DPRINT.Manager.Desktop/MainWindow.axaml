@@ -65,6 +65,7 @@
           </Border>
           <StackPanel x:Name="FooterNavigation">
             <Button x:Name="LocalServerModeButton" Classes="nav-item" Click="WorkspaceMode_Click" IsVisible="False" AutomationProperties.Name="Atelier serveur" ToolTip.Tip="Ouvrir l’atelier serveur indépendant"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconProjects}" /><TextBlock Classes="nav-label" Text="Atelier serveur" /></StackPanel></Button>
+            <Button x:Name="UpdateReadyButton" Classes="nav-item" Click="CheckUpdate_Click" IsVisible="False" AutomationProperties.Name="Installer la mise à jour" ToolTip.Tip="Une nouvelle version est téléchargée : installer et redémarrer"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconUpload}" Fill="{DynamicResource SuccessBrush}" /><TextBlock x:Name="UpdateReadyText" Classes="nav-label" Text="Installer la mise à jour" Foreground="{DynamicResource SuccessBrush}" /></StackPanel></Button>
             <Button x:Name="NotificationCenterButton" Classes="nav-item" Click="NotificationCenter_Click" AutomationProperties.Name="Notifications"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconHistory}" /><TextBlock Classes="nav-label" Text="Notifications" /><Border Classes="badge nav-label" IsVisible="{Binding IsVisible, ElementName=NotificationCount}"><TextBlock x:Name="NotificationCount" FontWeight="SemiBold" IsVisible="False" /></Border></StackPanel></Button>
             <Button Classes="nav-item" Tag="Paramètres" Click="NavigationButton_Click" AutomationProperties.Name="Paramètres"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconSettings}" /><TextBlock Classes="nav-label" Text="Paramètres" /></StackPanel></Button>
           </StackPanel>
@@ -337,7 +338,7 @@
         <ScrollViewer HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
           <StackPanel>
             <StackPanel x:Name="MonitoringEmptyHost" />
-            <UniformGrid x:Name="MonitoringSummary" Columns="4" ColumnSpacing="12" Margin="0,0,0,24" IsVisible="False" />
+            <Panel x:Name="MonitoringSummary" Margin="0,0,0,24" IsVisible="False" />
             <UniformGrid x:Name="PrinterLivePanel" Columns="3" Margin="0,0,-16,0" />
           </StackPanel>
         </ScrollViewer>

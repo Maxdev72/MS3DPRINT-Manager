@@ -1,3 +1,4 @@
+using Avalonia.Controls;
 using MS3DPRINT.Manager.Core.Printers;
 using MS3DPRINT.Manager.Desktop.Dashboard;
 using MS3DPRINT.Manager.Desktop.Printers;
@@ -90,37 +91,47 @@ public partial class MainWindow
         if (!seen || before is null || now is null) return;
         var name = card.Printer.Name;
         var job = now.JobName ?? "Impression";
-        if (before.IsPrinting && now.State == "FINISH") AnnouncePrinter($"Impression terminée · {name}", job, error: false);
-        else if (before.State != "FAILED" && now.State == "FAILED") AnnouncePrinter($"Impression en échec · {name}", job, error: true);
-        else if (before.State != "PAUSE" && now.State == "PAUSE") AnnouncePrinter($"Impression en pause · {name}", job, error: true);
+        if (before.IsPrinting && now.State == "FINISH") AnnouncePrinter(card, $"Impression terminée · {name}", job, error: false);
+        else if (before.State != "FAILED" && now.State == "FAILED") AnnouncePrinter(card, $"Impression en échec · {name}", job, error: true);
+        else if (before.State != "PAUSE" && now.State == "PAUSE") AnnouncePrinter(card, $"Impression en pause · {name}", job, error: true);
         var known = before.Alerts.Select(a => a.Ecode).ToHashSet();
         foreach (var alert in now.Alerts.Where(a => !known.Contains(a.Ecode)))
-            AnnouncePrinter($"Alerte · {name}", BambuHmsCatalog.Describe(alert, BambuHmsTexts.Current), error: true);
+            AnnouncePrinter(card, $"Alerte · {name}", BambuHmsCatalog.Describe(alert, BambuHmsTexts.Current), error: true);
     }
 
-    private void AnnouncePrinter(string title, string body, bool error)
+    /// <summary>The in-window toast at once; the Windows notification follows with a picture of the print when the camera gives one.</summary>
+    private async void AnnouncePrinter(PrinterLiveCard card, string title, string body, bool error)
     {
         Notify(title + " : " + body, error);
-        DesktopApplication.SystemNotification?.Invoke(title, body);
+        if (DesktopApplication.SystemNotification is not { } notify) return;
+        notify(title, body, await card.SnapshotAsync());
     }
 
-    private readonly InfoTile _watchedTile = new("IMPRIMANTES"), _printingTile = new("EN IMPRESSION"), _offlineTile = new("HORS LIGNE"), _nextTile = new("PROCHAINE FIN");
+    private readonly StatStage _watchedTile = new("Imprimantes"), _printingTile = new("En impression", "CyanBrush"), _offlineTile = new("Hors ligne", "WarningBrush"), _nextTile = new("Prochaine fin", "SuccessBrush");
 
     /// <summary>Four tiles above the cards: printers followed, printing, unreachable, and the next print to finish.</summary>
     private void RefreshMonitoringSummary()
     {
-        if (MonitoringSummary.Children.Count == 0) foreach (var tile in new[] { _watchedTile, _printingTile, _offlineTile, _nextTile }) MonitoringSummary.Children.Add(tile);
+        if (MonitoringSummary.Children.Count == 0)
+        {
+            // Same counters as the Home page: equal columns, 16 px apart.
+            var row = new Grid { ColumnDefinitions = new("*,*,*,*"), ColumnSpacing = 16 };
+            var stages = new[] { _watchedTile, _printingTile, _offlineTile, _nextTile };
+            for (var i = 0; i < stages.Length; i++) { Grid.SetColumn(stages[i], i); row.Children.Add(stages[i]); }
+            MonitoringSummary.Children.Add(row);
+        }
         var cards = _liveCards.Values.ToArray();
-        _watchedTile.Set(cards.Length.ToString(), "suivies en direct");
-        _printingTile.Set(cards.Count(c => c.Status?.IsPrinting == true).ToString());
+        _watchedTile.Set(cards.Length.ToString(), "Suivies en direct");
+        var printing = cards.Count(c => c.Status?.IsPrinting == true);
+        _printingTile.Set(printing.ToString(), printing == 0 ? "Aucune impression en cours" : "Avancement sur chaque carte");
         var offline = cards.Count(c => c.Status is null);
-        _offlineTile.Set(offline.ToString(), offline > 0 ? "ou en connexion" : null);
+        _offlineTile.Set(offline.ToString(), offline > 0 ? "Injoignables ou en connexion" : "Toutes répondent");
         if (cards.Where(c => c.Status is { IsPrinting: true, RemainingMinutes: > 0 }).MinBy(c => c.Status!.RemainingMinutes) is { } next)
         {
             var end = DateTime.Now.AddMinutes(next.Status!.RemainingMinutes!.Value);
             _nextTile.Set(end.ToString("HH:mm"), $"{PrinterLiveCard.FinishDay(end)} · {next.Printer.Name}");
         }
-        else _nextTile.Set("—");
+        else _nextTile.Set("—", "Aucune fin prévue");
         MonitoringSummary.IsVisible = cards.Length > 0;
     }
 }

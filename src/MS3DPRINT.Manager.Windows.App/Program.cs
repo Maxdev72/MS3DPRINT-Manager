@@ -15,7 +15,12 @@ internal static class Program
         using var single = new Mutex(false, @"Local\MS3DPRINT-Manager-single-instance");
         bool owned;
         try { owned = single.WaitOne(1500); } catch (AbandonedMutexException) { owned = true; }
-        if (!owned) { FocusRunningInstance(); return; }
+        var showSurveillance = args.Any(a => a.StartsWith(WindowsToast.SurveillanceLink, StringComparison.OrdinalIgnoreCase));
+        // A notification click starts this executable with the "ms3dprint://surveillance" link: wake the running one.
+        using var wake = new EventWaitHandle(false, EventResetMode.AutoReset, @"Local\MS3DPRINT-Manager-show-surveillance");
+        if (!owned) { if (showSurveillance) wake.Set(); else FocusRunningInstance(); return; }
+        if (showSurveillance) Environment.SetEnvironmentVariable("MS3DPRINT_START_PAGE", "Surveillance");
+        new Thread(() => { while (wake.WaitOne()) DesktopApplication.ShowPage?.Invoke("Surveillance"); }) { IsBackground = true, Name = "Surveillance link" }.Start();
         // Before any settings store is created: bring the preferences once kept next to the executable into the profile.
         try { MS3DPRINT.Manager.Core.Storage.LegacySettingsMigration.Run(MS3DPRINT.Manager.Core.Storage.ApplicationPaths.LegacyDataDirectory, MS3DPRINT.Manager.Core.Storage.ApplicationPaths.DataDirectory); }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { ErrorLog.Write(exception); }

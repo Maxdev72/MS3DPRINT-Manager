@@ -32,7 +32,7 @@ seul après accord de l'utilisateur (une question à chaque nouvelle version, pl
 - Les mises à jour sont les fichiers de `outputs/velopack` publiés dans une release
   GitHub `vX.Y.Z` de `Maxdev72/MS3DPRINT-Manager` ; publier demande l'accord de l'utilisateur.
 - Incrémenter la version à chaque livraison. L'application installée télécharge
-  après accord (dialogue `ConfirmUpdateWindow`), installe et redémarre (`MainWindow.Updates.cs` : au démarrage, toutes les 6 h et via Paramètres → Application).
+  après accord (dialogue `ConfirmUpdateWindow`), installe et redémarre (`MainWindow.Updates.cs` : au démarrage, toutes les 15 min, au retour sur la fenêtre et via Paramètres → Application ; la mise à jour est téléchargée avant la question et reste proposée dans la barre de gauche).
 - Linux reste l'archive `.tar.gz`.
 
 ## Confirmation des suppressions

@@ -23,18 +23,21 @@ public sealed class PrinterLiveCard : Border, IDisposable
     private readonly Image _camera = new() { Stretch = Stretch.Uniform };
     private readonly TextBlock _cameraNote = new() { Text = "Connexion à la caméra…", Foreground = Brushes.Gainsboro, TextWrapping = TextWrapping.Wrap, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Center, Margin = new(24) };
     private readonly Border _badge = new() { Classes = { "badge" }, VerticalAlignment = VerticalAlignment.Center };
-    private readonly TextBlock _badgeText = new() { Text = "Connexion…" };
+    private readonly TextBlock _badgeText = new() { Text = "Connexion…", FontSize = Ui.Text.Micro, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+    private readonly Control _badgeIcon = Icons.Glyph("IconPlay", 12);
+    private readonly Avalonia.Controls.Shapes.Ellipse _ringTrack = new() { StrokeThickness = 5 };
+    private readonly Avalonia.Controls.Shapes.Arc _ring = new() { StrokeThickness = 5, StrokeLineCap = PenLineCap.Round, StartAngle = -90, SweepAngle = 0 };
     private readonly Button _alerts = new() { Padding = new(0), MinHeight = 0, MinWidth = 0, Background = Brushes.Transparent, BorderThickness = new(0), VerticalAlignment = VerticalAlignment.Center, IsVisible = false };
     private readonly TextBlock _alertsText = new();
     private readonly StackPanel _alertsList = new() { Spacing = 12, Width = 380 };
     // Two lines reserved: the file name, or the reason the printer is unreachable.
     private readonly TextBlock _job = new() { TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis, Height = 40 };
     private readonly List<Image> _mirrors = [];
-    private readonly Run _percent = new(), _percentUnit = new(" %") { FontSize = Ui.Text.Section };
-    private readonly Border _track = new() { Height = 12, CornerRadius = new(Ui.Radius.Pill), VerticalAlignment = VerticalAlignment.Center };
+    private readonly Run _percent = new(), _percentUnit = new("%") { FontSize = Ui.Text.Micro };
+    private readonly Border _track = new() { Height = 8, CornerRadius = new(Ui.Radius.Pill), VerticalAlignment = VerticalAlignment.Center };
     private readonly Border _fill = new() { HorizontalAlignment = HorizontalAlignment.Left, CornerRadius = new(Ui.Radius.Pill) };
-    private readonly InfoTile _finish = new("FIN PRÉVUE"), _remaining = new("RESTANT"), _layer = new("COUCHE");
-    private readonly InfoTile _nozzle = new("BUSE"), _bed = new("PLATEAU"), _chamber = new("ENCEINTE");
+    private readonly InfoTile _finish = new("Fin prévue", "IconClock"), _remaining = new("Restant", "IconHourglass"), _layer = new("Couche", "IconLayers");
+    private readonly InfoTile _nozzle = new("Buse", "IconNozzle"), _bed = new("Plateau", "IconHeat"), _chamber = new("Enceinte", "IconCube");
     private readonly WrapPanel _trays = new();
     private double _fraction;
     private CancellationTokenSource? _cameraCancel;
@@ -52,49 +55,64 @@ public sealed class PrinterLiveCard : Border, IDisposable
     {
         Printer = printer;
         Connection = connection;
-        Classes.Add("card-raised");
-        // Follows the theme; the class alone left the card invisible on the page background.
+        // Raised surface with a fine outline that lights up in the accent colour under the pointer.
         Bind(BackgroundProperty, this.GetResourceObservable("RaisedSurfaceBrush"));
         Bind(BorderBrushProperty, this.GetResourceObservable("SubtleBorderBrush"));
         BorderThickness = new(1);
         CornerRadius = new(Ui.Radius.Card);
-        Padding = new(0);
-        ClipToBounds = true;
+        Padding = new(0, 0, 0, 4);
         Margin = new(0, 0, 16, 16);
+        PointerEntered += (_, _) => { Bind(BorderBrushProperty, this.GetResourceObservable("AccentBrush")); BoxShadow = new BoxShadows(new BoxShadow { Blur = 18, Color = Glow(0.35) }); };
+        PointerExited += (_, _) => { Bind(BorderBrushProperty, this.GetResourceObservable("SubtleBorderBrush")); BoxShadow = default; };
         AutomationProperties.SetName(_camera, "Caméra de " + printer.Name);
-        _badge.Child = _badgeText;
-        _alerts.Content = new Border { Classes = { "badge", "danger" }, Child = _alertsText };
+        _badge.Child = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { _badgeIcon, _badgeText } };
+        var alertIcon = Icons.Glyph("IconAlert", 12);
+        alertIcon.Classes.Add("icon-danger");
+        if (alertIcon is Viewbox { Child: Avalonia.Controls.Shapes.Path alertPath }) alertPath.Classes.Add("icon-danger");
+        _alertsText.FontSize = Ui.Text.Micro;
+        _alertsText.FontWeight = FontWeight.SemiBold;
+        _alertsText.Bind(TextBlock.ForegroundProperty, _alertsText.GetResourceObservable("DangerBrush"));
+        _alerts.Content = new Border { Classes = { "badge", "danger" }, Child = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { alertIcon, _alertsText } } };
         _alerts.Flyout = new Flyout { Content = new ScrollViewer { MaxHeight = 420, Content = _alertsList } };
         ToolTip.SetTip(_alerts, "Lire les alertes de l’imprimante");
         _track.Bind(BackgroundProperty, _track.GetResourceObservable("NeutralSoftBrush"));
         _track.Child = _fill;
         _track.SizeChanged += (_, _) => SizeFill();
+        _ringTrack.Bind(Avalonia.Controls.Shapes.Shape.StrokeProperty, _ringTrack.GetResourceObservable("NeutralSoftBrush"));
+
+        var mark = new Border { Classes = { "icon-chip" }, Width = 32, Height = 32, Child = Icons.Glyph("IconPrinters", 18) };
         var name = new TextBlock { Text = printer.Name, Classes = { "card-title" }, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
-        Grid.SetColumn(_alerts, 1);
-        Grid.SetColumn(_badge, 2);
+        Grid.SetColumn(name, 1);
+        Grid.SetColumn(_alerts, 2);
+        Grid.SetColumn(_badge, 3);
         var fullScreen = new Button { Content = Icons.Glyph("IconExpand"), Classes = { "icon-action" }, Background = new SolidColorBrush(Color.FromArgb(150, 0, 0, 0)), Foreground = Brushes.White, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new(8) };
         ToolTip.SetTip(fullScreen, "Plein écran (double-clic sur l’image)");
         AutomationProperties.SetName(fullScreen, "Caméra de " + printer.Name + " en plein écran");
         fullScreen.Click += (_, _) => OpenFullScreen();
-        // 16:9 like the printers' cameras, whatever the column width.
-        var cameraFrame = new Border { Background = Brushes.Black, Child = new Grid { Children = { _camera, _cameraNote, fullScreen } } };
+        // 16:9 like the printers' cameras, whatever the column width; inset with rounded corners.
+        var cameraFrame = new Border { Background = Brushes.Black, CornerRadius = new(Ui.Radius.Control), ClipToBounds = true, Margin = new(12, 0), Child = new Grid { Children = { _camera, _cameraNote, fullScreen } } };
         cameraFrame.SizeChanged += (_, e) => { if (Math.Abs(e.NewSize.Width * 9 / 16 - cameraFrame.Height) > 0.5) cameraFrame.Height = e.NewSize.Width * 9 / 16; };
-        cameraFrame.Height = 248;
+        cameraFrame.Height = 230;
         cameraFrame.DoubleTapped += (_, _) => OpenFullScreen();
-        var percent = new TextBlock { FontSize = Ui.Text.Page, FontWeight = FontWeight.SemiBold, MinWidth = 88, VerticalAlignment = VerticalAlignment.Center, Inlines = new InlineCollection { _percent, _percentUnit } };
+
+        var percent = new TextBlock { FontSize = Ui.Text.Section, FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Inlines = new InlineCollection { _percent, _percentUnit } };
+        var ring = new Grid { Width = 60, Height = 60, Children = { _ringTrack, _ring, percent } };
         Grid.SetColumn(_track, 1);
-        // Header, camera, then three sections with the same padding, title and dividers.
+        var job = new Grid { ColumnDefinitions = new("Auto,*"), ColumnSpacing = 8, Children = { Icons.Glyph("IconCube", 16), _job } };
+        job.Children[0].VerticalAlignment = VerticalAlignment.Top;
+        job.Children[0].Margin = new(0, 2, 0, 0);
+        Grid.SetColumn(_job, 1);
         Child = new StackPanel
         {
             Children =
             {
-                new Grid { Margin = new(16, 12), ColumnDefinitions = new("*,Auto,Auto"), ColumnSpacing = 8, Children = { name, _alerts, _badge } },
+                new Grid { Margin = new(12, 12, 12, 12), ColumnDefinitions = new("Auto,*,Auto,Auto"), ColumnSpacing = 8, Children = { mark, name, _alerts, _badge } },
                 cameraFrame,
-                Section("IMPRESSION", _job, new Grid { ColumnDefinitions = new("Auto,*"), ColumnSpacing = 16, Children = { percent, _track } }, Row(_finish, _remaining, _layer)),
+                Section(null, null, job, new Grid { ColumnDefinitions = new("Auto,*"), ColumnSpacing = 16, Children = { ring, _track } }, Row(_finish, _remaining, _layer)),
                 Divider(),
-                Section("TEMPÉRATURES", Row(_nozzle, _bed, _chamber)),
+                Section("Températures", "IconThermometer", Row(_nozzle, _bed, _chamber)),
                 Divider(),
-                Section("AMS", _trays)
+                Section("AMS", "IconSpool", _trays)
             }
         };
         Render(null, "Connexion…", null);
@@ -162,6 +180,41 @@ public sealed class PrinterLiveCard : Border, IDisposable
     {
         _video?.Dispose(); _video = null;
         _relay?.Dispose(); _relay = null;
+    }
+
+    /// <summary>
+    /// A picture of the print for a notification: the image on screen when the camera is open, otherwise one frame
+    /// fetched for the occasion. Null when the camera does not answer within 10 seconds.
+    /// </summary>
+    public async Task<string?> SnapshotAsync()
+    {
+        var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify), "MS3DPRINT Manager", "snapshots");
+        var path = Path.Combine(folder, Printer.Id.ToString("N") + ".png");
+        try
+        {
+            Directory.CreateDirectory(folder);
+            if (_camera.Source is Bitmap shown) { shown.Save(path, new PngBitmapEncoderOptions()); return path; }
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(_cancel.Token);
+            timeout.CancelAfter(TimeSpan.FromSeconds(10));
+            if (BambuLink.HasJpegCamera(Printer.Model))
+            {
+                var jpeg = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+                _ = BambuLink.WatchJpegCameraAsync(Connection, frame => jpeg.TrySetResult(frame), _ => { }, timeout.Token);
+                var bytes = await jpeg.Task.WaitAsync(timeout.Token);
+                timeout.Cancel();
+                path = Path.ChangeExtension(path, ".jpg");
+                await File.WriteAllBytesAsync(path, bytes);
+                return path;
+            }
+            if (VlcCamera.Unavailable is not null) return null;
+            var saved = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            using var relay = new BambuLink.RtspRelay(Connection);
+            using var video = new VlcCamera(relay.Url, frame => { if (!saved.Task.IsCompleted) { frame.Save(path, new PngBitmapEncoderOptions()); saved.TrySetResult(); } }, () => saved.TrySetCanceled());
+            await saved.Task.WaitAsync(timeout.Token);
+            return path;
+        }
+        catch (Exception exception) when (exception is OperationCanceledException or IOException or UnauthorizedAccessException or InvalidOperationException or VLCException or System.Net.Sockets.SocketException)
+        { return null; }
     }
 
     private void ShowFrame(Bitmap frame)
@@ -246,16 +299,17 @@ public sealed class PrinterLiveCard : Border, IDisposable
         _fraction = (percent ?? 0) / 100.0;
         SetFillColors(s?.State);
         SizeFill();
+        _ring.SweepAngle = 360 * _fraction;
         var minutes = printing ? s!.RemainingMinutes ?? 0 : 0;
         var end = DateTime.Now.AddMinutes(minutes);
         if (minutes > 0) _finish.Set(end.ToString("HH:mm", French), FinishDay(end));
         else _finish.Set(finished ? "Terminée" : "—");
         _remaining.Set(minutes > 0 ? Duration(minutes) : "—");
-        if ((printing || finished) && s!.Layer is { } layer && s.TotalLayers is > 0) _layer.Set(layer.ToString(CultureInfo.CurrentCulture), $"sur {s.TotalLayers}");
+        if ((printing || finished) && s!.Layer is { } layer && s.TotalLayers is > 0) _layer.Set(layer.ToString(CultureInfo.CurrentCulture), null, $" / {s.TotalLayers}");
         else _layer.Set("—");
 
-        if (s?.HasTwoNozzles == true) _nozzle.Set("BUSES D · G", $"{Degrees(s.Nozzle)} · {Degrees(s.SecondNozzle)}", Target(s.NozzleTarget));
-        else _nozzle.Set("BUSE", Degrees(s?.Nozzle), Target(s?.NozzleTarget));
+        _nozzle.SetLabel(s?.HasTwoNozzles == true ? "Buses D · G" : "Buse");
+        _nozzle.Set(s?.HasTwoNozzles == true ? $"{Degrees(s.Nozzle)} · {Degrees(s.SecondNozzle)}" : Degrees(s?.Nozzle), Target(s?.NozzleTarget));
         _bed.Set(Degrees(s?.Bed), Target(s?.BedTarget));
         // A1 and P1 report a fixed chamber value without having a sensor.
         if (BambuLink.HasJpegCamera(Printer.Model)) _chamber.Set("—", "non mesurée");
@@ -282,6 +336,11 @@ public sealed class PrinterLiveCard : Border, IDisposable
     {
         _badgeText.Text = text;
         foreach (var t in new[] { "info", "warning", "danger", "success" }) _badge.Classes.Set(t, t == tone);
+        // The badge style only colours a direct TextBlock: text and icon here follow the tone themselves.
+        var brush = tone switch { "info" => "AccentBrush", "warning" => "WarningBrush", "danger" => "DangerBrush", "success" => "SuccessBrush", _ => "MutedTextBrush" };
+        _badgeText.Bind(TextBlock.ForegroundProperty, _badgeText.GetResourceObservable(brush));
+        _badgeIcon.IsVisible = tone == "info";
+        if (_badgeIcon is Viewbox { Child: Avalonia.Controls.Shapes.Path path }) path.Classes.Set("icon-accent", true);
     }
 
     private static readonly CultureInfo French = CultureInfo.GetCultureInfo("fr-FR");
@@ -316,7 +375,14 @@ public sealed class PrinterLiveCard : Border, IDisposable
             GradientStops = { new GradientStop(Of(from), 0), new GradientStop(Of(to), 1) }
         };
         var glow = Of(to);
-        _fill.BoxShadow = new BoxShadows(new BoxShadow { Blur = 12, Color = Color.FromArgb(110, glow.R, glow.G, glow.B) });
+        _fill.BoxShadow = new BoxShadows(new BoxShadow { Blur = 8, Color = Color.FromArgb(70, glow.R, glow.G, glow.B) });
+        _ring.Stroke = _fill.Background;
+    }
+
+    private static Color Glow(double opacity)
+    {
+        var accent = Application.Current?.FindResource("AccentBrush") is ISolidColorBrush brush ? brush.Color : Colors.DodgerBlue;
+        return Color.FromArgb((byte)(255 * opacity), accent.R, accent.G, accent.B);
     }
 
     private static string Degrees(double? value) => value is { } v ? v.ToString("0", CultureInfo.CurrentCulture) + " °C" : "—";
@@ -330,14 +396,17 @@ public sealed class PrinterLiveCard : Border, IDisposable
         return end.Date == today ? "aujourd’hui" : end.Date == today.AddDays(1) ? "demain" : end.ToString("ddd d MMM", French);
     }
 
-    private static StackPanel Section(string title, params Control[] content)
+    /// <summary>A section with its icon and title (none for the print section, right under the camera).</summary>
+    private static StackPanel Section(string? title, string? icon, params Control[] content)
     {
-        var section = new StackPanel { Margin = new(16), Spacing = 12, Children = { new TextBlock { Text = title, Classes = { "overline" } } } };
+        var section = new StackPanel { Margin = new(12), Spacing = 12 };
+        if (title is not null)
+            section.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { Icons.Glyph(icon!, 16), new TextBlock { Text = title, FontWeight = FontWeight.SemiBold } } });
         foreach (var control in content) section.Children.Add(control);
         return section;
     }
 
-    private static Grid Row(params Control[] tiles)
+    private static Grid Row(params InfoTile[] tiles)
     {
         var row = new Grid { ColumnDefinitions = new(string.Join(",", tiles.Select(_ => "*"))), ColumnSpacing = 8 };
         for (var i = 0; i < tiles.Length; i++) { Grid.SetColumn(tiles[i], i); row.Children.Add(tiles[i]); }
@@ -346,7 +415,7 @@ public sealed class PrinterLiveCard : Border, IDisposable
 
     private static Border Divider()
     {
-        var line = new Border { Height = 1 };
+        var line = new Border { Height = 1, Margin = new(12, 0) };
         line.Bind(BackgroundProperty, line.GetResourceObservable("SubtleBorderBrush"));
         return line;
     }

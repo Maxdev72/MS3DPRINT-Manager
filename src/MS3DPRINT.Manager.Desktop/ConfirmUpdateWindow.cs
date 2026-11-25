@@ -12,7 +12,7 @@ public sealed class ConfirmUpdateWindow : DialogWindow
         confirm.Click += (_, _) => Close(true);
         var later = new Button { Content = "Plus tard" };
         later.Click += (_, _) => Close(false);
-        Layout($"Installer la version {version} ?", "Le logiciel se fermera puis se relancera. Vos données et vos documents sont conservés. Sans réponse maintenant, la question sera reposée au prochain démarrage.",
+        Layout($"Installer la version {version} ?", "La mise à jour est déjà téléchargée : le logiciel se ferme puis se relance en quelques secondes. Vos données et vos documents sont conservés. Avec « Plus tard », elle reste disponible dans la barre de gauche.",
             [], confirm, later);
     }
 }

@@ -144,6 +144,14 @@
       <StreamGeometry x:Key="IconInfo">M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17Z M12 11v5.5 M12 7.6h.01</StreamGeometry>
       <StreamGeometry x:Key="IconClose">M6 6l12 12 M18 6 6 18</StreamGeometry>
       <StreamGeometry x:Key="IconFile">M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10.5a.5.5 0 0 1-.5-.5v-16a.5.5 0 0 1 .5-.5Z M14 3.5v4h4 M9 12.5h6 M9 16h6</StreamGeometry>
+      <StreamGeometry x:Key="IconClock">M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0 M12 7v5l3 2</StreamGeometry>
+      <StreamGeometry x:Key="IconHourglass">M6 3h12 M6 21h12 M7 3c0 5 10 5 10 9s-10 4-10 9 M17 3c0 5-10 5-10 9s10 4 10 9</StreamGeometry>
+      <StreamGeometry x:Key="IconLayers">M12 3 3 8l9 5 9-5Z M3 12.5l9 5 9-5 M3 16.5l9 5 9-5</StreamGeometry>
+      <StreamGeometry x:Key="IconThermometer">M10 14V5a2 2 0 0 1 4 0v9a4 4 0 1 1-4 0Z M12 9v7</StreamGeometry>
+      <StreamGeometry x:Key="IconNozzle">M7 3h10v6H7Z M9 9h6l-2 6h-2Z M12 15v3 M9 21h6</StreamGeometry>
+      <StreamGeometry x:Key="IconHeat">M8 3c-1.5 2 1.5 3 0 5s1.5 3 0 5 M12 3c-1.5 2 1.5 3 0 5s1.5 3 0 5 M16 3c-1.5 2 1.5 3 0 5s1.5 3 0 5 M4 18h16 M4 21h16</StreamGeometry>
+      <StreamGeometry x:Key="IconSpool">M6 4a3 8 0 1 0 0 16a3 8 0 1 0 0-16 M18 4a3 8 0 1 0 0 16 M6 4h12 M6 20h12 M5 12a1 1 0 1 0 2 0a1 1 0 1 0-2 0</StreamGeometry>
+      <StreamGeometry x:Key="IconPlay">M8 5v14l11-7Z</StreamGeometry>
       <StreamGeometry x:Key="IconExpand">M4 9V4h5 M15 4h5v5 M20 15v5h-5 M9 20H4v-5</StreamGeometry>
       <StreamGeometry x:Key="IconOpen">M14 4h6v6 M20 4l-9 9 M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5</StreamGeometry>
       <StreamGeometry x:Key="IconEdit">M4 20l4-1 11-11a2.1 2.1 0 0 0-3-3L5 16Z M14 7l3 3</StreamGeometry>

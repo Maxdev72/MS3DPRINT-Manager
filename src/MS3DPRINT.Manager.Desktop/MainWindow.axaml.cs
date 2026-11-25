@@ -197,6 +197,11 @@ public partial class MainWindow : Window
         await PreloadAsync();
         // Printers are followed from the start, for the end-of-print notifications.
         _ = LoadMonitoringAsync();
+        DesktopApplication.ShowPage = page => Dispatcher.UIThread.Post(async () =>
+        {
+            RestoreFromTray();
+            if (NavigationButtons().FirstOrDefault(b => b.Tag as string == page) is { } target) NavigationButton_Click(target, new RoutedEventArgs());
+        });
         // MS3DPRINT_START_PAGE=Clients opens that page directly (screenshots, demos).
         if (Environment.GetEnvironmentVariable("MS3DPRINT_START_PAGE") is { Length: > 0 } page &&
             NavigationButtons().FirstOrDefault(button => button.Tag as string == page) is { } target)

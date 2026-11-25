@@ -17,26 +17,35 @@ public static class UpdateService
     public static Action? InstallAfterExit { get; set; }
 }
 
-/// <summary>Update checks: once shortly after startup, every 6 hours, and on demand from the settings. Installing always asks first.</summary>
+/// <summary>
+/// Update checks: shortly after startup, every 15 minutes, when the window comes back to the front (at most every
+/// 10 minutes) and on demand. A new version is downloaded in the background first, so installing it only takes a
+/// restart; installing always asks, and a version put off stays one click away in the side bar.
+/// </summary>
 public partial class MainWindow
 {
+    private static readonly TimeSpan UpdateInterval = TimeSpan.FromMinutes(15);
+    private static readonly TimeSpan ActivationCheckInterval = TimeSpan.FromMinutes(10);
     private string? _declinedUpdate;
+    private string? _readyUpdate;
     private bool _updateBusy;
+    private DateTime _lastUpdateCheck;
 
     private void StartUpdateChecks()
     {
         if (UpdateService.Check is null) return;
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromHours(6) };
+        var timer = new DispatcherTimer { Interval = UpdateInterval };
         timer.Tick += async (_, _) => await CheckForUpdateAsync(manual: false);
         timer.Start();
         DispatcherTimer.RunOnce(async () => await CheckForUpdateAsync(manual: false), TimeSpan.FromSeconds(10));
+        Activated += async (_, _) => { if (DateTime.UtcNow - _lastUpdateCheck > ActivationCheckInterval) await CheckForUpdateAsync(manual: false); };
     }
 
     private bool UpdateCheckMayInterrupt => _panel is null && _busy == 0;
 
     private async void CheckUpdate_Click(object? sender, RoutedEventArgs e) => await CheckForUpdateAsync(manual: true);
 
-    /// <summary>A periodic check stays silent unless a new version is found, and is skipped while the user is busy (the next tick retries).</summary>
+    /// <summary>A periodic check stays silent unless a new version is found, and only asks while the user is not busy (the next tick retries).</summary>
     private async Task CheckForUpdateAsync(bool manual)
     {
         if (_updateBusy) return;
@@ -45,8 +54,8 @@ public partial class MainWindow
             if (manual) Notify("Les mises à jour ne sont disponibles qu’avec la version installée par Setup.exe.");
             return;
         }
-        if (!manual && !UpdateCheckMayInterrupt) return;
         _updateBusy = true;
+        _lastUpdateCheck = DateTime.UtcNow;
         try
         {
             string? version;
@@ -58,21 +67,27 @@ public partial class MainWindow
                 return;
             }
             if (version is null) { if (manual) Notify("Vous utilisez la dernière version."); return; }
-            // A version declined once is not offered again by the timer; the manual button always asks.
+            if (_readyUpdate != version)
+            {
+                if (manual) Notify("Téléchargement de la mise à jour…");
+                try { await UpdateService.Download!(); }
+                catch (Exception exception)
+                {
+                    ErrorLog.Write(exception);
+                    if (manual) Notify("La mise à jour n’a pas pu être téléchargée. Réessayez plus tard.", error: true);
+                    return;
+                }
+                _readyUpdate = version;
+                UpdateReadyText.Text = $"Installer la version {version}";
+                UpdateReadyButton.IsVisible = true;
+            }
+            // A version put off is not asked again by the timer: the side bar button stays until the user installs it.
             if (!manual && (version == _declinedUpdate || !UpdateCheckMayInterrupt)) return;
             if (!await new ConfirmUpdateWindow(version).ShowDialog<bool>(this)) { _declinedUpdate = version; return; }
-            Notify("Téléchargement de la mise à jour…");
-            try { await UpdateService.Download!(); }
-            catch (Exception exception)
-            {
-                ErrorLog.Write(exception);
-                Notify("La mise à jour n’a pas pu être téléchargée. Réessayez plus tard.", error: true);
-                return;
-            }
             // Never cut an import or a save short: the download stays ready for a new try.
             if (OperationInProgress())
             {
-                Notify("Mise à jour prête. Terminez l’opération en cours, puis relancez-la depuis Paramètres → Application.");
+                Notify("Mise à jour prête. Terminez l’opération en cours, puis cliquez sur « Installer la version " + version + " ».");
                 return;
             }
             UpdateService.InstallAfterExit!();

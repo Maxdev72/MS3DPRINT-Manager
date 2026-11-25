@@ -36,12 +36,20 @@ public sealed class PrinterLiveCardTests
                 state(card);
                 return card;
             }
+            Control Summary()
+            {
+                var row = new Grid { ColumnDefinitions = new("*,*,*,*"), ColumnSpacing = 16 };
+                var stages = new[] { new StatStage("Imprimantes"), new StatStage("En impression", "CyanBrush"), new StatStage("Hors ligne", "WarningBrush"), new StatStage("Prochaine fin", "SuccessBrush") };
+                stages[0].Set("3", "Suivies en direct"); stages[1].Set("1", "Avancement sur chaque carte"); stages[2].Set("1", "Injoignables ou en connexion"); stages[3].Set("14:09", "aujourd’hui · Bambu Lab H2D");
+                for (var i = 0; i < 4; i++) { Grid.SetColumn(stages[i], i); row.Children.Add(stages[i]); }
+                return row;
+            }
             void Show(PrinterLiveCard card, BambuStatus status) => typeof(PrinterLiveCard).GetMethod("Show", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(card, [status]);
             var printing = Card("H2D", c => Show(c, new BambuStatus("RUNNING", 57, 89, 77, 465, "Système de récupération d'eau - 90mm.stl_1 + Système de récupération d'eau - 90mm.stl_2",
                 244, 245, 70, 70, 34, [new(0x05000100, 0x00030004, new DateTime(2026, 11, 25, 15, 36, 0)), new(0x05030000, 0x00030029)], [new("PLA", "F28C38"), new("PETG", "FFFFFF"), new("PP-GF", "FFFFFF"), new("PLA-S", "1E1E1E")], SecondNozzle: 47)));
             var idle = Card("A1", c => Show(c, new BambuStatus("FINISH", 100, 0, 200, 200, "Support", 26, 0, 24, 0, null, [], [new("PLA", "3D7BD9")])));
             var offline = Card("H2S", c => typeof(PrinterLiveCard).GetMethod("ShowOffline", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(c, ["Imprimante injoignable : vérifiez l’adresse et qu’elle est allumée."]));
-            var window = new Window { Width = 1440, Height = 900, Content = new UniformGrid { Columns = 3, Margin = new(24), Children = { printing, idle, offline } } };
+            var window = new Window { Width = 1440, Height = 1040, Content = new StackPanel { Margin = new(24), Spacing = 24, Children = { Summary(), new UniformGrid { Columns = 3, Children = { printing, idle, offline } } } } };
             window.Show();
             Dispatcher.UIThread.RunJobs(); window.UpdateLayout(); AvaloniaHeadlessPlatform.ForceRenderTimerTick();
             using var frame = window.CaptureRenderedFrame();
