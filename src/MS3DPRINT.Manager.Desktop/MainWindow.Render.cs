@@ -28,20 +28,19 @@ public partial class MainWindow
         if (RenderWorkspacePanel.Child is RenderStudioView studio) await studio.LoadModelAsync(modelPath);
     }
 
-    /// <summary>The colours of the workshop filaments first (their finish guessed from the name), then the usual colours.</summary>
+    /// <summary>The colours of the workshop filaments (their finish guessed from the name); the page adds the bundled palettes.</summary>
     private IReadOnlyList<RenderColor> LoadRenderColors()
     {
         var stock = new WorkspaceInventoryReader().LoadFilaments(WorkspaceRoot)
             .Select(f => (Filament: f, Hex: FilamentHex(f.Color)))
             .Where(x => PreviewColorParser.TryParse(x.Hex, out _))
             .Select(x => new RenderColor($"{x.Filament.Brand} {x.Filament.Name} ({x.Filament.Material})", x.Hex!.ToUpperInvariant(), RenderFinish($"{x.Filament.Material} {x.Filament.Name}")));
-        var usual = FilamentColors.Where(c => PreviewColorParser.TryParse(c.Value, out _))
-            .Select(c => new RenderColor(char.ToUpperInvariant(c.Key[0]) + c.Key[1..], c.Value, c.Key is "argent" or "or" ? "silk" : "matte"));
-        return stock.Concat(usual).DistinctBy(c => (c.Hex, c.Finish)).ToList();
+        return stock.DistinctBy(c => c.Key).ToList();
     }
 
     /// <summary>Silk filaments shine like metal, PETG is glossy, everything else renders matte.</summary>
     public static string RenderFinish(string materialAndName)
-        => materialAndName.Contains("silk", StringComparison.OrdinalIgnoreCase) || materialAndName.Contains("soie", StringComparison.OrdinalIgnoreCase) ? "silk"
+        => materialAndName.Contains("phospho", StringComparison.OrdinalIgnoreCase) || materialAndName.Contains("glow", StringComparison.OrdinalIgnoreCase) ? "glow"
+            : materialAndName.Contains("silk", StringComparison.OrdinalIgnoreCase) || materialAndName.Contains("soie", StringComparison.OrdinalIgnoreCase) ? "silk"
             : materialAndName.Contains("PETG", StringComparison.OrdinalIgnoreCase) ? "glossy" : "matte";
 }

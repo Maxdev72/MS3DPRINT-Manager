@@ -18,6 +18,7 @@
     <AvaloniaResource Include="Assets/Fonts/*.txt" />
     <AvaloniaResource Include="../../CHANGELOG.md" Link="Assets/CHANGELOG.md" />
     <EmbeddedResource Include="Rendering/product_render.py" LogicalName="MS3DPRINT.Manager.Desktop.Rendering.product_render.py" />
+    <EmbeddedResource Include="Rendering/filament-palettes.json" LogicalName="MS3DPRINT.Manager.Desktop.Rendering.filament-palettes.json" />
   </ItemGroup>
 
   <ItemGroup>

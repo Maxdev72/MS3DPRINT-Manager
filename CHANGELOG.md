@@ -11,6 +11,13 @@
 - Éclairage revu : les filaments blancs et noirs restent lisibles sur le studio clair.
 - Ambiance « Environnement (HDRI) » comme dans les logiciels de rendu : la pièce est éclairée par une image à 360° qui apparaît derrière elle, avec son ombre au sol. Les huit environnements fournis avec Blender sont proposés ; ajoutez vos propres images HDR ou EXR (Poly Haven par exemple) et tournez l'environnement pour choisir l'arrière-plan.
 
+### Rendu produit : onglets, palettes, orientation et ombres
+- Panneau en onglets comme KeyShot : Pièce, Matière, Ambiance, Caméra ; « Rendu HD » et « Enregistrer l'image » restent en bas.
+- Pièce : anneaux d'orientation X, Y, Z à faire glisser sur l'image, pas de rotation libre, 5°, 15°, 45° ou 90° ; redressement automatique sur la plus grande face plane, « Poser sur une face » d'un clic, « Orientation du fichier » ; l'orientation de chaque pièce est retenue.
+- Matière : palettes Mat (12), Brillant (10), Soie (6) et Phosphorescent (2), avec leur finition ; croix au survol pour retirer une couleur (avec confirmation) et « Rétablir les couleurs retirées » ; finitions Mat, Satiné / soie, Brillant et Phosphorescent, avec l'option « Dans le noir ».
+- Ambiance : ombre au sol, intensité et douceur de l'ombre, direction et hauteur de la lumière.
+- Caméra : vues prédéfinies et caméras enregistrées pour chaque pièce (ajouter, mettre à jour, renommer, retirer), verrouillage de la caméra, format et « Recentrer ».
+
 ### Rendu produit en direct
 - La caméra se déplace à la souris directement dans l'image : glisser pour tourner, clic droit pour déplacer, molette pour zoomer, plus des vues Trois-quarts, Face, Côté, Dessus et Arrière. Le cadrage du rendu est exactement celui de l'écran.
 - Aperçu en direct avec le moteur temps réel de Blender (EEVEE) : environ 0,1 s par image sur la carte graphique, mis à jour pendant le mouvement. Le rendu HD reste en Cycles sur la carte graphique (environ 20 s pour 2048 px) ; Blender reste ouvert entre deux rendus et se ferme après 3 minutes d'inactivité.

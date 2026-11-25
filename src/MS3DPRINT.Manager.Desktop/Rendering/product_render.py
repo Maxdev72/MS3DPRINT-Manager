@@ -83,7 +83,8 @@ def render(settings):
         bpy.ops.object.shade_flat()
 
     # --- filament: principled shader, optional layer lines from the object height
-    finish = {"matte": (0.62, 0.0, 0.0), "silk": (0.3, 0.45, 0.0), "glossy": (0.12, 0.0, 0.35)}[settings["finish"]]
+    finish = {"matte": (0.62, 0.0, 0.0), "silk": (0.3, 0.45, 0.0), "glossy": (0.12, 0.0, 0.35), "glow": (0.5, 0.0, 0.0)}[settings["finish"]]
+    glow_dark = settings["finish"] == "glow" and settings.get("glowDark", False)
     material = bpy.data.materials.new("Filament")
     material.use_nodes = True
     nodes, links = material.node_tree.nodes, material.node_tree.links
@@ -92,6 +93,11 @@ def render(settings):
     set_input(bsdf, "Roughness", finish[0])
     set_input(bsdf, "Metallic", finish[1])
     set_input(bsdf, "Coat Weight", finish[2])
+    if settings["finish"] == "glow":
+        # Glow in the dark: a faint glow in the light, a strong one with the lights off.
+        set_input(bsdf, "Emission Color", linear(settings["color"]))
+        set_input(bsdf, "Emission Strength", 1.6 if glow_dark else 0.25)
+    part.visible_shadow = settings.get("shadow", True)
     layer = settings["layerHeight"]
     if layer > 0:
         coords = nodes.new("ShaderNodeTexCoord")
@@ -138,10 +144,22 @@ def render(settings):
     backdrop.hide_render = eevee and floor_only
 
     # --- lights: soft key, fill and rim, brighter rim on the dark set; or the environment alone
+    # Shadow strength: the fill and ambient light that lighten the shadows; softness: the size of the lights;
+    # direction: the three lights turn together about the part, the key light at the chosen height.
+    strength = settings.get("shadowStrength", 0.3)
+    softness = 0.25 + 1.5 * settings.get("shadowSoftness", 0.5)
+    turn = math.radians(settings.get("lightAngle", 0))
+    lift = math.radians(settings.get("lightHeight", 39))
+    ambient = (1.4 - strength) / 1.1
+
+    def place(x, y, z):
+        return (x * math.cos(turn) - y * math.sin(turn), x * math.sin(turn) + y * math.cos(turn), z)
+
     def area(name, location, power, size_m, color="#FFFFFF"):
         light = bpy.data.lights.new(name, "AREA")
         light.energy = power
-        light.size = size_m
+        light.size = size_m * softness
+        location = place(*location)
         light.color = linear(color)[:3]
         holder = bpy.data.objects.new(name, light)
         holder.location = location
@@ -163,12 +181,17 @@ def render(settings):
         world.node_tree.links.new(mapping.outputs["Vector"], texture.inputs["Vector"])
         world.node_tree.links.new(texture.outputs["Color"], background.inputs["Color"])
         set_input(background, "Strength", 1.6)
+    elif glow_dark:
+        set_input(background, "Color", linear("#0A0D14"))
+        set_input(background, "Strength", 0.02)
     else:
-        area("Key", (-2.2, -2.4, 2.6), 190 if not dark else 180, 2.5, "#FFF4E8")
-        area("Fill", (2.6, -1.8, 1.2), 110 if not dark else 35, 3.0, "#EAF2FF")
+        key_azimuth = math.atan2(-2.4, -2.2)
+        area("Key", (4.17 * math.cos(lift) * math.cos(key_azimuth), 4.17 * math.cos(lift) * math.sin(key_azimuth), 4.17 * math.sin(lift)),
+             190 if not dark else 180, 2.5, "#FFF4E8")
+        area("Fill", (2.6, -1.8, 1.2), (110 if not dark else 35) * ambient, 3.0, "#EAF2FF")
         area("Rim", (0.6, 2.4, 2.8), 160 if not dark else 320, 1.5)
         set_input(background, "Color", linear("#FFFFFF" if not dark else "#5A6270"))
-        set_input(background, "Strength", 0.25 if not dark else 0.08)
+        set_input(background, "Strength", (0.25 if not dark else 0.08) * ambient)
 
     # --- camera: the one of the 3D view when given (model millimetres), else a front view framing the part
     width, height = settings["width"], settings["height"]

@@ -21,7 +21,7 @@ public sealed partial class EstimateUiTests
             var panel = owner.FindControl<Border>("RenderWorkspacePanel")!;
             Assert.True(panel.IsVisible);
             var studio = Assert.IsType<RenderStudioView>(panel.Child);
-            Assert.Contains(studio.GetVisualDescendants().OfType<Button>(), b => AutomationProperties.GetName(b) == "Couleur Rouge");
+            Assert.Contains(Avalonia.LogicalTree.LogicalExtensions.GetLogicalDescendants(studio).OfType<Button>(), b => AutomationProperties.GetName(b) == "Couleur Rouge mat");
             if (BlenderLocator.Detect() is null) return;
 
             Vector3[] corners = [new(0, 0, 0), new(30, 0, 0), new(30, 30, 0), new(0, 30, 0), new(0, 0, 30), new(30, 0, 30), new(30, 30, 30), new(0, 30, 30)];
@@ -35,6 +35,14 @@ public sealed partial class EstimateUiTests
             Assert.True(Get<Image>("_image").Source is not null, Get<TextBlock>("_status").Text);
             Assert.StartsWith("Aperçu en direct", Get<TextBlock>("_status").Text);
             CaptureDraftUi(owner, "render-page");
+            foreach (var (tab, name) in new[] { (0, "piece"), (1, "matiere"), (2, "ambiance"), (3, "camera") })
+            {
+                typeof(RenderStudioView).GetMethod("ShowTab", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(studio, [tab]);
+                Get<OrientationGizmo>("_gizmo").IsVisible = tab == 0;
+                await Task.Delay(50);
+                CaptureDraftUi(owner, "render-tab-" + name);
+            }
+            Get<OrientationGizmo>("_gizmo").IsVisible = false;
 
             // A moved camera (turn, height, zoom, pan) is rendered by Blender with the same framing as the live 3D view.
             var viewport = Get<IMeshViewport>("_viewport");

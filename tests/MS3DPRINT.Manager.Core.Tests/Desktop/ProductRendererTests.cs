@@ -110,6 +110,31 @@ public sealed class ProductRendererTests : IDisposable
     }
 
     [Fact]
+    public void Palettes_are_bundled_with_their_finish()
+    {
+        Assert.Equal(["Mat", "Brillant", "Soie", "Phosphorescent"], RenderPalettes.All.Select(g => g.Name));
+        Assert.Equal(30, RenderPalettes.All.Sum(g => g.Colors.Count));
+        Assert.All(RenderPalettes.All, g => Assert.All(g.Colors, c => Assert.Equal(g.Finish, c.Finish)));
+        Assert.Contains(RenderPalettes.All.SelectMany(g => g.Colors), c => c.Label == "Rouge mat" && c.Hex == "#DE4343");
+    }
+
+    [Fact]
+    public void A_plate_drawn_standing_is_laid_on_its_largest_face_and_a_flat_one_is_left_alone()
+    {
+        static MeshModel Box(float x, float y, float z)
+        {
+            Vector3[] corners = [new(0, 0, 0), new(x, 0, 0), new(x, y, 0), new(0, y, 0), new(0, 0, z), new(x, 0, z), new(x, y, z), new(0, y, z)];
+            return new MeshModel(corners, [0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7, 0, 1, 5, 0, 5, 4, 2, 3, 7, 2, 7, 6, 0, 4, 7, 0, 7, 3, 1, 2, 6, 1, 6, 5]);
+        }
+        var standing = Box(40, 2, 60);
+
+        var laid = ProductRenderer.Turned(standing, RenderOrientation.AutoStraighten(standing));
+
+        Assert.Equal(2, laid.Size.Z, 2);
+        Assert.True(RenderOrientation.AutoStraighten(Box(40, 60, 2)).IsIdentity);
+    }
+
+    [Fact]
     public void Camera_orbit_turns_the_part_and_keeps_height_zoom_and_pan()
     {
         var mesh = new MeshModel([new(0, 0, 0), new(20, 0, 0), new(0, 20, 0), new(0, 0, 20)], [0, 1, 2, 0, 1, 3]);

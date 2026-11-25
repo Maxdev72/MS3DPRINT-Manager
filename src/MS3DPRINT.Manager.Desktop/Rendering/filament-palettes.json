@@ -1,0 +1,20 @@
+{
+  "source": "Palettes fournies par l’utilisateur (gammes Bambu Lab) ; noms descriptifs et codes hexadécimaux estimés depuis des captures.",
+  "groupes": [
+    { "nom": "Mat", "finition": "matte", "couleurs": [
+      { "nom": "Blanc mat", "hex": "#FFFFFF" }, { "nom": "Noir mat", "hex": "#000000" }, { "nom": "Gris clair mat", "hex": "#9B9EA0" },
+      { "nom": "Beige sable mat", "hex": "#E8DBB7" }, { "nom": "Terracotta mat", "hex": "#B15533" }, { "nom": "Brun chocolat mat", "hex": "#4D3324" },
+      { "nom": "Vert olive mat", "hex": "#68724D" }, { "nom": "Bleu marine mat", "hex": "#042F56" }, { "nom": "Bleu ciel mat", "hex": "#56B7E6" },
+      { "nom": "Rose pastel mat", "hex": "#E8AFCF" }, { "nom": "Rouge mat", "hex": "#DE4343" }, { "nom": "Jaune soleil mat", "hex": "#F7D959" } ] },
+    { "nom": "Brillant", "finition": "glossy", "couleurs": [
+      { "nom": "Blanc brillant", "hex": "#FFFFFF" }, { "nom": "Noir brillant", "hex": "#000000" }, { "nom": "Beige rosé brillant", "hex": "#F7E6DE" },
+      { "nom": "Rouge vermillon brillant", "hex": "#C12E1F" }, { "nom": "Bleu royal brillant", "hex": "#0055B8" }, { "nom": "Vert forêt brillant", "hex": "#3F8E43" },
+      { "nom": "Jaune or brillant", "hex": "#FEC601" }, { "nom": "Orange vif brillant", "hex": "#FF6A13" }, { "nom": "Rose magenta brillant", "hex": "#EC008C" },
+      { "nom": "Violet brillant", "hex": "#5E43B7" } ] },
+    { "nom": "Soie", "finition": "silk", "couleurs": [
+      { "nom": "Gris argent soie", "hex": "#C8C8C8" }, { "nom": "Jaune or soie", "hex": "#F4A925" }, { "nom": "Bleu azur soie", "hex": "#008BDA" },
+      { "nom": "Rose poudré soie", "hex": "#BA9594" }, { "nom": "Rouge soie", "hex": "#D02727" }, { "nom": "Vert menthe soie", "hex": "#96DCB9" } ] },
+    { "nom": "Phosphorescent", "finition": "glow", "couleurs": [
+      { "nom": "Vert phosphorescent", "hex": "#A1FFAC" }, { "nom": "Bleu phosphorescent", "hex": "#7AC0E9" } ] }
+  ]
+}
