@@ -73,3 +73,18 @@ Mesuré : réduction des rebonds (5 %) et réutilisation de la scène non retenu
     métadonnées retirées. Avertir si fond transparent + JPEG.
 14. **Notification « Image enregistrée »** (`SaveViewerCapture` dans `MainWindow.Viewer.cs`) : bouton
     « Ouvrir le dossier » (Explorateur avec le fichier sélectionné) et nom du fichier seul.
+
+## Livraison 4 — Peinture par face et pause (1.0.31) — FAITE
+
+15. **Peinture par face (onglet Matière)** : mode « Peindre » ; clic = élément entier (zones reliées
+    à la face cliquée jusqu'à l'arête vive qui les relie au corps de la pièce, ex. un pied entier) ;
+    Alt + clic = seulement la face cliquée et ses voisines lisses (angle réglable) ; Maj + clic = ajouter
+    une zone à la même couleur. Plusieurs couleurs, chacune avec sa finition ; liste « Zones peintes »
+    (retrait avec confirmation, « Tout effacer »). Mémorisé par pièce. Rendu : attribut par triangle
+    (index de matière) écrit avec le STL ou un fichier à côté, matériaux multiples dans `product_render.py` ;
+    aperçu direct, final et séries. Le changement de couleur à une hauteur reste disponible.
+16. **Pause de l'aperçu façon KeyShot** : bouton Pause / Lecture sur l'image (barre en surimpression),
+    touche Espace. En pause : aperçu et affinage arrêtés, dernière image affichée avec badge « Pause »,
+    réglages et cadrage toujours modifiables (vue 3D simple), moteurs gardés chargés pour une reprise
+    immédiate ; rendu final et séries toujours possibles ; pause retenue. Les moteurs se ferment en
+    quittant la page (au lieu de 3 min d'inactivité).

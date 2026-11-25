@@ -11,6 +11,11 @@
 - Éclairage revu : les filaments blancs et noirs restent lisibles sur le studio clair.
 - Ambiance « Environnement (HDRI) » comme dans les logiciels de rendu : la pièce est éclairée par une image à 360° qui apparaît derrière elle, avec son ombre au sol. Les huit environnements fournis avec Blender sont proposés ; ajoutez vos propres images HDR ou EXR (Poly Haven par exemple) et tournez l'environnement pour choisir l'arrière-plan.
 
+### Rendu produit : peinture par zones et pause
+- Peinture sur la pièce (onglet Matière) : un clic colore tout l'élément (un pied, un bouton, un logo en relief), Alt + clic seulement la face, Ctrl + clic efface ; plusieurs couleurs, chacune avec sa finition ; zones retirables, mémorisées pour chaque pièce et conservées dans les séries de couleurs.
+- Pause de l'aperçu comme dans KeyShot : bouton sur l'image ou touche Espace ; réglages et cadrage restent modifiables, rien n'est calculé jusqu'à la reprise, le rendu final reste disponible.
+- Les moteurs de rendu se ferment en quittant la page Rendu produit et redémarrent au retour.
+
 ### Rendu produit : qualité, séries et fichiers de sortie
 - Nouvel onglet Rendu : qualité Rapide (EEVEE, environ 1 s), Standard (Cycles 1024 px, environ 2 s), HD (2048 px, environ 11 s) ou Très haute (4096 px), calcul sur la carte graphique (nom affiché) ou sur le processeur.
 - Avancement en pourcentage avec le temps restant, pour un rendu comme pour une série.

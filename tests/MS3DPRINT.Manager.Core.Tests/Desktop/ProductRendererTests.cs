@@ -191,6 +191,45 @@ public sealed class ProductRendererTests : IDisposable
         Assert.Equal(60, standing.Size.Z, 1);
     }
 
+    /// <summary>A body with a foot under it, as an extruded profile (sides only): 8 edges of the profile, 2 triangles each.</summary>
+    private static MeshModel BodyWithFoot()
+    {
+        (float X, float Z)[] profile = [(0, 4), (5, 4), (5, 0), (10, 0), (10, 4), (40, 4), (40, 20), (0, 20)];
+        var positions = new List<Vector3>();
+        var indices = new List<int>();
+        for (var i = 0; i < profile.Length; i++)
+        {
+            var (a, b) = (profile[i], profile[(i + 1) % profile.Length]);
+            var start = positions.Count;
+            positions.AddRange([new(a.X, 0, a.Z), new(b.X, 0, b.Z), new(a.X, 10, a.Z), new(b.X, 10, b.Z)]);
+            indices.AddRange([start, start + 3, start + 1, start, start + 2, start + 3]); // outward normals
+        }
+        return new MeshModel([.. positions], [.. indices]);
+    }
+
+    [Fact]
+    public void A_click_paints_the_whole_foot_alt_click_only_its_face_and_the_body_stops_at_the_foot()
+    {
+        var mesh = BodyWithFoot();
+        Assert.True(mesh.Normals[4].Z < -0.9f, "le dessous du pied doit regarder vers le bas");
+        var selector = new PaintSelector(mesh);
+
+        Assert.Equal([2, 3, 4, 5, 6, 7], selector.Select(4, wholeElement: true, 30).Order());
+        Assert.Equal([4, 5], selector.Select(4, wholeElement: false, 30).Order());
+        Assert.Equal([0, 1, 8, 9, 10, 11, 12, 13, 14, 15], selector.Select(12, wholeElement: true, 30).Order());
+    }
+
+    [Fact]
+    public void Painted_zones_are_written_as_their_own_files_and_the_body_keeps_the_rest()
+    {
+        var mesh = BodyWithFoot();
+        var (body, zones) = PaintParts.Write(mesh, [new PaintZone("Noir mat", "#000000", "matte", [2, 3, 4, 5, 6, 7]), new PaintZone("Vide", "#FFFFFF", "matte", [])], _directory, "part");
+
+        Assert.Equal(10, MeshLoader.Load(body).TriangleCount);
+        var zone = Assert.Single(zones);
+        Assert.Equal(6, MeshLoader.Load(zone.File).TriangleCount);
+    }
+
     [Fact]
     public void Camera_orbit_turns_the_part_and_keeps_height_zoom_and_pan()
     {

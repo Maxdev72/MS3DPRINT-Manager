@@ -51,6 +51,8 @@ public partial class MainWindow
         PurchasesWorkspacePanel.IsVisible = destination == "Achats";
         ModelSearchWorkspacePanel.IsVisible = destination == "Modèles 3D";
         RenderWorkspacePanel.IsVisible = destination == "Rendu produit";
+        // Leaving the render page closes its Blenders (memory and graphics card back at once).
+        if (destination != "Rendu produit" && RenderWorkspacePanel.Child is MS3DPRINT.Manager.Desktop.Rendering.RenderStudioView studio) studio.Suspend();
         DocumentsWorkspacePanel.IsVisible = destination == "Documents";
         TrashWorkspacePanel.IsVisible = destination == "Corbeille";
         SettingsWorkspacePanel.IsVisible = destination == "Paramètres";

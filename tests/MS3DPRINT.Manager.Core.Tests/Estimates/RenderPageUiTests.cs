@@ -68,6 +68,27 @@ public sealed partial class EstimateUiTests
             Assert.StartsWith("Aperçu affiné", Get<TextBlock>("_status").Text);
             CaptureDraftUi(owner, "render-page-environment");
 
+            // The top of the cube painted black: rendered as a part of its own.
+            Get<ComboBox>("_scene").SelectedIndex = 0;
+            typeof(RenderStudioView).GetField("_zones", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+                .SetValue(studio, new List<PaintZone> { new("Noir brillant", "#000000", "glossy", [2, 3]) });
+            await (Task)typeof(RenderStudioView).GetMethod("ZonesChangedAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(studio, null)!;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Single(Get<System.Collections.IList>("_zoneFiles"));
+            Assert.StartsWith("Aperçu affiné", Get<TextBlock>("_status").Text);
+            CaptureDraftUi(owner, "render-paint");
+
+            // Pause: nothing is rendered until the preview resumes.
+            var setPaused = typeof(RenderStudioView).GetMethod("SetPaused", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+            setPaused.Invoke(studio, [true]);
+            var shownBefore = Get<string>("_shown");
+            typeof(RenderStudioView).GetMethod("SettingsChanged", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(studio, null);
+            await Task.Delay(300);
+            Assert.Equal(shownBefore, Get<string>("_shown"));
+            Assert.StartsWith("Aperçu en pause", Get<TextBlock>("_status").Text);
+            setPaused.Invoke(studio, [false]);
+            await (Task)typeof(RenderStudioView).GetMethod("RunPreviewsAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(studio, null)!;
+
             // A series: one view in two colours, as JPEG, with a contact sheet.
             Get<ComboBox>("_scene").SelectedIndex = 0;
             Get<ComboBox>("_quality").SelectedIndex = 0;

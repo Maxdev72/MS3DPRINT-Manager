@@ -42,6 +42,9 @@ public sealed record RenderPreferences
     public bool MaxCompression { get; init; } = true;
     public int MaxSide { get; init; }
     public bool ContactSheet { get; init; }
+    public bool Paused { get; init; }
+    /// <summary>Painted zones of each part (by file path).</summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<PaintZone>> Paints { get; init; } = new Dictionary<string, IReadOnlyList<PaintZone>>();
     /// <summary>Orientation of each part (by file path) as a quaternion X, Y, Z, W.</summary>
     public IReadOnlyDictionary<string, float[]> Orientations { get; init; } = new Dictionary<string, float[]>();
     /// <summary>Cameras saved for each part (by file path).</summary>

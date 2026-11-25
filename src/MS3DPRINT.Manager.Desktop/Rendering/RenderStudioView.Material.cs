@@ -47,7 +47,7 @@ public sealed partial class RenderStudioView
                 FormKit.Field("Couleur", colorRow, hint: "Nuancier ou code #RRGGBB ; + l’ajoute à vos couleurs. Survolez une pastille : × la retire."),
                 _colorGroups, _restoreColors,
                 FormKit.Field("Finition", _finish), _glowDark, FormKit.Field("Lignes de couche", _layer),
-                FormKit.SectionLabel("Changement de couleur"), _bandOn, _bandFields
+                FormKit.SectionLabel("Changement de couleur"), _bandOn, _bandFields, BuildPaintSection()
             }
         };
     }
@@ -137,6 +137,7 @@ public sealed partial class RenderStudioView
         AutomationProperties.SetName(swatch, "Couleur " + color.Label);
         swatch.Click += (_, _) =>
         {
+            if (_paintMode.IsChecked == true) { SetBrush(color); return; }
             _finish.SelectedIndex = Math.Max(0, Array.FindIndex(Finishes, f => f.Key == color.Finish));
             SetColor(color.Hex);
         };

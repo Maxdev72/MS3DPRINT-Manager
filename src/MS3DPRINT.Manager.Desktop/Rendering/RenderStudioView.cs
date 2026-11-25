@@ -212,6 +212,8 @@ public sealed partial class RenderStudioView : UserControl
         InitializeMaterial();
         InitializePart();
         InitializeOutput();
+        InitializePaint();
+        InitializePause();
     }
 
     private Control BuildAmbianceTab() => new StackPanel
@@ -305,6 +307,7 @@ public sealed partial class RenderStudioView : UserControl
             if (_savedEnvironment is { } saved && File.Exists(saved)) SelectEnvironment(saved);
             ShowEmptyState();
         }
+        ResumeEngines();
         try { _workshopColors = await Task.Run(_loadColors); }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException) { _workshopColors = []; }
         RebuildSwatches();
@@ -327,6 +330,8 @@ public sealed partial class RenderStudioView : UserControl
     {
         _gizmo.InvalidateVisual();
         if (_mesh is null) return;
+        // Paused: the last image would hide the new framing, so the simple 3D view shows through until the preview resumes.
+        if (_paused) _image.Opacity = 0;
         // The studio has a floor: the camera stops at its level, in the 3D view as in the render.
         if (_viewport.Camera.Pitch < 0) { _viewport.Camera.Pitch = 0; _viewport.RequestRender(true); }
         MarkCamera();
@@ -337,6 +342,8 @@ public sealed partial class RenderStudioView : UserControl
     {
         if (_stlPath is null || _live is null) return;
         _generation++;
+        // Paused like KeyShot: nothing is computed, the changes are rendered when the preview resumes.
+        if (_paused) { _refineCancel?.Cancel(); return; }
         // The HD render has the graphics card to itself: changes wait for it to end.
         if (_finalRender is not null) return;
         _refineCancel?.Cancel();
@@ -351,7 +358,7 @@ public sealed partial class RenderStudioView : UserControl
     /// samples, denoised on the graphics card), each image replacing the previous one. A change stops the refining Blender at once
     /// (it restarts in the background) so the live images never wait behind it.
     /// </summary>
-    private Task RunPreviewsAsync() => _previews = _previews.IsCompleted ? PreviewLoopAsync() : _previews;
+    private Task RunPreviewsAsync() => _paused ? Task.CompletedTask : _previews = _previews.IsCompleted ? PreviewLoopAsync() : _previews;
 
     private async Task PreviewLoopAsync()
     {
@@ -380,7 +387,7 @@ public sealed partial class RenderStudioView : UserControl
             if (generation != _generation) continue;
             SavePreferences();
             var seconds = watch.Elapsed.TotalSeconds.ToString("0.0", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
-            ShowStatus($"Aperçu affiné en {seconds} s. Bougez la caméra dans l’image ; le rendu HD donne l’image finale en grand.");
+            ShowStatus($"Aperçu affiné en {seconds} s. Bougez la caméra dans l’image ; « Rendu final » donne l’image en grand.");
             return;
         }
     }
@@ -470,6 +477,7 @@ public sealed partial class RenderStudioView : UserControl
         using (var stream = File.OpenRead(output)) bitmap = new Bitmap(stream);
         (_image.Source as IDisposable)?.Dispose();
         _image.Source = bitmap;
+        _image.Opacity = 1;
         if (_shown is { } previous && previous != output) TryDelete(previous);
         if (_shownTiff is { } tiff) TryDelete(tiff);
         _shownTiff = null;
@@ -522,7 +530,7 @@ public sealed partial class RenderStudioView : UserControl
             rotation, 0, width, height, samples, environment, _environmentRotation.Value, camera, engine,
             _shadow.IsChecked == true, _shadowStrength.Value, _shadowSoftness.Value, _lightAngle.Value, _lightHeight.Value, _glowDark.IsChecked == true,
             _bandOn.IsChecked == true && PreviewColorParser.TryParse(BandHex, out _) ? BandHex : null, _bandHeight.Value,
-            Devices[Math.Max(0, _device.SelectedIndex)].Key, tiff);
+            Devices[Math.Max(0, _device.SelectedIndex)].Key, tiff, _zoneFiles.Select(z => new RenderZone(z.File, z.Zone.Hex, z.Zone.Finish)).ToList());
     }
 
     private void ShowSceneFields()
@@ -574,7 +582,7 @@ public sealed partial class RenderStudioView : UserControl
             LightAngle = _lightAngle.Value, LightHeight = _lightHeight.Value, GlowDark = _glowDark.IsChecked == true, Orientations = orientations,
             BandOn = _bandOn.IsChecked == true, BandHex = BandHex, BandHeight = _bandHeight.Value,
             Quality = Math.Max(0, _quality.SelectedIndex), Device = Devices[Math.Max(0, _device.SelectedIndex)].Key, OutputFormat = CurrentOutput.Format,
-            OutputQuality = _outputQuality.Value, MaxCompression = _maxCompression.IsChecked == true, MaxSide = CurrentOutput.MaxSide, ContactSheet = _contactSheet.IsChecked == true
+            Paused = _paused, OutputQuality = _outputQuality.Value, MaxCompression = _maxCompression.IsChecked == true, MaxSide = CurrentOutput.MaxSide, ContactSheet = _contactSheet.IsChecked == true
         };
         _store.Save(_saved);
     }

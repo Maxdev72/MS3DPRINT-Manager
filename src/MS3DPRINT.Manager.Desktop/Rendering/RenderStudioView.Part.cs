@@ -81,6 +81,9 @@ public sealed partial class RenderStudioView
         var camera = _viewport.Camera;
         (camera.Yaw, camera.Pitch, camera.Zoom, camera.PanX, camera.PanY) = (_saved.Yaw, _saved.Pitch, _saved.Zoom, 0, 0);
         RebuildCameras();
+        _selector = null;
+        _zones = _saved.Paints.TryGetValue(path, out var paints) ? [.. paints] : [];
+        RebuildZoneList();
         if (_saved.Orientations.TryGetValue(path, out var known) && known.Length == 4)
         {
             _turn = new Quaternion(known[0], known[1], known[2], known[3]);
@@ -104,6 +107,7 @@ public sealed partial class RenderStudioView
     /// <summary>A click on the part while « Poser sur une face » is on: that face goes down on the floor.</summary>
     private async void FaceClicked(Point point)
     {
+        if (_paintMode.IsChecked == true) { await PaintAtAsync(point); return; }
         if (_faceMode.IsChecked != true || _mesh is not { } mesh) return;
         var size = _viewport.Visual.Bounds.Size;
         var (origin, direction) = ViewMath.Ray(mesh, _viewport.Camera, size.Width, size.Height, point.X, point.Y);
@@ -117,17 +121,29 @@ public sealed partial class RenderStudioView
     private async Task UseOrientationAsync()
     {
         if (_loaded is not { } loaded) return;
-        var stl = Path.Combine(_work, $"model-{++_counter}.stl");
+        var stem = $"model-{++_counter}";
         var turn = _turn;
-        MeshModel mesh;
-        try { mesh = await Task.Run(() => ProductRenderer.PrepareModel(loaded, turn, stl)); }
+        var zones = _zones.ToList();
+        (MeshModel Mesh, string Body, List<(PaintZone Zone, string File)> Zones) prepared;
+        try
+        {
+            prepared = await Task.Run(() =>
+            {
+                var turned = ProductRenderer.Turned(loaded, turn);
+                var (body, files) = PaintParts.Write(turned, zones, _work, stem);
+                return (turned, body, files);
+            });
+        }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             ShowStatus("Impossible de préparer le modèle : " + exception.Message);
             return;
         }
         if (_stlPath is { } previous) TryDelete(previous);
-        _stlPath = stl;
+        foreach (var (_, file) in _zoneFiles) TryDelete(file);
+        _stlPath = prepared.Body;
+        _zoneFiles = prepared.Zones;
+        var mesh = prepared.Mesh;
         _mesh = mesh;
         _gizmo.Mesh = mesh;
         _bandHeight.Maximum = Math.Max(0.2, Math.Round(mesh.Size.Z, 1));

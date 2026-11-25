@@ -19,35 +19,35 @@ def set_input(node, name, value):
         socket.default_value = value
 
 
-# The imported part is kept between renders: only a new model is imported again.
-cache = {"model": None, "mesh": None, "bottom": None, "fit": 1.0}
+# Imported parts are kept between renders (by file): only new files are imported again. Painted zones come as extra
+# files of the same part, each with its own colour and finish.
+cache = {}
 
 
-def load_part(path):
-    if cache["model"] != path:
-        if cache["mesh"] is not None:
-            bpy.data.meshes.remove(cache["mesh"])
-        bpy.ops.wm.stl_import(filepath=path)
-        imported = bpy.context.view_layer.objects.active
-        mesh = imported.data
-        corners = [Vector(c) for c in imported.bound_box]
-        low = Vector(map(min, *corners))
-        high = Vector(map(max, *corners))
-        bpy.data.objects.remove(imported)
-        cache.update(model=path, mesh=mesh, bottom=Vector(((low.x + high.x) / 2, (low.y + high.y) / 2, low.z)), fit=1 / max(high - low))
-        # Bottom centre at the origin; object space stays in millimetres for the layer lines.
-        mesh.transform(Matrix.Translation(-cache["bottom"]))
-    part = bpy.data.objects.new("Part", cache["mesh"])
-    bpy.context.scene.collection.objects.link(part)
-    return part
+def load_parts(paths):
+    for path in list(cache):
+        if path not in paths:
+            bpy.data.meshes.remove(cache.pop(path)[0])
+    for path in paths:
+        if path not in cache:
+            bpy.ops.wm.stl_import(filepath=path)
+            imported = bpy.context.view_layer.objects.active
+            corners = [Vector(c) for c in imported.bound_box]
+            cache[path] = (imported.data, Vector(map(min, *corners)), Vector(map(max, *corners)))
+            bpy.data.objects.remove(imported)
+    lows = [cache[p][1] for p in paths]
+    highs = [cache[p][2] for p in paths]
+    return (Vector((min(v.x for v in lows), min(v.y for v in lows), min(v.z for v in lows))),
+            Vector((max(v.x for v in highs), max(v.y for v in highs), max(v.z for v in highs))))
 
 
 def clear_scene():
+    kept = {entry[0] for entry in cache.values()}
     for thing in list(bpy.data.objects):
         bpy.data.objects.remove(thing)
     for collection in (bpy.data.meshes, bpy.data.materials, bpy.data.lights, bpy.data.cameras, bpy.data.worlds):
         for block in list(collection):
-            if block is not cache["mesh"] and block.users == 0:
+            if block not in kept and block.users == 0:
                 collection.remove(block)
 
 
@@ -93,70 +93,88 @@ def render(settings):
     scene = bpy.context.scene
     clear_scene()
 
-    # --- the part: largest side 1 unit, turned on the turntable
-    part = load_part(settings["model"])
-    fit = cache["fit"]
-    part.scale = (fit, fit, fit)
-    part.rotation_euler = (0, 0, math.radians(settings["rotation"]))
-    bpy.context.view_layer.objects.active = part
-    part.select_set(True)
+    # --- the part (and its painted zones): bottom centre on the turntable, largest side 1 unit; object space stays in
+    # millimetres for the layer lines
+    parts = [(settings["model"], settings["color"], settings["finish"], True)]
+    parts += [(zone["model"], zone["color"], zone["finish"], False) for zone in settings.get("zones") or []]
+    low, high = load_parts([part[0] for part in parts])
+    bottom = Vector(((low.x + high.x) / 2, (low.y + high.y) / 2, low.z))
+    fit = 1 / max(high - low)
+    turntable = bpy.data.objects.new("Turntable", None)
+    scene.collection.objects.link(turntable)
+    turntable.scale = (fit, fit, fit)
+    turntable.rotation_euler = (0, 0, math.radians(settings["rotation"]))
+    glow_dark = settings.get("glowDark", False) and any(part[2] == "glow" for part in parts)
+    finishes = {"matte": (0.62, 0.0, 0.0), "silk": (0.3, 0.45, 0.0), "glossy": (0.12, 0.0, 0.35), "glow": (0.5, 0.0, 0.0)}
+
+    def filament(color, finish_key, base):
+        finish = finishes[finish_key]
+        material = bpy.data.materials.new("Filament")
+        material.use_nodes = True
+        nodes, links = material.node_tree.nodes, material.node_tree.links
+        bsdf = nodes["Principled BSDF"]
+        set_input(bsdf, "Base Color", linear(color))
+        set_input(bsdf, "Roughness", finish[0])
+        set_input(bsdf, "Metallic", finish[1])
+        set_input(bsdf, "Coat Weight", finish[2])
+        band = settings.get("bandColor") if base else None
+        if band:
+            # Colour change at a height, like a filament change at a layer: below it (millimetres from the bottom of the
+            # part) the second colour.
+            band_coords = nodes.new("ShaderNodeTexCoord")
+            band_split = nodes.new("ShaderNodeSeparateXYZ")
+            below = nodes.new("ShaderNodeMath")
+            below.operation = "LESS_THAN"
+            below.inputs[1].default_value = bottom.z + settings.get("bandHeight", 0)
+            mix = nodes.new("ShaderNodeMix")
+            mix.data_type = "RGBA"
+            mix.inputs[6].default_value = linear(color)
+            mix.inputs[7].default_value = linear(band)
+            links.new(band_coords.outputs["Object"], band_split.inputs[0])
+            links.new(band_split.outputs["Z"], below.inputs[0])
+            links.new(below.outputs[0], mix.inputs[0])
+            links.new(mix.outputs[2], bsdf.inputs["Base Color"])
+        if finish_key == "glow":
+            # Glow in the dark: a faint glow in the light, a strong one with the lights off.
+            set_input(bsdf, "Emission Color", linear(color))
+            set_input(bsdf, "Emission Strength", 1.6 if glow_dark else 0.25)
+        layer = settings["layerHeight"]
+        if layer > 0:
+            coords = nodes.new("ShaderNodeTexCoord")
+            split = nodes.new("ShaderNodeSeparateXYZ")
+            wave = nodes.new("ShaderNodeMath")
+            wave.operation = "MULTIPLY"
+            wave.inputs[1].default_value = 2 * math.pi / layer
+            sine = nodes.new("ShaderNodeMath")
+            sine.operation = "SINE"
+            bump = nodes.new("ShaderNodeBump")
+            bump.inputs["Strength"].default_value = 0.6
+            set_input(bump, "Distance", layer * fit * 0.25)
+            links.new(coords.outputs["Object"], split.inputs[0])
+            links.new(split.outputs["Z"], wave.inputs[0])
+            links.new(wave.outputs[0], sine.inputs[0])
+            links.new(sine.outputs[0], bump.inputs["Height"])
+            links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
+        return material
+
+    shown = []
+    for path, color, finish_key, base in parts:
+        mesh = cache[path][0]
+        piece = bpy.data.objects.new("Part", mesh)
+        scene.collection.objects.link(piece)
+        piece.parent = turntable
+        piece.location = -bottom
+        piece.visible_shadow = settings.get("shadow", True)
+        mesh.materials.clear()
+        mesh.materials.append(filament(color, finish_key, base))
+        shown.append(piece)
+    for piece in shown:
+        piece.select_set(True)
+    bpy.context.view_layer.objects.active = shown[0]
     try:
         bpy.ops.object.shade_smooth_by_angle(angle=math.radians(35))
     except (AttributeError, RuntimeError):
         bpy.ops.object.shade_flat()
-
-    # --- filament: principled shader, optional layer lines from the object height
-    finish = {"matte": (0.62, 0.0, 0.0), "silk": (0.3, 0.45, 0.0), "glossy": (0.12, 0.0, 0.35), "glow": (0.5, 0.0, 0.0)}[settings["finish"]]
-    glow_dark = settings["finish"] == "glow" and settings.get("glowDark", False)
-    material = bpy.data.materials.new("Filament")
-    material.use_nodes = True
-    nodes, links = material.node_tree.nodes, material.node_tree.links
-    bsdf = nodes["Principled BSDF"]
-    set_input(bsdf, "Base Color", linear(settings["color"]))
-    set_input(bsdf, "Roughness", finish[0])
-    set_input(bsdf, "Metallic", finish[1])
-    set_input(bsdf, "Coat Weight", finish[2])
-    band = settings.get("bandColor")
-    if band:
-        # Colour change at a height, like a filament change at a layer: below it (object space, millimetres from the
-        # bottom of the part) the second colour.
-        band_coords = nodes.new("ShaderNodeTexCoord")
-        band_split = nodes.new("ShaderNodeSeparateXYZ")
-        below = nodes.new("ShaderNodeMath")
-        below.operation = "LESS_THAN"
-        below.inputs[1].default_value = settings.get("bandHeight", 0)
-        mix = nodes.new("ShaderNodeMix")
-        mix.data_type = "RGBA"
-        mix.inputs[6].default_value = linear(settings["color"])
-        mix.inputs[7].default_value = linear(band)
-        links.new(band_coords.outputs["Object"], band_split.inputs[0])
-        links.new(band_split.outputs["Z"], below.inputs[0])
-        links.new(below.outputs[0], mix.inputs[0])
-        links.new(mix.outputs[2], bsdf.inputs["Base Color"])
-    if settings["finish"] == "glow":
-        # Glow in the dark: a faint glow in the light, a strong one with the lights off.
-        set_input(bsdf, "Emission Color", linear(settings["color"]))
-        set_input(bsdf, "Emission Strength", 1.6 if glow_dark else 0.25)
-    part.visible_shadow = settings.get("shadow", True)
-    layer = settings["layerHeight"]
-    if layer > 0:
-        coords = nodes.new("ShaderNodeTexCoord")
-        split = nodes.new("ShaderNodeSeparateXYZ")
-        wave = nodes.new("ShaderNodeMath")
-        wave.operation = "MULTIPLY"
-        wave.inputs[1].default_value = 2 * math.pi / layer
-        sine = nodes.new("ShaderNodeMath")
-        sine.operation = "SINE"
-        bump = nodes.new("ShaderNodeBump")
-        bump.inputs["Strength"].default_value = 0.6
-        set_input(bump, "Distance", layer * fit * 0.25)
-        links.new(coords.outputs["Object"], split.inputs[0])
-        links.new(split.outputs["Z"], wave.inputs[0])
-        links.new(wave.outputs[0], sine.inputs[0])
-        links.new(sine.outputs[0], bump.inputs["Height"])
-        links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
-    part.data.materials.clear()
-    part.data.materials.append(material)
 
     # --- set: curved studio backdrop, or a shadow-catching floor for a transparent background or an environment (HDRI)
     style = settings["scene"]
@@ -241,7 +259,7 @@ def render(settings):
     scene.camera = camera
     view = settings.get("camera")
     if view:
-        to_scene = lambda p: (Vector(p) - cache["bottom"]) * fit
+        to_scene = lambda p: (Vector(p) - bottom) * fit
         camera.location = to_scene(view["location"])
         target = to_scene(view["target"])
         camera_data.sensor_fit = "VERTICAL"
@@ -251,7 +269,7 @@ def render(settings):
         distance = (target - camera.location).length
     else:
         camera_data.lens = 70
-        dims = part.dimensions
+        dims = (high - low) * fit
         target = Vector((0, 0, dims.z / 2))
         radius = 0.5 * math.sqrt(dims.x ** 2 + dims.y ** 2 + dims.z ** 2)
         half_fov = math.atan(math.tan(math.atan(18 / camera_data.lens)) * min(width, height) / max(width, height))
