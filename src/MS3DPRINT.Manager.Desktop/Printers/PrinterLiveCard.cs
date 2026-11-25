@@ -12,7 +12,11 @@ using MS3DPRINT.Manager.Core.Printers;
 
 namespace MS3DPRINT.Manager.Desktop.Printers;
 
-/// <summary>Live card of a Bambu Lab printer on the Printers page: state, progress, temperatures, AMS and camera. Read only.</summary>
+/// <summary>
+/// Live card of a Bambu Lab printer on the Surveillance page: camera, state, progress, temperatures, AMS and alerts.
+/// Read only. The status link runs for as long as the card exists (end-of-print notifications); the camera only while
+/// the page is shown.
+/// </summary>
 public sealed class PrinterLiveCard : Border, IDisposable
 {
     private readonly CancellationTokenSource _cancel = new();
@@ -20,16 +24,21 @@ public sealed class PrinterLiveCard : Border, IDisposable
     private readonly TextBlock _cameraNote = new() { Text = "Connexion à la caméra…", Foreground = Brushes.Gainsboro, TextWrapping = TextWrapping.Wrap, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Center, Margin = new(24) };
     private readonly Border _badge = new() { Classes = { "badge" }, VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock _badgeText = new() { Text = "Connexion…" };
-    private readonly Border _alerts = new() { Classes = { "badge", "danger" }, VerticalAlignment = VerticalAlignment.Center, IsVisible = false };
+    private readonly Button _alerts = new() { Padding = new(0), MinHeight = 0, MinWidth = 0, Background = Brushes.Transparent, BorderThickness = new(0), VerticalAlignment = VerticalAlignment.Center, IsVisible = false };
     private readonly TextBlock _alertsText = new();
+    private readonly StackPanel _alertsList = new() { Spacing = 12, Width = 380 };
     // Two lines reserved: the file name, or the reason the printer is unreachable.
     private readonly TextBlock _job = new() { TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis, Height = 40 };
     private readonly List<Image> _mirrors = [];
     private readonly StackPanel _progressBlock = new() { Spacing = 8 };
     private readonly Run _percent = new(), _percentUnit = new(" %") { FontSize = Ui.Text.Section };
+    private readonly TextBlock _finishLabel = new() { Text = "FIN PRÉVUE", Classes = { "overline" }, HorizontalAlignment = HorizontalAlignment.Right };
     private readonly TextBlock _finish = new() { FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Right };
     private readonly TextBlock _remaining = new() { Classes = { "caption" }, HorizontalAlignment = HorizontalAlignment.Right };
-    private readonly ProgressBar _progress = new() { Minimum = 0, Maximum = 100, Height = 6, MinHeight = 6, CornerRadius = new(Ui.Radius.Pill) };
+    private readonly Border _track = new() { Height = 12, CornerRadius = new(Ui.Radius.Pill) };
+    private readonly Border _fill = new() { HorizontalAlignment = HorizontalAlignment.Left, CornerRadius = new(Ui.Radius.Pill) };
+    private double _fraction;
+    private CancellationTokenSource? _cameraCancel;
     private readonly TextBlock _layers = new() { Classes = { "caption" } };
     private readonly Grid _temperatures = new() { ColumnDefinitions = new("*,*,*"), ColumnSpacing = 8 };
     private readonly StackPanel _amsBlock = new() { Spacing = 8 };
@@ -59,7 +68,12 @@ public sealed class PrinterLiveCard : Border, IDisposable
         Margin = new(0, 0, 16, 16);
         AutomationProperties.SetName(_camera, "Caméra de " + printer.Name);
         _badge.Child = _badgeText;
-        _alerts.Child = _alertsText;
+        _alerts.Content = new Border { Classes = { "badge", "danger" }, Child = _alertsText };
+        _alerts.Flyout = new Flyout { Content = new ScrollViewer { MaxHeight = 420, Content = _alertsList } };
+        ToolTip.SetTip(_alerts, "Lire les alertes de l’imprimante");
+        _track.Bind(BackgroundProperty, _track.GetResourceObservable("NeutralSoftBrush"));
+        _track.Child = _fill;
+        _track.SizeChanged += (_, _) => SizeFill();
         var name = new TextBlock { Text = printer.Name, Classes = { "card-title" }, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
         Grid.SetColumn(_alerts, 1);
         Grid.SetColumn(_badge, 2);
@@ -73,10 +87,11 @@ public sealed class PrinterLiveCard : Border, IDisposable
         cameraFrame.Height = 248;
         cameraFrame.DoubleTapped += (_, _) => OpenFullScreen();
         var percent = new TextBlock { FontSize = Ui.Text.Page, FontWeight = FontWeight.SemiBold, Inlines = new InlineCollection { _percent, _percentUnit } };
-        var finish = new StackPanel { VerticalAlignment = VerticalAlignment.Bottom, Children = { _finish, _remaining } };
+        percent.VerticalAlignment = VerticalAlignment.Bottom;
+        var finish = new StackPanel { VerticalAlignment = VerticalAlignment.Bottom, Children = { _finishLabel, _finish, _remaining } };
         Grid.SetColumn(finish, 1);
         _progressBlock.Children.Add(new Grid { ColumnDefinitions = new("*,Auto"), Children = { percent, finish } });
-        _progressBlock.Children.Add(_progress);
+        _progressBlock.Children.Add(_track);
         _progressBlock.Children.Add(_layers);
         _amsBlock.Children.Add(new TextBlock { Text = "AMS", Classes = { "overline" } });
         _amsBlock.Children.Add(_trays);
@@ -101,7 +116,26 @@ public sealed class PrinterLiveCard : Border, IDisposable
         if (!connect) return;
         var token = _cancel.Token;
         _ = Task.Run(() => BambuLink.WatchStatusAsync(connection, s => Dispatcher.UIThread.Post(() => Show(s)), m => Dispatcher.UIThread.Post(() => ShowOffline(m)), token));
-        StartCamera(printer.Model, token);
+    }
+
+    /// <summary>Opens or closes the camera stream; the status link is not affected.</summary>
+    public void SetCameraActive(bool active)
+    {
+        if (active == _cameraCancel is not null || (active && _cancel.IsCancellationRequested)) return;
+        if (!active)
+        {
+            _cameraCancel!.Cancel();
+            _cameraCancel = null;
+            StopVideo();
+            var last = _camera.Source;
+            _camera.Source = null;
+            if (last is Bitmap bitmap and not WriteableBitmap) bitmap.Dispose();
+            _cameraNote.Text = "Connexion à la caméra…";
+            _cameraNote.IsVisible = true;
+            return;
+        }
+        _cameraCancel = CancellationTokenSource.CreateLinkedTokenSource(_cancel.Token);
+        StartCamera(Printer.Model, _cameraCancel.Token);
     }
 
     private void StartCamera(string model, CancellationToken token)
@@ -123,7 +157,7 @@ public sealed class PrinterLiveCard : Border, IDisposable
 
     private void StartVideo()
     {
-        if (_cancel.IsCancellationRequested) return;
+        if (_cameraCancel is null) return;
         StopVideo();
         try
         {
@@ -147,7 +181,7 @@ public sealed class PrinterLiveCard : Border, IDisposable
 
     private void ShowFrame(Bitmap frame)
     {
-        if (_cancel.IsCancellationRequested) { if (frame is not WriteableBitmap) frame.Dispose(); return; }
+        if (_cameraCancel is null) { if (frame is not WriteableBitmap) frame.Dispose(); return; }
         _cameraNote.IsVisible = false;
         if (ReferenceEquals(_camera.Source, frame)) { _camera.InvalidateVisual(); foreach (var mirror in _mirrors) mirror.InvalidateVisual(); return; }
         var previous = _camera.Source as Bitmap;
@@ -202,10 +236,18 @@ public sealed class PrinterLiveCard : Border, IDisposable
     {
         Status = s;
         SetBadge(badge, s?.State switch { "RUNNING" or "PREPARE" or "SLICING" => "info", "PAUSE" => "warning", "FAILED" => "danger", "FINISH" => "success", _ => null });
-        var errors = s?.ErrorCount ?? 0;
-        _alertsText.Text = $"{errors} alerte{(errors > 1 ? "s" : "")}";
-        ToolTip.SetTip(_alerts, "Voir le détail sur l’écran de l’imprimante");
-        _alerts.IsVisible = errors > 0;
+        var alerts = s?.Alerts ?? [];
+        _alertsText.Text = $"{alerts.Count} alerte{(alerts.Count > 1 ? "s" : "")}";
+        _alerts.IsVisible = alerts.Count > 0;
+        AutomationProperties.SetName(_alerts, _alertsText.Text + " : lire le détail");
+        _alertsList.Children.Clear();
+        foreach (var alert in alerts.OrderByDescending(a => a.Since))
+            _alertsList.Children.Add(new StackPanel { Spacing = 4, Children =
+            {
+                new TextBlock { Text = alert.Severity.ToUpperInvariant() + (alert.Since is { } since ? " · depuis le " + since.ToString("d MMMM à HH:mm", French) : ""), Classes = { "overline" } },
+                new TextBlock { Text = BambuHmsCatalog.Describe(alert, BambuHmsTexts.Current), TextWrapping = TextWrapping.Wrap },
+                new TextBlock { Text = alert.DisplayCode, Classes = { "caption" } }
+            } });
 
         var printing = s?.IsPrinting == true;
         var finished = s?.State == "FINISH";
@@ -216,10 +258,14 @@ public sealed class PrinterLiveCard : Border, IDisposable
         var percent = printing ? s!.Percent ?? 0 : finished ? 100 : (int?)null;
         _percent.Text = percent?.ToString(CultureInfo.CurrentCulture) ?? "—";
         _percentUnit.Text = percent is null ? "" : " %";
-        _progress.Value = percent ?? 0;
+        _fraction = (percent ?? 0) / 100.0;
+        SetFillColors(s?.State);
+        SizeFill();
         var minutes = printing ? s!.RemainingMinutes ?? 0 : 0;
-        _finish.Text = minutes > 0 ? FinishTime(DateTime.Now.AddMinutes(minutes)) : finished ? "Terminée" : "";
-        _remaining.Text = minutes > 0 ? "reste " + (minutes >= 60 ? $"{minutes / 60} h {minutes % 60:00}" : $"{minutes} min") : "";
+        // Empty lines keep their height (non-breaking space) so every card's bar sits at the same level.
+        _finishLabel.Text = minutes > 0 ? "FIN PRÉVUE" : " ";
+        _finish.Text = minutes > 0 ? FinishTime(DateTime.Now.AddMinutes(minutes)) : finished ? "Terminée" : " ";
+        _remaining.Text = minutes > 0 ? "dans " + (minutes >= 60 ? $"{minutes / 60} h {minutes % 60:00}" : $"{minutes} min") : " ";
         _layers.Text = (printing || finished) && s!.Layer is { } layer && s.TotalLayers is > 0 ? $"Couche {layer} sur {s.TotalLayers}" : "Couche —";
 
         _temperatures.Children.Clear();
@@ -249,12 +295,39 @@ public sealed class PrinterLiveCard : Border, IDisposable
         foreach (var t in new[] { "info", "warning", "danger", "success" }) _badge.Classes.Set(t, t == tone);
     }
 
-    /// <summary>"Fin 14:32", "Fin demain 07:46" or "Fin le 27/11 09:10".</summary>
+    private static readonly CultureInfo French = CultureInfo.GetCultureInfo("fr-FR");
+
+    /// <summary>"aujourd’hui à 14:32", "demain à 07:46" or "vendredi 28 novembre à 09:10".</summary>
     public static string FinishTime(DateTime end, DateTime? now = null)
     {
         var today = (now ?? DateTime.Now).Date;
-        var time = end.ToString("HH:mm", CultureInfo.CurrentCulture);
-        return end.Date == today ? "Fin " + time : end.Date == today.AddDays(1) ? "Fin demain " + time : $"Fin le {end:dd/MM} {time}";
+        var time = end.ToString("HH:mm", French);
+        return end.Date == today ? "aujourd’hui à " + time : end.Date == today.AddDays(1) ? "demain à " + time : end.ToString("dddd d MMMM", French) + " à " + time;
+    }
+
+    private void SizeFill()
+    {
+        var width = _track.Bounds.Width * _fraction;
+        // Below the bar's height, a rounded fill would draw as a dot: start it at one full height.
+        _fill.Width = _fraction <= 0 ? 0 : Math.Max(width, _track.Height);
+    }
+
+    /// <summary>Blue to cyan while printing, amber in pause, red on failure, green when done.</summary>
+    private void SetFillColors(string? state)
+    {
+        var (from, to) = state switch
+        {
+            "PAUSE" => ("WarningBrush", "WarningBrush"), "FAILED" => ("DangerBrush", "DangerBrush"), "FINISH" => ("SuccessBrush", "SuccessBrush"),
+            _ => ("AccentBrush", "CyanBrush")
+        };
+        Color Of(string key) => Application.Current?.FindResource(key) is ISolidColorBrush brush ? brush.Color : Colors.DodgerBlue;
+        _fill.Background = new LinearGradientBrush
+        {
+            StartPoint = new RelativePoint(0, 0.5, RelativeUnit.Relative), EndPoint = new RelativePoint(1, 0.5, RelativeUnit.Relative),
+            GradientStops = { new GradientStop(Of(from), 0), new GradientStop(Of(to), 1) }
+        };
+        var glow = Of(to);
+        _fill.BoxShadow = new BoxShadows(new BoxShadow { Blur = 12, Color = Color.FromArgb(110, glow.R, glow.G, glow.B) });
     }
 
     private static Control Temperature(string label, double? current, double? target)
@@ -275,7 +348,7 @@ public sealed class PrinterLiveCard : Border, IDisposable
 
     public void Dispose()
     {
+        SetCameraActive(false);
         _cancel.Cancel();
-        StopVideo();
     }
 }

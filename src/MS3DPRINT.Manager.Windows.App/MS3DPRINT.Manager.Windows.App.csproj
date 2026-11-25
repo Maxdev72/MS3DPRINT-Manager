@@ -26,4 +26,8 @@
     <VlcWindowsX86Enabled>false</VlcWindowsX86Enabled>
     <VlcWindowsArm64Enabled>false</VlcWindowsArm64Enabled>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- Icon of the Windows notifications (WindowsToast). -->
+    <None Update="Assets/app-icon.ico" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

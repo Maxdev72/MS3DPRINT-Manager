@@ -35,6 +35,7 @@ internal static class Program
         MS3DPRINT.Manager.Core.Recognition.DocumentReader.Rasterizer = new MS3DPRINT.Manager.Windows.WindowsPdfRasterizer();
         DesktopApplication.RemoteSessionStoreFactory = () => new MS3DPRINT.Manager.Windows.Remote.WindowsRemoteSessionStore();
         DesktopApplication.ReduceMotion = !ClientAreaAnimationsEnabled();
+        DesktopApplication.SystemNotification = WindowsToast.Show;
         ConfigureUpdates();
         DesktopApplication.BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }

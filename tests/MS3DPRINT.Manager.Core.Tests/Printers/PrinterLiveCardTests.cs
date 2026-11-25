@@ -16,9 +16,9 @@ public sealed class PrinterLiveCardTests
     public void Finish_time_names_today_tomorrow_or_the_date()
     {
         var now = new DateTime(2026, 11, 25, 10, 0, 0);
-        Assert.Equal("Fin 14:32", PrinterLiveCard.FinishTime(now.Date.AddHours(14).AddMinutes(32), now));
-        Assert.Equal("Fin demain 07:46", PrinterLiveCard.FinishTime(now.Date.AddDays(1).AddHours(7).AddMinutes(46), now));
-        Assert.Equal("Fin le 27/11 09:10", PrinterLiveCard.FinishTime(now.Date.AddDays(2).AddHours(9).AddMinutes(10), now));
+        Assert.Equal("aujourd’hui à 14:32", PrinterLiveCard.FinishTime(now.Date.AddHours(14).AddMinutes(32), now));
+        Assert.Equal("demain à 07:46", PrinterLiveCard.FinishTime(now.Date.AddDays(1).AddHours(7).AddMinutes(46), now));
+        Assert.Equal("vendredi 27 novembre à 09:10", PrinterLiveCard.FinishTime(now.Date.AddDays(2).AddHours(9).AddMinutes(10), now));
     }
 
     [Fact]
@@ -36,8 +36,8 @@ public sealed class PrinterLiveCardTests
             }
             void Show(PrinterLiveCard card, BambuStatus status) => typeof(PrinterLiveCard).GetMethod("Show", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(card, [status]);
             var printing = Card("H2D", c => Show(c, new BambuStatus("RUNNING", 57, 89, 77, 465, "Système de récupération d'eau - 90mm.stl_1 + Système de récupération d'eau - 90mm.stl_2",
-                244, 245, 70, 70, 38, 2, [new("PLA", "F28C38"), new("PETG", "FFFFFF"), new("PP-GF", "FFFFFF"), new("PLA-S", "1E1E1E")])));
-            var idle = Card("A1", c => Show(c, new BambuStatus("FINISH", 100, 0, 200, 200, "Support", 26, 0, 24, 0, null, 0, [new("PLA", "3D7BD9")])));
+                244, 245, 70, 70, 38, [new(0x05000100, 0x00030004, new DateTime(2026, 11, 25, 15, 36, 0)), new(0x05030000, 0x00030029)], [new("PLA", "F28C38"), new("PETG", "FFFFFF"), new("PP-GF", "FFFFFF"), new("PLA-S", "1E1E1E")])));
+            var idle = Card("A1", c => Show(c, new BambuStatus("FINISH", 100, 0, 200, 200, "Support", 26, 0, 24, 0, null, [], [new("PLA", "3D7BD9")])));
             var offline = Card("H2S", c => typeof(PrinterLiveCard).GetMethod("ShowOffline", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(c, ["Imprimante injoignable : vérifiez l’adresse et qu’elle est allumée."]));
             var window = new Window { Width = 1440, Height = 760, Content = new UniformGrid { Columns = 3, Margin = new(24), Children = { printing, idle, offline } } };
             window.Show();

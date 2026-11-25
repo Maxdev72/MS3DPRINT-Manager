@@ -35,6 +35,7 @@ public partial class MainWindow
                 dialog.PurchasePrice, dialog.LifetimeHours, dialog.PowerWatts, dialog.AmortizationYears, dialog.ProductiveHoursPerYear, dialog.UseManualHourlyRate, dialog.MaintenanceHourlyRate));
             PrinterConnectionStore.Default.Set(id, dialog.Connection);
             Notify("Imprimante ajoutée.");
+            _ = LoadMonitoringAsync();
             await LoadPrintersAsync();
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
@@ -53,6 +54,7 @@ public partial class MainWindow
                 IsActive = dialog.PrinterIsActive, PurchasePrice = dialog.PurchasePrice, LifetimeHours = dialog.LifetimeHours, PowerWatts = dialog.PowerWatts,
                 AmortizationYears = dialog.AmortizationYears, ProductiveHoursPerYear = dialog.ProductiveHoursPerYear, UseManualHourlyRate = dialog.UseManualHourlyRate, MaintenanceHourlyRate = dialog.MaintenanceHourlyRate }, original.UpdatedAt);
             PrinterConnectionStore.Default.Set(original.Id, dialog.Connection);
+            _ = LoadMonitoringAsync();
             await LoadPrintersAsync();
             Notify("Imprimante enregistrée.");
         }
@@ -70,6 +72,7 @@ public partial class MainWindow
             await Task.Run(() => new PrinterStore(root).Trash(printer.Id));
             await LoadPrintersAsync();
             Notify("Imprimante envoyée dans la corbeille.");
+            _ = LoadMonitoringAsync();
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException)
         { Notify(exception.Message, error: true); }

@@ -195,6 +195,8 @@ public partial class MainWindow : Window
         if (_workspaceLocation.NeedsSetup) await RunWorkspaceSetupAsync();
         if (!await EnsureWorkspaceAvailableAsync()) return;
         await PreloadAsync();
+        // Printers are followed from the start, for the end-of-print notifications.
+        _ = LoadMonitoringAsync();
         // MS3DPRINT_START_PAGE=Clients opens that page directly (screenshots, demos).
         if (Environment.GetEnvironmentVariable("MS3DPRINT_START_PAGE") is { Length: > 0 } page &&
             NavigationButtons().FirstOrDefault(button => button.Tag as string == page) is { } target)

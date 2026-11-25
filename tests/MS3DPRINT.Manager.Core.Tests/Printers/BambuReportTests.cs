@@ -18,12 +18,26 @@ public sealed class BambuReportTests
         Assert.Equal(60, full.Bed);
         Assert.Equal([new BambuTray("PLA", "FF0000")], full.Trays);
 
-        var delta = report.Apply("""{"print":{"command":"push_status","mc_percent":46,"hms":[{"attr":1,"code":2}]}}""")!;
+        var delta = report.Apply("""{"print":{"command":"push_status","mc_percent":46,"hms":[{"attr":83886336,"code":196612,"ts_unix":"20261125153645"}]}}""")!;
         Assert.Equal(46, delta.Percent);
         Assert.Equal(12, delta.Layer);
         Assert.Equal("Support casque", delta.JobName);
         Assert.Equal(1, delta.ErrorCount);
         Assert.Single(delta.Trays);
+        var alert = Assert.Single(delta.Alerts);
+        Assert.Equal("0500010000030004", alert.Ecode);
+        Assert.Equal("HMS_0500_0100_0003_0004", alert.DisplayCode);
+        Assert.Equal("Courante", alert.Severity);
+        Assert.Equal(new DateTime(2026, 11, 25, 15, 36, 45), alert.Since);
+    }
+
+    [Fact]
+    public void Catalogue_gives_the_french_text_or_the_code()
+    {
+        var texts = BambuHmsCatalog.Parse("""{"result":0,"data":{"device_hms":{"ver":1,"fr":[{"ecode":"0500010000030004","intro":"Espace insuffisant sur la carte MicroSD."},{"ecode":"0500040000030021","intro":""}]}}}""");
+        Assert.Equal("Espace insuffisant sur la carte MicroSD.", BambuHmsCatalog.Describe(new BambuAlert(0x05000100, 0x00030004), texts));
+        Assert.Contains("HMS_0500_0400_0003_0021", BambuHmsCatalog.Describe(new BambuAlert(0x05000400, 0x00030021), texts));
+        Assert.Empty(BambuHmsCatalog.Parse("not json"));
     }
 
     [Theory]
