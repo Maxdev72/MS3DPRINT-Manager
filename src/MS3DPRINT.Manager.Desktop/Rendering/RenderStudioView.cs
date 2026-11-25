@@ -90,13 +90,20 @@ public sealed partial class RenderStudioView : UserControl
     private MeshModel? _mesh;
     private string? _shown;
     private string? _shownTiff;
+    private bool _settingMesh;
     private int _counter;
     private int _generation;
     private Task _previews = Task.CompletedTask;
     private CancellationTokenSource? _finalRender;
 
     /// <summary>Asks the window to file a copy of the image (temporary PNG, model path), like a capture of the 3D viewer.</summary>
-    public event Action<IReadOnlyList<string>, string>? SaveRequested;
+    /// <summary>
+    /// Files images for the window (temporary files, model path, choose the folder): in the model's project, or in a folder the
+    /// user picks. Returns the folder they went to, or null when nothing was saved.
+    /// </summary>
+    public Func<IReadOnlyList<string>, string, bool, Task<string?>>? SaveFiles { get; set; }
+
+    private RenderResultWindow? _resultWindow;
 
     public RenderStudioView(Func<IReadOnlyList<RenderColor>> loadColors, RenderPreferencesStore? store = null)
     {
@@ -237,6 +244,8 @@ public sealed partial class RenderStudioView : UserControl
             ((Control)_tabs[i].Parent!.Parent!).IsVisible = i == index;
             if (i == index) _tabButtons[i].Classes.Add("selected"); else _tabButtons[i].Classes.Remove("selected");
         }
+        // The orientation rings belong to the Pièce tab: shown there, out of the way elsewhere.
+        _gizmo.IsVisible = index == 0 && _mesh is not null;
     }
 
     private int CurrentTab => Array.FindIndex(_tabButtons, b => b.Classes.Contains("selected"));
@@ -329,7 +338,7 @@ public sealed partial class RenderStudioView : UserControl
     private void CameraMoved()
     {
         _gizmo.InvalidateVisual();
-        if (_mesh is null) return;
+        if (_mesh is null || _settingMesh) return;
         // Paused: the last image would hide the new framing, so the simple 3D view shows through until the preview resumes.
         if (_paused) _image.Opacity = 0;
         // The studio has a floor: the camera stops at its level, in the 3D view as in the render.
@@ -392,21 +401,64 @@ public sealed partial class RenderStudioView : UserControl
         }
     }
 
+    /// <summary>
+    /// The final render, in a window of its own (as in KeyShot): progress while it renders, then the image and what to do with it.
+    /// The page keeps its preview image; the window keeps the final one until it is saved or closed.
+    /// </summary>
     private async Task RenderFinalAsync()
     {
+        if (_modelPath is not { } model || _mesh is null) return;
         var quality = Qualities[_quality.SelectedIndex];
-        var result = await RunExclusiveAsync(async (cancel, progress) =>
+        var window = _resultWindow;
+        if (window is null)
         {
-            var output = Path.Combine(_work, $"render-{++_counter}.png");
-            var tiff = _outputFormat.SelectedIndex >= 0 && Outputs[_outputFormat.SelectedIndex].Format == "tiff" ? Path.ChangeExtension(output, ".tif") : null;
+            window = _resultWindow = new RenderResultWindow("Rendu · " + Path.GetFileNameWithoutExtension(model), CurrentOutput) { Icon = (TopLevel.GetTopLevel(this) as Window)?.Icon };
+            window.CancelRequested += () => _finalRender?.Cancel();
+            window.RedoRequested += async () => await RenderFinalAsync();
+            window.SaveRequested += async (png, tiff, options, name, chooseFolder) => await SaveFinalAsync(window, png, tiff, options, name, chooseFolder);
+            window.Closed += (_, _) => { if (ReferenceEquals(_resultWindow, window)) _resultWindow = null; _finalRender?.Cancel(); };
+            if (TopLevel.GetTopLevel(this) is Window owner) window.Show(owner); else window.Show();
+        }
+        else window.Activate();
+        window.Start($"{Path.GetFileName(model)} · {quality.Label} · {Scenes[_scene.SelectedIndex].Label} · {Formats[_format.SelectedIndex].Label}",
+            $"{Path.GetFileNameWithoutExtension(model)} - rendu {DateTime.Now:yyyy-MM-dd HHmmss}");
+        string? done = null, doneTiff = null;
+        var finished = await RunExclusiveAsync(async (cancel, progress) =>
+        {
+            var output = Path.Combine(_work, $"final-{++_counter}.png");
+            var tiff = Outputs[Math.Max(0, _outputFormat.SelectedIndex)].Format == "tiff" ? Path.ChangeExtension(output, ".tif") : null;
             if (ReadSettings(quality.Pass, _mesh!, tiff: tiff) is not { } settings) return false;
             await SessionFor(quality.Pass).RenderAsync(_stlPath!, settings, output, cancel, new Progress<double>(f => progress(f, 1, 1)));
-            ShowImage(output);
-            _shownTiff = tiff;
-            ShowStatus($"Rendu {quality.Label} prêt ({settings.Width} × {settings.Height}). Enregistrez-le dans le projet du modèle.");
+            (done, doneTiff) = (output, tiff);
+            ShowStatus($"Rendu {quality.Label} terminé : il est dans sa fenêtre.");
             return true;
-        }, $"Rendu {quality.Label}");
-        if (result) await EstimateSizeAsync();
+        }, $"Rendu {quality.Label}", (text, fraction) => window.Progress(text, fraction));
+        if (finished && done is not null) window.ShowResult(done, doneTiff);
+        else window.Stopped(_status.Text ?? "Rendu arrêté.");
+    }
+
+    /// <summary>Writes the final image with the window's choices, then files it; the window learns where it went.</summary>
+    private async Task SaveFinalAsync(RenderResultWindow window, string png, string? tiff, OutputOptions options, string name, bool chooseFolder)
+    {
+        if (_modelPath is not { } model || SaveFiles is not { } save) return;
+        var folder = Directory.CreateDirectory(Path.Combine(_work, Guid.NewGuid().ToString("N"))).FullName;
+        try
+        {
+            var file = await Task.Run(() =>
+            {
+                if (options.Format == "tiff" && tiff is not null && File.Exists(tiff))
+                {
+                    var copy = Path.Combine(folder, name + ".tif");
+                    File.Copy(tiff, copy);
+                    return copy;
+                }
+                var target = Path.Combine(folder, name + (options.Format == "tiff" ? ".png" : options.Extension));
+                File.WriteAllBytes(target, RenderOutput.Encode(png, options.Format == "tiff" ? options with { Format = "png" } : options));
+                return target;
+            });
+            if (await save([file], model, chooseFolder) is { } where) window.MarkSaved(where);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException) { window.Stopped(exception.Message); }
     }
 
     /// <summary>Warms the Cycles Blender, then shows the graphics card it found in the Rendu tab.</summary>
@@ -422,7 +474,7 @@ public sealed partial class RenderStudioView : UserControl
     /// Runs a final render or a series with the graphics card to itself: the preview and the 3D view pause and the camera is
     /// locked; the status shows the percentage and the time left; « Annuler » stops it. Settings changed meanwhile apply after.
     /// </summary>
-    private async Task<bool> RunExclusiveAsync(Func<CancellationToken, Action<double, int, int>, Task<bool>> work, string label)
+    private async Task<bool> RunExclusiveAsync(Func<CancellationToken, Action<double, int, int>, Task<bool>> work, string label, Action<string, double>? mirror = null)
     {
         if (_live is null || _refine is null || _stlPath is null || _mesh is null) return false;
         _refineCancel?.Cancel();
@@ -446,6 +498,7 @@ public sealed partial class RenderStudioView : UserControl
             _status.Text = (images > 1 ? $"{label} · image {image}/{images} · " : label + " · ") + overall.ToString("0 %", french)
                 + (left is { } l ? $" · environ {(l.TotalMinutes >= 1 ? $"{(int)l.TotalMinutes} min {l.Seconds:00}" : $"{Math.Max(1, l.Seconds)} s")} restantes" : string.Empty)
                 + ". L’aperçu est en pause.";
+            mirror?.Invoke(_status.Text, overall);
         }
         Progress(0, 1, 1);
         SavePreferences();
@@ -529,7 +582,7 @@ public sealed partial class RenderStudioView : UserControl
         return new RenderSettings(hex, finish, Layers[_layer.SelectedIndex].Height, scene, _background.Text?.Trim() ?? "#FFFFFF",
             rotation, 0, width, height, samples, environment, _environmentRotation.Value, camera, engine,
             _shadow.IsChecked == true, _shadowStrength.Value, _shadowSoftness.Value, _lightAngle.Value, _lightHeight.Value, _glowDark.IsChecked == true,
-            _bandOn.IsChecked == true && PreviewColorParser.TryParse(BandHex, out _) ? BandHex : null, _bandHeight.Value,
+            null, 0,
             Devices[Math.Max(0, _device.SelectedIndex)].Key, tiff, _zoneFiles.Select(z => new RenderZone(z.File, z.Zone.Hex, z.Zone.Finish)).ToList());
     }
 
@@ -572,6 +625,7 @@ public sealed partial class RenderStudioView : UserControl
         var camera = _viewport.Camera;
         var orientations = new Dictionary<string, float[]>(_saved.Orientations);
         if (_modelPath is { } model) orientations[model] = [_turn.X, _turn.Y, _turn.Z, _turn.W];
+        foreach (var other in _parts.Where(p => p.Path != _modelPath)) orientations[other.Path] = [other.Turn.X, other.Turn.Y, other.Turn.Z, other.Turn.W];
         _saved = _saved with
         {
             CustomColors = _customColors.ToList(), HiddenColors = _hiddenColors.ToList(), Hex = CurrentHex, Finish = _finish.SelectedIndex,
@@ -580,7 +634,6 @@ public sealed partial class RenderStudioView : UserControl
             EnvironmentRotation = _environmentRotation.Value, Yaw = camera.Yaw, Pitch = camera.Pitch, Zoom = camera.Zoom, Tab = Math.Max(0, CurrentTab),
             RotationStep = _gizmo.Step, Shadow = _shadow.IsChecked == true, ShadowStrength = _shadowStrength.Value, ShadowSoftness = _shadowSoftness.Value,
             LightAngle = _lightAngle.Value, LightHeight = _lightHeight.Value, GlowDark = _glowDark.IsChecked == true, Orientations = orientations,
-            BandOn = _bandOn.IsChecked == true, BandHex = BandHex, BandHeight = _bandHeight.Value,
             Quality = Math.Max(0, _quality.SelectedIndex), Device = Devices[Math.Max(0, _device.SelectedIndex)].Key, OutputFormat = CurrentOutput.Format,
             Paused = _paused, OutputQuality = _outputQuality.Value, MaxCompression = _maxCompression.IsChecked == true, MaxSide = CurrentOutput.MaxSide, ContactSheet = _contactSheet.IsChecked == true
         };
@@ -609,7 +662,7 @@ public sealed partial class RenderStudioView : UserControl
                 return target;
             });
             if (options.Format == "tiff" && !file.EndsWith(".tif", StringComparison.Ordinal)) ShowStatus("Le TIFF 16 bits vient du rendu final : cet aperçu est enregistré en PNG.");
-            SaveRequested?.Invoke([file], _modelPath);
+            if (SaveFiles is { } save) await save([file], _modelPath, false);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException) { ShowStatus(exception.Message); }
     }

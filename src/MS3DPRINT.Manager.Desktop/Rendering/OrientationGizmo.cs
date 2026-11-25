@@ -25,7 +25,10 @@ public sealed class OrientationGizmo : Control, ICustomHitTest
     private double _degrees;
     private Point _pointer;
 
+    /// <summary>The part the rings turn (their centre and size).</summary>
     public MeshModel? Mesh { get; set; }
+    /// <summary>What the 3D view frames (the whole scene); the rings are projected with it. Null: the part itself.</summary>
+    public MeshModel? Frame { get; set; }
     public ViewCamera? Camera { get; set; }
     /// <summary>Snap in degrees; 0 turns freely.</summary>
     public double Step { get; set; } = 15;
@@ -111,7 +114,7 @@ public sealed class OrientationGizmo : Control, ICustomHitTest
         for (var i = 0; i < Segments; i++)
         {
             var a = i * MathF.Tau / Segments;
-            if (ViewMath.TryProject(mesh, camera, Bounds.Width, Bounds.Height, mesh.Center + radius * (MathF.Cos(a) * u + MathF.Sin(a) * v), out var x, out var y))
+            if (ViewMath.TryProject(Frame ?? mesh, camera, Bounds.Width, Bounds.Height, mesh.Center + radius * (MathF.Cos(a) * u + MathF.Sin(a) * v), out var x, out var y))
                 points.Add(new Point(x, y));
         }
         return points;
@@ -134,7 +137,7 @@ public sealed class OrientationGizmo : Control, ICustomHitTest
     }
 
     private Point Center()
-        => Mesh is { } mesh && Camera is { } camera && ViewMath.TryProject(mesh, camera, Bounds.Width, Bounds.Height, mesh.Center, out var x, out var y) ? new Point(x, y) : Bounds.Center;
+        => Mesh is { } mesh && Camera is { } camera && ViewMath.TryProject(Frame ?? mesh, camera, Bounds.Width, Bounds.Height, mesh.Center, out var x, out var y) ? new Point(x, y) : Bounds.Center;
 
     private double Angle(Point point)
     {
@@ -150,8 +153,8 @@ public sealed class OrientationGizmo : Control, ICustomHitTest
         var u = Vector3.Normalize(Vector3.Cross(axis, MathF.Abs(axis.Z) > 0.9f ? Vector3.UnitX : Vector3.UnitZ));
         var turned = Vector3.Transform(u, Quaternion.CreateFromAxisAngle(axis, 0.1f));
         var radius = mesh.Radius * 0.8f;
-        if (!ViewMath.TryProject(mesh, camera, Bounds.Width, Bounds.Height, mesh.Center + radius * u, out var x0, out var y0) ||
-            !ViewMath.TryProject(mesh, camera, Bounds.Width, Bounds.Height, mesh.Center + radius * turned, out var x1, out var y1)) return 1;
+        if (!ViewMath.TryProject(Frame ?? mesh, camera, Bounds.Width, Bounds.Height, mesh.Center + radius * u, out var x0, out var y0) ||
+            !ViewMath.TryProject(Frame ?? mesh, camera, Bounds.Width, Bounds.Height, mesh.Center + radius * turned, out var x1, out var y1)) return 1;
         var center = Center();
         var change = Math.IEEERemainder(Math.Atan2(y1 - center.Y, x1 - center.X) - Math.Atan2(y0 - center.Y, x0 - center.X), Math.Tau);
         return change >= 0 ? 1 : -1;

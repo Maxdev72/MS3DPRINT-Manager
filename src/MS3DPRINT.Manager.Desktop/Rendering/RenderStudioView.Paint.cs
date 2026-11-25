@@ -94,7 +94,12 @@ public sealed partial class RenderStudioView
         if (_mesh is not { } mesh || _loaded is not { } loaded) return;
         var size = _viewport.Visual.Bounds.Size;
         var (origin, direction) = ViewMath.Ray(mesh, _viewport.Camera, size.Width, size.Height, point.X, point.Y);
-        if (!MeshPicker.TryPick(mesh, origin, direction, out _, out var triangle)) return;
+        if (!MeshPicker.TryPick(mesh, origin, direction, out _, out var hit)) return;
+        // Painting another product of the scene selects it first; the stroke then applies to it.
+        var (clicked, triangle) = PartAt(hit);
+        if (clicked != _active) SelectPart(clicked);
+        if (_loaded is not { } painted) return;
+        loaded = painted;
         var modifiers = _clickModifiers;
         _selector ??= await Task.Run(() => new PaintSelector(loaded));
         var whole = !modifiers.HasFlag(KeyModifiers.Alt);

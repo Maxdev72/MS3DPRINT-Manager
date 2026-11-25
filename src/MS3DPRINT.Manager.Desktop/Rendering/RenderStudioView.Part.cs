@@ -17,9 +17,10 @@ namespace MS3DPRINT.Manager.Desktop.Rendering;
 public sealed partial class RenderStudioView
 {
     private static readonly (string Label, double Degrees)[] Steps = [("Libre", 0), ("5°", 5), ("15°", 15), ("45°", 45), ("90°", 90)];
-    private readonly CheckBox _showGizmo = new() { Content = "Afficher les anneaux d’orientation" };
     private readonly CheckBox _faceMode = new() { Content = "Poser sur une face (cliquez-la sur l’image)" };
-    private readonly ComboBox _step = Choice(Steps.Select(s => s.Label));
+    private readonly UniformGrid _stepChips = new() { Columns = Steps.Length };
+    private readonly TextBlock _orientationAngles = new() { Classes = { "caption" } };
+    private double _stepDegrees = 15;
     private readonly TextBlock _orientationNote = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
     private MeshModel? _loaded;
     private Quaternion _turn = Quaternion.Identity;
@@ -37,8 +38,10 @@ public sealed partial class RenderStudioView
             Spacing = 12,
             Children =
             {
-                open, _modelName,
-                FormKit.SectionLabel("Orientation"), _showGizmo, FormKit.Field("Pas de rotation", _step, hint: "Faites glisser un anneau : rouge X, vert Y, bleu Z."),
+                open, _modelName, BuildSceneSection(), BuildSceneFileButtons(),
+                FormKit.SectionLabel("Orientation de la pièce sélectionnée"),
+                new TextBlock { Text = "Faites glisser un anneau sur l’image (rouge X, vert Y, bleu Z), ou tournez d’un pas avec les boutons.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap },
+                FormKit.Field("Pas de rotation", _stepChips), AxisButtons(), _orientationAngles,
                 _faceMode, straighten, fileOrientation, _orientationNote
             }
         };
@@ -46,21 +49,71 @@ public sealed partial class RenderStudioView
 
     private void InitializePart()
     {
-        _step.SelectedIndex = Math.Max(0, Array.FindIndex(Steps, s => s.Degrees == _saved.RotationStep));
-        _gizmo.Step = Steps[_step.SelectedIndex].Degrees;
-        _step.SelectionChanged += (_, _) => { _gizmo.Step = Steps[_step.SelectedIndex].Degrees; SavePreferences(); };
-        _showGizmo.IsCheckedChanged += (_, _) => _gizmo.IsVisible = _showGizmo.IsChecked == true && _mesh is not null;
+        // Step chosen in one click; the rings and the axis buttons use it.
+        foreach (var (label, degrees) in Steps)
+        {
+            var chip = new Button { Content = label, Tag = degrees, Classes = { "filter-chip" }, Margin = new Thickness(0, 0, 4, 0), Padding = new Thickness(4, 8),
+                HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center };
+            chip.Click += (_, _) => { SetStep(degrees); SavePreferences(); };
+            _stepChips.Children.Add(chip);
+        }
+        SetStep(Steps.Any(s => s.Degrees == _saved.RotationStep) ? _saved.RotationStep : 15);
         _faceMode.IsCheckedChanged += (_, _) =>
         {
             _viewport.Visual.Cursor = _faceMode.IsChecked == true ? new Cursor(StandardCursorType.Cross) : null;
             if (_faceMode.IsChecked == true) _orientationNote.Text = "Cliquez la face de la pièce à poser au sol.";
         };
-        _gizmo.Turned += async (axis, degrees) =>
+        _gizmo.Turned += async (axis, degrees) => await TurnAsync(axis, degrees);
+    }
+
+    private void SetStep(double degrees)
+    {
+        _stepDegrees = degrees;
+        _gizmo.Step = degrees;
+        foreach (var chip in _stepChips.Children.OfType<Button>())
+            if ((double)chip.Tag! == degrees) chip.Classes.Add("selected"); else chip.Classes.Remove("selected");
+    }
+
+    /// <summary>One row per axis, in the colour of its ring: turn back or forward by the step (a quarter turn when free).</summary>
+    private Control AxisButtons()
+    {
+        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,*"), RowDefinitions = new RowDefinitions("Auto,Auto,Auto"), ColumnSpacing = 8, RowSpacing = 4 };
+        (string Name, Vector3 Axis, string Hex)[] axes = [("X", Vector3.UnitX, "#E5484D"), ("Y", Vector3.UnitY, "#46A758"), ("Z", Vector3.UnitZ, "#3E8BFF")];
+        for (var row = 0; row < axes.Length; row++)
         {
-            _turn = Quaternion.Normalize(Quaternion.Concatenate(_turn, Quaternion.CreateFromAxisAngle(axis, (float)(degrees * Math.PI / 180))));
-            _orientationNote.Text = $"Tournée de {degrees:+0.#;-0.#} ° autour de {(axis == Vector3.UnitX ? "X" : axis == Vector3.UnitY ? "Y" : "Z")}.";
-            await UseOrientationAsync();
-        };
+            var (name, axis, hex) = axes[row];
+            var label = new TextBlock { Text = name, FontWeight = FontWeight.SemiBold, Foreground = new SolidColorBrush(Color.Parse(hex)), VerticalAlignment = VerticalAlignment.Center, Width = 16 };
+            Grid.SetRow(label, row);
+            grid.Children.Add(label);
+            for (var column = 1; column <= 2; column++)
+            {
+                var sign = column == 1 ? -1 : 1;
+                var button = new Button { Content = sign < 0 ? name + " −" : name + " +", HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center };
+                ToolTip.SetTip(button, $"Tourner autour de {name} du pas choisi ({(sign < 0 ? "sens inverse" : "sens horaire")})");
+                Avalonia.Automation.AutomationProperties.SetName(button, $"Tourner autour de {name}, {(sign < 0 ? "sens inverse" : "sens horaire")}");
+                button.Click += async (_, _) => await TurnAsync(axis, sign * (_stepDegrees > 0 ? _stepDegrees : 90));
+                Grid.SetRow(button, row);
+                Grid.SetColumn(button, column);
+                grid.Children.Add(button);
+            }
+        }
+        return grid;
+    }
+
+    private async Task TurnAsync(Vector3 axis, double degrees)
+    {
+        _turn = Quaternion.Normalize(Quaternion.Concatenate(_turn, Quaternion.CreateFromAxisAngle(axis, (float)(degrees * Math.PI / 180))));
+        _orientationNote.Text = $"Tournée de {degrees:+0.#;-0.#} ° autour de {(axis == Vector3.UnitX ? "X" : axis == Vector3.UnitY ? "Y" : "Z")}.";
+        await UseOrientationAsync();
+    }
+
+    /// <summary>The part's orientation from the file, as three angles (X, then Y, then Z).</summary>
+    private void ShowAngles()
+    {
+        var orientation = new ModelOrientation();
+        orientation.Compose(_turn);
+        var angles = orientation.EulerDegrees;
+        _orientationAngles.Text = $"Orientation : X {ModelOrientation.FormatAngle(angles.X)}° · Y {ModelOrientation.FormatAngle(angles.Y)}° · Z {ModelOrientation.FormatAngle(angles.Z)}°";
     }
 
     public async Task LoadModelAsync(string path)
@@ -73,17 +126,12 @@ public sealed partial class RenderStudioView
             ShowStatus("Impossible d’ouvrir ce modèle : " + exception.Message);
             return;
         }
-        _loaded = loaded;
-        _modelPath = path;
-        _modelName.Text = Path.GetFileName(path);
-        ToolTip.SetTip(_modelName, path);
+        ResetScene(loaded, path);
+        _parts[0].Zones = _saved.Paints.TryGetValue(path, out var paints) ? [.. paints] : [];
+        LoadActive();
         _image.Source = null;
         var camera = _viewport.Camera;
         (camera.Yaw, camera.Pitch, camera.Zoom, camera.PanX, camera.PanY) = (_saved.Yaw, _saved.Pitch, _saved.Zoom, 0, 0);
-        RebuildCameras();
-        _selector = null;
-        _zones = _saved.Paints.TryGetValue(path, out var paints) ? [.. paints] : [];
-        RebuildZoneList();
         if (_saved.Orientations.TryGetValue(path, out var known) && known.Length == 4)
         {
             _turn = new Quaternion(known[0], known[1], known[2], known[3]);
@@ -108,49 +156,65 @@ public sealed partial class RenderStudioView
     private async void FaceClicked(Point point)
     {
         if (_paintMode.IsChecked == true) { await PaintAtAsync(point); return; }
-        if (_faceMode.IsChecked != true || _mesh is not { } mesh) return;
+        if (_mesh is not { } mesh) return;
         var size = _viewport.Visual.Bounds.Size;
         var (origin, direction) = ViewMath.Ray(mesh, _viewport.Camera, size.Width, size.Height, point.X, point.Y);
         if (!MeshPicker.TryPick(mesh, origin, direction, out _, out var triangle)) return;
+        // A click on another product of the scene selects it.
+        var (clicked, _) = PartAt(triangle);
+        if (clicked != _active) SelectPart(clicked);
+        if (_faceMode.IsChecked != true) return;
         _faceMode.IsChecked = false;
         _turn = Quaternion.Normalize(Quaternion.Concatenate(_turn, OrientationMath.Between(mesh.Normals[triangle], -Vector3.UnitZ)));
         _orientationNote.Text = "Face posée au sol.";
         await UseOrientationAsync();
     }
 
+    private int _sceneVersion;
+
+    /// <summary>Rebuilds the scene after any change to a product (orientation, zones, order, spacing) and renders it again.</summary>
     private async Task UseOrientationAsync()
     {
-        if (_loaded is not { } loaded) return;
-        var stem = $"model-{++_counter}";
-        var turn = _turn;
-        var zones = _zones.ToList();
-        (MeshModel Mesh, string Body, List<(PaintZone Zone, string File)> Zones) prepared;
-        try
-        {
-            prepared = await Task.Run(() =>
-            {
-                var turned = ProductRenderer.Turned(loaded, turn);
-                var (body, files) = PaintParts.Write(turned, zones, _work, stem);
-                return (turned, body, files);
-            });
-        }
+        if (_parts.Count == 0 || _loaded is null) return;
+        StoreActive();
+        var version = ++_sceneVersion;
+        var snapshot = _parts.Select(p => (p.Loaded, p.Turn, p.Zones.ToList(), p.Shift)).ToList();
+        var spacing = (float)_spacing.Value;
+        var stem = $"scene-{++_counter}";
+        (MeshModel Scene, List<(MeshModel Placed, int First, string Body, List<(PaintZone, string)> Files)> Parts) built;
+        try { built = await Task.Run(() => BuildScene(snapshot, spacing, _work, stem)); }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            ShowStatus("Impossible de préparer le modèle : " + exception.Message);
+            ShowStatus("Impossible de préparer la scène : " + exception.Message);
             return;
         }
-        if (_stlPath is { } previous) TryDelete(previous);
-        foreach (var (_, file) in _zoneFiles) TryDelete(file);
-        _stlPath = prepared.Body;
-        _zoneFiles = prepared.Zones;
-        var mesh = prepared.Mesh;
+        // A newer change finished first, or the scene changed meanwhile: these files are already out of date.
+        if (version != _sceneVersion || built.Parts.Count != _parts.Count)
+        {
+            foreach (var (_, _, body, files) in built.Parts) { TryDelete(body); foreach (var (_, file) in files) TryDelete(file); }
+            return;
+        }
+        for (var i = 0; i < _parts.Count; i++)
+        {
+            DeleteFiles(_parts[i]);
+            (_parts[i].Placed, _parts[i].FirstTriangle, _parts[i].Body, _parts[i].ZoneFiles) = built.Parts[i];
+        }
+        ApplyRenderParts();
+        var mesh = built.Scene;
         _mesh = mesh;
-        _gizmo.Mesh = mesh;
-        _bandHeight.Maximum = Math.Max(0.2, Math.Round(mesh.Size.Z, 1));
-        ShowBandValue();
-        _gizmo.IsVisible = _showGizmo.IsChecked == true;
+        _gizmo.Mesh = Active!.Placed;
+        _gizmo.Frame = mesh;
+        _gizmo.IsVisible = CurrentTab == 0;
+        ShowAngles();
+        RebuildPartList();
         _final.IsEnabled = _live is not null;
-        _viewport.SetMesh(mesh);
+        // Loading the mesh into the 3D view resets its camera: the framing is kept, a paint stroke or a turn must not move it.
+        var camera = _viewport.Camera;
+        var kept = (camera.Yaw, camera.Pitch, camera.Zoom, camera.PanX, camera.PanY);
+        _settingMesh = true;
+        try { _viewport.SetMesh(mesh); }
+        finally { _settingMesh = false; }
+        (camera.Yaw, camera.Pitch, camera.Zoom, camera.PanX, camera.PanY) = kept;
         _viewport.RequestRender(false);
         ShowEmptyState();
         SavePreferences();

@@ -70,11 +70,14 @@ public sealed partial class EstimateUiTests
 
             // The top of the cube painted black: rendered as a part of its own.
             Get<ComboBox>("_scene").SelectedIndex = 0;
+            var framing = Get<IMeshViewport>("_viewport").Camera;
+            (framing.Yaw, framing.Pitch, framing.Zoom, framing.PanX, framing.PanY) = (0.8, 0.5, 1.3, 40, 10);
             typeof(RenderStudioView).GetField("_zones", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
                 .SetValue(studio, new List<PaintZone> { new("Noir brillant", "#000000", "glossy", [2, 3]) });
             await (Task)typeof(RenderStudioView).GetMethod("ZonesChangedAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(studio, null)!;
             Dispatcher.UIThread.RunJobs();
             Assert.Single(Get<System.Collections.IList>("_zoneFiles"));
+            Assert.Equal((0.8, 0.5, 1.3, 40d, 10d), (framing.Yaw, framing.Pitch, framing.Zoom, framing.PanX, framing.PanY)); // painting keeps the framing
             Assert.StartsWith("Aperçu affiné", Get<TextBlock>("_status").Text);
             CaptureDraftUi(owner, "render-paint");
 
@@ -98,12 +101,54 @@ public sealed partial class EstimateUiTests
             keys.Add("#DE4343|matte");
             keys.Add("#000000|matte");
             var saved = new List<string>();
-            studio.SaveRequested += (files, _) => saved.AddRange(files);
+            studio.SaveFiles = (files, _, _) => { saved.AddRange(files); return Task.FromResult<string?>("test"); };
             await (Task)typeof(RenderStudioView).GetMethod("RunSeriesAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(studio, null)!;
-            Assert.True(saved.Count == 3, Get<TextBlock>("_status").Text + " | " + saved.Count);
-            Assert.All(saved, f => Assert.EndsWith(".jpg", f));
-            Assert.Contains(saved, f => f.Contains("planche couleurs") && f.Contains("cube"));
-            Assert.Contains(saved, f => f.EndsWith("cube - Rouge mat.jpg"));
+            var zip = Assert.Single(saved);
+            Assert.EndsWith(".zip", zip);
+            using (var archive = System.IO.Compression.ZipFile.OpenRead(zip))
+                Assert.Equal(new HashSet<string> { "Noir mat.jpg", "Rouge mat.jpg", "planche couleurs.jpg", "récapitulatif.txt" }, archive.Entries.Select(e => e.FullName).ToHashSet());
+
+            // A second product next to the first, in its own colour: both are rendered side by side.
+            var other = Path.Combine(_root, "petit cube.stl");
+            StlWriter.Write(other, new MeshModel([.. corners.Select(c => c * 0.5f)], faces));
+            await studio.AddPartAsync(other);
+            Dispatcher.UIThread.RunJobs();
+            var parts = Get<System.Collections.IList>("_parts");
+            Assert.Equal(2, parts.Count);
+            Assert.Equal(24, Get<MeshModel>("_mesh").TriangleCount);
+            typeof(RenderStudioView).GetMethod("SetColor", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(studio, ["#0055B8"]);
+            await (Task)typeof(RenderStudioView).GetMethod("RunPreviewsAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(studio, null)!;
+            Assert.Contains(Get<System.Collections.IList>("_zoneFiles").Cast<object>(), z => z.ToString()!.Contains("#000000")); // the first cube keeps its painted top
+            Get<IMeshViewport>("_viewport").Camera.Zoom = 0.8;
+            typeof(RenderStudioView).GetMethod("CameraMoved", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(studio, null);
+            await (Task)typeof(RenderStudioView).GetMethod("RunPreviewsAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(studio, null)!;
+            typeof(RenderStudioView).GetMethod("ShowTab", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(studio, [0]);
+            await Task.Delay(100);
+            CaptureDraftUi(owner, "render-scene");
+
+            // The small cube moved back 10 mm, then the scene saved and opened again: same products, shift and colours.
+            await (Task)typeof(RenderStudioView).GetMethod("ShiftActiveAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(studio, [new System.Numerics.Vector2(0, 10)])!;
+            var sceneFile = Path.Combine(_root, "scène.ms3dscene");
+            var saved1 = (SceneFile)typeof(RenderStudioView).GetMethod("CurrentScene", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(studio, null)!;
+            File.WriteAllText(sceneFile, System.Text.Json.JsonSerializer.Serialize(saved1));
+            await studio.LoadModelAsync(model);
+            Assert.Single(Get<System.Collections.IList>("_parts"));
+            await studio.OpenSceneAsync(sceneFile);
+            var reopened = (SceneFile)typeof(RenderStudioView).GetMethod("CurrentScene", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(studio, null)!;
+            Assert.Equal(2, reopened.Parts.Count);
+            Assert.Equal([0f, 10f], reopened.Parts[1].Shift);
+            Assert.Equal("#0055B8", reopened.Parts[1].Hex);
+            Assert.Single(reopened.Parts[0].Zones);
+
+            // The final render opens its own window, then offers to save the image.
+            Get<ComboBox>("_quality").SelectedIndex = 0;
+            await (Task)typeof(RenderStudioView).GetMethod("RenderFinalAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(studio, null)!;
+            Dispatcher.UIThread.RunJobs();
+            var result = Assert.IsType<RenderResultWindow>(typeof(RenderStudioView).GetField("_resultWindow", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(studio));
+            await Task.Delay(200);
+            CaptureDraftUi(result, "render-window");
+            Assert.True(((StackPanel)typeof(RenderResultWindow).GetField("_savePanel", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(result)!).IsVisible);
+            result.Close();
         }
         finally { owner.Close(); }
     });

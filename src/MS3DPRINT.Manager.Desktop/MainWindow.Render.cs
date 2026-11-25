@@ -15,7 +15,7 @@ public partial class MainWindow
             // Kept beside the window placement file, so tests that redirect that file never touch this PC's preferences.
             var placementFile = Environment.GetEnvironmentVariable("MS3DPRINT_WINDOW_FILE");
             studio = new RenderStudioView(LoadRenderColors, new RenderPreferencesStore(placementFile is null ? null : Path.Combine(Path.GetDirectoryName(placementFile)!, "render.json")));
-            studio.SaveRequested += SaveRenders;
+            studio.SaveFiles = SaveRendersAsync;
             RenderWorkspacePanel.Child = studio;
         }
         await studio.ActivateAsync();
@@ -25,13 +25,13 @@ public partial class MainWindow
     /// Files the rendered images in the photos and renders folder of the model's project (one notification with « Ouvrir le
     /// dossier »); for a model outside any project, asks for a folder. The temporary copies are deleted afterwards.
     /// </summary>
-    private async void SaveRenders(IReadOnlyList<string> temporaryFiles, string modelPath)
+    private async Task<string?> SaveRendersAsync(IReadOnlyList<string> temporaryFiles, string modelPath, bool chooseFolder)
     {
         try
         {
             var root = WorkspaceRoot;
             var saved = new List<string>();
-            if (MS3DPRINT.Manager.Core.Projects.ProjectLocator.PhotosFolder(modelPath) is { } photos && Path.GetFullPath(photos).StartsWith(Path.GetFullPath(root), StringComparison.OrdinalIgnoreCase))
+            if (!chooseFolder && MS3DPRINT.Manager.Core.Projects.ProjectLocator.PhotosFolder(modelPath) is { } photos && Path.GetFullPath(photos).StartsWith(Path.GetFullPath(root), StringComparison.OrdinalIgnoreCase))
             {
                 saved.AddRange(await Task.Run(() =>
                 {
@@ -43,7 +43,7 @@ public partial class MainWindow
             else
             {
                 var folders = await StorageProvider.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions { Title = "Où enregistrer les images du rendu ?" });
-                if (folders.FirstOrDefault()?.TryGetLocalPath() is not { } target) return;
+                if (folders.FirstOrDefault()?.TryGetLocalPath() is not { } target) return null;
                 saved.AddRange(await Task.Run(() => temporaryFiles.Select(file =>
                 {
                     var destination = Path.Combine(target, Path.GetFileName(file));
@@ -51,12 +51,13 @@ public partial class MainWindow
                     return destination;
                 }).ToList()));
             }
-            if (saved.Count == 0) return;
-            Notify(saved.Count == 1 ? "Image enregistrée : " + Path.GetFileName(saved[0]) : $"{saved.Count} images enregistrées dans {Path.GetFileName(Path.GetDirectoryName(saved[0]))}",
+            if (saved.Count == 0) return null;
+            Notify(saved.Count == 1 ? "Image enregistrée : " + Path.GetFileName(saved[0]) : $"{saved.Count} fichiers enregistrés dans {Path.GetFileName(Path.GetDirectoryName(saved[0]))}",
                 action: ("Ouvrir le dossier", () => RevealInExplorer(saved[0])));
+            return Path.GetDirectoryName(saved[0]);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
-        { Notify(exception.Message, error: true); }
+        { Notify(exception.Message, error: true); return null; }
         finally
         {
             foreach (var file in temporaryFiles) { try { File.Delete(file); } catch (IOException) { } }

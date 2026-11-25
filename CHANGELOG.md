@@ -11,6 +11,23 @@
 - Éclairage revu : les filaments blancs et noirs restent lisibles sur le studio clair.
 - Ambiance « Environnement (HDRI) » comme dans les logiciels de rendu : la pièce est éclairée par une image à 360° qui apparaît derrière elle, avec son ombre au sol. Les huit environnements fournis avec Blender sont proposés ; ajoutez vos propres images HDR ou EXR (Poly Haven par exemple) et tournez l'environnement pour choisir l'arrière-plan.
 
+### Rendu produit : plusieurs pièces dans la scène
+- « Ajouter une pièce à la scène » (onglet Pièce) : les produits sont posés côte à côte sur le sol, avec un espacement réglable et un ordre modifiable (← →) ; chaque pièce garde son orientation, sa couleur, sa finition et ses zones peintes. Retirer une pièce demande confirmation.
+- Un clic sur un produit dans l'image le sélectionne : les onglets règlent alors cette pièce (orientation, couleur, peinture). Les séries de couleurs s'appliquent à la pièce sélectionnée, les autres gardent leurs couleurs.
+- Position de chaque pièce sur le sol : flèches gauche, droite, avant, arrière par pas de 1, 5, 10 ou 50 mm, et « Remettre en place ».
+- « Enregistrer la scène… » et « Ouvrir une scène… » (fichier .ms3dscene) : pièces, orientations, couleurs, zones peintes, positions, ambiance, ombres, format et cadrage ; une pièce dont le fichier a disparu est signalée.
+- Correction : faire glisser un anneau d'orientation tournait la pièce deux fois de l'angle voulu.
+
+### Rendu produit : fenêtre de rendu et séries en ZIP
+- « Rendu final » s'ouvre dans une fenêtre à part : avancement en pourcentage avec Annuler, puis l'image et les choix d'enregistrement (nom, format, qualité, taille avec poids estimé) : dans le projet, « Enregistrer sous… », refaire le rendu, ou fermer (une image non enregistrée demande confirmation).
+- Les séries sont rangées dans un seul ZIP : un dossier par vue s'il y en a plusieurs, une image par couleur, la planche couleurs et un récapitulatif des réglages (couleurs, codes, finitions, zones peintes).
+
+### Rendu produit : retours d'usage
+- Peindre ou tourner la pièce ne réinitialise plus la vue : le cadrage reste en place.
+- Orientation plus simple : les anneaux s'affichent d'eux-mêmes dans l'onglet Pièce ; pas de rotation en un clic (Libre, 5°, 15°, 45°, 90°) ; boutons X, Y, Z pour tourner d'un pas ; angles actuels affichés.
+- Groupes de couleurs fermés par défaut, un seul ouvert à la fois ; pastilles plus grandes.
+- Le « changement de couleur en bas de la pièce » est retiré : la peinture par zones le remplace.
+
 ### Rendu produit : peinture par zones et pause
 - Peinture sur la pièce (onglet Matière) : un clic colore tout l'élément (un pied, un bouton, un logo en relief), Alt + clic seulement la face, Ctrl + clic efface ; plusieurs couleurs, chacune avec sa finition ; zones retirables, mémorisées pour chaque pièce et conservées dans les séries de couleurs.
 - Pause de l'aperçu comme dans KeyShot : bouton sur l'image ou touche Espace ; réglages et cadrage restent modifiables, rien n'est calculé jusqu'à la reprise, le rendu final reste disponible.

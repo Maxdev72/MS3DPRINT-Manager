@@ -88,3 +88,26 @@ Mesuré : réduction des rebonds (5 %) et réutilisation de la scène non retenu
     réglages et cadrage toujours modifiables (vue 3D simple), moteurs gardés chargés pour une reprise
     immédiate ; rendu final et séries toujours possibles ; pause retenue. Les moteurs se ferment en
     quittant la page (au lieu de 3 min d'inactivité).
+
+## Livraison 5 — Fenêtre de rendu et séries en ZIP — FAITE (sans « copier » ni historique de session)
+
+17. **Fenêtre de rendu façon KeyShot** : « Rendu final » ouvre une fenêtre à part (l'image se construit,
+    pourcentage et temps restant, Annuler) ; la page reste utilisable. À la fin, la fenêtre demande quoi
+    faire : enregistrer (nom, format, qualité, taille, dossier proposé : photos du projet), copier, refaire,
+    fermer sans enregistrer (avec confirmation). Rendus terminés listés dans la fenêtre (historique de session).
+18. **Séries en ZIP classé** : un fichier « pièce - série AAAA-MM-JJ.zip » rangé par dossiers
+    (une vue = un dossier, une image par couleur), planche(s) à la racine, plus un récapitulatif texte
+    (réglages, couleurs, codes). Option : aussi les fichiers à plat.
+
+## Livraison 6 — Plusieurs produits dans la scène — FAITE (disposition automatique, flèches de position, fichier .ms3dscene ; déplacement libre à la souris non fait)
+
+19. **Scène à plusieurs pièces** : ajouter d'autres modèles à côté (liste des pièces dans l'onglet Pièce),
+    chacun avec sa position, son orientation, sa matière et ses zones peintes ; disposition automatique
+    côte à côte (alignés, espacement réglable) puis déplacement à la souris sur le sol ; la caméra cadre
+    l'ensemble. Implique : scène enregistrée (fichier « .ms3dscene ») plutôt que réglages par pièce.
+
+## Vers un outil façon KeyShot (pistes, à prioriser)
+
+Bibliothèque de matières (plastiques, métaux, verre) avec glisser-déposer sur la pièce ; bibliothèque
+d'environnements avec aperçus ; profondeur de champ et focale ; animations tournantes (turntable en vidéo
+ou GIF) ; fichiers de scène sauvegardés et rouverts ; rendus en file d'attente.

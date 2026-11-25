@@ -20,14 +20,6 @@ public sealed partial class RenderStudioView
     private List<RenderColor> _customColors = [];
     private HashSet<string> _hiddenColors = [];
     private bool _syncingColor;
-    private readonly CheckBox _bandOn = new() { Content = "Autre couleur en bas de la pièce" };
-    private readonly ColorPicker _bandPicker = new() { IsAlphaEnabled = false, IsAlphaVisible = false, Width = 64, MinHeight = 40, VerticalAlignment = VerticalAlignment.Stretch };
-    private readonly TextBox _bandHex = new();
-    private readonly Slider _bandHeight = new() { Minimum = 0, Maximum = 100, TickFrequency = 0.2, IsSnapToTickEnabled = true };
-    private readonly TextBlock _bandValue = new() { Classes = { "caption" } };
-    private readonly StackPanel _bandFields = new() { Spacing = 8 };
-
-    private string BandHex => _bandHex.Text?.Trim().ToUpperInvariant() ?? string.Empty;
 
     private string CurrentHex => _hex.Text?.Trim().ToUpperInvariant() ?? string.Empty;
 
@@ -47,7 +39,7 @@ public sealed partial class RenderStudioView
                 FormKit.Field("Couleur", colorRow, hint: "Nuancier ou code #RRGGBB ; + l’ajoute à vos couleurs. Survolez une pastille : × la retire."),
                 _colorGroups, _restoreColors,
                 FormKit.Field("Finition", _finish), _glowDark, FormKit.Field("Lignes de couche", _layer),
-                FormKit.SectionLabel("Changement de couleur"), _bandOn, _bandFields, BuildPaintSection()
+                BuildPaintSection()
             }
         };
     }
@@ -72,30 +64,6 @@ public sealed partial class RenderStudioView
         AutomationProperties.SetName(_keepColor, "Ajouter cette couleur à mes couleurs");
         _keepColor.Click += async (_, _) => await KeepColorAsync();
         _restoreColors.Click += (_, _) => { _hiddenColors.Clear(); SavePreferences(); RebuildSwatches(); };
-        // A filament change at a height, as on the printer: below it the second colour (black feet, a coloured base).
-        _bandOn.IsChecked = _saved.BandOn;
-        _bandHex.Text = PreviewColorParser.TryParse(_saved.BandHex, out var band) ? _saved.BandHex : "#000000";
-        _bandPicker.Color = PreviewColorParser.TryParse(_bandHex.Text, out band) ? band : Colors.Black;
-        _bandHeight.Value = _saved.BandHeight;
-        var bandRow = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 8 };
-        bandRow.Children.Add(_bandPicker);
-        Grid.SetColumn(_bandHex, 1);
-        bandRow.Children.Add(_bandHex);
-        _bandFields.Children.Add(FormKit.Field("Couleur du bas", bandRow, hint: "Nuancier ou code #RRGGBB, avec la même finition."));
-        _bandFields.Children.Add(FormKit.Field("Hauteur du changement", _bandHeight));
-        _bandFields.Children.Add(_bandValue);
-        _bandFields.IsVisible = _bandOn.IsChecked == true;
-        _bandOn.IsCheckedChanged += (_, _) => { _bandFields.IsVisible = _bandOn.IsChecked == true; SettingsChanged(); };
-        _bandPicker.ColorChanged += (_, e) =>
-        {
-            if (_syncingColor) return;
-            _bandHex.Text = $"#{e.NewColor.R:X2}{e.NewColor.G:X2}{e.NewColor.B:X2}";
-            SettingsChanged();
-        };
-        _bandHex.LostFocus += (_, _) => BandHexEdited();
-        _bandHex.KeyDown += (_, e) => { if (e.Key == Key.Enter) { BandHexEdited(); e.Handled = true; } };
-        _bandHeight.PropertyChanged += (_, e) => { if (e.Property == Avalonia.Controls.Primitives.RangeBase.ValueProperty) { ShowBandValue(); SettingsChanged(); } };
-        ShowBandValue();
         RebuildSwatches();
     }
 
@@ -104,16 +72,24 @@ public sealed partial class RenderStudioView
     {
         _colorGroups.Children.Clear();
         var shown = new HashSet<string>();
-        void Group(string title, IEnumerable<RenderColor> colors, bool custom, bool expanded)
+        void Group(string title, IEnumerable<RenderColor> colors, bool custom)
         {
             var wrap = new WrapPanel();
             foreach (var color in colors)
                 if ((custom || !_hiddenColors.Contains(color.Key)) && shown.Add(color.Key)) wrap.Children.Add(Swatch(color, custom));
-            if (wrap.Children.Count > 0) _colorGroups.Children.Add(new Expander { Header = $"{title} ({wrap.Children.Count})", Content = wrap, IsExpanded = expanded, HorizontalAlignment = HorizontalAlignment.Stretch, Classes = { "estimate-section" } });
+            if (wrap.Children.Count == 0) return;
+            // Closed by default; opening a group closes the others, so the list stays short.
+            var group = new Expander { Header = $"{title} ({wrap.Children.Count})", Content = wrap, IsExpanded = false, HorizontalAlignment = HorizontalAlignment.Stretch, Classes = { "estimate-section" } };
+            group.PropertyChanged += (_, e) =>
+            {
+                if (e.Property != Expander.IsExpandedProperty || !group.IsExpanded) return;
+                foreach (var other in _colorGroups.Children.OfType<Expander>().Where(other => other != group)) other.IsExpanded = false;
+            };
+            _colorGroups.Children.Add(group);
         }
-        Group("Mes couleurs", _customColors, custom: true, expanded: true);
-        Group("Filaments de l’atelier", _workshopColors, custom: false, expanded: true);
-        foreach (var palette in RenderPalettes.All) Group(palette.Name, palette.Colors, custom: false, expanded: palette.Finish == "matte");
+        Group("Mes couleurs", _customColors, custom: true);
+        Group("Filaments de l’atelier", _workshopColors, custom: false);
+        foreach (var palette in RenderPalettes.All) Group(palette.Name, palette.Colors, custom: false);
         _restoreColors.Content = $"Rétablir les couleurs retirées ({_hiddenColors.Count})";
         _restoreColors.IsVisible = _hiddenColors.Count > 0;
         MarkSwatch();
@@ -125,11 +101,11 @@ public sealed partial class RenderStudioView
     {
         var swatch = new Button
         {
-            Tag = color, Width = 32, Height = 32, MinWidth = 32, MinHeight = 32, Padding = new Thickness(4),
+            Tag = color, Width = 40, Height = 40, MinWidth = 40, MinHeight = 40, Padding = new Thickness(4),
             CornerRadius = new CornerRadius(Ui.Radius.Pill), Background = Brushes.Transparent, BorderThickness = new Thickness(2),
             Content = new Border
             {
-                Width = 20, Height = 20, CornerRadius = new CornerRadius(Ui.Radius.Pill), Background = new SolidColorBrush(Color.Parse(color.Hex)),
+                Width = 28, Height = 28, CornerRadius = new CornerRadius(Ui.Radius.Pill), Background = new SolidColorBrush(Color.Parse(color.Hex)),
                 BorderThickness = new Thickness(1), BorderBrush = (IBrush?)Application.Current?.FindResource("ControlBorderBrush")
             }
         };
@@ -181,34 +157,6 @@ public sealed partial class RenderStudioView
         RebuildSwatches();
     }
 
-    private void BandHexEdited()
-    {
-        var text = _bandHex.Text?.Trim() ?? string.Empty;
-        if (!text.StartsWith('#')) text = "#" + text;
-        if (!PreviewColorParser.TryParse(text, out var color)) return;
-        _bandHex.Text = text.ToUpperInvariant();
-        _syncingColor = true;
-        _bandPicker.Color = color;
-        _syncingColor = false;
-        SettingsChanged();
-    }
-
-    private void ShowBandValue()
-    {
-        var french = System.Globalization.CultureInfo.GetCultureInfo("fr-FR");
-        var layer = Layers[Math.Max(0, _layer.SelectedIndex)].Height;
-        _bandValue.Text = $"Jusqu’à {_bandHeight.Value.ToString("0.0", french)} mm du bas"
-            + (layer > 0 ? $" ({Math.Round(_bandHeight.Value / layer)} couches de {layer.ToString("0.00", french)} mm)." : ".");
-    }
-
-    private void HexEdited()
-    {
-        var text = _hex.Text?.Trim() ?? string.Empty;
-        if (!text.StartsWith('#')) text = "#" + text;
-        if (!PreviewColorParser.TryParse(text, out _)) { SettingsChanged(); return; }
-        SetColor(text.ToUpperInvariant());
-    }
-
     private void SetColor(string hex)
     {
         _hex.Text = hex.ToUpperInvariant();
@@ -219,6 +167,14 @@ public sealed partial class RenderStudioView
             _syncingColor = false;
         }
         ColorChanged();
+    }
+
+    private void HexEdited()
+    {
+        var text = _hex.Text?.Trim() ?? string.Empty;
+        if (!text.StartsWith('#')) text = "#" + text;
+        if (!PreviewColorParser.TryParse(text, out _)) { SettingsChanged(); return; }
+        SetColor(text.ToUpperInvariant());
     }
 
     private void ColorChanged()

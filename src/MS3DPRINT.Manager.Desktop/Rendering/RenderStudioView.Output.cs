@@ -160,11 +160,11 @@ public sealed partial class RenderStudioView
         {
             var dot = new Button
             {
-                Tag = color, Width = 28, Height = 28, MinWidth = 28, MinHeight = 28, Padding = new Thickness(4), Margin = new Thickness(0, 0, 4, 4),
+                Tag = color, Width = 36, Height = 36, MinWidth = 36, MinHeight = 36, Padding = new Thickness(4), Margin = new Thickness(0, 0, 4, 4),
                 CornerRadius = new CornerRadius(Ui.Radius.Pill), Background = Brushes.Transparent, BorderThickness = new Thickness(2),
                 Content = new Border
                 {
-                    Width = 16, Height = 16, CornerRadius = new CornerRadius(Ui.Radius.Pill), Background = new SolidColorBrush(Color.Parse(color.Hex)),
+                    Width = 24, Height = 24, CornerRadius = new CornerRadius(Ui.Radius.Pill), Background = new SolidColorBrush(Color.Parse(color.Hex)),
                     BorderThickness = new Thickness(1), BorderBrush = (IBrush?)Application.Current?.FindResource("ControlBorderBrush")
                 }
             };
@@ -244,36 +244,69 @@ public sealed partial class RenderStudioView
         try
         {
             var sheet = _contactSheet.IsChecked == true;
-            var files = await Task.Run(() => WriteSeries(model, rendered, views.Count, colors.Count, options, keep, sheet));
-            SaveRequested?.Invoke(files, model);
-            ShowStatus($"Série terminée : {files.Count} fichier{(files.Count > 1 ? "s" : "")}.");
+            var summary = SeriesSummary(model, quality.Label, options, views, colors);
+            var zip = await Task.Run(() => WriteSeries(model, rendered, views.Count, colors.Count, options, keep, sheet, summary));
+            var where = SaveFiles is { } save ? await save([zip], model, false) : null;
+            ShowStatus(where is null ? "Série terminée, non enregistrée." : $"Série terminée : {rendered.Count} image{(rendered.Count > 1 ? "s" : "")} dans {Path.GetFileName(zip)}.");
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException) { ShowStatus(exception.Message); }
     }
 
-    private static List<string> WriteSeries(string model, List<(string Png, string? Tiff, SavedCamera View, RenderColor Color)> rendered, int viewCount, int colorCount,
-        OutputOptions options, string folder, bool contactSheet)
+    /// <summary>What the series was made of, written next to the images in the ZIP.</summary>
+    private string SeriesSummary(string model, string quality, OutputOptions options, List<SavedCamera> views, List<RenderColor> colors)
+    {
+        var lines = new List<string>
+        {
+            "Série de rendus MS3DPRINT Manager", $"Pièce : {Path.GetFileName(model)}", $"Date : {DateTime.Now:dd/MM/yyyy HH:mm}",
+            $"Qualité : {quality} · format : {options.Format.ToUpperInvariant()}" + (options.MaxSide > 0 ? $" · {options.MaxSide} px" : ""),
+            $"Ambiance : {Scenes[_scene.SelectedIndex].Label} · cadre : {Formats[_format.SelectedIndex].Label}", "", "Vues :"
+        };
+        lines.AddRange(views.Select(v => "  - " + v.Name));
+        lines.Add("");
+        lines.Add("Couleurs :");
+        lines.AddRange(colors.Select(c => $"  - {c.Label} ({c.Hex}, {Finishes.FirstOrDefault(f => f.Key == c.Finish).Label ?? c.Finish})"));
+        if (_zones.Count > 0)
+        {
+            lines.Add("");
+            lines.Add("Zones peintes (identiques sur toutes les images) :");
+            lines.AddRange(_zones.Select(z => $"  - {z.Label} ({z.Hex})"));
+        }
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    /// <summary>
+    /// Packs the series in one ZIP, sorted: a folder per view when there are several (one image per colour inside), the contact
+    /// sheets and a summary of the settings at the top.
+    /// </summary>
+    private static string WriteSeries(string model, List<(string Png, string? Tiff, SavedCamera View, RenderColor Color)> rendered, int viewCount, int colorCount,
+        OutputOptions options, string folder, bool contactSheet, string summary)
     {
         static string Clean(string text) => string.Concat(text.Split(Path.GetInvalidFileNameChars())).Trim();
-        var files = new List<string>();
         var stem = Clean(Path.GetFileNameWithoutExtension(model));
-        foreach (var (png, tiff, view, color) in rendered)
+        var zip = Path.Combine(folder, $"{stem} - série {DateTime.Now:yyyy-MM-dd HHmm}.zip");
+        using (var archive = System.IO.Compression.ZipFile.Open(zip, System.IO.Compression.ZipArchiveMode.Create))
         {
-            var name = stem + (viewCount > 1 ? " - " + Clean(view.Name) : "") + (colorCount > 1 ? " - " + Clean(color.Label) : "") + (viewCount == 1 && colorCount == 1 ? " - rendu" : "");
-            var target = Path.Combine(folder, name + options.Extension);
-            if (tiff is not null && File.Exists(tiff)) File.Copy(tiff, target, overwrite: true);
-            else File.WriteAllBytes(target, RenderOutput.Encode(png, options.Format == "tiff" ? options with { Format = "png" } : options));
-            files.Add(target);
-        }
-        if (contactSheet && colorCount > 1)
-            foreach (var group in rendered.GroupBy(r => r.View.Name))
+            void Add(string entry, byte[] bytes)
             {
-                using var sheet = RenderOutput.ContactSheet(group.Select(r => (r.Png, r.Color.Label)).ToList());
-                var sheetOptions = options.Format == "tiff" ? options with { Format = "png" } : options with { MaxSide = 0 };
-                var target = Path.Combine(folder, stem + (viewCount > 1 ? " - " + Clean(group.Key) : "") + " - planche couleurs" + (sheetOptions.Format == "png" ? ".png" : sheetOptions.Extension));
-                File.WriteAllBytes(target, RenderOutput.Encode(sheet, sheetOptions));
-                files.Add(target);
+                using var target = archive.CreateEntry(entry, System.IO.Compression.CompressionLevel.NoCompression).Open();
+                target.Write(bytes);
             }
-        return files;
+            foreach (var (png, tiff, view, color) in rendered)
+            {
+                var name = colorCount > 1 ? Clean(color.Label) : stem + (viewCount > 1 ? "" : " - rendu");
+                var folderName = viewCount > 1 ? Clean(view.Name) + "/" : "";
+                if (tiff is not null && File.Exists(tiff)) Add(folderName + name + ".tif", File.ReadAllBytes(tiff));
+                else Add(folderName + name + (options.Format == "tiff" ? ".png" : options.Extension), RenderOutput.Encode(png, options.Format == "tiff" ? options with { Format = "png" } : options));
+            }
+            if (contactSheet && colorCount > 1)
+                foreach (var group in rendered.GroupBy(r => r.View.Name))
+                {
+                    using var sheet = RenderOutput.ContactSheet(group.Select(r => (r.Png, r.Color.Label)).ToList());
+                    var sheetOptions = options.Format == "tiff" ? options with { Format = "png" } : options with { MaxSide = 0 };
+                    Add("planche couleurs" + (viewCount > 1 ? " - " + Clean(group.Key) : "") + (sheetOptions.Format == "png" ? ".png" : sheetOptions.Extension), RenderOutput.Encode(sheet, sheetOptions));
+                }
+            Add("récapitulatif.txt", System.Text.Encoding.UTF8.GetBytes(summary));
+        }
+        return zip;
     }
 }
