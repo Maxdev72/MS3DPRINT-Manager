@@ -48,6 +48,7 @@
             <TextBlock Text="OUTILS" Classes="overline nav-label" Margin="16,12,0,4" />
             <Button Classes="nav-item" Tag="Modèles 3D" Click="NavigationButton_Click" AutomationProperties.Name="Modèles 3D"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconSearch}" /><TextBlock Classes="nav-label" Text="Modèles 3D" /></StackPanel></Button>
             <Button x:Name="ViewerNavButton" Classes="nav-item" Click="OpenThreeDViewer_Click" AutomationProperties.Name="Visualiseur 3D"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconCube}" /><TextBlock Classes="nav-label" Text="Visualiseur 3D" /></StackPanel></Button>
+            <Button Classes="nav-item" Tag="Rendu produit" Click="NavigationButton_Click" AutomationProperties.Name="Rendu produit"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconImage}" /><TextBlock Classes="nav-label" Text="Rendu produit" /></StackPanel></Button>
             <Button Classes="nav-item" Tag="Corbeille" Click="NavigationButton_Click" AutomationProperties.Name="Corbeille"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconTrash}" /><TextBlock Classes="nav-label" Text="Corbeille" /></StackPanel></Button>
           </StackPanel>
           </Panel>
@@ -337,6 +338,14 @@
       <Border x:Name="MonitoringWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="panel">
         <ScrollViewer HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
           <StackPanel>
+            <Button x:Name="MonitoringDetachButton" HorizontalAlignment="Right" Margin="0,0,0,16" IsVisible="False" Click="DetachMonitoring_Click" ToolTip.Tip="Afficher la surveillance dans sa propre fenêtre, par exemple sur un second écran (F11 : plein écran)"><StackPanel Orientation="Horizontal" Spacing="8"><Path Classes="icon icon-sm" Data="{StaticResource IconExpand}" /><TextBlock Text="Ouvrir dans une fenêtre" /></StackPanel></Button>
+            <Border x:Name="MonitoringDetachedNote" Classes="card" Padding="24" IsVisible="False">
+              <StackPanel Spacing="12" HorizontalAlignment="Center">
+                <TextBlock Text="La surveillance est affichée dans sa propre fenêtre." FontWeight="SemiBold" HorizontalAlignment="Center" />
+                <TextBlock Text="Vous pouvez continuer à utiliser le logiciel ; les notifications d’impression restent actives." Classes="muted" HorizontalAlignment="Center" TextWrapping="Wrap" />
+                <Button Content="Rappeler ici" HorizontalAlignment="Center" Click="ReattachMonitoring_Click" />
+              </StackPanel>
+            </Border>
             <StackPanel x:Name="MonitoringEmptyHost" />
             <Panel x:Name="MonitoringSummary" Margin="0,0,0,24" IsVisible="False" />
             <UniformGrid x:Name="PrinterLivePanel" Columns="3" Margin="0,0,-16,0" />
@@ -366,6 +375,7 @@
         </Grid>
       </Border>
       <Border x:Name="ModelSearchWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="panel" />
+      <Border x:Name="RenderWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="panel" />
       <Border x:Name="TrashWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="panel">
         <Grid RowDefinitions="Auto,*" RowSpacing="16"><Grid ColumnDefinitions="*,Auto"><StackPanel /></Grid><ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel x:Name="TrashList" HorizontalAlignment="Stretch" Spacing="0" Margin="0,0,12,0" /></ScrollViewer></Grid>
       </Border>

@@ -135,9 +135,10 @@ public partial class MainWindow : Window
         if (_tray is null)
         {
             var open = new NativeMenuItem("Ouvrir MS3DPRINT Manager"); open.Click += (_, _) => RestoreFromTray();
+            var watch = new NativeMenuItem("Fenêtre de surveillance"); watch.Click += (_, _) => OpenMonitoringWindow();
             var quit = new NativeMenuItem("Quitter"); quit.Click += (_, _) => { RestoreFromTray(); QuitApplication(); };
             using var icon = Avalonia.Platform.AssetLoader.Open(new Uri("avares://MS3DPRINT.Manager.Desktop/Assets/app-icon.png"));
-            _tray = new TrayIcon { Icon = new WindowIcon(icon), ToolTipText = "MS3DPRINT Manager", Menu = new NativeMenu { open, quit } };
+            _tray = new TrayIcon { Icon = new WindowIcon(icon), ToolTipText = "MS3DPRINT Manager", Menu = new NativeMenu { open, watch, quit } };
             _tray.Clicked += (_, _) => RestoreFromTray();
             // A TrayIcon built in code is only shown once it belongs to the application.
             TrayIcon.SetIcons(Application.Current!, new TrayIcons { _tray });
@@ -327,7 +328,7 @@ public partial class MainWindow : Window
         PageSubtitle.IsVisible = !browser;
         var centralMargins = browser ? 32d : 68d;
         var available = Math.Max(0, windowWidth - sidebarWidth - centralMargins);
-        var wide = ViewerWorkspacePanel.IsVisible || browser;
+        var wide = ViewerWorkspacePanel.IsVisible || RenderWorkspacePanel.IsVisible || browser;
         CentralWorkspace.MaxWidth = wide ? double.PositiveInfinity : 1400;
         CentralWorkspace.Width = wide ? available : Math.Min(1400, available);
         SearchResultsPanel.Width = Math.Min(compact ? 500 : 560, available);
@@ -423,6 +424,7 @@ public partial class MainWindow : Window
         ["Imprimantes"] = "Votre parc machines et leurs coûts horaires.",
         ["Surveillance"] = "Vos imprimantes en direct : avancement, températures et caméra.",
         ["Modèles 3D"] = "Cherchez un modèle sur plusieurs sites à la fois, dans des onglets.",
+        ["Rendu produit"] = "Une image produit de votre modèle avec Blender : couleur, finition et ambiance, sans scène à préparer.",
         ["Corbeille"] = "Retrouvez et restaurez ce que vous avez supprimé.",
         ["Paramètres"] = "Stockage, arborescence et journal des modifications."
     };

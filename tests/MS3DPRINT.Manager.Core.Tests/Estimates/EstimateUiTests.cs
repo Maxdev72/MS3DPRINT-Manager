@@ -26,6 +26,7 @@ public sealed class EstimateTestApplication : Application
     {
         RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Dark;
         Styles.Add(new Avalonia.Themes.Fluent.FluentTheme());
+        Styles.Add(new StyleInclude(new Uri("avares://MS3DPRINT.Manager.Desktop/")) { Source = new Uri("avares://Avalonia.Controls.ColorPicker/Themes/Fluent/Fluent.xaml") });
         foreach (var file in new[] { "Theme.axaml", "Controls.axaml", "Brand.axaml", "Workspace.axaml" })
             Styles.Add(new StyleInclude(new Uri("avares://MS3DPRINT.Manager.Desktop/")) { Source = new Uri("avares://MS3DPRINT.Manager.Desktop/Styles/" + file) });
     }

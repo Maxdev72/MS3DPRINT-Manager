@@ -159,14 +159,19 @@ public partial class MainWindow
         ["beige"] = "#D8C3A0", ["or"] = "#D4AF37", ["naturel"] = "#E8DFC8", ["transparent"] = "#00000000"
     };
 
-    /// <summary>A small dot in the filament's colour when the name (first word) or a #RRGGBB code is recognised.</summary>
-    private static Control? FilamentSwatch(string? name)
+    /// <summary>The #RRGGBB code of a filament colour given by name (first word) or by code, or null when not recognised.</summary>
+    private static string? FilamentHex(string? name)
     {
         if (string.IsNullOrWhiteSpace(name)) return null;
         var text = name.Trim();
         var key = text.StartsWith('#') ? text : text.Split(' ', '-', '/')[0];
-        var hex = key.StartsWith('#') ? key : FilamentColors.GetValueOrDefault(key);
-        if (hex is null || !Color.TryParse(hex, out var parsed)) return null;
+        return key.StartsWith('#') ? key : FilamentColors.GetValueOrDefault(key);
+    }
+
+    /// <summary>A small dot in the filament's colour when the name (first word) or a #RRGGBB code is recognised.</summary>
+    private static Control? FilamentSwatch(string? name)
+    {
+        if (FilamentHex(name) is not { } hex || !Color.TryParse(hex, out var parsed)) return null;
         return new Border { Width = 12, Height = 12, CornerRadius = new Avalonia.CornerRadius(Ui.Radius.Pill), Background = new SolidColorBrush(parsed), BorderThickness = new Avalonia.Thickness(1),
             BorderBrush = (IBrush?)Avalonia.Application.Current?.FindResource("ControlBorderBrush"), VerticalAlignment = VerticalAlignment.Center };
     }

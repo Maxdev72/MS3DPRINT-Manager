@@ -17,10 +17,12 @@
     <AvaloniaResource Include="Assets/Fonts/*.ttf" />
     <AvaloniaResource Include="Assets/Fonts/*.txt" />
     <AvaloniaResource Include="../../CHANGELOG.md" Link="Assets/CHANGELOG.md" />
+    <EmbeddedResource Include="Rendering/product_render.py" LogicalName="MS3DPRINT.Manager.Desktop.Rendering.product_render.py" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Controls.ColorPicker" Version="12.1.4" />
     <PackageReference Include="Avalonia.Desktop" Version="12.1.4" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
     <PackageReference Include="Avalonia.Controls.WebView" Version="12.1.1" />

@@ -40,9 +40,9 @@ public partial class MainWindow
             MonitoringWorkspacePanel.PropertyChanged += (_, e) =>
             {
                 if (e.Property != IsVisibleProperty) return;
-                foreach (var live in _liveCards.Values) live.SetCameraActive(MonitoringWorkspacePanel.IsVisible);
+                foreach (var live in _liveCards.Values) live.SetCameraActive(CamerasWanted);
             };
-            Closed += (_, _) => StopLiveCards();
+            Closed += (_, _) => { _monitoringWindow?.Close(); StopLiveCards(); };
             // Equal columns: about 420 px per card, so every card has the same width and its sections line up.
             PrinterLivePanel.SizeChanged += (_, e) => PrinterLivePanel.Columns = Math.Max(1, (int)(e.NewSize.Width / 420));
         }
@@ -56,7 +56,7 @@ public partial class MainWindow
             {
                 var card = new PrinterLiveCard(printer, connection!);
                 card.Changed += () => { RefreshMonitoringSummary(); AnnouncePrinterChange(card); };
-                card.SetCameraActive(MonitoringWorkspacePanel.IsVisible);
+                card.SetCameraActive(CamerasWanted);
                 _liveCards[printer.Id] = card;
             }
         PrinterLivePanel.Children.Clear();
@@ -133,5 +133,6 @@ public partial class MainWindow
         }
         else _nextTile.Set("—", "Aucune fin prévue");
         MonitoringSummary.IsVisible = cards.Length > 0;
+        RefreshMonitoringDetached();
     }
 }

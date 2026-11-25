@@ -76,6 +76,9 @@ public sealed partial class ModelViewerView : UserControl
 
     /// <summary>Raised when the user wants an estimate prefilled from the displayed model.</summary>
     public event Action<ModelEstimateSeed>? EstimateRequested;
+
+    /// <summary>Asks for a product render of the model on screen (its path).</summary>
+    public event Action<string>? RenderRequested;
     private readonly MeasureOverlay _overlay = new();
     private readonly ToggleButton _measureToggle = new() { IsEnabled = false };
     private readonly TextBlock _measureList = new() { TextWrapping = TextWrapping.Wrap };
@@ -158,6 +161,9 @@ public sealed partial class ModelViewerView : UserControl
         Tool(compareTool, "IconCompare", "Comparer avec une autre version");
         _compareButton.PropertyChanged += (_, e) => { if (e.Property == IsEnabledProperty) compareTool.IsEnabled = _compareButton.IsEnabled; };
         compareTool.Click += async (_, _) => { ShowTab(2); await CompareAsync(); };
+        var renderTool = new Button();
+        Tool(renderTool, "IconImage", "Rendu produit de ce modèle (Blender)");
+        renderTool.Click += (_, _) => { if (_modelPath is not null) RenderRequested?.Invoke(_modelPath); };
         _reset.Click += (_, _) => _viewport.ResetView();
         _captureTool.Click += async (_, _) => await CaptureViewAsync();
         _wireToggle.IsCheckedChanged += (_, _) => _mode.SelectedIndex = _wireToggle.IsChecked == true ? 1 : 0;
@@ -165,7 +171,7 @@ public sealed partial class ModelViewerView : UserControl
         _stage.Children.Add(new Border
         {
             Classes = { "toolbar" }, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(12),
-            Child = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2, Children = { _reset, _wireToggle, divider, _measureToggle, _cutToggle, _faceToggle, compareTool, _captureTool } }
+            Child = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2, Children = { _reset, _wireToggle, divider, _measureToggle, _cutToggle, _faceToggle, compareTool, _captureTool, renderTool } }
         });
 
         // side panel: back and open on top, four tabs, the estimate action always in reach

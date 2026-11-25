@@ -50,6 +50,7 @@ public partial class MainWindow
         RevenuesWorkspacePanel.IsVisible = destination == "Recettes";
         PurchasesWorkspacePanel.IsVisible = destination == "Achats";
         ModelSearchWorkspacePanel.IsVisible = destination == "Modèles 3D";
+        RenderWorkspacePanel.IsVisible = destination == "Rendu produit";
         DocumentsWorkspacePanel.IsVisible = destination == "Documents";
         TrashWorkspacePanel.IsVisible = destination == "Corbeille";
         SettingsWorkspacePanel.IsVisible = destination == "Paramètres";
@@ -61,7 +62,7 @@ public partial class MainWindow
         {
             "Projets" => ProjectsWorkspacePanel, "Tâches" => TasksWorkspacePanel, "Clients" => ClientsWorkspacePanel, "Collections" => CollectionsWorkspacePanel,
             "Filaments" => FilamentsWorkspacePanel, "Estimations" => EstimatesWorkspacePanel, "Imprimantes" => PrintersWorkspacePanel, "Surveillance" => MonitoringWorkspacePanel, "Recettes" => RevenuesWorkspacePanel, "Achats" => PurchasesWorkspacePanel, "Documents" => DocumentsWorkspacePanel,
-            "Modèles 3D" => ModelSearchWorkspacePanel, "Corbeille" => TrashWorkspacePanel, "Paramètres" => SettingsWorkspacePanel, _ => DashboardContent
+            "Modèles 3D" => ModelSearchWorkspacePanel, "Rendu produit" => RenderWorkspacePanel, "Corbeille" => TrashWorkspacePanel, "Paramètres" => SettingsWorkspacePanel, _ => DashboardContent
         });
         _selectedNavigationButton = NavigationButtons().FirstOrDefault(button => button.Tag as string == destination);
         SetPageBrand(destination);
@@ -171,6 +172,8 @@ public partial class MainWindow
                 await LoadPrintersAsync();
             else if (destination == "Surveillance")
                 await LoadMonitoringAsync();
+            else if (destination == "Rendu produit")
+                await LoadRenderPageAsync();
             else if (trashVisible)
                 await LoadTrashAsync();
             else if (settingsVisible)

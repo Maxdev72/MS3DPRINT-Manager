@@ -1,5 +1,19 @@
 # Journal des modifications
 
+## 25 novembre 2026
+
+### Rendu produit avec Blender
+- Nouvelle page Outils → Rendu produit : ouvrez ou déposez un STL, OBJ ou 3MF et obtenez une image produit sans préparer de scène. Blender (gratuit) doit être installé ; la page le détecte seule.
+- Couleurs des filaments de l'atelier (finition déduite : Silk → soie, PETG → brillant) ou code #RRGGBB, finition mate, soie ou brillante, lignes de couche de 0,12 à 0,28 mm ou surface lisse.
+- Ambiances studio clair, studio sombre, fond de couleur ou fond transparent avec ombre ; rotation du modèle, hauteur de vue et format (carré, 4:3, 3:4, 16:9). L'aperçu se met à jour à chaque réglage, le rendu HD (2048 px) se lance à la demande et s'enregistre dans le dossier photos du projet du modèle.
+- Couleurs personnalisées : nuancier ou code #RRGGBB, bouton + pour garder la couleur (avec sa finition) dans « vos couleurs » ; clic droit pour la retirer, après confirmation. Les derniers réglages de la page sont retrouvés à la visite suivante.
+- Vues rapides Face, Trois-quarts, Dessus et Arrière, temps écoulé affiché pendant le rendu HD, et bouton « Rendu produit » dans la barre d'outils du visualiseur 3D pour mettre en scène le modèle affiché.
+- Éclairage revu : les filaments blancs et noirs restent lisibles sur le studio clair.
+- Ambiance « Environnement (HDRI) » comme dans les logiciels de rendu : la pièce est éclairée par une image à 360° qui apparaît derrière elle, avec son ombre au sol. Les huit environnements fournis avec Blender sont proposés ; ajoutez vos propres images HDR ou EXR (Poly Haven par exemple) et tournez l'environnement pour choisir l'arrière-plan.
+
+### Surveillance dans sa propre fenêtre
+- Bouton « Ouvrir dans une fenêtre » sur la page Surveillance, et entrée « Fenêtre de surveillance » dans le menu de l'icône de la zone de notification : les cartes des imprimantes passent dans une fenêtre à laisser sur un écran de l'atelier pendant que le logiciel sert ailleurs. F11 pour le plein écran, Échap pour en sortir ; la fenêtre rouvre sur le même écran. Fermer la fenêtre ou « Rappeler ici » remet les cartes sur la page.
+
 ## 2 novembre 2026
 
 ### Première candidate du compagnon distant

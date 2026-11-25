@@ -66,6 +66,7 @@ public partial class MainWindow
             _modelViewer.FileOpened += path => { if (!IsServerWorkspace) _ = RememberOpenedFileAsync(WorkspaceRoot, path); };
             _modelViewer.EstimateRequested += StartEstimateFromModel;
             _modelViewer.ImageCaptured += SaveViewerCapture;
+            _modelViewer.RenderRequested += RenderFromViewer;
             ViewerWorkspacePanel.Child = _modelViewer;
         }
         _modelViewer.Resume();

@@ -46,7 +46,7 @@ public partial class MainWindow
         {
             "Projets" => "IconProjects", "Clients" => "IconClients", "Estimations" => "IconEstimates",
             "Imprimantes" => "IconPrinters", "Surveillance" => "IconCamera", "Recettes" => "IconBook", "Achats" => "IconCart", "Documents" => "IconProjects","Filaments" => "IconFilaments", "Collections" => "IconCollections",
-            "Paramètres" => "IconSettings", "Corbeille" => "IconTrash", "Tâches" => "IconProjectTasks", "Modèles 3D" => "IconSearch", "Visualiseur 3D" => "IconCube", _ => "IconHome"
+            "Paramètres" => "IconSettings", "Corbeille" => "IconTrash", "Tâches" => "IconProjectTasks", "Modèles 3D" => "IconSearch", "Visualiseur 3D" => "IconCube", "Rendu produit" => "IconImage", _ => "IconHome"
         };
         PageIcon.Data = (Geometry?)this.FindResource(icon);
         QueueBrandNavigation();
