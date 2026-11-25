@@ -337,7 +337,8 @@
         <ScrollViewer HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
           <StackPanel>
             <StackPanel x:Name="MonitoringEmptyHost" />
-            <WrapPanel x:Name="PrinterLivePanel" />
+            <TextBlock x:Name="MonitoringSummary" Classes="muted" Margin="0,0,0,16" IsVisible="False" TextWrapping="Wrap" />
+            <UniformGrid x:Name="PrinterLivePanel" Columns="3" Margin="0,0,-16,0" />
           </StackPanel>
         </ScrollViewer>
       </Border>

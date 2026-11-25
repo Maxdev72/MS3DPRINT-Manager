@@ -1,6 +1,8 @@
 using System.Globalization;
+using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Controls.Documents;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -15,37 +17,88 @@ public sealed class PrinterLiveCard : Border, IDisposable
 {
     private readonly CancellationTokenSource _cancel = new();
     private readonly Image _camera = new() { Stretch = Stretch.Uniform };
-    private readonly TextBlock _cameraNote = new() { Text = "Connexion à la caméra…", Classes = { "muted" }, TextWrapping = TextWrapping.Wrap, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Center, Margin = new(12) };
-    private readonly TextBlock _state = new() { Text = "Connexion…", FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap };
-    private readonly TextBlock _job = new() { TextWrapping = TextWrapping.Wrap, IsVisible = false };
-    private readonly ProgressBar _progress = new() { Minimum = 0, Maximum = 100, IsVisible = false };
-    private readonly TextBlock _detail = new() { Classes = { "muted" }, TextWrapping = TextWrapping.Wrap, IsVisible = false };
-    private readonly TextBlock _temperatures = new() { Classes = { "muted" }, TextWrapping = TextWrapping.Wrap, IsVisible = false };
-    private readonly WrapPanel _trays = new() { IsVisible = false };
+    private readonly TextBlock _cameraNote = new() { Text = "Connexion à la caméra…", Foreground = Brushes.Gainsboro, TextWrapping = TextWrapping.Wrap, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Center, Margin = new(24) };
+    private readonly Border _badge = new() { Classes = { "badge" }, VerticalAlignment = VerticalAlignment.Center };
+    private readonly TextBlock _badgeText = new() { Text = "Connexion…" };
+    private readonly Border _alerts = new() { Classes = { "badge", "danger" }, VerticalAlignment = VerticalAlignment.Center, IsVisible = false };
+    private readonly TextBlock _alertsText = new();
+    // Two lines reserved: the file name, or the reason the printer is unreachable.
+    private readonly TextBlock _job = new() { TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis, Height = 40 };
+    private readonly List<Image> _mirrors = [];
+    private readonly StackPanel _progressBlock = new() { Spacing = 8 };
+    private readonly Run _percent = new(), _percentUnit = new(" %") { FontSize = Ui.Text.Section };
+    private readonly TextBlock _finish = new() { FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Right };
+    private readonly TextBlock _remaining = new() { Classes = { "caption" }, HorizontalAlignment = HorizontalAlignment.Right };
+    private readonly ProgressBar _progress = new() { Minimum = 0, Maximum = 100, Height = 6, MinHeight = 6, CornerRadius = new(Ui.Radius.Pill) };
+    private readonly TextBlock _layers = new() { Classes = { "caption" } };
+    private readonly Grid _temperatures = new() { ColumnDefinitions = new("*,*,*"), ColumnSpacing = 8 };
+    private readonly StackPanel _amsBlock = new() { Spacing = 8 };
+    private readonly WrapPanel _trays = new();
     private VlcCamera? _video;
     private BambuLink.RtspRelay? _relay;
 
     public PrinterProfile Printer { get; }
     public PrinterConnection Connection { get; }
+    /// <summary>Last state received, or null while offline; <see cref="Changed"/> follows it.</summary>
+    public BambuStatus? Status { get; private set; }
+    public event Action? Changed;
 
-    public PrinterLiveCard(PrinterProfile printer, PrinterConnection connection)
+    /// <param name="connect">False only to preview the card without a printer.</param>
+    public PrinterLiveCard(PrinterProfile printer, PrinterConnection connection, bool connect = true)
     {
         Printer = printer;
         Connection = connection;
-        Classes.Add("card");
-        Width = 440;
-        Margin = new(0, 0, 12, 12);
+        Classes.Add("card-raised");
+        // Follows the theme; the class alone left the card invisible on the page background.
+        Bind(BackgroundProperty, this.GetResourceObservable("RaisedSurfaceBrush"));
+        Bind(BorderBrushProperty, this.GetResourceObservable("SubtleBorderBrush"));
+        BorderThickness = new(1);
+        CornerRadius = new(Ui.Radius.Card);
+        Padding = new(0);
+        ClipToBounds = true;
+        Margin = new(0, 0, 16, 16);
         AutomationProperties.SetName(_camera, "Caméra de " + printer.Name);
+        _badge.Child = _badgeText;
+        _alerts.Child = _alertsText;
+        var name = new TextBlock { Text = printer.Name, Classes = { "card-title" }, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
+        Grid.SetColumn(_alerts, 1);
+        Grid.SetColumn(_badge, 2);
+        var fullScreen = new Button { Content = Icons.Glyph("IconExpand"), Classes = { "icon-action" }, Background = new SolidColorBrush(Color.FromArgb(150, 0, 0, 0)), Foreground = Brushes.White, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new(8) };
+        ToolTip.SetTip(fullScreen, "Plein écran (double-clic sur l’image)");
+        AutomationProperties.SetName(fullScreen, "Caméra de " + printer.Name + " en plein écran");
+        fullScreen.Click += (_, _) => OpenFullScreen();
+        // 16:9 like the printers' cameras, whatever the column width.
+        var cameraFrame = new Border { Background = Brushes.Black, Child = new Grid { Children = { _camera, _cameraNote, fullScreen } } };
+        cameraFrame.SizeChanged += (_, e) => { if (Math.Abs(e.NewSize.Width * 9 / 16 - cameraFrame.Height) > 0.5) cameraFrame.Height = e.NewSize.Width * 9 / 16; };
+        cameraFrame.Height = 248;
+        cameraFrame.DoubleTapped += (_, _) => OpenFullScreen();
+        var percent = new TextBlock { FontSize = Ui.Text.Page, FontWeight = FontWeight.SemiBold, Inlines = new InlineCollection { _percent, _percentUnit } };
+        var finish = new StackPanel { VerticalAlignment = VerticalAlignment.Bottom, Children = { _finish, _remaining } };
+        Grid.SetColumn(finish, 1);
+        _progressBlock.Children.Add(new Grid { ColumnDefinitions = new("*,Auto"), Children = { percent, finish } });
+        _progressBlock.Children.Add(_progress);
+        _progressBlock.Children.Add(_layers);
+        _amsBlock.Children.Add(new TextBlock { Text = "AMS", Classes = { "overline" } });
+        _amsBlock.Children.Add(_trays);
         Child = new StackPanel
         {
-            Spacing = 8,
             Children =
             {
-                new TextBlock { Text = printer.Name, Classes = { "card-title" }, TextWrapping = TextWrapping.Wrap },
-                new Border { Height = 248, Background = Brushes.Black, CornerRadius = new(6), ClipToBounds = true, Child = new Grid { Children = { _camera, _cameraNote } } },
-                _state, _job, _progress, _detail, _temperatures, _trays
+                cameraFrame,
+                new StackPanel
+                {
+                    Margin = new(16, 12, 16, 16), Spacing = 12,
+                    Children =
+                    {
+                        // Every section keeps a fixed height so the rows line up from one card to the next.
+                        new StackPanel { Spacing = 8, Children = { new Grid { ColumnDefinitions = new("*,Auto,Auto"), ColumnSpacing = 8, Children = { name, _alerts, _badge } }, _job } },
+                        _progressBlock, _temperatures, _amsBlock
+                    }
+                }
             }
         };
+        Render(null, "Connexion…", null);
+        if (!connect) return;
         var token = _cancel.Token;
         _ = Task.Run(() => BambuLink.WatchStatusAsync(connection, s => Dispatcher.UIThread.Post(() => Show(s)), m => Dispatcher.UIThread.Post(() => ShowOffline(m)), token));
         StartCamera(printer.Model, token);
@@ -96,10 +149,34 @@ public sealed class PrinterLiveCard : Border, IDisposable
     {
         if (_cancel.IsCancellationRequested) { if (frame is not WriteableBitmap) frame.Dispose(); return; }
         _cameraNote.IsVisible = false;
-        if (ReferenceEquals(_camera.Source, frame)) { _camera.InvalidateVisual(); return; }
+        if (ReferenceEquals(_camera.Source, frame)) { _camera.InvalidateVisual(); foreach (var mirror in _mirrors) mirror.InvalidateVisual(); return; }
         var previous = _camera.Source as Bitmap;
         _camera.Source = frame;
-        if (previous is not null and not WriteableBitmap) previous.Dispose();
+        foreach (var mirror in _mirrors) mirror.Source = frame;
+        if (previous is not null and not WriteableBitmap && !ReferenceEquals(previous, frame)) previous.Dispose();
+    }
+
+    /// <summary>The camera alone on the whole screen; Échap, a click or a double-click closes it.</summary>
+    private void OpenFullScreen()
+    {
+        var image = new Image { Stretch = Stretch.Uniform, Source = _camera.Source };
+        AutomationProperties.SetName(image, "Caméra de " + Printer.Name);
+        var caption = new Border
+        {
+            Background = new SolidColorBrush(Color.FromArgb(160, 0, 0, 0)), CornerRadius = new(Ui.Radius.Control), Padding = new(12, 8), Margin = new(24),
+            HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top,
+            Child = new TextBlock { Foreground = Brushes.White, Text = Printer.Name + " · Échap pour fermer" }
+        };
+        var window = new Window
+        {
+            Title = "Caméra · " + Printer.Name, Background = Brushes.Black, WindowState = WindowState.FullScreen,
+            Content = new Grid { Children = { image, caption } }
+        };
+        _mirrors.Add(image);
+        window.Closed += (_, _) => _mirrors.Remove(image);
+        window.KeyDown += (_, e) => { if (e.Key == Avalonia.Input.Key.Escape) window.Close(); };
+        window.PointerPressed += (_, _) => window.Close();
+        window.Show();
     }
 
     private void ShowCameraNote(string message)
@@ -108,48 +185,93 @@ public sealed class PrinterLiveCard : Border, IDisposable
         _cameraNote.IsVisible = true;
     }
 
-    private void ShowOffline(string message)
+    internal void ShowOffline(string message)
     {
-        _state.Text = message;
-        _job.IsVisible = _progress.IsVisible = _detail.IsVisible = _temperatures.IsVisible = _trays.IsVisible = false;
+        Render(null, "Hors ligne", message);
+        Changed?.Invoke();
     }
 
-    private void Show(BambuStatus s)
+    internal void Show(BambuStatus s)
     {
-        _state.Text = s.ErrorCount > 0 ? $"{s.StateLabel} · {s.ErrorCount} alerte{(s.ErrorCount > 1 ? "s" : "")} sur l’écran de l’imprimante" : s.StateLabel;
-        _job.Text = s.JobName ?? "";
-        _job.IsVisible = s.IsPrinting && s.JobName is not null;
-        _progress.Value = s.Percent ?? 0;
-        _progress.IsVisible = s.IsPrinting;
-        var parts = new List<string>();
-        if (s.Percent is { } percent) parts.Add(percent + " %");
-        if (s.Layer is { } layer && s.TotalLayers is > 0) parts.Add($"couche {layer}/{s.TotalLayers}");
-        if (s.RemainingMinutes is > 0 and var minutes) parts.Add("reste " + (minutes >= 60 ? $"{minutes / 60} h {minutes % 60:00}" : $"{minutes} min"));
-        _detail.Text = string.Join(" · ", parts);
-        _detail.IsVisible = s.IsPrinting && parts.Count > 0;
-        var temperatures = new List<string>();
-        if (s.Nozzle is { } nozzle) temperatures.Add("Buse " + Degrees(nozzle, s.NozzleTarget));
-        if (s.Bed is { } bed) temperatures.Add("Plateau " + Degrees(bed, s.BedTarget));
-        if (s.Chamber is > 0 and var chamber) temperatures.Add("Enceinte " + Degrees(chamber, null));
-        _temperatures.Text = string.Join(" · ", temperatures);
-        _temperatures.IsVisible = temperatures.Count > 0;
+        Render(s, s.StateLabel, null);
+        Changed?.Invoke();
+    }
+
+    /// <summary>Every state keeps the same layout; values that are not known show a dash.</summary>
+    private void Render(BambuStatus? s, string badge, string? message)
+    {
+        Status = s;
+        SetBadge(badge, s?.State switch { "RUNNING" or "PREPARE" or "SLICING" => "info", "PAUSE" => "warning", "FAILED" => "danger", "FINISH" => "success", _ => null });
+        var errors = s?.ErrorCount ?? 0;
+        _alertsText.Text = $"{errors} alerte{(errors > 1 ? "s" : "")}";
+        ToolTip.SetTip(_alerts, "Voir le détail sur l’écran de l’imprimante");
+        _alerts.IsVisible = errors > 0;
+
+        var printing = s?.IsPrinting == true;
+        var finished = s?.State == "FINISH";
+        var showJob = (printing || finished) && s?.JobName is not null;
+        _job.Text = message ?? (showJob ? s!.JobName : "Aucune impression en cours");
+        _job.Classes.Set("muted", !printing);
+
+        var percent = printing ? s!.Percent ?? 0 : finished ? 100 : (int?)null;
+        _percent.Text = percent?.ToString(CultureInfo.CurrentCulture) ?? "—";
+        _percentUnit.Text = percent is null ? "" : " %";
+        _progress.Value = percent ?? 0;
+        var minutes = printing ? s!.RemainingMinutes ?? 0 : 0;
+        _finish.Text = minutes > 0 ? FinishTime(DateTime.Now.AddMinutes(minutes)) : finished ? "Terminée" : "";
+        _remaining.Text = minutes > 0 ? "reste " + (minutes >= 60 ? $"{minutes / 60} h {minutes % 60:00}" : $"{minutes} min") : "";
+        _layers.Text = (printing || finished) && s!.Layer is { } layer && s.TotalLayers is > 0 ? $"Couche {layer} sur {s.TotalLayers}" : "Couche —";
+
+        _temperatures.Children.Clear();
+        var tiles = new[] { Temperature("BUSE", s?.Nozzle, s?.NozzleTarget), Temperature("PLATEAU", s?.Bed, s?.BedTarget), Temperature("ENCEINTE", s?.Chamber is > 0 ? s.Chamber : null, null) };
+        for (var i = 0; i < tiles.Length; i++) { Grid.SetColumn(tiles[i], i); _temperatures.Children.Add(tiles[i]); }
+
         _trays.Children.Clear();
-        foreach (var tray in s.Trays)
+        foreach (var tray in s?.Trays ?? [])
         {
             var color = Color.TryParse("#" + tray.ColorHex, out var parsed) ? parsed : Colors.Gray;
-            var chip = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Margin = new(0, 0, 10, 4), Children =
+            var chip = new StackPanel { Spacing = 4, Width = 52, Margin = new(0, 0, 8, 0), Children =
             {
-                new Border { Width = 12, Height = 12, CornerRadius = new(6), Background = new SolidColorBrush(color), BorderBrush = Brushes.Gray, BorderThickness = new(1), VerticalAlignment = VerticalAlignment.Center },
-                new TextBlock { Text = tray.Type, Classes = { "muted" } }
+                new Border { Width = 28, Height = 28, CornerRadius = new(Ui.Radius.Pill), Background = new SolidColorBrush(color), BorderBrush = new SolidColorBrush(Color.FromArgb(90, 255, 255, 255)), BorderThickness = new(1), HorizontalAlignment = HorizontalAlignment.Center },
+                new TextBlock { Text = tray.Type, Classes = { "caption" }, HorizontalAlignment = HorizontalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis }
             } };
             AutomationProperties.SetName(chip, $"{tray.Type} #{tray.ColorHex}");
             _trays.Children.Add(chip);
         }
-        _trays.IsVisible = s.Trays.Count > 0;
+        // Same height as a row of spools, so empty cards keep the layout of the others.
+        if (_trays.Children.Count == 0)
+            _trays.Children.Add(new TextBlock { Text = s is null ? "—" : "Aucune bobine détectée", Classes = { "caption" }, Height = 46, VerticalAlignment = VerticalAlignment.Center });
     }
 
-    private static string Degrees(double current, double? target) =>
-        target is > 0 ? $"{current.ToString("0", CultureInfo.CurrentCulture)}/{target.Value.ToString("0", CultureInfo.CurrentCulture)} °C" : $"{current.ToString("0", CultureInfo.CurrentCulture)} °C";
+    private void SetBadge(string text, string? tone)
+    {
+        _badgeText.Text = text;
+        foreach (var t in new[] { "info", "warning", "danger", "success" }) _badge.Classes.Set(t, t == tone);
+    }
+
+    /// <summary>"Fin 14:32", "Fin demain 07:46" or "Fin le 27/11 09:10".</summary>
+    public static string FinishTime(DateTime end, DateTime? now = null)
+    {
+        var today = (now ?? DateTime.Now).Date;
+        var time = end.ToString("HH:mm", CultureInfo.CurrentCulture);
+        return end.Date == today ? "Fin " + time : end.Date == today.AddDays(1) ? "Fin demain " + time : $"Fin le {end:dd/MM} {time}";
+    }
+
+    private static Control Temperature(string label, double? current, double? target)
+    {
+        var value = new TextBlock { FontWeight = FontWeight.SemiBold, Inlines = new InlineCollection
+        {
+            new Run(current is { } c ? c.ToString("0", CultureInfo.CurrentCulture) + " °C" : "—"),
+            new Run(current is not null && target is > 0 ? " / " + target.Value.ToString("0", CultureInfo.CurrentCulture) : "") { FontWeight = FontWeight.Normal, Foreground = Application.Current?.FindResource("MutedTextBrush") as IBrush }
+        } };
+        var tile = new Border
+        {
+            CornerRadius = new(Ui.Radius.Control), Padding = new(12, 8),
+            Child = new StackPanel { Spacing = 2, Children = { new TextBlock { Text = label, Classes = { "overline" } }, value } }
+        };
+        tile.Bind(BackgroundProperty, tile.GetResourceObservable("NeutralSoftBrush"));
+        return tile;
+    }
 
     public void Dispose()
     {
