@@ -20,8 +20,12 @@ public sealed record BambuAlert(long Attr, long Code, DateTime? Since = null)
 }
 
 public sealed record BambuStatus(string State, int? Percent, int? RemainingMinutes, int? Layer, int? TotalLayers, string? JobName,
-    double? Nozzle, double? NozzleTarget, double? Bed, double? BedTarget, double? Chamber, IReadOnlyList<BambuAlert> Alerts, IReadOnlyList<BambuTray> Trays)
+    double? Nozzle, double? NozzleTarget, double? Bed, double? BedTarget, double? Chamber, IReadOnlyList<BambuAlert> Alerts, IReadOnlyList<BambuTray> Trays,
+    double? SecondNozzle = null)
 {
+    /// <summary>H2D: right nozzle in <see cref="Nozzle"/>, left one here.</summary>
+    public bool HasTwoNozzles => SecondNozzle is not null;
+
     public int ErrorCount => Alerts.Count;
 
     public bool IsPrinting => State is "RUNNING" or "PREPARE" or "SLICING" or "PAUSE";
@@ -70,11 +74,23 @@ public sealed class BambuReport
                     foreach (var slot in slots)
                         if (Text(slot?["tray_type"]) is { Length: > 0 } type)
                             trays.Add(new BambuTray(type, (Text(slot?["tray_color"]) ?? "").PadRight(6, '0')[..6]));
+        // H2 series: "device" holds the temperatures, each packed as target << 16 | current, and the chamber ("ctc").
+        var device = p["device"];
+        var extruders = device?["extruder"]?["info"] as JsonArray;
+        var right = Packed(extruders?.FirstOrDefault(e => Int(e?["id"]) == 0)?["temp"]);
+        var left = Packed(extruders?.FirstOrDefault(e => Int(e?["id"]) == 1)?["temp"]);
+        var bed = Packed(device?["bed"]?["info"]?["temp"]);
+        var chamber = Packed(device?["ctc"]?["info"]?["temp"]);
         return new BambuStatus(Text(p["gcode_state"]) ?? "", Int(p["mc_percent"]), Int(p["mc_remaining_time"]), Int(p["layer_num"]), Int(p["total_layer_num"]),
             Text(p["subtask_name"]) is { Length: > 0 } job ? job : null,
-            Number(p["nozzle_temper"]), Number(p["nozzle_target_temper"]), Number(p["bed_temper"]), Number(p["bed_target_temper"]), Number(p["chamber_temper"]),
-            Alerts(p["hms"]), trays);
+            right?.Current ?? Number(p["nozzle_temper"]), right?.Target ?? Number(p["nozzle_target_temper"]),
+            bed?.Current ?? Number(p["bed_temper"]), bed?.Target ?? Number(p["bed_target_temper"]),
+            chamber?.Current ?? Number(p["chamber_temper"]),
+            Alerts(p["hms"]), trays, left?.Current);
     }
+
+    private static (double Current, double Target)? Packed(JsonNode? node) =>
+        Number(node) is { } value && value >= 0 ? ((long)value & 0xFFFF, ((long)value >> 16) & 0xFFFF) : null;
 
     private static IReadOnlyList<BambuAlert> Alerts(JsonNode? hms)
     {

@@ -104,18 +104,23 @@ public partial class MainWindow
         DesktopApplication.SystemNotification?.Invoke(title, body);
     }
 
-    /// <summary>"3 imprimantes · 2 en impression · 1 hors ligne · prochaine fin 14:32 (Bambu Lab H2D)".</summary>
+    private readonly InfoTile _watchedTile = new("IMPRIMANTES"), _printingTile = new("EN IMPRESSION"), _offlineTile = new("HORS LIGNE"), _nextTile = new("PROCHAINE FIN");
+
+    /// <summary>Four tiles above the cards: printers followed, printing, unreachable, and the next print to finish.</summary>
     private void RefreshMonitoringSummary()
     {
+        if (MonitoringSummary.Children.Count == 0) foreach (var tile in new[] { _watchedTile, _printingTile, _offlineTile, _nextTile }) MonitoringSummary.Children.Add(tile);
         var cards = _liveCards.Values.ToArray();
-        var parts = new List<string> { $"{cards.Length} imprimante{(cards.Length > 1 ? "s" : "")}" };
-        var printing = cards.Count(c => c.Status?.IsPrinting == true);
-        if (printing > 0) parts.Add($"{printing} en impression");
+        _watchedTile.Set(cards.Length.ToString(), "suivies en direct");
+        _printingTile.Set(cards.Count(c => c.Status?.IsPrinting == true).ToString());
         var offline = cards.Count(c => c.Status is null);
-        if (offline > 0) parts.Add($"{offline} hors ligne ou en connexion");
+        _offlineTile.Set(offline.ToString(), offline > 0 ? "ou en connexion" : null);
         if (cards.Where(c => c.Status is { IsPrinting: true, RemainingMinutes: > 0 }).MinBy(c => c.Status!.RemainingMinutes) is { } next)
-            parts.Add($"prochaine fin {PrinterLiveCard.FinishTime(DateTime.Now.AddMinutes(next.Status!.RemainingMinutes!.Value))} ({next.Printer.Name})");
-        MonitoringSummary.Text = string.Join(" · ", parts);
+        {
+            var end = DateTime.Now.AddMinutes(next.Status!.RemainingMinutes!.Value);
+            _nextTile.Set(end.ToString("HH:mm"), $"{PrinterLiveCard.FinishDay(end)} · {next.Printer.Name}");
+        }
+        else _nextTile.Set("—");
         MonitoringSummary.IsVisible = cards.Length > 0;
     }
 }

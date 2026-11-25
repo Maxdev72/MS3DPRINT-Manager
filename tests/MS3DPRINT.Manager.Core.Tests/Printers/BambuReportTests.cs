@@ -40,6 +40,20 @@ public sealed class BambuReportTests
         Assert.Empty(BambuHmsCatalog.Parse("not json"));
     }
 
+    [Fact]
+    public void H2_temperatures_are_read_from_the_packed_device_values()
+    {
+        var status = new BambuReport().Apply("""
+            {"print":{"gcode_state":"RUNNING","nozzle_temper":245.0,"chamber_temper":5,"device":{"bed":{"info":{"temp":4587590}},"ctc":{"info":{"temp":34}},
+             "extruder":{"info":[{"id":0,"temp":16056565},{"id":1,"temp":47}]}}}}
+            """)!;
+        Assert.Equal((245d, 245d), (status.Nozzle, status.NozzleTarget));
+        Assert.Equal(47, status.SecondNozzle);
+        Assert.Equal((70d, 70d), (status.Bed, status.BedTarget));
+        Assert.Equal(34, status.Chamber);
+        Assert.True(status.HasTwoNozzles);
+    }
+
     [Theory]
     [InlineData("""{"info":{"command":"get_version"}}""")]
     [InlineData("not json")]

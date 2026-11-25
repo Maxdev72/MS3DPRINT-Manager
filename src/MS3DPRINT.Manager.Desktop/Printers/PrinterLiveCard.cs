@@ -30,19 +30,14 @@ public sealed class PrinterLiveCard : Border, IDisposable
     // Two lines reserved: the file name, or the reason the printer is unreachable.
     private readonly TextBlock _job = new() { TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis, Height = 40 };
     private readonly List<Image> _mirrors = [];
-    private readonly StackPanel _progressBlock = new() { Spacing = 8 };
     private readonly Run _percent = new(), _percentUnit = new(" %") { FontSize = Ui.Text.Section };
-    private readonly TextBlock _finishLabel = new() { Text = "FIN PRÉVUE", Classes = { "overline" }, HorizontalAlignment = HorizontalAlignment.Right };
-    private readonly TextBlock _finish = new() { FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Right };
-    private readonly TextBlock _remaining = new() { Classes = { "caption" }, HorizontalAlignment = HorizontalAlignment.Right };
-    private readonly Border _track = new() { Height = 12, CornerRadius = new(Ui.Radius.Pill) };
+    private readonly Border _track = new() { Height = 12, CornerRadius = new(Ui.Radius.Pill), VerticalAlignment = VerticalAlignment.Center };
     private readonly Border _fill = new() { HorizontalAlignment = HorizontalAlignment.Left, CornerRadius = new(Ui.Radius.Pill) };
+    private readonly InfoTile _finish = new("FIN PRÉVUE"), _remaining = new("RESTANT"), _layer = new("COUCHE");
+    private readonly InfoTile _nozzle = new("BUSE"), _bed = new("PLATEAU"), _chamber = new("ENCEINTE");
+    private readonly WrapPanel _trays = new();
     private double _fraction;
     private CancellationTokenSource? _cameraCancel;
-    private readonly TextBlock _layers = new() { Classes = { "caption" } };
-    private readonly Grid _temperatures = new() { ColumnDefinitions = new("*,*,*"), ColumnSpacing = 8 };
-    private readonly StackPanel _amsBlock = new() { Spacing = 8 };
-    private readonly WrapPanel _trays = new();
     private VlcCamera? _video;
     private BambuLink.RtspRelay? _relay;
 
@@ -86,30 +81,20 @@ public sealed class PrinterLiveCard : Border, IDisposable
         cameraFrame.SizeChanged += (_, e) => { if (Math.Abs(e.NewSize.Width * 9 / 16 - cameraFrame.Height) > 0.5) cameraFrame.Height = e.NewSize.Width * 9 / 16; };
         cameraFrame.Height = 248;
         cameraFrame.DoubleTapped += (_, _) => OpenFullScreen();
-        var percent = new TextBlock { FontSize = Ui.Text.Page, FontWeight = FontWeight.SemiBold, Inlines = new InlineCollection { _percent, _percentUnit } };
-        percent.VerticalAlignment = VerticalAlignment.Bottom;
-        var finish = new StackPanel { VerticalAlignment = VerticalAlignment.Bottom, Children = { _finishLabel, _finish, _remaining } };
-        Grid.SetColumn(finish, 1);
-        _progressBlock.Children.Add(new Grid { ColumnDefinitions = new("*,Auto"), Children = { percent, finish } });
-        _progressBlock.Children.Add(_track);
-        _progressBlock.Children.Add(_layers);
-        _amsBlock.Children.Add(new TextBlock { Text = "AMS", Classes = { "overline" } });
-        _amsBlock.Children.Add(_trays);
+        var percent = new TextBlock { FontSize = Ui.Text.Page, FontWeight = FontWeight.SemiBold, MinWidth = 88, VerticalAlignment = VerticalAlignment.Center, Inlines = new InlineCollection { _percent, _percentUnit } };
+        Grid.SetColumn(_track, 1);
+        // Header, camera, then three sections with the same padding, title and dividers.
         Child = new StackPanel
         {
             Children =
             {
+                new Grid { Margin = new(16, 12), ColumnDefinitions = new("*,Auto,Auto"), ColumnSpacing = 8, Children = { name, _alerts, _badge } },
                 cameraFrame,
-                new StackPanel
-                {
-                    Margin = new(16, 12, 16, 16), Spacing = 12,
-                    Children =
-                    {
-                        // Every section keeps a fixed height so the rows line up from one card to the next.
-                        new StackPanel { Spacing = 8, Children = { new Grid { ColumnDefinitions = new("*,Auto,Auto"), ColumnSpacing = 8, Children = { name, _alerts, _badge } }, _job } },
-                        _progressBlock, _temperatures, _amsBlock
-                    }
-                }
+                Section("IMPRESSION", _job, new Grid { ColumnDefinitions = new("Auto,*"), ColumnSpacing = 16, Children = { percent, _track } }, Row(_finish, _remaining, _layer)),
+                Divider(),
+                Section("TEMPÉRATURES", Row(_nozzle, _bed, _chamber)),
+                Divider(),
+                Section("AMS", _trays)
             }
         };
         Render(null, "Connexion…", null);
@@ -262,15 +247,19 @@ public sealed class PrinterLiveCard : Border, IDisposable
         SetFillColors(s?.State);
         SizeFill();
         var minutes = printing ? s!.RemainingMinutes ?? 0 : 0;
-        // Empty lines keep their height (non-breaking space) so every card's bar sits at the same level.
-        _finishLabel.Text = minutes > 0 ? "FIN PRÉVUE" : " ";
-        _finish.Text = minutes > 0 ? FinishTime(DateTime.Now.AddMinutes(minutes)) : finished ? "Terminée" : " ";
-        _remaining.Text = minutes > 0 ? "dans " + (minutes >= 60 ? $"{minutes / 60} h {minutes % 60:00}" : $"{minutes} min") : " ";
-        _layers.Text = (printing || finished) && s!.Layer is { } layer && s.TotalLayers is > 0 ? $"Couche {layer} sur {s.TotalLayers}" : "Couche —";
+        var end = DateTime.Now.AddMinutes(minutes);
+        if (minutes > 0) _finish.Set(end.ToString("HH:mm", French), FinishDay(end));
+        else _finish.Set(finished ? "Terminée" : "—");
+        _remaining.Set(minutes > 0 ? Duration(minutes) : "—");
+        if ((printing || finished) && s!.Layer is { } layer && s.TotalLayers is > 0) _layer.Set(layer.ToString(CultureInfo.CurrentCulture), $"sur {s.TotalLayers}");
+        else _layer.Set("—");
 
-        _temperatures.Children.Clear();
-        var tiles = new[] { Temperature("BUSE", s?.Nozzle, s?.NozzleTarget), Temperature("PLATEAU", s?.Bed, s?.BedTarget), Temperature("ENCEINTE", s?.Chamber is > 0 ? s.Chamber : null, null) };
-        for (var i = 0; i < tiles.Length; i++) { Grid.SetColumn(tiles[i], i); _temperatures.Children.Add(tiles[i]); }
+        if (s?.HasTwoNozzles == true) _nozzle.Set("BUSES D · G", $"{Degrees(s.Nozzle)} · {Degrees(s.SecondNozzle)}", Target(s.NozzleTarget));
+        else _nozzle.Set("BUSE", Degrees(s?.Nozzle), Target(s?.NozzleTarget));
+        _bed.Set(Degrees(s?.Bed), Target(s?.BedTarget));
+        // A1 and P1 report a fixed chamber value without having a sensor.
+        if (BambuLink.HasJpegCamera(Printer.Model)) _chamber.Set("—", "non mesurée");
+        else _chamber.Set(Degrees(s?.Chamber));
 
         _trays.Children.Clear();
         foreach (var tray in s?.Trays ?? [])
@@ -330,20 +319,36 @@ public sealed class PrinterLiveCard : Border, IDisposable
         _fill.BoxShadow = new BoxShadows(new BoxShadow { Blur = 12, Color = Color.FromArgb(110, glow.R, glow.G, glow.B) });
     }
 
-    private static Control Temperature(string label, double? current, double? target)
+    private static string Degrees(double? value) => value is { } v ? v.ToString("0", CultureInfo.CurrentCulture) + " °C" : "—";
+    private static string? Target(double? value) => value is > 0 ? "cible " + Degrees(value) : null;
+    private static string Duration(int minutes) => minutes >= 60 ? $"{minutes / 60} h {minutes % 60:00}" : $"{minutes} min";
+
+    /// <summary>"aujourd’hui", "demain" or "ven. 28 nov.".</summary>
+    public static string FinishDay(DateTime end, DateTime? now = null)
     {
-        var value = new TextBlock { FontWeight = FontWeight.SemiBold, Inlines = new InlineCollection
-        {
-            new Run(current is { } c ? c.ToString("0", CultureInfo.CurrentCulture) + " °C" : "—"),
-            new Run(current is not null && target is > 0 ? " / " + target.Value.ToString("0", CultureInfo.CurrentCulture) : "") { FontWeight = FontWeight.Normal, Foreground = Application.Current?.FindResource("MutedTextBrush") as IBrush }
-        } };
-        var tile = new Border
-        {
-            CornerRadius = new(Ui.Radius.Control), Padding = new(12, 8),
-            Child = new StackPanel { Spacing = 2, Children = { new TextBlock { Text = label, Classes = { "overline" } }, value } }
-        };
-        tile.Bind(BackgroundProperty, tile.GetResourceObservable("NeutralSoftBrush"));
-        return tile;
+        var today = (now ?? DateTime.Now).Date;
+        return end.Date == today ? "aujourd’hui" : end.Date == today.AddDays(1) ? "demain" : end.ToString("ddd d MMM", French);
+    }
+
+    private static StackPanel Section(string title, params Control[] content)
+    {
+        var section = new StackPanel { Margin = new(16), Spacing = 12, Children = { new TextBlock { Text = title, Classes = { "overline" } } } };
+        foreach (var control in content) section.Children.Add(control);
+        return section;
+    }
+
+    private static Grid Row(params Control[] tiles)
+    {
+        var row = new Grid { ColumnDefinitions = new(string.Join(",", tiles.Select(_ => "*"))), ColumnSpacing = 8 };
+        for (var i = 0; i < tiles.Length; i++) { Grid.SetColumn(tiles[i], i); row.Children.Add(tiles[i]); }
+        return row;
+    }
+
+    private static Border Divider()
+    {
+        var line = new Border { Height = 1 };
+        line.Bind(BackgroundProperty, line.GetResourceObservable("SubtleBorderBrush"));
+        return line;
     }
 
     public void Dispose()
