@@ -11,6 +11,15 @@
 - Éclairage revu : les filaments blancs et noirs restent lisibles sur le studio clair.
 - Ambiance « Environnement (HDRI) » comme dans les logiciels de rendu : la pièce est éclairée par une image à 360° qui apparaît derrière elle, avec son ombre au sol. Les huit environnements fournis avec Blender sont proposés ; ajoutez vos propres images HDR ou EXR (Poly Haven par exemple) et tournez l'environnement pour choisir l'arrière-plan.
 
+### Rendu produit plus rapide, aperçu progressif façon KeyShot
+- Pendant le mouvement, aperçu EEVEE en temps réel ; dès l'arrêt, l'image s'affine en Cycles par étapes (8, 32 puis 128 échantillons) avec les vraies ombres, y compris sur fond transparent ou HDRI. Un mouvement relance aussitôt l'aperçu.
+- Deux Blender restent ouverts (temps réel et Cycles) et démarrent dès l'ouverture de la page ; débruitage OptiX sur la carte graphique.
+- Mesures sur RTX 5070 : aperçu Cycles 960 px de 1,7 à 3,8 s à 0,8 s ; première image propre 0,5 s après l'arrêt ; rendu HD 2048 px de 18 à 25 s à 11 s.
+- Pendant le rendu HD, l'aperçu et la vue 3D sont en pause et la caméra verrouillée ; les réglages modifiés entre-temps s'appliquent ensuite.
+- Changement de couleur à une hauteur, comme un changement de filament sur l'imprimante : par exemple des pieds noirs sous une pièce rouge (onglet Matière).
+- Redressement automatique revu : la pièce est posée sur son appui le plus large ; une pièce sur pieds tient debout sur ses pieds. Pour une pièce déjà ouverte, cliquez « Redresser automatiquement ».
+- Groupes de couleurs et cases de l'onglet Pièce au thème de l'application.
+
 ### Rendu produit : onglets, palettes, orientation et ombres
 - Panneau en onglets comme KeyShot : Pièce, Matière, Ambiance, Caméra ; « Rendu HD » et « Enregistrer l'image » restent en bas.
 - Pièce : anneaux d'orientation X, Y, Z à faire glisser sur l'image, pas de rotation libre, 5°, 15°, 45° ou 90° ; redressement automatique sur la plus grande face plane, « Poser sur une face » d'un clic, « Orientation du fichier » ; l'orientation de chaque pièce est retenue.

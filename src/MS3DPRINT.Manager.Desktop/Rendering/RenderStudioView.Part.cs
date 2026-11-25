@@ -17,8 +17,8 @@ namespace MS3DPRINT.Manager.Desktop.Rendering;
 public sealed partial class RenderStudioView
 {
     private static readonly (string Label, double Degrees)[] Steps = [("Libre", 0), ("5°", 5), ("15°", 15), ("45°", 45), ("90°", 90)];
-    private readonly ToggleButton _showGizmo = new() { Content = "Anneaux d’orientation", HorizontalAlignment = HorizontalAlignment.Stretch };
-    private readonly ToggleButton _faceMode = new() { Content = "Poser sur une face", HorizontalAlignment = HorizontalAlignment.Stretch };
+    private readonly CheckBox _showGizmo = new() { Content = "Afficher les anneaux d’orientation" };
+    private readonly CheckBox _faceMode = new() { Content = "Poser sur une face (cliquez-la sur l’image)" };
     private readonly ComboBox _step = Choice(Steps.Select(s => s.Label));
     private readonly TextBlock _orientationNote = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
     private MeshModel? _loaded;
@@ -130,8 +130,10 @@ public sealed partial class RenderStudioView
         _stlPath = stl;
         _mesh = mesh;
         _gizmo.Mesh = mesh;
+        _bandHeight.Maximum = Math.Max(0.2, Math.Round(mesh.Size.Z, 1));
+        ShowBandValue();
         _gizmo.IsVisible = _showGizmo.IsChecked == true;
-        _final.IsEnabled = _session is not null;
+        _final.IsEnabled = _live is not null;
         _viewport.SetMesh(mesh);
         _viewport.RequestRender(false);
         ShowEmptyState();

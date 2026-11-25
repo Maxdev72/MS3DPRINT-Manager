@@ -31,54 +31,61 @@ public static class RenderPalettes
 public static class RenderOrientation
 {
     /// <summary>
-    /// The turn that lays the part on its largest flat base: among the flat faces that touch the part's outline on their side
-    /// (a real base, not an inner shelf), the direction with the most area goes down. Near-equal bases keep the one already
-    /// down, then the one down for a file drawn Y up. Identity when the part already rests on its best base.
+    /// The turn that sets the part on its widest footprint: for each candidate direction (the six axes and the largest families
+    /// of flat faces), the points touching the floor are gathered and the area of their outline measured — four feet span their
+    /// whole circle, a flat base its face, a curved side only a strip. Near-equal footprints keep the one already down, then the
+    /// one down for a file drawn Y up. Identity when the part already rests on its best footprint.
     /// </summary>
     public static Quaternion AutoStraighten(MeshModel mesh)
     {
-        var areas = new Dictionary<(int, int, int), (Vector3 Normal, double Area)>();
-        var count = mesh.TriangleCount;
-        for (var t = 0; t < count; t++)
+        var families = new Dictionary<(int, int, int), (Vector3 Normal, double Area)>();
+        for (var t = 0; t < mesh.TriangleCount; t++)
         {
             var normal = mesh.Normals[t];
             if (normal == Vector3.Zero) continue;
             var a = mesh.Positions[mesh.Indices[t * 3]];
             var area = Vector3.Cross(mesh.Positions[mesh.Indices[t * 3 + 1]] - a, mesh.Positions[mesh.Indices[t * 3 + 2]] - a).Length() / 2;
             var key = ((int)MathF.Round(normal.X * 50), (int)MathF.Round(normal.Y * 50), (int)MathF.Round(normal.Z * 50));
-            areas[key] = areas.TryGetValue(key, out var known) ? (known.Normal, known.Area + area) : (normal, area);
+            families[key] = families.TryGetValue(key, out var known) ? (known.Normal, known.Area + area) : (normal, area);
         }
-        var tolerance = mesh.Radius * 0.01f;
-        var bases = areas.Values
-            .Where(family => family.Area > 0)
-            .OrderByDescending(family => family.Area)
-            .Take(12)
-            .Select(family => (family.Normal, Area: BaseArea(mesh, family.Normal, tolerance)))
-            .Where(candidate => candidate.Area > 0)
+        Vector3[] axes = [-Vector3.UnitZ, Vector3.UnitZ, -Vector3.UnitY, Vector3.UnitY, -Vector3.UnitX, Vector3.UnitX];
+        var candidates = axes.Concat(families.Values.OrderByDescending(f => f.Area).Take(12).Select(f => Vector3.Normalize(f.Normal)))
+            .Select(down => (Down: down, Area: Footprint(mesh, down)))
             .ToList();
-        if (bases.Count == 0) return Quaternion.Identity;
-        var best = bases.Max(candidate => candidate.Area);
-        var chosen = bases.Where(candidate => candidate.Area >= best * 0.9)
-            .OrderByDescending(candidate => Vector3.Dot(candidate.Normal, -Vector3.UnitZ) > 0.999f)
-            .ThenByDescending(candidate => Vector3.Dot(candidate.Normal, -Vector3.UnitY))
+        var best = candidates.Max(c => c.Area);
+        if (best <= 0) return Quaternion.Identity;
+        var chosen = candidates.Where(c => c.Area >= best * 0.9)
+            .OrderByDescending(c => Vector3.Dot(c.Down, -Vector3.UnitZ) > 0.999f)
+            .ThenByDescending(c => Vector3.Dot(c.Down, -Vector3.UnitY))
             .First();
-        return Vector3.Dot(chosen.Normal, -Vector3.UnitZ) > 0.999f ? Quaternion.Identity : OrientationMath.Between(chosen.Normal, -Vector3.UnitZ);
+        return Vector3.Dot(chosen.Down, -Vector3.UnitZ) > 0.999f ? Quaternion.Identity : OrientationMath.Between(chosen.Down, -Vector3.UnitZ);
     }
 
-    /// <summary>Area of the faces facing <paramref name="normal"/> that lie on the part's outline in that direction.</summary>
-    private static double BaseArea(MeshModel mesh, Vector3 normal, float tolerance)
+    /// <summary>Area of the outline of the points within 0.5 % of the part's size of the floor when <paramref name="down"/> points down.</summary>
+    public static double Footprint(MeshModel mesh, Vector3 down)
     {
-        var reach = mesh.Positions.Max(p => Vector3.Dot(p, normal));
-        double area = 0;
-        for (var t = 0; t < mesh.TriangleCount; t++)
+        var reach = mesh.Positions.Max(p => Vector3.Dot(p, down));
+        var tolerance = mesh.Size.Length() * 0.005f;
+        var u = Vector3.Normalize(Vector3.Cross(down, MathF.Abs(down.Z) > 0.9f ? Vector3.UnitX : Vector3.UnitZ));
+        var v = Vector3.Cross(down, u);
+        var points = mesh.Positions.Where(p => Vector3.Dot(p, down) >= reach - tolerance)
+            .Select(p => (X: (double)Vector3.Dot(p, u), Y: (double)Vector3.Dot(p, v))).Distinct().OrderBy(p => p.X).ThenBy(p => p.Y).ToList();
+        if (points.Count < 3) return 0;
+        // Monotone chain convex hull, then the shoelace area.
+        static double Cross((double X, double Y) o, (double X, double Y) a, (double X, double Y) b) => (a.X - o.X) * (b.Y - o.Y) - (a.Y - o.Y) * (b.X - o.X);
+        var hull = new List<(double X, double Y)>();
+        foreach (var pass in new[] { points, Enumerable.Reverse(points).ToList() })
         {
-            if (Vector3.Dot(mesh.Normals[t], normal) < 0.999f) continue;
-            var a = mesh.Positions[mesh.Indices[t * 3]];
-            var b = mesh.Positions[mesh.Indices[t * 3 + 1]];
-            var c = mesh.Positions[mesh.Indices[t * 3 + 2]];
-            if (Vector3.Dot((a + b + c) / 3, normal) < reach - tolerance) continue;
-            area += Vector3.Cross(b - a, c - a).Length() / 2;
+            var start = hull.Count;
+            foreach (var p in pass)
+            {
+                while (hull.Count >= start + 2 && Cross(hull[^2], hull[^1], p) <= 0) hull.RemoveAt(hull.Count - 1);
+                hull.Add(p);
+            }
+            hull.RemoveAt(hull.Count - 1);
         }
-        return area;
+        double area = 0;
+        for (var i = 0; i < hull.Count; i++) { var (a, b) = (hull[i], hull[(i + 1) % hull.Count]); area += a.X * b.Y - b.X * a.Y; }
+        return Math.Abs(area) / 2;
     }
 }

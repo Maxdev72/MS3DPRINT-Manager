@@ -32,6 +32,9 @@ public sealed record RenderPreferences
     public double LightAngle { get; init; }
     public double LightHeight { get; init; } = 39;
     public bool GlowDark { get; init; }
+    public bool BandOn { get; init; }
+    public string BandHex { get; init; } = "#000000";
+    public double BandHeight { get; init; } = 3;
     /// <summary>Orientation of each part (by file path) as a quaternion X, Y, Z, W.</summary>
     public IReadOnlyDictionary<string, float[]> Orientations { get; init; } = new Dictionary<string, float[]>();
     /// <summary>Cameras saved for each part (by file path).</summary>

@@ -33,7 +33,7 @@ public sealed partial class EstimateUiTests
 
             T Get<T>(string name) => (T)typeof(RenderStudioView).GetField(name, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(studio)!;
             Assert.True(Get<Image>("_image").Source is not null, Get<TextBlock>("_status").Text);
-            Assert.StartsWith("Aperçu en direct", Get<TextBlock>("_status").Text);
+            Assert.StartsWith("Aperçu affiné", Get<TextBlock>("_status").Text);
             CaptureDraftUi(owner, "render-page");
             foreach (var (tab, name) in new[] { (0, "piece"), (1, "matiere"), (2, "ambiance"), (3, "camera") })
             {
@@ -65,7 +65,7 @@ public sealed partial class EstimateUiTests
             Assert.True(Get<StackPanel>("_environmentField").IsVisible);
             await studio.LoadModelAsync(model);
             Dispatcher.UIThread.RunJobs();
-            Assert.StartsWith("Aperçu en direct", Get<TextBlock>("_status").Text);
+            Assert.StartsWith("Aperçu affiné", Get<TextBlock>("_status").Text);
             CaptureDraftUi(owner, "render-page-environment");
         }
         finally { owner.Close(); }

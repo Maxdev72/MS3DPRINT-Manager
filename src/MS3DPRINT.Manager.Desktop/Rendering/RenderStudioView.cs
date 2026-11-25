@@ -35,7 +35,13 @@ public sealed partial class RenderStudioView : UserControl
     private static readonly (string Label, string Key)[] Scenes = [("Studio clair", "light"), ("Studio sombre", "dark"), ("Fond de couleur", "color"), ("Fond transparent (PNG)", "transparent"), ("Environnement (HDRI)", "environment")];
     private static readonly (string Label, int Width, int Height)[] Formats = [("Carré 1:1", 1, 1), ("Paysage 4:3", 4, 3), ("Portrait 3:4", 3, 4), ("Large 16:9", 16, 9)];
     private static readonly string[] TabNames = ["Pièce", "Matière", "Ambiance", "Caméra"];
-    private enum Pass { Live, Final }
+    /// <summary>A render step: long side in pixels, samples and engine.</summary>
+    private readonly record struct Pass(int Side, int Samples, string Engine)
+    {
+        public static readonly Pass Live = new(480, 16, "eevee");
+        public static readonly Pass[] Refine = [new(960, 8, "cycles"), new(960, 32, "cycles"), new(960, 128, "cycles")];
+        public static readonly Pass Final = new(2048, 256, "cycles");
+    }
 
     private readonly Func<IReadOnlyList<RenderColor>> _loadColors;
     private readonly RenderPreferencesStore _store;
@@ -76,7 +82,9 @@ public sealed partial class RenderStudioView : UserControl
 
     private string? _savedEnvironment;
     private string? _blender;
-    private BlenderSession? _session;
+    private BlenderSession? _live;
+    private BlenderSession? _refine;
+    private CancellationTokenSource? _refineCancel;
     private bool _blenderSearched;
     private string? _modelPath;
     private string? _stlPath;
@@ -197,7 +205,7 @@ public sealed partial class RenderStudioView : UserControl
         Grid.SetColumn(panel, 1);
         root.Children.Add(panel);
         Content = root;
-        DetachedFromVisualTree += (_, _) => _session?.Dispose();
+        DetachedFromVisualTree += (_, _) => { _live?.Dispose(); _refine?.Dispose(); };
         ShowSceneFields();
         ShowTab(Math.Clamp(saved.Tab, 0, TabNames.Length - 1));
         ShowEmptyState();
@@ -286,9 +294,12 @@ public sealed partial class RenderStudioView : UserControl
         {
             _blender = await Task.Run(BlenderLocator.Detect);
             _blenderSearched = true;
-            _session?.Dispose();
-            _session = _blender is null ? null : new BlenderSession(_blender);
-            _final.IsEnabled = _session is not null && _stlPath is not null;
+            _live?.Dispose();
+            _refine?.Dispose();
+            (_live, _refine) = _blender is null ? (null, null) : (new BlenderSession(_blender), new BlenderSession(_blender));
+            // Both Blenders start now, while the user picks a model: the first images do not wait for them.
+            if (_live is not null && _refine is not null) { _ = _live.WarmUpAsync("eevee"); _ = _refine.WarmUpAsync("cycles"); }
+            _final.IsEnabled = _live is not null && _stlPath is not null;
             if (_blender is { } blender) _environment.ItemsSource = (await Task.Run(() => BlenderLocator.Environments(blender))).ToList();
             if (_savedEnvironment is { } saved && File.Exists(saved)) SelectEnvironment(saved);
             ShowEmptyState();
@@ -323,60 +334,91 @@ public sealed partial class RenderStudioView : UserControl
 
     private void SettingsChanged()
     {
-        if (_stlPath is null || _session is null) return;
+        if (_stlPath is null || _live is null) return;
         _generation++;
-        _finalRender?.Cancel();
+        // The HD render has the graphics card to itself: changes wait for it to end.
+        if (_finalRender is not null) return;
+        _refineCancel?.Cancel();
         RunPreviews();
     }
 
     private async void RunPreviews() => await RunPreviewsAsync();
 
     /// <summary>
-    /// Live preview: EEVEE renders the latest settings again and again while they change (about a tenth of a second an image
-    /// on a recent graphics card); each image is shown as it comes, the last one matches the settings at rest.
+    /// Progressive preview, like KeyShot. While the settings change, a Blender kept for EEVEE (real time) renders small images
+    /// one after the other; as soon as they rest, a second Blender kept for Cycles refines the view in steps (8, 32, then 128
+    /// samples, denoised on the graphics card), each image replacing the previous one. A change stops the refining Blender at once
+    /// (it restarts in the background) so the live images never wait behind it.
     /// </summary>
     private Task RunPreviewsAsync() => _previews = _previews.IsCompleted ? PreviewLoopAsync() : _previews;
 
     private async Task PreviewLoopAsync()
     {
-        if (_session is null || _stlPath is null) return;
-        var watch = new Stopwatch();
-        int generation;
-        do
+        if (_live is null || _refine is null || _stlPath is null) return;
+        while (true)
         {
-            generation = _generation;
-            watch.Restart();
-            if (!await RenderPassAsync(Pass.Live, CancellationToken.None)) return;
-        } while (generation != _generation);
-        SavePreferences();
-        // The last image only: the first one after opening also waits for Blender to start.
-        var each = watch.Elapsed.TotalSeconds.ToString("0.0#", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
-        ShowStatus($"Aperçu en direct ({each} s par image). Bougez la caméra dans l’image ; le rendu HD donne l’image finale, plus réaliste.");
+            var generation = _generation;
+            if (!await RenderPassAsync(Pass.Live, _live, CancellationToken.None)) return;
+            if (generation != _generation) continue;
+            // A short rest before refining, so a slow drag does not start Cycles between two moves.
+            await Task.Delay(120);
+            if (generation != _generation) continue;
+            using var cancel = _refineCancel = new CancellationTokenSource();
+            var watch = Stopwatch.StartNew();
+            foreach (var step in Pass.Refine)
+            {
+                if (generation != _generation || cancel.IsCancellationRequested) break;
+                ShowStatus($"Affinage de l’aperçu ({step.Samples} échantillons)…");
+                if (!await RenderPassAsync(step, _refine, cancel.Token))
+                {
+                    if (cancel.IsCancellationRequested) { _ = _refine.WarmUpAsync("cycles"); break; }
+                    return;
+                }
+            }
+            if (ReferenceEquals(_refineCancel, cancel)) _refineCancel = null;
+            if (generation != _generation) continue;
+            SavePreferences();
+            var seconds = watch.Elapsed.TotalSeconds.ToString("0.0", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+            ShowStatus($"Aperçu affiné en {seconds} s. Bougez la caméra dans l’image ; le rendu HD donne l’image finale en grand.");
+            return;
+        }
     }
 
     private async Task RenderFinalAsync()
     {
+        if (_refine is null) return;
+        _refineCancel?.Cancel();
+        await _previews;
         using var cancel = _finalRender = new CancellationTokenSource();
+        var generation = _generation;
         _cancel.IsVisible = true;
+        // Pause: the 3D view is hidden and the camera locked while Cycles has the graphics card.
+        _viewport.Visual.IsVisible = false;
+        _frame.IsHitTestVisible = false;
         var watch = Stopwatch.StartNew();
-        EventHandler tick = (_, _) => _status.Text = $"Rendu HD en cours · {watch.Elapsed:m\\:ss} écoulées (souvent 15 s à 1 min).";
+        EventHandler tick = (_, _) => _status.Text = $"Rendu HD en cours · {watch.Elapsed:m\\:ss} écoulées (souvent 10 à 30 s). L’aperçu est en pause.";
         _clock.Tick += tick;
         _clock.Start();
         SavePreferences();
-        try { await RenderPassAsync(Pass.Final, cancel.Token); }
+        try { await RenderPassAsync(Pass.Final, _refine, cancel.Token); }
         finally
         {
             _clock.Tick -= tick;
             _clock.Stop();
             _cancel.IsVisible = false;
+            _viewport.Visual.IsVisible = true;
+            _frame.IsHitTestVisible = true;
             if (ReferenceEquals(_finalRender, cancel)) _finalRender = null;
+            if (cancel.IsCancellationRequested) _ = _refine.WarmUpAsync("cycles");
         }
+        // Settings changed during the HD render: the preview catches up now.
+        if (generation != _generation) RunPreviews();
     }
 
     /// <summary>One Blender render, shown as soon as it is ready. False when it failed or was cancelled.</summary>
-    private async Task<bool> RenderPassAsync(Pass pass, CancellationToken cancellationToken)
+    private async Task<bool> RenderPassAsync(Pass pass, BlenderSession session, CancellationToken cancellationToken)
     {
-        if (_stlPath is not { } stl || _session is not { } session || _mesh is not { } mesh) return false;
+        if (_stlPath is not { } stl || _mesh is not { } mesh) return false;
         if (ReadSettings(pass, mesh) is not { } settings) return false;
         var output = Path.Combine(_work, $"render-{++_counter}.png");
         if (pass == Pass.Final) ShowStatus($"Rendu HD {settings.Width} × {settings.Height} en cours…", busy: true);
@@ -403,7 +445,7 @@ public sealed partial class RenderStudioView : UserControl
         catch (OperationCanceledException)
         {
             TryDelete(output);
-            ShowStatus("Rendu HD annulé.");
+            if (pass == Pass.Final) ShowStatus("Rendu HD annulé.");
             return false;
         }
         catch (Exception exception) when (exception is InvalidOperationException or IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
@@ -421,13 +463,13 @@ public sealed partial class RenderStudioView : UserControl
         var environment = (_environment.SelectedItem as RenderEnvironment)?.Path ?? string.Empty;
         if (scene == "environment" && !File.Exists(environment)) { ShowStatus("Choisissez un environnement, ou ajoutez votre image HDR ou EXR."); return null; }
         var (_, ratioWidth, ratioHeight) = Formats[_format.SelectedIndex];
-        // EEVEE (real time) for the live preview, Cycles on the graphics card for the final image.
-        var (side, samples, engine) = pass == Pass.Live ? (960, 16, "eevee") : (2048, 256, "cycles");
+        var (side, samples, engine) = (pass.Side, pass.Samples, pass.Engine);
         var (width, height) = ratioWidth >= ratioHeight ? (side, side * ratioHeight / ratioWidth) : (side * ratioWidth / ratioHeight, side);
         var (camera, rotation) = RenderCamera.From(mesh, _viewport.Camera, width, height);
         return new RenderSettings(CurrentHex, Finishes[_finish.SelectedIndex].Key, Layers[_layer.SelectedIndex].Height, scene, _background.Text?.Trim() ?? "#FFFFFF",
             rotation, 0, width, height, samples, environment, _environmentRotation.Value, camera, engine,
-            _shadow.IsChecked == true, _shadowStrength.Value, _shadowSoftness.Value, _lightAngle.Value, _lightHeight.Value, _glowDark.IsChecked == true);
+            _shadow.IsChecked == true, _shadowStrength.Value, _shadowSoftness.Value, _lightAngle.Value, _lightHeight.Value, _glowDark.IsChecked == true,
+            _bandOn.IsChecked == true && PreviewColorParser.TryParse(BandHex, out _) ? BandHex : null, _bandHeight.Value);
     }
 
     private void ShowSceneFields()
@@ -476,7 +518,8 @@ public sealed partial class RenderStudioView : UserControl
             Format = _format.SelectedIndex, Environment = (_environment.SelectedItem as RenderEnvironment)?.Path ?? _savedEnvironment,
             EnvironmentRotation = _environmentRotation.Value, Yaw = camera.Yaw, Pitch = camera.Pitch, Zoom = camera.Zoom, Tab = Math.Max(0, CurrentTab),
             RotationStep = _gizmo.Step, Shadow = _shadow.IsChecked == true, ShadowStrength = _shadowStrength.Value, ShadowSoftness = _shadowSoftness.Value,
-            LightAngle = _lightAngle.Value, LightHeight = _lightHeight.Value, GlowDark = _glowDark.IsChecked == true, Orientations = orientations
+            LightAngle = _lightAngle.Value, LightHeight = _lightHeight.Value, GlowDark = _glowDark.IsChecked == true, Orientations = orientations,
+            BandOn = _bandOn.IsChecked == true, BandHex = BandHex, BandHeight = _bandHeight.Value
         };
         _store.Save(_saved);
     }

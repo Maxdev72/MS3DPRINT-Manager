@@ -135,6 +135,32 @@ public sealed class ProductRendererTests : IDisposable
     }
 
     [Fact]
+    public void A_round_pot_drawn_lying_stands_up_on_its_base()
+    {
+        // 64-sided prism of radius 45 and length 60 along Y (a file drawn Y up): its flat sides are thin strips, its ends full discs.
+        var positions = new List<Vector3>();
+        var indices = new List<int>();
+        for (var i = 0; i < 64; i++)
+        {
+            var a = i * MathF.Tau / 64;
+            positions.Add(new(45 * MathF.Cos(a), 0, 45 * MathF.Sin(a)));
+            positions.Add(new(45 * MathF.Cos(a), 60, 45 * MathF.Sin(a)));
+        }
+        positions.Add(new(0, 0, 0));
+        positions.Add(new(0, 60, 0));
+        for (var i = 0; i < 64; i++)
+        {
+            int a0 = 2 * i, a1 = 2 * i + 1, b0 = 2 * ((i + 1) % 64), b1 = b0 + 1;
+            indices.AddRange([a0, b0, a1, a1, b0, b1, 128, a0, b0, 129, b1, a1]);
+        }
+        var lying = new MeshModel([.. positions], [.. indices]);
+
+        var standing = ProductRenderer.Turned(lying, RenderOrientation.AutoStraighten(lying));
+
+        Assert.Equal(60, standing.Size.Z, 1);
+    }
+
+    [Fact]
     public void Camera_orbit_turns_the_part_and_keeps_height_zoom_and_pan()
     {
         var mesh = new MeshModel([new(0, 0, 0), new(20, 0, 0), new(0, 20, 0), new(0, 0, 20)], [0, 1, 2, 0, 1, 3]);

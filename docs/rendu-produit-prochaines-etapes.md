@@ -42,7 +42,9 @@ grille d'espacement 4 px (`DesignTokenTests`), incrémenter la version à chaque
    champ de vision (focale : passer `fieldOfView` à `RenderCamera` et au viewport), format, « Recentrer ».
    Caméras retenues par pièce. Cases à cocher pour les séries (livraison 3).
 
-## Livraison 2 — Performances (1.0.29)
+## Livraison 2 — Performances (1.0.29) — FAITE
+
+Mesuré : réduction des rebonds (5 %) et réutilisation de la scène non retenues ; maillage allégé inutile jusqu'à 250 000 triangles (EEVEE 0,2 s).
 
 7. **Aperçu progressif façon KeyShot** : pendant le mouvement EEVEE 480 px ; à l'arrêt, paliers Cycles
    8 → 32 → 128 échantillons, débruitage GPU (`cycles.denoising_use_gpu`), chaque palier remplace le précédent,

@@ -12,7 +12,7 @@ namespace MS3DPRINT.Manager.Desktop.Rendering;
 /// <summary>What the render script needs besides the model: names match the keys read by product_render.py.</summary>
 public sealed record RenderSettings(string Color, string Finish, double LayerHeight, string Scene, string Background,
     double Rotation, double Elevation, int Width, int Height, int Samples, string Environment = "", double EnvironmentRotation = 0, RenderCamera? Camera = null, string Engine = "cycles",
-    bool Shadow = true, double ShadowStrength = 0.3, double ShadowSoftness = 0.5, double LightAngle = 0, double LightHeight = 39, bool GlowDark = false);
+    bool Shadow = true, double ShadowStrength = 0.3, double ShadowSoftness = 0.5, double LightAngle = 0, double LightHeight = 39, bool GlowDark = false, string? BandColor = null, double BandHeight = 0);
 
 /// <summary>The camera of the 3D view in model millimetres: Blender frames the part exactly as on screen.</summary>
 public sealed record RenderCamera(float[] Location, float[] Target, double FieldOfView, double ShiftX, double ShiftY)
@@ -182,22 +182,39 @@ public sealed class BlenderSession(string blender) : IDisposable
 
     public async Task RenderAsync(string stlPath, RenderSettings settings, string outputPng, CancellationToken cancellationToken)
     {
-        await _gate.WaitAsync(cancellationToken);
         var settingsPath = Path.ChangeExtension(outputPng, ".json");
         try
         {
-            _idle?.Dispose();
             await File.WriteAllTextAsync(settingsPath, ProductRenderer.SettingsJson(stlPath, outputPng, settings), cancellationToken);
+            await RunAsync(settingsPath, cancellationToken);
+            if (!File.Exists(outputPng)) throw new InvalidOperationException("Blender n’a pas produit d’image.");
+        }
+        finally { try { File.Delete(settingsPath); } catch (IOException) { } }
+    }
+
+    /// <summary>Starts Blender and renders a tiny scene with this engine ("eevee" or "cycles"), so the first real image is quick.</summary>
+    public async Task WarmUpAsync(string engine)
+    {
+        try { await RunAsync("WARMUP " + engine, CancellationToken.None); }
+        catch (InvalidOperationException) { } // the real render will report the problem
+    }
+
+    /// <summary>One command to Blender (a settings file to render, or a warm-up), one at a time; cancelling stops Blender.</summary>
+    private async Task RunAsync(string command, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            _idle?.Dispose();
             var job = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
             Process process;
             lock (_sync) { _job = job; process = Start(); }
-            await process.StandardInput.WriteLineAsync(settingsPath);
+            await process.StandardInput.WriteLineAsync(command);
             await process.StandardInput.FlushAsync(cancellationToken);
             string? error;
             using (cancellationToken.Register(() => { Stop(); job.TrySetCanceled(cancellationToken); }))
                 error = await job.Task;
             if (error is not null) throw new InvalidOperationException("Blender a échoué : " + error);
-            if (!File.Exists(outputPng)) throw new InvalidOperationException("Blender n’a pas produit d’image.");
         }
         catch (IOException exception) when (!cancellationToken.IsCancellationRequested)
         {
@@ -206,7 +223,6 @@ public sealed class BlenderSession(string blender) : IDisposable
         }
         finally
         {
-            try { File.Delete(settingsPath); } catch (IOException) { }
             _idle = new Timer(_ => { if (_gate.Wait(0)) { try { Stop(); } finally { _gate.Release(); } } }, null, IdleLimit, Timeout.InfiniteTimeSpan);
             _gate.Release();
         }
