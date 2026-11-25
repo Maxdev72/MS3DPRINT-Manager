@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Layout;
 using MS3DPRINT.Manager.Core.Filaments;
 using MS3DPRINT.Manager.Core.Printers;
+using MS3DPRINT.Manager.Desktop.Printers;
 
 namespace MS3DPRINT.Manager.Desktop;
 
@@ -33,6 +34,11 @@ public sealed class CreatePrinterWindow : DialogWindow
     private readonly CheckBox _useManual = new() { Content = "Utiliser le taux horaire manuel" };
     private readonly TextBlock _calculatedRate = new() { TextWrapping = Avalonia.Media.TextWrapping.Wrap, Classes = { "muted" } };
     private readonly TextBlock _error = FormKit.ErrorText();
+    private readonly TextBox _host = new() { PlaceholderText = "ex. 192.168.1.50" };
+    private readonly TextBox _serial = new() { PlaceholderText = "Paramètres → Appareil" };
+    private readonly TextBox _accessCode = new() { PlaceholderText = "8 caractères", PasswordChar = '•' };
+    /// <summary>Local connection for live status, or null when the three fields are empty.</summary>
+    public PrinterConnection? Connection { get; private set; }
     public PrinterProfile? Original { get; }
     public string Brand => _brand.Text?.Trim() ?? _brand.SelectedItem as string ?? string.Empty;
     public string Model => _model.Text?.Trim() ?? string.Empty;
@@ -48,7 +54,7 @@ public sealed class CreatePrinterWindow : DialogWindow
     public decimal MaintenanceHourlyRate { get; private set; }
     public bool PrinterIsActive => Original?.IsActive ?? true;
 
-    public CreatePrinterWindow(PrinterProfile? original = null)
+    public CreatePrinterWindow(PrinterProfile? original = null, PrinterConnection? connection = null)
     {
         Original = original;
         Title = original is null ? "Ajouter une imprimante" : "Modifier l’imprimante"; Width = 480; Height = 700; MinWidth = 420;
@@ -68,6 +74,9 @@ public sealed class CreatePrinterWindow : DialogWindow
         _useManual.IsChecked = original?.UseManualHourlyRate == true ||
             (original is not null && (original.PurchasePrice == 0 || annual == 0));
         _maintenance.Text = original?.MaintenanceHourlyRate.ToString() ?? "0";
+        _host.Text = connection?.Host ?? string.Empty;
+        _serial.Text = connection?.Serial ?? string.Empty;
+        _accessCode.Text = connection?.AccessCode ?? string.Empty;
         var save = new Button { Content = original is null ? "Ajouter l’imprimante" : "Enregistrer" };
         save.Click += Save_Click;
         Layout(original is null ? "Nouvelle imprimante" : "Modifier l’imprimante",
@@ -77,8 +86,11 @@ public sealed class CreatePrinterWindow : DialogWindow
              CreateUnitField("Durée d’amortissement", _years, "ans"), CreateUnitField("Heures productives annuelles", _annualHours, "h/an"),
              CreateUnitField("Taux manuel", _manualRate, "€/h"), CreateUnitField("Maintenance / usure distincte", _maintenance, "€/h"), _calculatedRate,
              CreateUnitField("Puissance (optionnelle)", _powerWatts, "W"),
+             new TextBlock { Text = "Suivi en direct (Bambu Lab, optionnel)", Classes = { "card-title" }, Margin = new(0, 8, 0, 0) },
+             new TextBlock { Text = "Sur l’imprimante : Paramètres → Réseau pour l’adresse IP et le code d’accès. Gardés sur ce PC uniquement.", Classes = { "muted" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap },
+             CreateUnitField("Adresse IP", _host), CreateUnitField("Numéro de série", _serial), CreateUnitField("Code d’accès", _accessCode),
              _error], save);
-        foreach (var field in new[] { _purchasePrice, _years, _annualHours, _manualRate, _maintenance, _powerWatts, _model }) field.TextChanged += (_, _) => { FormKit.ClearError(_error); UpdateCalculatedRate(); };
+        foreach (var field in new[] { _purchasePrice, _years, _annualHours, _manualRate, _maintenance, _powerWatts, _model, _host, _serial, _accessCode }) field.TextChanged += (_, _) => { FormKit.ClearError(_error); UpdateCalculatedRate(); };
         _useManual.IsCheckedChanged += (_, _) => { FormKit.ClearError(_error); UpdateCalculatedRate(); };
         UpdateCalculatedRate();
     }
@@ -121,6 +133,14 @@ public sealed class CreatePrinterWindow : DialogWindow
         { FormKit.ShowError(_error, !FilamentPrice.TryParse(_purchasePrice.Text, out _) ? _purchasePrice : !FilamentPrice.TryParse(_maintenance.Text, out _) ? _maintenance : _powerWatts, "Vérifiez les valeurs : coûts positifs ou nuls et puissance entière en watts."); return; }
         if (!TryGetRate(out var rate, out var message))
         { FormKit.ShowError(_error, UseManualHourlyRate ? _manualRate : !FilamentPrice.TryParse(_years.Text, out var validYears) || validYears <= 0 ? _years : _annualHours, message); return; }
+        var host = _host.Text?.Trim() ?? ""; var serial = _serial.Text?.Trim() ?? ""; var code = _accessCode.Text?.Trim() ?? "";
+        if (host.Length + serial.Length + code.Length > 0)
+        {
+            if (Uri.CheckHostName(host) == UriHostNameType.Unknown) { FormKit.ShowError(_error, _host, "Saisissez l’adresse IP de l’imprimante, par exemple 192.168.1.50."); return; }
+            if (serial.Length is 0 or > 32 || !serial.All(char.IsAsciiLetterOrDigit)) { FormKit.ShowError(_error, _serial, "Le numéro de série ne contient que des lettres et des chiffres."); return; }
+            if (code.Length is 0 or > 32) { FormKit.ShowError(_error, _accessCode, "Saisissez le code d’accès affiché sur l’imprimante."); return; }
+        }
+        Connection = host.Length == 0 ? null : new PrinterConnection(host, serial.ToUpperInvariant(), code);
         PurchasePrice = purchasePrice;
         LifetimeHours = Original?.LifetimeHours ?? 0;
         FilamentPrice.TryParse(_years.Text, out var years);

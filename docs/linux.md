@@ -10,6 +10,8 @@ Installer les dépendances du bureau si elles manquent :
 sudo apt install libicu-dev libfontconfig1 libice6 libsm6 libx11-6 libxrandr2 libxi6 libxcursor1 libgl1 xdg-utils libsecret-tools libgtk-3-0 libwebkit2gtk-4.1-0 libsoup-3.0-0
 ```
 
+Pour voir la caméra des imprimantes Bambu Lab X1, H2 et X2 dans la page Imprimantes : `sudo apt install vlc`.
+
 Extraire `MS3DPRINT-Manager-linux-x64.tar.gz` dans un dossier personnel, puis lancer
 `MS3DPRINT Manager`. Depuis un terminal dans ce dossier :
 
