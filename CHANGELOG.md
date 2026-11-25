@@ -11,6 +11,12 @@
 - Éclairage revu : les filaments blancs et noirs restent lisibles sur le studio clair.
 - Ambiance « Environnement (HDRI) » comme dans les logiciels de rendu : la pièce est éclairée par une image à 360° qui apparaît derrière elle, avec son ombre au sol. Les huit environnements fournis avec Blender sont proposés ; ajoutez vos propres images HDR ou EXR (Poly Haven par exemple) et tournez l'environnement pour choisir l'arrière-plan.
 
+### Rendu produit en direct
+- La caméra se déplace à la souris directement dans l'image : glisser pour tourner, clic droit pour déplacer, molette pour zoomer, plus des vues Trois-quarts, Face, Côté, Dessus et Arrière. Le cadrage du rendu est exactement celui de l'écran.
+- Aperçu en direct avec le moteur temps réel de Blender (EEVEE) : environ 0,1 s par image sur la carte graphique, mis à jour pendant le mouvement. Le rendu HD reste en Cycles sur la carte graphique (environ 20 s pour 2048 px) ; Blender reste ouvert entre deux rendus et se ferme après 3 minutes d'inactivité.
+- Boutons « Basculer vers l'avant », « Basculer sur le côté » et « Orientation du fichier » pour redresser une pièce dessinée couchée (axe Y vers le haut).
+- Avec un fond transparent ou un environnement HDRI, l'ombre au sol n'apparaît que dans le rendu HD.
+
 ### Surveillance dans sa propre fenêtre
 - Bouton « Ouvrir dans une fenêtre » sur la page Surveillance, et entrée « Fenêtre de surveillance » dans le menu de l'icône de la zone de notification : les cartes des imprimantes passent dans une fenêtre à laisser sur un écran de l'atelier pendant que le logiciel sert ailleurs. F11 pour le plein écran, Échap pour en sortir ; la fenêtre rouvre sur le même écran. Fermer la fenêtre ou « Rappeler ici » remet les cartes sur la page.
 

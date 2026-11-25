@@ -88,13 +88,90 @@ public sealed class ProductRendererTests : IDisposable
         var store = new RenderPreferencesStore(path);
         Assert.Empty(store.Load().CustomColors);
 
-        store.Save(RenderPreferences.Default with { CustomColors = [new("Bleu nuit soie", "#1A2B4C", "silk")], Scene = 2, Rotation = 90 });
+        store.Save(RenderPreferences.Default with { CustomColors = [new("Bleu nuit soie", "#1A2B4C", "silk")], Scene = 2, Yaw = 1.5 });
         var loaded = store.Load();
         Assert.Equal(new RenderColor("Bleu nuit soie", "#1A2B4C", "silk"), Assert.Single(loaded.CustomColors));
-        Assert.Equal((2, 90d), (loaded.Scene, loaded.Rotation));
+        Assert.Equal((2, 1.5), (loaded.Scene, loaded.Yaw));
 
         File.WriteAllText(path, "{ pas du json");
         Assert.Equal(RenderPreferences.Default, store.Load());
+    }
+
+    [Fact]
+    public void A_part_drawn_lying_along_y_stands_up_after_a_quarter_turn_forward()
+    {
+        var lying = new MeshModel([new(0, 0, 0), new(10, 0, 0), new(0, 80, 0), new(0, 0, 10)], [0, 1, 2, 0, 1, 3]);
+
+        var standing = ProductRenderer.Turned(lying, Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathF.PI / 2));
+
+        Assert.Equal(80, standing.Size.Z, 3);
+        Assert.Equal(lying.TriangleCount, standing.TriangleCount);
+        Assert.Same(lying, ProductRenderer.Turned(lying, Quaternion.Identity));
+    }
+
+    [Fact]
+    public void Camera_orbit_turns_the_part_and_keeps_height_zoom_and_pan()
+    {
+        var mesh = new MeshModel([new(0, 0, 0), new(20, 0, 0), new(0, 20, 0), new(0, 0, 20)], [0, 1, 2, 0, 1, 3]);
+        var view = new ViewCamera { Yaw = Math.PI / 2, Pitch = 0, Zoom = 2, PanX = 76, PanY = 0 };
+
+        var (camera, rotation) = RenderCamera.From(mesh, view, 800, 400);
+
+        Assert.Equal(90, rotation, 6);
+        var distance = mesh.Radius * 2.9 / 2;
+        Assert.Equal(mesh.Center.Y - distance, camera.Location[1], 3);
+        Assert.Equal(mesh.Center.Z, camera.Location[2], 3);
+        Assert.Equal(-0.1 * 0.5, camera.ShiftX, 6);
+    }
+
+    /// <summary>What the 3D view frames is what Blender renders: the part covers the same pixels in both (camera turned, raised, zoomed and panned).</summary>
+    [Fact]
+    public async Task Blender_frames_the_part_like_the_3d_view_when_installed()
+    {
+        if (BlenderLocator.Detect() is not { } blender) return;
+        Vector3[] corners = [new(0, 0, 0), new(40, 0, 0), new(40, 10, 0), new(0, 10, 0), new(0, 0, 25), new(40, 0, 25), new(40, 10, 25), new(0, 10, 25),
+            new(0, 10, 0), new(10, 10, 0), new(10, 30, 0), new(0, 30, 0), new(0, 10, 25), new(10, 10, 25), new(10, 30, 25), new(0, 30, 25)];
+        int[] box = [0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7, 0, 1, 5, 0, 5, 4, 2, 3, 7, 2, 7, 6, 0, 4, 7, 0, 7, 3, 1, 2, 6, 1, 6, 5];
+        var mesh = new MeshModel(corners, [.. box, .. box.Select(i => i + 8)]); // an L, so a wrong turn shows
+        var stl = Path.Combine(_directory, "l.stl");
+        StlWriter.Write(stl, mesh);
+        var view = new ViewCamera { Yaw = -1.0, Pitch = 0.55, Zoom = 1.3, PanX = 60, PanY = -30 };
+        const int width = 320, height = 240;
+        var (camera, rotation) = RenderCamera.From(mesh, view, width, height);
+        var png = Path.Combine(_directory, "l.png");
+
+        using (var session = new BlenderSession(blender))
+            await session.RenderAsync(stl, Small with { Scene = "transparent", LayerHeight = 0, Width = width, Height = height, Rotation = rotation, Camera = camera }, png, CancellationToken.None);
+
+        const uint background = 0xFF000000;
+        var live = SoftwareRenderer.Render(mesh, view, new RenderOptions(width, height, false, 0xFFFFFFFF, background));
+        using var rendered = SkiaSharp.SKBitmap.Decode(png);
+        int both = 0, either = 0;
+        for (var i = 0; i < width * height; i++)
+        {
+            var inLive = live[i] != background;
+            var inBlender = rendered.GetPixel(i % width, i / width).Alpha > 240; // the part is opaque, its shadow only partly
+            if (inLive && inBlender) both++;
+            if (inLive || inBlender) either++;
+        }
+        Assert.True(either > width * height / 20, "la pièce doit être visible");
+        Assert.True(both > either * 0.9, $"cadrages différents : {both} pixels communs sur {either}");
+    }
+
+    /// <summary>Blender kept open renders several images, the later ones without starting again.</summary>
+    [Fact]
+    public async Task Session_renders_one_job_after_another_when_installed()
+    {
+        if (BlenderLocator.Detect() is not { } blender) return;
+        var stl = Path.Combine(_directory, "cube.stl");
+        StlWriter.Write(stl, new MeshModel([new(0, 0, 0), new(20, 0, 0), new(0, 20, 0), new(0, 0, 20)], [0, 2, 1, 0, 1, 3, 0, 3, 2, 1, 2, 3]));
+        using var session = new BlenderSession(blender);
+        foreach (var name in new[] { "one.png", "two.png" })
+        {
+            var png = Path.Combine(_directory, name);
+            await session.RenderAsync(stl, Small, png, CancellationToken.None);
+            Assert.True(new FileInfo(png).Length > 0);
+        }
     }
 
     /// <summary>A real render when Blender is installed on this computer (a few seconds); nothing to check otherwise.</summary>

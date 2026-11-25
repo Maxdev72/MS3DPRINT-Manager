@@ -2,9 +2,9 @@ using System.Text.Json;
 
 namespace MS3DPRINT.Manager.Desktop.Rendering;
 
-/// <summary>The render page as it was left: the user's own colours and the last choices (list positions on the page).</summary>
+/// <summary>The render page as it was left: the user's own colours, the last choices (list positions on the page) and the camera.</summary>
 public sealed record RenderPreferences(IReadOnlyList<RenderColor> CustomColors, string Hex = "#D93A3A", int Finish = 0, int Layer = 3, int Scene = 0,
-    string Background = "#2F6FD6", double Rotation = 30, double Elevation = 20, int Format = 0, string? Environment = null, double EnvironmentRotation = 0)
+    string Background = "#2F6FD6", int Format = 0, string? Environment = null, double EnvironmentRotation = 0, double Yaw = -0.6, double Pitch = 0.35, double Zoom = 1)
 {
     public static RenderPreferences Default { get; } = new([]);
 }

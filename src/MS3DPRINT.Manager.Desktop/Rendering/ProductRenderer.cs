@@ -1,5 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Numerics;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
@@ -9,7 +11,29 @@ namespace MS3DPRINT.Manager.Desktop.Rendering;
 
 /// <summary>What the render script needs besides the model: names match the keys read by product_render.py.</summary>
 public sealed record RenderSettings(string Color, string Finish, double LayerHeight, string Scene, string Background,
-    double Rotation, double Elevation, int Width, int Height, int Samples, string Environment = "", double EnvironmentRotation = 0);
+    double Rotation, double Elevation, int Width, int Height, int Samples, string Environment = "", double EnvironmentRotation = 0, RenderCamera? Camera = null, string Engine = "cycles");
+
+/// <summary>The camera of the 3D view in model millimetres: Blender frames the part exactly as on screen.</summary>
+public sealed record RenderCamera(float[] Location, float[] Target, double FieldOfView, double ShiftX, double ShiftY)
+{
+    /// <summary>The 3D view's vertical field of view (see <see cref="ViewMath"/>).</summary>
+    public const double ViewFieldOfView = 40;
+
+    /// <summary>
+    /// The view's orbit around the vertical axis becomes a turn of the part (returned in degrees), so the studio lights and
+    /// backdrop stay behind the camera; the height, zoom and pan become the Blender camera.
+    /// </summary>
+    public static (RenderCamera Camera, double RotationDegrees) From(MeshModel mesh, ViewCamera view, int width, int height)
+    {
+        var distance = mesh.Radius * 2.9 / Math.Max(ViewCamera.MinZoom, view.Zoom);
+        var toModel = Matrix4x4.Transpose(Matrix4x4.CreateRotationX((float)view.Pitch));
+        var location = mesh.Center + Vector3.Transform(new Vector3(0, (float)-distance, 0), toModel);
+        // The view pans in pixels of a 760 px high view; Blender shifts in parts of the larger image side.
+        var heightShare = (double)height / Math.Max(width, height);
+        return (new RenderCamera([location.X, location.Y, location.Z], [mesh.Center.X, mesh.Center.Y, mesh.Center.Z], ViewFieldOfView,
+            -view.PanX / 760 * heightShare, view.PanY / 760 * heightShare), view.Yaw * 180 / Math.PI);
+    }
+}
 
 /// <summary>An environment image (HDRI) that lights the part and shows behind it.</summary>
 public sealed record RenderEnvironment(string Label, string Path)
@@ -77,7 +101,16 @@ public static class ProductRenderer
 {
     /// <summary>Blender reads STL only: every supported model (STL, OBJ, 3MF) goes through the viewer loader and is written as STL in millimetres.</summary>
     // shortcut: the model is taken as millimetres (the viewer's per-file unit choice is not applied); pass ModelUnits here if inch models show up.
-    public static void PrepareModel(string modelPath, string stlPath) => StlWriter.Write(stlPath, MeshLoader.Load(modelPath));
+    public static MeshModel PrepareModel(MeshModel loaded, Quaternion turn, string stlPath)
+    {
+        var mesh = Turned(loaded, turn);
+        StlWriter.Write(stlPath, mesh);
+        return mesh;
+    }
+
+    /// <summary>The part turned as the user stood it (a file drawn with Y up arrives lying down).</summary>
+    public static MeshModel Turned(MeshModel mesh, Quaternion turn)
+        => turn.IsIdentity ? mesh : new MeshModel(mesh.Positions.Select(p => Vector3.Transform(p, turn)).ToArray(), mesh.Indices);
 
     public static string SettingsJson(string stlPath, string outputPng, RenderSettings settings)
     {
@@ -126,8 +159,113 @@ public static class ProductRenderer
         return path;
     });
 
-    private static string ScriptPath() => Script.Value;
+    internal static string ScriptPath() => Script.Value;
 
     /// <summary>One temporary folder per running instance, so two windows never write the same files.</summary>
     public static string WorkFolder() => Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "ms3dprint-render", Environment.ProcessId.ToString())).FullName;
+}
+
+/// <summary>
+/// One Blender kept open for the render page: it starts once (about 2 s), keeps the imported part, and renders one job at a
+/// time; after a few idle minutes it closes to give its memory back. Cancelling a render stops Blender, the next one restarts it.
+/// </summary>
+public sealed class BlenderSession(string blender) : IDisposable
+{
+    private static readonly TimeSpan IdleLimit = TimeSpan.FromMinutes(3);
+    private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly object _sync = new();
+    private readonly Queue<string> _tail = new();
+    private Process? _process;
+    private TaskCompletionSource<string?>? _job;
+    private Timer? _idle;
+
+    public async Task RenderAsync(string stlPath, RenderSettings settings, string outputPng, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        var settingsPath = Path.ChangeExtension(outputPng, ".json");
+        try
+        {
+            _idle?.Dispose();
+            await File.WriteAllTextAsync(settingsPath, ProductRenderer.SettingsJson(stlPath, outputPng, settings), cancellationToken);
+            var job = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+            Process process;
+            lock (_sync) { _job = job; process = Start(); }
+            await process.StandardInput.WriteLineAsync(settingsPath);
+            await process.StandardInput.FlushAsync(cancellationToken);
+            string? error;
+            using (cancellationToken.Register(() => { Stop(); job.TrySetCanceled(cancellationToken); }))
+                error = await job.Task;
+            if (error is not null) throw new InvalidOperationException("Blender a échoué : " + error);
+            if (!File.Exists(outputPng)) throw new InvalidOperationException("Blender n’a pas produit d’image.");
+        }
+        catch (IOException exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            Stop();
+            throw new InvalidOperationException("Blender s’est arrêté pendant le rendu : " + exception.Message, exception);
+        }
+        finally
+        {
+            try { File.Delete(settingsPath); } catch (IOException) { }
+            _idle = new Timer(_ => { if (_gate.Wait(0)) { try { Stop(); } finally { _gate.Release(); } } }, null, IdleLimit, Timeout.InfiniteTimeSpan);
+            _gate.Release();
+        }
+    }
+
+    private Process Start()
+    {
+        if (_process is { HasExited: false } running) return running;
+        var start = new ProcessStartInfo(blender)
+        {
+            UseShellExecute = false, CreateNoWindow = true, RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true,
+            StandardInputEncoding = new UTF8Encoding(false), StandardOutputEncoding = Encoding.UTF8,
+            ArgumentList = { "-b", "--factory-startup", "-P", ProductRenderer.ScriptPath(), "--", "--server" }
+        };
+        start.Environment["PYTHONUTF8"] = "1";
+        var process = new Process { StartInfo = start, EnableRaisingEvents = true };
+        process.OutputDataReceived += (_, e) => Received(e.Data);
+        process.ErrorDataReceived += (_, e) => Remember(e.Data);
+        // Only a Blender that stopped by itself fails the job; one stopped on purpose is no longer the current one.
+        process.Exited += (_, _) => { if (ReferenceEquals(_process, process)) Finish("Blender s’est arrêté. " + string.Join(" ", _tail)); };
+        process.Start();
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+        return _process = process;
+    }
+
+    private void Received(string? line)
+    {
+        if (line is null) return;
+        if (line.StartsWith("MS3D-DONE", StringComparison.Ordinal)) Finish(null);
+        else if (line.StartsWith("MS3D-ERROR ", StringComparison.Ordinal)) Finish(line["MS3D-ERROR ".Length..]);
+        else Remember(line);
+    }
+
+    private void Remember(string? line)
+    {
+        if (string.IsNullOrWhiteSpace(line)) return;
+        lock (_tail) { _tail.Enqueue(line.Trim()); while (_tail.Count > 3) _tail.Dequeue(); }
+    }
+
+    private void Finish(string? error)
+    {
+        TaskCompletionSource<string?>? job;
+        lock (_sync) { job = _job; _job = null; }
+        job?.TrySetResult(error);
+    }
+
+    private void Stop()
+    {
+        Process? process;
+        lock (_sync) { process = _process; _process = null; }
+        if (process is null) return;
+        try { if (!process.HasExited) process.Kill(entireProcessTree: true); }
+        catch (Exception exception) when (exception is InvalidOperationException or Win32Exception) { }
+        process.Dispose();
+    }
+
+    public void Dispose()
+    {
+        _idle?.Dispose();
+        Stop();
+    }
 }

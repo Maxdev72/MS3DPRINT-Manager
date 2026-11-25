@@ -31,11 +31,25 @@ public sealed partial class EstimateUiTests
             await studio.LoadModelAsync(model);
             Dispatcher.UIThread.RunJobs();
 
-            Assert.NotNull(studio.GetVisualDescendants().OfType<Image>().Single().Source);
+            T Get<T>(string name) => (T)typeof(RenderStudioView).GetField(name, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(studio)!;
+            Assert.True(Get<Image>("_image").Source is not null, Get<TextBlock>("_status").Text);
+            Assert.StartsWith("Aperçu en direct", Get<TextBlock>("_status").Text);
             CaptureDraftUi(owner, "render-page");
 
+            // A moved camera (turn, height, zoom, pan) is rendered by Blender with the same framing as the live 3D view.
+            var viewport = Get<IMeshViewport>("_viewport");
+            (viewport.Camera.Yaw, viewport.Camera.Pitch, viewport.Camera.Zoom, viewport.Camera.PanX, viewport.Camera.PanY) = (-1.0, 0.6, 1.6, 90, -50);
+            viewport.RequestRender(false);
+            typeof(RenderStudioView).GetMethod("CameraMoved", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(studio, null);
+            await (Task)typeof(RenderStudioView).GetMethod("RunPreviewsAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(studio, null)!;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(1, Get<Image>("_image").Opacity);
+            CaptureDraftUi(owner, "render-match-blender");
+            Get<Image>("_image").Opacity = 0;
+            await Task.Delay(100);
+            CaptureDraftUi(owner, "render-match-live");
+
             // The HDRI environments shipped with Blender light and fill the background.
-            T Get<T>(string name) => (T)typeof(RenderStudioView).GetField(name, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(studio)!;
             var environments = Get<ComboBox>("_environment");
             Assert.NotEmpty(environments.Items);
             Get<ComboBox>("_scene").SelectedIndex = 4;
@@ -43,7 +57,7 @@ public sealed partial class EstimateUiTests
             Assert.True(Get<StackPanel>("_environmentField").IsVisible);
             await studio.LoadModelAsync(model);
             Dispatcher.UIThread.RunJobs();
-            Assert.Equal("Aperçu à jour. Lancez le rendu HD pour l’image finale.", Get<TextBlock>("_status").Text);
+            Assert.StartsWith("Aperçu en direct", Get<TextBlock>("_status").Text);
             CaptureDraftUi(owner, "render-page-environment");
         }
         finally { owner.Close(); }

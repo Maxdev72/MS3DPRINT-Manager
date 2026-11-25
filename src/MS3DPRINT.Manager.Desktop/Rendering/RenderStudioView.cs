@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Numerics;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
@@ -18,8 +19,9 @@ namespace MS3DPRINT.Manager.Desktop.Rendering;
 public sealed record RenderColor(string Label, string Hex, string Finish);
 
 /// <summary>
-/// Product render page: one model, a few choices (colour, finish, layer lines, set, angle) and a Blender preview that
-/// follows every change; the HD render is asked for explicitly. The choices and the user's own colours are kept between visits.
+/// Product render page: the camera moves with the mouse in the image (left drag turns, right drag moves, wheel zooms) and
+/// Blender's real-time engine (EEVEE) renders that exact view continuously; Blender stays open between renders. The HD
+/// render (Cycles on the graphics card) is asked for explicitly. The HD render is asked for explicitly; choices and custom colours are kept between visits.
 /// </summary>
 public sealed class RenderStudioView : UserControl
 {
@@ -27,13 +29,17 @@ public sealed class RenderStudioView : UserControl
     private static readonly (string Label, double Height)[] Layers = [("Lisse, sans lignes", 0), ("0,12 mm", 0.12), ("0,16 mm", 0.16), ("0,20 mm", 0.2), ("0,28 mm", 0.28)];
     private static readonly (string Label, string Key)[] Scenes = [("Studio clair", "light"), ("Studio sombre", "dark"), ("Fond de couleur", "color"), ("Fond transparent (PNG)", "transparent"), ("Environnement (HDRI)", "environment")];
     private static readonly (string Label, int Width, int Height)[] Formats = [("Carré 1:1", 1, 1), ("Paysage 4:3", 4, 3), ("Portrait 3:4", 3, 4), ("Large 16:9", 16, 9)];
-    private static readonly (string Label, double Rotation, double Elevation)[] Views = [("Face", 0, 10), ("Trois-quarts", 35, 22), ("Dessus", 30, 65), ("Arrière", 180, 20)];
-    private const int PreviewSide = 720, PreviewSamples = 24, FinalSide = 2048, FinalSamples = 256;
+    private static readonly (string Label, double Yaw, double Pitch)[] Views =
+        [("Trois-quarts", -0.6, 0.35), ("Face", 0, 0.1), ("Côté", -Math.PI / 2, 0.1), ("Dessus", -0.6, 1.2), ("Arrière", Math.PI, 0.25)];
+    private enum Pass { Live, Final }
 
     private readonly Func<IReadOnlyList<RenderColor>> _loadColors;
     private readonly RenderPreferencesStore _store;
-    private readonly Image _image = new() { Stretch = Stretch.Uniform };
+    private IMeshViewport _viewport;
+    private readonly Grid _frame = new() { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+    private readonly Image _image = new() { Stretch = Stretch.Uniform, IsHitTestVisible = false };
     private readonly StackPanel _emptyState = new() { Spacing = 8, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, MaxWidth = 420 };
+    private readonly Border _emptyCover;
     private readonly TextBlock _status = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
     private readonly ProgressBar _progress = new() { IsIndeterminate = true, IsVisible = false };
     private readonly TextBlock _modelName = new() { Classes = { "muted" }, TextTrimming = TextTrimming.CharacterEllipsis };
@@ -50,26 +56,30 @@ public sealed class RenderStudioView : UserControl
     private readonly ComboBox _environment = new() { HorizontalAlignment = HorizontalAlignment.Stretch, PlaceholderText = "Choisissez un environnement" };
     private readonly Slider _environmentRotation = new() { Minimum = 0, Maximum = 360, TickFrequency = 15, IsSnapToTickEnabled = true };
     private readonly StackPanel _environmentField = new() { Spacing = 12 };
-    private string? _savedEnvironment;
-    private readonly Slider _rotation = new() { Minimum = 0, Maximum = 360, TickFrequency = 15, IsSnapToTickEnabled = true };
-    private readonly Slider _elevation = new() { Minimum = 0, Maximum = 80, TickFrequency = 5, IsSnapToTickEnabled = true };
     private readonly Button _final = new() { Content = Icons.Label("IconPlay", "Rendu HD"), Classes = { "primary-action" }, HorizontalAlignment = HorizontalAlignment.Stretch, IsEnabled = false };
-    private readonly Button _cancel = new() { Content = "Annuler le rendu", HorizontalAlignment = HorizontalAlignment.Stretch, IsVisible = false };
+    private readonly Button _cancel = new() { Content = "Annuler le rendu HD", HorizontalAlignment = HorizontalAlignment.Stretch, IsVisible = false };
     private readonly Button _save = new() { Content = Icons.Label("IconSave", "Enregistrer l’image"), HorizontalAlignment = HorizontalAlignment.Stretch, IsEnabled = false };
-    private readonly DispatcherTimer _delay = new() { Interval = TimeSpan.FromMilliseconds(450) };
     private readonly DispatcherTimer _clock = new() { Interval = TimeSpan.FromSeconds(1) };
     private readonly string _work = ProductRenderer.WorkFolder();
+    private readonly RenderPreferences _saved;
 
     private IReadOnlyList<RenderColor> _workshopColors = [];
     private List<RenderColor> _customColors;
+    private string? _savedEnvironment;
     private string? _blender;
+    private BlenderSession? _session;
     private bool _blenderSearched;
     private bool _syncingColor;
     private string? _modelPath;
     private string? _stlPath;
+    private MeshModel? _mesh;
+    private MeshModel? _loaded;
+    private Quaternion _turn = Quaternion.Identity;
     private string? _shown;
     private int _counter;
-    private CancellationTokenSource? _render;
+    private int _generation;
+    private Task _previews = Task.CompletedTask;
+    private CancellationTokenSource? _finalRender;
 
     /// <summary>Asks the window to file a copy of the image (temporary PNG, model path), like a capture of the 3D viewer.</summary>
     public event Action<string, string>? SaveRequested;
@@ -78,7 +88,7 @@ public sealed class RenderStudioView : UserControl
     {
         _loadColors = loadColors;
         _store = store ?? new RenderPreferencesStore();
-        var saved = _store.Load();
+        var saved = _saved = _store.Load();
         _customColors = [.. saved.CustomColors ?? []];
         _hex.Text = PreviewColorParser.TryParse(saved.Hex, out var savedColor) ? saved.Hex : RenderPreferences.Default.Hex;
         _picker.Color = PreviewColorParser.TryParse(_hex.Text, out savedColor) ? savedColor : Colors.Red;
@@ -87,8 +97,6 @@ public sealed class RenderStudioView : UserControl
         _scene.SelectedIndex = Math.Clamp(saved.Scene, 0, Scenes.Length - 1);
         _format.SelectedIndex = Math.Clamp(saved.Format, 0, Formats.Length - 1);
         _background.Text = saved.Background;
-        _rotation.Value = saved.Rotation;
-        _elevation.Value = saved.Elevation;
         _environmentRotation.Value = saved.EnvironmentRotation;
         _savedEnvironment = saved.Environment;
 
@@ -107,23 +115,59 @@ public sealed class RenderStudioView : UserControl
             catch (Exception exception) when (exception is ArgumentException or NotSupportedException) { ShowStatus(exception.Message); }
         });
 
-        var stage = new Grid();
-        stage.Children.Add(_image);
-        stage.Children.Add(_emptyState);
+        // The 3D view and the image share a frame with the image's proportions, so what is framed live is what Blender renders.
+        _viewport = CreateViewport();
+        _frame.Children.Add(_viewport.Visual);
+        _frame.Children.Add(_image);
+        _frame.Children.Add(new Border
+        {
+            Classes = { "toolbar" }, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(12),
+            IsHitTestVisible = false, Padding = new Thickness(12, 4),
+            Child = new TextBlock { Text = "Glisser : tourner · Clic droit : déplacer · Molette : zoomer", Classes = { "caption" } }
+        });
+        _emptyCover = new Border { Background = (IBrush?)Application.Current?.FindResource("CanvasBrush"), Child = _emptyState };
+        var stage = new Grid { ClipToBounds = true };
+        stage.Children.Add(_frame);
+        stage.Children.Add(_emptyCover);
+        stage.SizeChanged += (_, _) => FitFrame();
+        _stageHost = stage;
         var stageFrame = new Border
         {
             CornerRadius = new CornerRadius(Ui.Radius.Card), ClipToBounds = true, BorderThickness = new Thickness(1),
             BorderBrush = (IBrush?)Application.Current?.FindResource("SubtleBorderBrush"), Child = stage
         };
-        var stageColumn = new Grid { RowDefinitions = new RowDefinitions("*,Auto,Auto"), RowSpacing = 8 };
+        var views = new WrapPanel();
+        foreach (var (label, yaw, pitch) in Views)
+        {
+            var chip = new Button { Content = label, Classes = { "filter-chip" }, Margin = new Thickness(0, 0, 8, 8) };
+            chip.Click += (_, _) => SetView(yaw, pitch);
+            views.Children.Add(chip);
+        }
+        var stageColumn = new Grid { RowDefinitions = new RowDefinitions("Auto,*,Auto,Auto"), RowSpacing = 8 };
+        stageColumn.Children.Add(views);
+        Grid.SetRow(stageFrame, 1);
         stageColumn.Children.Add(stageFrame);
-        Grid.SetRow(_progress, 1);
+        Grid.SetRow(_progress, 2);
         stageColumn.Children.Add(_progress);
-        Grid.SetRow(_status, 2);
+        Grid.SetRow(_status, 3);
         stageColumn.Children.Add(_status);
 
         var open = new Button { Content = Icons.Label("IconOpen", "Ouvrir un modèle"), HorizontalAlignment = HorizontalAlignment.Stretch };
         open.Click += async (_, _) => await BrowseAsync();
+        // A part drawn with Y up arrives lying down: a quarter turn forward or sideways stands it up.
+        var orientation = new WrapPanel();
+        foreach (var (label, axis, tip) in new (string, Vector3?, string)[]
+        {
+            ("Basculer vers l’avant", Vector3.UnitX, "Quart de tour autour de l’axe X"),
+            ("Basculer sur le côté", Vector3.UnitY, "Quart de tour autour de l’axe Y"),
+            ("Orientation du fichier", null, "Revenir à la pièce telle qu’elle est dans le fichier")
+        })
+        {
+            var button = new Button { Content = label, Classes = { "filter-chip" }, Margin = new Thickness(0, 0, 8, 8) };
+            ToolTip.SetTip(button, tip);
+            button.Click += async (_, _) => await TurnAsync(axis);
+            orientation.Children.Add(button);
+        }
         _hex.LostFocus += (_, _) => HexEdited();
         _hex.KeyDown += (_, e) => { if (e.Key == Key.Enter) { HexEdited(); e.Handled = true; } };
         _picker.ColorChanged += (_, e) =>
@@ -137,29 +181,21 @@ public sealed class RenderStudioView : UserControl
         ToolTip.SetTip(_keepColor, "Ajouter cette couleur à mes couleurs");
         AutomationProperties.SetName(_keepColor, "Ajouter cette couleur à mes couleurs");
         _keepColor.Click += async (_, _) => await KeepColorAsync();
-        _background.LostFocus += (_, _) => ScheduleRender();
-        _background.KeyDown += (_, e) => { if (e.Key == Key.Enter) { ScheduleRender(); e.Handled = true; } };
+        _background.LostFocus += (_, _) => SettingsChanged();
+        _background.KeyDown += (_, e) => { if (e.Key == Key.Enter) { SettingsChanged(); e.Handled = true; } };
         _backgroundField = FormKit.Field("Couleur du fond", _background, hint: "Code #RRGGBB");
-        foreach (var box in new[] { _finish, _layer, _format, _environment }) box.SelectionChanged += (_, _) => ScheduleRender();
-        _scene.SelectionChanged += (_, _) => { ShowSceneFields(); ScheduleRender(); };
+        foreach (var box in new[] { _finish, _layer, _environment }) box.SelectionChanged += (_, _) => SettingsChanged();
+        _format.SelectionChanged += (_, _) => { FitFrame(); SettingsChanged(); };
+        _scene.SelectionChanged += (_, _) => { ShowSceneFields(); SettingsChanged(); };
+        _environmentRotation.PropertyChanged += (_, e) => { if (e.Property == RangeBase.ValueProperty) SettingsChanged(); };
         var addEnvironment = new Button { Content = Icons.Label("IconOpen", "Ajouter un fichier HDR ou EXR"), HorizontalAlignment = HorizontalAlignment.Stretch };
         addEnvironment.Click += async (_, _) => await BrowseEnvironmentAsync();
         _environmentField.Children.Add(FormKit.Field("Environnement", _environment, hint: "Ceux fournis avec Blender, ou vos images HDRI (Poly Haven par exemple)."));
         _environmentField.Children.Add(addEnvironment);
         _environmentField.Children.Add(FormKit.Field("Rotation de l’environnement", _environmentRotation));
         ShowSceneFields();
-        foreach (var slider in new[] { _rotation, _elevation, _environmentRotation })
-            slider.PropertyChanged += (_, e) => { if (e.Property == RangeBase.ValueProperty) ScheduleRender(); };
-        var views = new WrapPanel();
-        foreach (var (label, rotation, elevation) in Views)
-        {
-            var chip = new Button { Content = label, Classes = { "filter-chip" }, Margin = new Thickness(0, 0, 8, 8) };
-            chip.Click += (_, _) => { _rotation.Value = rotation; _elevation.Value = elevation; };
-            views.Children.Add(chip);
-        }
-        _delay.Tick += async (_, _) => { _delay.Stop(); await RenderAsync(final: false); };
-        _final.Click += async (_, _) => await RenderAsync(final: true);
-        _cancel.Click += (_, _) => _render?.Cancel();
+        _final.Click += async (_, _) => await RenderFinalAsync();
+        _cancel.Click += (_, _) => _finalRender?.Cancel();
         _save.Click += (_, _) => Save();
 
         var colorRow = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 8 };
@@ -173,11 +209,10 @@ public sealed class RenderStudioView : UserControl
             Spacing = 12,
             Children =
             {
-                FormKit.SectionLabel("Modèle"), open, _modelName,
+                FormKit.SectionLabel("Modèle"), open, _modelName, FormKit.Field("Orientation de la pièce", orientation),
                 FormKit.SectionLabel("Filament"), _swatches, FormKit.Field("Couleur", colorRow, hint: "Nuancier ou code #RRGGBB. + l’ajoute à vos couleurs ; clic droit sur l’une d’elles pour la retirer."),
                 FormKit.Field("Finition", _finish), FormKit.Field("Lignes de couche", _layer),
-                FormKit.SectionLabel("Mise en scène"), FormKit.Field("Ambiance", _scene), _backgroundField, _environmentField,
-                FormKit.Field("Vue", views), FormKit.Field("Rotation du modèle", _rotation), FormKit.Field("Hauteur de vue", _elevation), FormKit.Field("Format", _format)
+                FormKit.SectionLabel("Mise en scène"), FormKit.Field("Ambiance", _scene), _backgroundField, _environmentField, FormKit.Field("Format", _format)
             }
         };
         var scroller = new ScrollViewer
@@ -195,8 +230,57 @@ public sealed class RenderStudioView : UserControl
         Grid.SetColumn(panel, 1);
         root.Children.Add(panel);
         Content = root;
+        DetachedFromVisualTree += (_, _) => _session?.Dispose();
         ShowEmptyState();
         RebuildSwatches();
+    }
+
+    private readonly Grid _stageHost;
+
+    private IMeshViewport CreateViewport()
+    {
+        IMeshViewport viewport;
+        try
+        {
+            var gpu = new GpuViewportHost();
+            gpu.Failed += _ => Dispatcher.UIThread.Post(() => SwapViewport(new MeshViewport()));
+            viewport = gpu;
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or NotSupportedException) { viewport = new MeshViewport(); }
+        Hook(viewport);
+        return viewport;
+    }
+
+    private void Hook(IMeshViewport viewport)
+    {
+        viewport.ShowGrid = false;
+        viewport.CameraChanged += CameraMoved;
+        AutomationProperties.SetName(viewport.Visual, "Cadrage du rendu : glisser pour tourner, clic droit pour déplacer, molette pour zoomer");
+        if (PreviewColorParser.TryParse(_hex.Text, out var color)) viewport.ModelColor = color;
+    }
+
+    /// <summary>The graphics card view failed: the processor view takes over with the same model and camera.</summary>
+    private void SwapViewport(IMeshViewport next)
+    {
+        var camera = _viewport.Camera;
+        _frame.Children.Remove(_viewport.Visual);
+        _viewport.CameraChanged -= CameraMoved;
+        _viewport = next;
+        Hook(next);
+        (next.Camera.Yaw, next.Camera.Pitch, next.Camera.Zoom, next.Camera.PanX, next.Camera.PanY) = (camera.Yaw, camera.Pitch, camera.Zoom, camera.PanX, camera.PanY);
+        _frame.Children.Insert(0, next.Visual);
+        next.SetMesh(_mesh);
+    }
+
+    /// <summary>The frame takes the largest size with the image's proportions.</summary>
+    private void FitFrame()
+    {
+        var (_, ratioWidth, ratioHeight) = Formats[_format.SelectedIndex];
+        var available = _stageHost.Bounds.Size;
+        if (available.Width <= 0 || available.Height <= 0) return;
+        var scale = Math.Min(available.Width / ratioWidth, available.Height / ratioHeight);
+        _frame.Width = ratioWidth * scale;
+        _frame.Height = ratioHeight * scale;
     }
 
     /// <summary>Called on each visit: finds Blender once and refreshes the filament colours of the workshop.</summary>
@@ -206,7 +290,9 @@ public sealed class RenderStudioView : UserControl
         {
             _blender = await Task.Run(BlenderLocator.Detect);
             _blenderSearched = true;
-            _final.IsEnabled = _blender is not null && _stlPath is not null;
+            _session?.Dispose();
+            _session = _blender is null ? null : new BlenderSession(_blender);
+            _final.IsEnabled = _session is not null && _stlPath is not null;
             if (_blender is { } blender) _environment.ItemsSource = (await Task.Run(() => BlenderLocator.Environments(blender))).ToList();
             if (_savedEnvironment is { } saved && File.Exists(saved)) SelectEnvironment(saved);
             ShowEmptyState();
@@ -218,22 +304,54 @@ public sealed class RenderStudioView : UserControl
 
     public async Task LoadModelAsync(string path)
     {
-        _render?.Cancel();
-        var stl = Path.Combine(_work, $"model-{++_counter}.stl");
         ShowStatus("Préparation du modèle…", busy: true);
-        try { await Task.Run(() => ProductRenderer.PrepareModel(path, stl)); }
+        MeshModel loaded;
+        try { loaded = await Task.Run(() => MeshLoader.Load(path)); }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException or NotSupportedException or ArgumentException)
         {
             ShowStatus("Impossible d’ouvrir ce modèle : " + exception.Message);
             return;
         }
-        if (_stlPath is { } previous) TryDelete(previous);
+        _loaded = loaded;
+        _turn = Quaternion.Identity;
         _modelPath = path;
-        _stlPath = stl;
         _modelName.Text = Path.GetFileName(path);
         ToolTip.SetTip(_modelName, path);
-        _final.IsEnabled = _blender is not null;
-        await RenderAsync(final: false);
+        _image.Source = null;
+        var camera = _viewport.Camera;
+        (camera.Yaw, camera.Pitch, camera.Zoom, camera.PanX, camera.PanY) = (_saved.Yaw, _saved.Pitch, _saved.Zoom, 0, 0);
+        await UseOrientationAsync();
+    }
+
+    /// <summary>Stands the part as asked (a quarter turn about X or Y, or back to the file's orientation) and renders it again.</summary>
+    private async Task TurnAsync(Vector3? axis)
+    {
+        if (_loaded is null) return;
+        _turn = axis is { } turnAxis ? Quaternion.Normalize(Quaternion.Concatenate(_turn, Quaternion.CreateFromAxisAngle(turnAxis, MathF.PI / 2))) : Quaternion.Identity;
+        await UseOrientationAsync();
+    }
+
+    private async Task UseOrientationAsync()
+    {
+        if (_loaded is not { } loaded) return;
+        var stl = Path.Combine(_work, $"model-{++_counter}.stl");
+        var turn = _turn;
+        MeshModel mesh;
+        try { mesh = await Task.Run(() => ProductRenderer.PrepareModel(loaded, turn, stl)); }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            ShowStatus("Impossible de préparer le modèle : " + exception.Message);
+            return;
+        }
+        if (_stlPath is { } previous) TryDelete(previous);
+        _stlPath = stl;
+        _mesh = mesh;
+        _final.IsEnabled = _session is not null;
+        _viewport.SetMesh(mesh);
+        _viewport.RequestRender(false);
+        ShowEmptyState();
+        _generation++;
+        await RunPreviewsAsync();
     }
 
     private async Task BrowseAsync()
@@ -246,6 +364,131 @@ public sealed class RenderStudioView : UserControl
             FileTypeFilter = [new FilePickerFileType("Modèles 3D (STL, OBJ, 3MF)") { Patterns = ["*.stl", "*.obj", "*.3mf"] }]
         });
         if (files.FirstOrDefault()?.TryGetLocalPath() is { Length: > 0 } local) await LoadModelAsync(local);
+    }
+
+    private void SetView(double yaw, double pitch)
+    {
+        var camera = _viewport.Camera;
+        (camera.Yaw, camera.Pitch, camera.Zoom, camera.PanX, camera.PanY) = (yaw, pitch, 1, 0, 0);
+        _viewport.RequestRender(false);
+        CameraMoved();
+    }
+
+    /// <summary>The camera moves: the live render follows it (the 3D view underneath shows only until the first image).</summary>
+    private void CameraMoved()
+    {
+        if (_mesh is null) return;
+        // The studio has a floor: the camera stops at its level, in the 3D view as in the render.
+        if (_viewport.Camera.Pitch < 0) { _viewport.Camera.Pitch = 0; _viewport.RequestRender(true); }
+        SettingsChanged();
+    }
+
+    private void SettingsChanged()
+    {
+        if (_stlPath is null || _session is null) return;
+        _generation++;
+        _finalRender?.Cancel();
+        RunPreviews();
+    }
+
+    private async void RunPreviews() => await RunPreviewsAsync();
+
+    /// <summary>
+    /// Live preview: EEVEE renders the latest settings again and again while they change (about a tenth of a second an image
+    /// on a recent graphics card); each image is shown as it comes, the last one matches the settings at rest.
+    /// </summary>
+    private Task RunPreviewsAsync() => _previews = _previews.IsCompleted ? PreviewLoopAsync() : _previews;
+
+    private async Task PreviewLoopAsync()
+    {
+        if (_session is null || _stlPath is null) return;
+        var watch = new Stopwatch();
+        int generation;
+        do
+        {
+            generation = _generation;
+            watch.Restart();
+            if (!await RenderPassAsync(Pass.Live, CancellationToken.None)) return;
+        } while (generation != _generation);
+        SavePreferences();
+        // The last image only: the first one after opening also waits for Blender to start.
+        var each = watch.Elapsed.TotalSeconds.ToString("0.0#", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+        ShowStatus($"Aperçu en direct ({each} s par image). Bougez la caméra dans l’image ; le rendu HD donne l’image finale, plus réaliste.");
+    }
+
+    private async Task RenderFinalAsync()
+    {
+        using var cancel = _finalRender = new CancellationTokenSource();
+        _cancel.IsVisible = true;
+        var watch = Stopwatch.StartNew();
+        EventHandler tick = (_, _) => _status.Text = $"Rendu HD en cours · {watch.Elapsed:m\\:ss} écoulées (souvent 15 s à 1 min).";
+        _clock.Tick += tick;
+        _clock.Start();
+        SavePreferences();
+        try { await RenderPassAsync(Pass.Final, cancel.Token); }
+        finally
+        {
+            _clock.Tick -= tick;
+            _clock.Stop();
+            _cancel.IsVisible = false;
+            if (ReferenceEquals(_finalRender, cancel)) _finalRender = null;
+        }
+    }
+
+    /// <summary>One Blender render, shown as soon as it is ready. False when it failed or was cancelled.</summary>
+    private async Task<bool> RenderPassAsync(Pass pass, CancellationToken cancellationToken)
+    {
+        if (_stlPath is not { } stl || _session is not { } session || _mesh is not { } mesh) return false;
+        if (ReadSettings(pass, mesh) is not { } settings) return false;
+        var output = Path.Combine(_work, $"render-{++_counter}.png");
+        if (pass == Pass.Final) ShowStatus($"Rendu HD {settings.Width} × {settings.Height} en cours…", busy: true);
+        else if (_image.Source is null) ShowStatus("Premier aperçu…", busy: true);
+        var watch = Stopwatch.StartNew();
+        try
+        {
+            await session.RenderAsync(stl, settings, output, cancellationToken);
+            Bitmap bitmap;
+            await using (var stream = File.OpenRead(output)) bitmap = new Bitmap(stream);
+            (_image.Source as IDisposable)?.Dispose();
+            _image.Source = bitmap;
+            if (_shown is { } previous) TryDelete(previous);
+            _shown = output;
+            _save.IsEnabled = true;
+            if (pass == Pass.Final)
+            {
+                var seconds = watch.Elapsed.TotalSeconds.ToString("0.0", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+                ShowStatus($"Rendu HD prêt ({settings.Width} × {settings.Height}, {seconds} s). Enregistrez-le dans le projet du modèle.");
+            }
+            else _progress.IsVisible = false;
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            TryDelete(output);
+            ShowStatus("Rendu HD annulé.");
+            return false;
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
+        {
+            ShowStatus(exception.Message);
+            return false;
+        }
+    }
+
+    private RenderSettings? ReadSettings(Pass pass, MeshModel mesh)
+    {
+        if (!PreviewColorParser.TryParse(_hex.Text?.Trim(), out _)) { ShowStatus("Couleur du filament invalide : saisissez un code comme #D93A3A."); return null; }
+        var scene = Scenes[_scene.SelectedIndex].Key;
+        if (scene == "color" && !PreviewColorParser.TryParse(_background.Text?.Trim(), out _)) { ShowStatus("Couleur du fond invalide : saisissez un code comme #2F6FD6."); return null; }
+        var environment = (_environment.SelectedItem as RenderEnvironment)?.Path ?? string.Empty;
+        if (scene == "environment" && !File.Exists(environment)) { ShowStatus("Choisissez un environnement, ou ajoutez votre image HDR ou EXR."); return null; }
+        var (_, ratioWidth, ratioHeight) = Formats[_format.SelectedIndex];
+        // EEVEE (real time) for the live preview, Cycles on the graphics card for the final image.
+        var (side, samples, engine) = pass == Pass.Live ? (960, 16, "eevee") : (2048, 256, "cycles");
+        var (width, height) = ratioWidth >= ratioHeight ? (side, side * ratioHeight / ratioWidth) : (side * ratioWidth / ratioHeight, side);
+        var (camera, rotation) = RenderCamera.From(mesh, _viewport.Camera, width, height);
+        return new RenderSettings(_hex.Text!.Trim(), Finishes[_finish.SelectedIndex].Key, Layers[_layer.SelectedIndex].Height, scene, _background.Text?.Trim() ?? "#FFFFFF",
+            rotation, 0, width, height, samples, environment, _environmentRotation.Value, camera, engine);
     }
 
     private void ShowSceneFields()
@@ -339,7 +582,7 @@ public sealed class RenderStudioView : UserControl
     {
         var text = _hex.Text?.Trim() ?? string.Empty;
         if (!text.StartsWith('#')) text = "#" + text;
-        if (!PreviewColorParser.TryParse(text, out _)) { ScheduleRender(); return; }
+        if (!PreviewColorParser.TryParse(text, out _)) { SettingsChanged(); return; }
         SetColor(text.ToUpperInvariant());
     }
 
@@ -357,8 +600,9 @@ public sealed class RenderStudioView : UserControl
 
     private void ColorChanged()
     {
+        if (PreviewColorParser.TryParse(_hex.Text?.Trim(), out var color)) _viewport.ModelColor = color;
         MarkSwatch();
-        ScheduleRender();
+        SettingsChanged();
     }
 
     private void MarkSwatch()
@@ -368,74 +612,12 @@ public sealed class RenderStudioView : UserControl
             swatch.BorderBrush = string.Equals(swatch.Tag as string, _hex.Text?.Trim(), StringComparison.OrdinalIgnoreCase) ? accent : Brushes.Transparent;
     }
 
-    private void ScheduleRender()
+    private void SavePreferences()
     {
-        if (_stlPath is null || _blender is null) return;
-        _delay.Stop();
-        _delay.Start();
-    }
-
-    private void SavePreferences() => _store.Save(new RenderPreferences(_customColors.ToList(), _hex.Text?.Trim() ?? RenderPreferences.Default.Hex, _finish.SelectedIndex,
-        _layer.SelectedIndex, _scene.SelectedIndex, _background.Text?.Trim() ?? RenderPreferences.Default.Background, _rotation.Value, _elevation.Value, _format.SelectedIndex,
-        (_environment.SelectedItem as RenderEnvironment)?.Path ?? _savedEnvironment, _environmentRotation.Value));
-
-    private RenderSettings? ReadSettings(bool final)
-    {
-        if (!PreviewColorParser.TryParse(_hex.Text?.Trim(), out _)) { ShowStatus("Couleur du filament invalide : saisissez un code comme #D93A3A."); return null; }
-        var scene = Scenes[_scene.SelectedIndex].Key;
-        if (scene == "color" && !PreviewColorParser.TryParse(_background.Text?.Trim(), out _)) { ShowStatus("Couleur du fond invalide : saisissez un code comme #2F6FD6."); return null; }
-        var environment = (_environment.SelectedItem as RenderEnvironment)?.Path ?? string.Empty;
-        if (scene == "environment" && !File.Exists(environment)) { ShowStatus("Choisissez un environnement, ou ajoutez votre image HDR ou EXR."); return null; }
-        var (_, ratioWidth, ratioHeight) = Formats[_format.SelectedIndex];
-        var side = final ? FinalSide : PreviewSide;
-        var (width, height) = ratioWidth >= ratioHeight ? (side, side * ratioHeight / ratioWidth) : (side * ratioWidth / ratioHeight, side);
-        return new RenderSettings(_hex.Text!.Trim(), Finishes[_finish.SelectedIndex].Key, Layers[_layer.SelectedIndex].Height, scene, _background.Text?.Trim() ?? "#FFFFFF",
-            _rotation.Value, _elevation.Value, width, height, final ? FinalSamples : PreviewSamples, environment, _environmentRotation.Value);
-    }
-
-    /// <summary>Starts a render and drops the one in progress: the latest choice always wins.</summary>
-    private async Task RenderAsync(bool final)
-    {
-        _delay.Stop();
-        if (_stlPath is not { } stl || _blender is not { } blender) return;
-        if (ReadSettings(final) is not { } settings) return;
-        SavePreferences();
-        _render?.Cancel();
-        using var render = _render = new CancellationTokenSource();
-        var output = Path.Combine(_work, $"render-{++_counter}.png");
-        var label = final ? $"Rendu HD {settings.Width} × {settings.Height} en cours" : "Aperçu en cours…";
-        ShowStatus(final ? label + "…" : label, busy: true);
-        _cancel.IsVisible = final;
-        // Blender gives no progress in the background: the HD render shows the time spent instead.
-        var watch = Stopwatch.StartNew();
-        EventHandler tick = (_, _) => { if (ReferenceEquals(_render, render)) _status.Text = $"{label} · {watch.Elapsed:m\\:ss} écoulées (souvent 30 s à 2 min)."; };
-        if (final) { _clock.Tick += tick; _clock.Start(); }
-        try
-        {
-            await ProductRenderer.RenderAsync(blender, stl, settings, output, render.Token);
-            Bitmap bitmap;
-            await using (var stream = File.OpenRead(output)) bitmap = new Bitmap(stream);
-            (_image.Source as IDisposable)?.Dispose();
-            _image.Source = bitmap;
-            if (_shown is { } previous) TryDelete(previous);
-            _shown = output;
-            _save.IsEnabled = true;
-            ShowStatus(final ? $"Rendu HD prêt ({settings.Width} × {settings.Height}, {watch.Elapsed:m\\:ss}). Enregistrez-le dans le projet du modèle." : "Aperçu à jour. Lancez le rendu HD pour l’image finale.");
-        }
-        catch (OperationCanceledException)
-        {
-            TryDelete(output);
-            if (ReferenceEquals(_render, render)) ShowStatus("Rendu annulé.");
-        }
-        catch (Exception exception) when (exception is InvalidOperationException or IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
-        {
-            if (ReferenceEquals(_render, render)) ShowStatus(exception.Message);
-        }
-        finally
-        {
-            if (final) { _clock.Tick -= tick; _clock.Stop(); }
-            if (ReferenceEquals(_render, render)) { _render = null; _cancel.IsVisible = false; _progress.IsVisible = false; }
-        }
+        var camera = _viewport.Camera;
+        _store.Save(new RenderPreferences(_customColors.ToList(), _hex.Text?.Trim() ?? RenderPreferences.Default.Hex, _finish.SelectedIndex,
+            _layer.SelectedIndex, _scene.SelectedIndex, _background.Text?.Trim() ?? RenderPreferences.Default.Background, _format.SelectedIndex,
+            (_environment.SelectedItem as RenderEnvironment)?.Path ?? _savedEnvironment, _environmentRotation.Value, camera.Yaw, camera.Pitch, camera.Zoom));
     }
 
     private void Save()
@@ -452,7 +634,7 @@ public sealed class RenderStudioView : UserControl
     private void ShowEmptyState()
     {
         _emptyState.Children.Clear();
-        _emptyState.IsVisible = _image.Source is null;
+        _emptyCover.IsVisible = _mesh is null;
         if (_blenderSearched && _blender is null)
         {
             _emptyState.Children.Add(new TextBlock { Text = "Blender n’est pas installé", FontSize = Ui.Text.Section, FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Center });
@@ -464,10 +646,11 @@ public sealed class RenderStudioView : UserControl
                 _blenderSearched = false;
             };
             _emptyState.Children.Add(download);
+            _emptyCover.IsVisible = true;
             return;
         }
         _emptyState.Children.Add(new TextBlock { Text = "Déposez un fichier STL, OBJ ou 3MF ici", FontSize = Ui.Text.Section, FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Center });
-        _emptyState.Children.Add(new TextBlock { Text = "Choisissez la couleur et l’ambiance : l’aperçu se met à jour tout seul.", Classes = { "muted" }, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center });
+        _emptyState.Children.Add(new TextBlock { Text = "Cadrez à la souris dans l’image, choisissez la couleur et l’ambiance : le rendu suit.", Classes = { "muted" }, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center });
         var browse = new Button { Content = Icons.Label("IconOpen", "Ouvrir un modèle"), Classes = { "primary-action" }, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 8, 0, 0) };
         browse.Click += async (_, _) => await BrowseAsync();
         _emptyState.Children.Add(browse);
@@ -477,7 +660,6 @@ public sealed class RenderStudioView : UserControl
     {
         _status.Text = text;
         _progress.IsVisible = busy;
-        _emptyState.IsVisible = _image.Source is null && !busy;
     }
 
     private static ComboBox Choice(IEnumerable<string> labels)
