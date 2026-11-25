@@ -35,6 +35,13 @@ public sealed record RenderPreferences
     public bool BandOn { get; init; }
     public string BandHex { get; init; } = "#000000";
     public double BandHeight { get; init; } = 3;
+    public int Quality { get; init; } = 1;
+    public string Device { get; init; } = "auto";
+    public string OutputFormat { get; init; } = "png";
+    public double OutputQuality { get; init; } = 90;
+    public bool MaxCompression { get; init; } = true;
+    public int MaxSide { get; init; }
+    public bool ContactSheet { get; init; }
     /// <summary>Orientation of each part (by file path) as a quaternion X, Y, Z, W.</summary>
     public IReadOnlyDictionary<string, float[]> Orientations { get; init; } = new Dictionary<string, float[]>();
     /// <summary>Cameras saved for each part (by file path).</summary>

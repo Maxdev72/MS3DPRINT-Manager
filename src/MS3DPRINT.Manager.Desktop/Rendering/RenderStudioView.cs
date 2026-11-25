@@ -34,13 +34,12 @@ public sealed partial class RenderStudioView : UserControl
     private static readonly (string Label, double Height)[] Layers = [("Lisse, sans lignes", 0), ("0,12 mm", 0.12), ("0,16 mm", 0.16), ("0,20 mm", 0.2), ("0,28 mm", 0.28)];
     private static readonly (string Label, string Key)[] Scenes = [("Studio clair", "light"), ("Studio sombre", "dark"), ("Fond de couleur", "color"), ("Fond transparent (PNG)", "transparent"), ("Environnement (HDRI)", "environment")];
     private static readonly (string Label, int Width, int Height)[] Formats = [("Carré 1:1", 1, 1), ("Paysage 4:3", 4, 3), ("Portrait 3:4", 3, 4), ("Large 16:9", 16, 9)];
-    private static readonly string[] TabNames = ["Pièce", "Matière", "Ambiance", "Caméra"];
+    private static readonly string[] TabNames = ["Pièce", "Matière", "Ambiance", "Caméra", "Rendu"];
     /// <summary>A render step: long side in pixels, samples and engine.</summary>
     private readonly record struct Pass(int Side, int Samples, string Engine)
     {
         public static readonly Pass Live = new(480, 16, "eevee");
         public static readonly Pass[] Refine = [new(960, 8, "cycles"), new(960, 32, "cycles"), new(960, 128, "cycles")];
-        public static readonly Pass Final = new(2048, 256, "cycles");
     }
 
     private readonly Func<IReadOnlyList<RenderColor>> _loadColors;
@@ -73,8 +72,8 @@ public sealed partial class RenderStudioView : UserControl
     private readonly StackPanel _studioLightFields = new() { Spacing = 12 };
     private readonly Button[] _tabButtons;
     private readonly Control[] _tabs;
-    private readonly Button _final = new() { Content = Icons.Label("IconPlay", "Rendu HD"), Classes = { "primary-action" }, HorizontalAlignment = HorizontalAlignment.Stretch, IsEnabled = false };
-    private readonly Button _cancel = new() { Content = "Annuler le rendu HD", HorizontalAlignment = HorizontalAlignment.Stretch, IsVisible = false };
+    private readonly Button _final = new() { Content = Icons.Label("IconPlay", "Rendu final"), Classes = { "primary-action" }, HorizontalAlignment = HorizontalAlignment.Stretch, IsEnabled = false };
+    private readonly Button _cancel = new() { Content = "Annuler le rendu", HorizontalAlignment = HorizontalAlignment.Stretch, IsVisible = false };
     private readonly Button _save = new() { Content = Icons.Label("IconSave", "Enregistrer l’image"), HorizontalAlignment = HorizontalAlignment.Stretch, IsEnabled = false };
     private readonly DispatcherTimer _clock = new() { Interval = TimeSpan.FromSeconds(1) };
     private readonly string _work = ProductRenderer.WorkFolder();
@@ -90,13 +89,14 @@ public sealed partial class RenderStudioView : UserControl
     private string? _stlPath;
     private MeshModel? _mesh;
     private string? _shown;
+    private string? _shownTiff;
     private int _counter;
     private int _generation;
     private Task _previews = Task.CompletedTask;
     private CancellationTokenSource? _finalRender;
 
     /// <summary>Asks the window to file a copy of the image (temporary PNG, model path), like a capture of the 3D viewer.</summary>
-    public event Action<string, string>? SaveRequested;
+    public event Action<IReadOnlyList<string>, string>? SaveRequested;
 
     public RenderStudioView(Func<IReadOnlyList<RenderColor>> loadColors, RenderPreferencesStore? store = null)
     {
@@ -181,11 +181,11 @@ public sealed partial class RenderStudioView : UserControl
         _cancel.Click += (_, _) => _finalRender?.Cancel();
         _save.Click += (_, _) => Save();
 
-        _tabs = [BuildPartTab(), BuildMaterialTab(), BuildAmbianceTab(), BuildCameraTab()];
-        var tabRow = new WrapPanel();
+        _tabs = [BuildPartTab(), BuildMaterialTab(), BuildAmbianceTab(), BuildCameraTab(), BuildOutputTab()];
+        var tabRow = new UniformGrid { Columns = TabNames.Length, Margin = new Thickness(0, 0, 0, 4) };
         _tabButtons = TabNames.Select((name, index) =>
         {
-            var chip = new Button { Content = name, Classes = { "filter-chip" }, Margin = new Thickness(0, 0, 8, 8) };
+            var chip = new Button { Content = name, Classes = { "filter-chip" }, Margin = new Thickness(0, 0, 4, 0), Padding = new Thickness(4, 8), HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center };
             chip.Click += (_, _) => { ShowTab(index); SavePreferences(); };
             tabRow.Children.Add(chip);
             return chip;
@@ -200,7 +200,7 @@ public sealed partial class RenderStudioView : UserControl
         panel.Children.Add(tabBody);
         Grid.SetRow(actions, 2);
         panel.Children.Add(actions);
-        var root = new Grid { ColumnDefinitions = new ColumnDefinitions("*,340"), ColumnSpacing = 16 };
+        var root = new Grid { ColumnDefinitions = new ColumnDefinitions("*,380"), ColumnSpacing = 16 };
         root.Children.Add(stageColumn);
         Grid.SetColumn(panel, 1);
         root.Children.Add(panel);
@@ -211,6 +211,7 @@ public sealed partial class RenderStudioView : UserControl
         ShowEmptyState();
         InitializeMaterial();
         InitializePart();
+        InitializeOutput();
     }
 
     private Control BuildAmbianceTab() => new StackPanel
@@ -298,7 +299,7 @@ public sealed partial class RenderStudioView : UserControl
             _refine?.Dispose();
             (_live, _refine) = _blender is null ? (null, null) : (new BlenderSession(_blender), new BlenderSession(_blender));
             // Both Blenders start now, while the user picks a model: the first images do not wait for them.
-            if (_live is not null && _refine is not null) { _ = _live.WarmUpAsync("eevee"); _ = _refine.WarmUpAsync("cycles"); }
+            if (_live is not null && _refine is not null) { _ = _live.WarmUpAsync("eevee"); WarmRefine(_refine); }
             _final.IsEnabled = _live is not null && _stlPath is not null;
             if (_blender is { } blender) _environment.ItemsSource = (await Task.Run(() => BlenderLocator.Environments(blender))).ToList();
             if (_savedEnvironment is { } saved && File.Exists(saved)) SelectEnvironment(saved);
@@ -386,66 +387,113 @@ public sealed partial class RenderStudioView : UserControl
 
     private async Task RenderFinalAsync()
     {
-        if (_refine is null) return;
+        var quality = Qualities[_quality.SelectedIndex];
+        var result = await RunExclusiveAsync(async (cancel, progress) =>
+        {
+            var output = Path.Combine(_work, $"render-{++_counter}.png");
+            var tiff = _outputFormat.SelectedIndex >= 0 && Outputs[_outputFormat.SelectedIndex].Format == "tiff" ? Path.ChangeExtension(output, ".tif") : null;
+            if (ReadSettings(quality.Pass, _mesh!, tiff: tiff) is not { } settings) return false;
+            await SessionFor(quality.Pass).RenderAsync(_stlPath!, settings, output, cancel, new Progress<double>(f => progress(f, 1, 1)));
+            ShowImage(output);
+            _shownTiff = tiff;
+            ShowStatus($"Rendu {quality.Label} prêt ({settings.Width} × {settings.Height}). Enregistrez-le dans le projet du modèle.");
+            return true;
+        }, $"Rendu {quality.Label}");
+        if (result) await EstimateSizeAsync();
+    }
+
+    /// <summary>Warms the Cycles Blender, then shows the graphics card it found in the Rendu tab.</summary>
+    private async void WarmRefine(BlenderSession refine)
+    {
+        await refine.WarmUpAsync("cycles");
+        ShowOutputHints();
+    }
+
+    private BlenderSession SessionFor(Pass pass) => pass.Engine == "eevee" ? _live! : _refine!;
+
+    /// <summary>
+    /// Runs a final render or a series with the graphics card to itself: the preview and the 3D view pause and the camera is
+    /// locked; the status shows the percentage and the time left; « Annuler » stops it. Settings changed meanwhile apply after.
+    /// </summary>
+    private async Task<bool> RunExclusiveAsync(Func<CancellationToken, Action<double, int, int>, Task<bool>> work, string label)
+    {
+        if (_live is null || _refine is null || _stlPath is null || _mesh is null) return false;
         _refineCancel?.Cancel();
         await _previews;
         using var cancel = _finalRender = new CancellationTokenSource();
         var generation = _generation;
         _cancel.IsVisible = true;
-        // Pause: the 3D view is hidden and the camera locked while Cycles has the graphics card.
+        _final.IsEnabled = _runSeries.IsEnabled = false;
         _viewport.Visual.IsVisible = false;
         _frame.IsHitTestVisible = false;
+        _progress.IsIndeterminate = false;
+        _progress.Value = 0;
+        _progress.IsVisible = true;
         var watch = Stopwatch.StartNew();
-        EventHandler tick = (_, _) => _status.Text = $"Rendu HD en cours · {watch.Elapsed:m\\:ss} écoulées (souvent 10 à 30 s). L’aperçu est en pause.";
-        _clock.Tick += tick;
-        _clock.Start();
+        var french = System.Globalization.CultureInfo.GetCultureInfo("fr-FR");
+        void Progress(double fraction, int image, int images)
+        {
+            var overall = Math.Clamp((image - 1 + fraction) / images, 0, 1);
+            _progress.Value = overall * 100;
+            var left = overall > 0.03 ? TimeSpan.FromSeconds(watch.Elapsed.TotalSeconds * (1 - overall) / overall) : (TimeSpan?)null;
+            _status.Text = (images > 1 ? $"{label} · image {image}/{images} · " : label + " · ") + overall.ToString("0 %", french)
+                + (left is { } l ? $" · environ {(l.TotalMinutes >= 1 ? $"{(int)l.TotalMinutes} min {l.Seconds:00}" : $"{Math.Max(1, l.Seconds)} s")} restantes" : string.Empty)
+                + ". L’aperçu est en pause.";
+        }
+        Progress(0, 1, 1);
         SavePreferences();
-        try { await RenderPassAsync(Pass.Final, _refine, cancel.Token); }
+        try { return await work(cancel.Token, Progress); }
+        catch (OperationCanceledException) { ShowStatus("Rendu annulé."); return false; }
+        catch (Exception exception) when (exception is InvalidOperationException or IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
+        {
+            ShowStatus(exception.Message);
+            return false;
+        }
         finally
         {
-            _clock.Tick -= tick;
-            _clock.Stop();
             _cancel.IsVisible = false;
+            _final.IsEnabled = _runSeries.IsEnabled = true;
             _viewport.Visual.IsVisible = true;
             _frame.IsHitTestVisible = true;
+            _progress.IsVisible = false;
+            _progress.IsIndeterminate = true;
             if (ReferenceEquals(_finalRender, cancel)) _finalRender = null;
             if (cancel.IsCancellationRequested) _ = _refine.WarmUpAsync("cycles");
+            if (generation != _generation) RunPreviews();
         }
-        // Settings changed during the HD render: the preview catches up now.
-        if (generation != _generation) RunPreviews();
     }
 
-    /// <summary>One Blender render, shown as soon as it is ready. False when it failed or was cancelled.</summary>
+    /// <summary>Shows a rendered image; the previous one shown is deleted.</summary>
+    private void ShowImage(string output)
+    {
+        Bitmap bitmap;
+        using (var stream = File.OpenRead(output)) bitmap = new Bitmap(stream);
+        (_image.Source as IDisposable)?.Dispose();
+        _image.Source = bitmap;
+        if (_shown is { } previous && previous != output) TryDelete(previous);
+        if (_shownTiff is { } tiff) TryDelete(tiff);
+        _shownTiff = null;
+        _shown = output;
+        _save.IsEnabled = true;
+    }
+
+    /// <summary>One preview render, shown as soon as it is ready. False when it failed or was cancelled.</summary>
     private async Task<bool> RenderPassAsync(Pass pass, BlenderSession session, CancellationToken cancellationToken)
     {
         if (_stlPath is not { } stl || _mesh is not { } mesh) return false;
         if (ReadSettings(pass, mesh) is not { } settings) return false;
         var output = Path.Combine(_work, $"render-{++_counter}.png");
-        if (pass == Pass.Final) ShowStatus($"Rendu HD {settings.Width} × {settings.Height} en cours…", busy: true);
-        else if (_image.Source is null) ShowStatus("Premier aperçu…", busy: true);
-        var watch = Stopwatch.StartNew();
+        if (_image.Source is null) ShowStatus("Premier aperçu…", busy: true);
         try
         {
             await session.RenderAsync(stl, settings, output, cancellationToken);
-            Bitmap bitmap;
-            await using (var stream = File.OpenRead(output)) bitmap = new Bitmap(stream);
-            (_image.Source as IDisposable)?.Dispose();
-            _image.Source = bitmap;
-            if (_shown is { } previous) TryDelete(previous);
-            _shown = output;
-            _save.IsEnabled = true;
-            if (pass == Pass.Final)
-            {
-                var seconds = watch.Elapsed.TotalSeconds.ToString("0.0", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
-                ShowStatus($"Rendu HD prêt ({settings.Width} × {settings.Height}, {seconds} s). Enregistrez-le dans le projet du modèle.");
-            }
-            else _progress.IsVisible = false;
+            ShowImage(output);
+            _progress.IsVisible = false;
             return true;
         }
         catch (OperationCanceledException)
         {
             TryDelete(output);
-            if (pass == Pass.Final) ShowStatus("Rendu HD annulé.");
             return false;
         }
         catch (Exception exception) when (exception is InvalidOperationException or IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
@@ -455,9 +503,11 @@ public sealed partial class RenderStudioView : UserControl
         }
     }
 
-    private RenderSettings? ReadSettings(Pass pass, MeshModel mesh)
+    private RenderSettings? ReadSettings(Pass pass, MeshModel mesh, RenderColor? color = null, SavedCamera? view = null, string? tiff = null)
     {
-        if (!PreviewColorParser.TryParse(CurrentHex, out _)) { ShowStatus("Couleur du filament invalide : saisissez un code comme #D93A3A."); return null; }
+        var hex = color?.Hex ?? CurrentHex;
+        var finish = color?.Finish ?? Finishes[_finish.SelectedIndex].Key;
+        if (!PreviewColorParser.TryParse(hex, out _)) { ShowStatus("Couleur du filament invalide : saisissez un code comme #D93A3A."); return null; }
         var scene = Scenes[_scene.SelectedIndex].Key;
         if (scene == "color" && !PreviewColorParser.TryParse(_background.Text?.Trim(), out _)) { ShowStatus("Couleur du fond invalide : saisissez un code comme #2F6FD6."); return null; }
         var environment = (_environment.SelectedItem as RenderEnvironment)?.Path ?? string.Empty;
@@ -465,11 +515,14 @@ public sealed partial class RenderStudioView : UserControl
         var (_, ratioWidth, ratioHeight) = Formats[_format.SelectedIndex];
         var (side, samples, engine) = (pass.Side, pass.Samples, pass.Engine);
         var (width, height) = ratioWidth >= ratioHeight ? (side, side * ratioHeight / ratioWidth) : (side * ratioWidth / ratioHeight, side);
-        var (camera, rotation) = RenderCamera.From(mesh, _viewport.Camera, width, height);
-        return new RenderSettings(CurrentHex, Finishes[_finish.SelectedIndex].Key, Layers[_layer.SelectedIndex].Height, scene, _background.Text?.Trim() ?? "#FFFFFF",
+        var current = _viewport.Camera;
+        var camera3d = view is null ? current : new ViewCamera { Yaw = view.Yaw, Pitch = view.Pitch, Zoom = view.Zoom, PanX = view.PanX, PanY = view.PanY };
+        var (camera, rotation) = RenderCamera.From(mesh, camera3d, width, height);
+        return new RenderSettings(hex, finish, Layers[_layer.SelectedIndex].Height, scene, _background.Text?.Trim() ?? "#FFFFFF",
             rotation, 0, width, height, samples, environment, _environmentRotation.Value, camera, engine,
             _shadow.IsChecked == true, _shadowStrength.Value, _shadowSoftness.Value, _lightAngle.Value, _lightHeight.Value, _glowDark.IsChecked == true,
-            _bandOn.IsChecked == true && PreviewColorParser.TryParse(BandHex, out _) ? BandHex : null, _bandHeight.Value);
+            _bandOn.IsChecked == true && PreviewColorParser.TryParse(BandHex, out _) ? BandHex : null, _bandHeight.Value,
+            Devices[Math.Max(0, _device.SelectedIndex)].Key, tiff);
     }
 
     private void ShowSceneFields()
@@ -519,20 +572,38 @@ public sealed partial class RenderStudioView : UserControl
             EnvironmentRotation = _environmentRotation.Value, Yaw = camera.Yaw, Pitch = camera.Pitch, Zoom = camera.Zoom, Tab = Math.Max(0, CurrentTab),
             RotationStep = _gizmo.Step, Shadow = _shadow.IsChecked == true, ShadowStrength = _shadowStrength.Value, ShadowSoftness = _shadowSoftness.Value,
             LightAngle = _lightAngle.Value, LightHeight = _lightHeight.Value, GlowDark = _glowDark.IsChecked == true, Orientations = orientations,
-            BandOn = _bandOn.IsChecked == true, BandHex = BandHex, BandHeight = _bandHeight.Value
+            BandOn = _bandOn.IsChecked == true, BandHex = BandHex, BandHeight = _bandHeight.Value,
+            Quality = Math.Max(0, _quality.SelectedIndex), Device = Devices[Math.Max(0, _device.SelectedIndex)].Key, OutputFormat = CurrentOutput.Format,
+            OutputQuality = _outputQuality.Value, MaxCompression = _maxCompression.IsChecked == true, MaxSide = CurrentOutput.MaxSide, ContactSheet = _contactSheet.IsChecked == true
         };
         _store.Save(_saved);
     }
 
-    private void Save()
+    /// <summary>Writes the image on screen in the chosen format and size, then asks the window to file it.</summary>
+    private async void Save()
     {
-        if (_shown is null || _modelPath is null) return;
-        // The window deletes the copy once filed, so the image on screen stays available for another save.
+        if (_shown is not { } shown || _modelPath is null) return;
+        var options = CurrentOutput;
         var folder = Directory.CreateDirectory(Path.Combine(_work, Guid.NewGuid().ToString("N"))).FullName;
-        var copy = Path.Combine(folder, $"{Path.GetFileNameWithoutExtension(_modelPath)} - rendu {DateTime.Now:yyyy-MM-dd HHmmss}.png");
-        try { File.Copy(_shown, copy); }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { ShowStatus(exception.Message); return; }
-        SaveRequested?.Invoke(copy, _modelPath);
+        var name = $"{Path.GetFileNameWithoutExtension(_modelPath)} - rendu {DateTime.Now:yyyy-MM-dd HHmmss}";
+        try
+        {
+            var file = await Task.Run(() =>
+            {
+                if (options.Format == "tiff" && _shownTiff is { } tiff && File.Exists(tiff))
+                {
+                    var copy = Path.Combine(folder, name + ".tif");
+                    File.Copy(tiff, copy);
+                    return copy;
+                }
+                var target = Path.Combine(folder, name + (options.Format == "tiff" ? ".png" : options.Extension));
+                File.WriteAllBytes(target, RenderOutput.Encode(shown, options.Format == "tiff" ? options with { Format = "png" } : options));
+                return target;
+            });
+            if (options.Format == "tiff" && !file.EndsWith(".tif", StringComparison.Ordinal)) ShowStatus("Le TIFF 16 bits vient du rendu final : cet aperçu est enregistré en PNG.");
+            SaveRequested?.Invoke([file], _modelPath);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException) { ShowStatus(exception.Message); }
     }
 
     private void ShowEmptyState()

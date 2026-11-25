@@ -44,6 +44,7 @@ public sealed partial class RenderStudioView
         foreach (var preset in Presets) _cameraList.Children.Add(CameraButton(preset, saved: false));
         foreach (var camera in SavedCameras) _cameraList.Children.Add(CameraButton(camera, saved: true));
         MarkCamera();
+        RebuildSeries();
     }
 
     private Button CameraButton(SavedCamera camera, bool saved)

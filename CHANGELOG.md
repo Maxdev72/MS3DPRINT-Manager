@@ -11,6 +11,14 @@
 - Éclairage revu : les filaments blancs et noirs restent lisibles sur le studio clair.
 - Ambiance « Environnement (HDRI) » comme dans les logiciels de rendu : la pièce est éclairée par une image à 360° qui apparaît derrière elle, avec son ombre au sol. Les huit environnements fournis avec Blender sont proposés ; ajoutez vos propres images HDR ou EXR (Poly Haven par exemple) et tournez l'environnement pour choisir l'arrière-plan.
 
+### Rendu produit : qualité, séries et fichiers de sortie
+- Nouvel onglet Rendu : qualité Rapide (EEVEE, environ 1 s), Standard (Cycles 1024 px, environ 2 s), HD (2048 px, environ 11 s) ou Très haute (4096 px), calcul sur la carte graphique (nom affiché) ou sur le processeur.
+- Avancement en pourcentage avec le temps restant, pour un rendu comme pour une série.
+- Séries de rendus : caméras cochées × couleurs choisies (ou une palette entière), avec le total d'images et la durée estimée ; option « Planche couleurs » qui réunit les variantes et leur nom sur une image.
+- Fichier enregistré en PNG (compression maximale sans perte), JPEG ou WebP (qualité réglable, poids du fichier affiché) ou TIFF 16 bits ; taille réduite au choix sans refaire le rendu ; métadonnées retirées ; fond blanc et avertissement pour un JPEG sur fond transparent.
+- Notification « Image enregistrée » avec le nom du fichier seul et un bouton « Ouvrir le dossier », aussi pour les captures du visualiseur 3D.
+- Correction : la carte graphique détectée n'était pas retenue, si bien que le débruiteur OptiX promis en 1.0.29 n'était pas utilisé ; il l'est maintenant (HD 2048 px mesuré à 10,6 s).
+
 ### Rendu produit plus rapide, aperçu progressif façon KeyShot
 - Pendant le mouvement, aperçu EEVEE en temps réel ; dès l'arrêt, l'image s'affine en Cycles par étapes (8, 32 puis 128 échantillons) avec les vraies ombres, y compris sur fond transparent ou HDRI. Un mouvement relance aussitôt l'aperçu.
 - Deux Blender restent ouverts (temps réel et Cycles) et démarrent dès l'ouverture de la page ; débruitage OptiX sur la carte graphique.

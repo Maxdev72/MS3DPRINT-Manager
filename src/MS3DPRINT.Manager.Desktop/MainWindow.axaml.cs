@@ -366,7 +366,7 @@ public partial class MainWindow : Window
     public void NotifyInfo(string message) => Notify(message);
 
     /// <summary>Short feedback bubble below the search in the top-right corner; it fades away on its own.</summary>
-    private void Notify(string message, bool error = false)
+    private void Notify(string message, bool error = false, (string Label, Action Run)? action = null)
     {
         var entry = AddNotification(message, "", error);
         // an identical toast already on screen is not stacked a second time
@@ -398,6 +398,13 @@ public partial class MainWindow : Window
             Avalonia.Automation.AutomationProperties.SetName(details, "Consulter la notification complète");
             details.Click += async (_, _) => { if (CanShowPanel) { Dismiss(); await ShowNotificationAsync(entry); } };
             Grid.SetColumn(details, 1); Grid.SetRow(details, 1); layout.Children.Add(details);
+        }
+        if (action is { } act)
+        {
+            // An action on the result, e.g. « Ouvrir le dossier » after saving a file.
+            var run = new Button { Content = act.Label, Classes = { "ghost" }, Padding = new Thickness(8, 2), MinHeight = 32, HorizontalAlignment = HorizontalAlignment.Left };
+            run.Click += (_, _) => { Dismiss(); act.Run(); };
+            Grid.SetColumn(run, 1); Grid.SetRow(run, 1); layout.Children.Add(run);
         }
         close.Click += (_, _) => Dismiss();
         ToastHost.Children.Insert(0, toast);

@@ -54,7 +54,7 @@ Mesuré : réduction des rebonds (5 %) et réutilisation de la scène non retenu
    échantillonnage adaptatif, rebonds réduits, maillage allégé pour le direct sur gros STL,
    pause de l'aperçu et de la vue 3D pendant un rendu HD ou une série. Mesurer avant/après chaque piste.
 
-## Livraison 3 — Rendu et finitions (1.0.30)
+## Livraison 3 — Rendu et finitions (1.0.30) — FAITE
 
 9. **Qualité** : Rapide (EEVEE), Standard (Cycles 1024 px, défaut des séries), HD (2048 px), Très haute (4096 px).
 10. **CPU ou GPU** : Automatique / Carte graphique (nom détecté) / Processeur ; passer le choix au script

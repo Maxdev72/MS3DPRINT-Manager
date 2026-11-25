@@ -110,7 +110,11 @@ public sealed partial class EstimateUiTests : IDisposable
     private static object? Invoke(MainWindow window, string method, params object?[] args)
     {
         Dispatcher.UIThread.RunJobs();
-        return typeof(MainWindow).GetMethod(method, BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(window, args);
+        var info = typeof(MainWindow).GetMethod(method, BindingFlags.NonPublic | BindingFlags.Instance)!;
+        // Optional parameters left out keep their default value, as in a normal call.
+        var parameters = info.GetParameters();
+        if (args.Length < parameters.Length) args = [.. args, .. parameters.Skip(args.Length).Select(p => p.DefaultValue)];
+        return info.Invoke(window, args);
     }
     private static T Field<T>(MainWindow window, string name) => (T)typeof(MainWindow).GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(window)!;
     private static void Text(MainWindow window, string name, string value) { window.FindControl<TextBox>(name)!.Text = value; Dispatcher.UIThread.RunJobs(); }

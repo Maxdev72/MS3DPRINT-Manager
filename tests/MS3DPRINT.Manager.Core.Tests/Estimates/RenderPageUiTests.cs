@@ -35,7 +35,7 @@ public sealed partial class EstimateUiTests
             Assert.True(Get<Image>("_image").Source is not null, Get<TextBlock>("_status").Text);
             Assert.StartsWith("Aperçu affiné", Get<TextBlock>("_status").Text);
             CaptureDraftUi(owner, "render-page");
-            foreach (var (tab, name) in new[] { (0, "piece"), (1, "matiere"), (2, "ambiance"), (3, "camera") })
+            foreach (var (tab, name) in new[] { (0, "piece"), (1, "matiere"), (2, "ambiance"), (3, "camera"), (4, "rendu") })
             {
                 typeof(RenderStudioView).GetMethod("ShowTab", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(studio, [tab]);
                 Get<OrientationGizmo>("_gizmo").IsVisible = tab == 0;
@@ -67,6 +67,22 @@ public sealed partial class EstimateUiTests
             Dispatcher.UIThread.RunJobs();
             Assert.StartsWith("Aperçu affiné", Get<TextBlock>("_status").Text);
             CaptureDraftUi(owner, "render-page-environment");
+
+            // A series: one view in two colours, as JPEG, with a contact sheet.
+            Get<ComboBox>("_scene").SelectedIndex = 0;
+            Get<ComboBox>("_quality").SelectedIndex = 0;
+            Get<ComboBox>("_outputFormat").SelectedIndex = 1;
+            Get<CheckBox>("_contactSheet").IsChecked = true;
+            var keys = Get<HashSet<string>>("_seriesColorKeys");
+            keys.Add("#DE4343|matte");
+            keys.Add("#000000|matte");
+            var saved = new List<string>();
+            studio.SaveRequested += (files, _) => saved.AddRange(files);
+            await (Task)typeof(RenderStudioView).GetMethod("RunSeriesAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(studio, null)!;
+            Assert.True(saved.Count == 3, Get<TextBlock>("_status").Text + " | " + saved.Count);
+            Assert.All(saved, f => Assert.EndsWith(".jpg", f));
+            Assert.Contains(saved, f => f.Contains("planche couleurs") && f.Contains("cube"));
+            Assert.Contains(saved, f => f.EndsWith("cube - Rouge mat.jpg"));
         }
         finally { owner.Close(); }
     });

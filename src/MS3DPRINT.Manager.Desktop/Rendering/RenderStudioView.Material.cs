@@ -117,6 +117,7 @@ public sealed partial class RenderStudioView
         _restoreColors.Content = $"Rétablir les couleurs retirées ({_hiddenColors.Count})";
         _restoreColors.IsVisible = _hiddenColors.Count > 0;
         MarkSwatch();
+        RebuildSeries();
     }
 
     /// <summary>A colour dot; hovering shows a small × that removes it (after confirmation).</summary>

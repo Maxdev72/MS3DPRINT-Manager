@@ -12,7 +12,7 @@ namespace MS3DPRINT.Manager.Desktop.Rendering;
 /// <summary>What the render script needs besides the model: names match the keys read by product_render.py.</summary>
 public sealed record RenderSettings(string Color, string Finish, double LayerHeight, string Scene, string Background,
     double Rotation, double Elevation, int Width, int Height, int Samples, string Environment = "", double EnvironmentRotation = 0, RenderCamera? Camera = null, string Engine = "cycles",
-    bool Shadow = true, double ShadowStrength = 0.3, double ShadowSoftness = 0.5, double LightAngle = 0, double LightHeight = 39, bool GlowDark = false, string? BandColor = null, double BandHeight = 0);
+    bool Shadow = true, double ShadowStrength = 0.3, double ShadowSoftness = 0.5, double LightAngle = 0, double LightHeight = 39, bool GlowDark = false, string? BandColor = null, double BandHeight = 0, string Device = "auto", string? Tiff = null);
 
 /// <summary>The camera of the 3D view in model millimetres: Blender frames the part exactly as on screen.</summary>
 public sealed record RenderCamera(float[] Location, float[] Target, double FieldOfView, double ShiftX, double ShiftY)
@@ -180,16 +180,26 @@ public sealed class BlenderSession(string blender) : IDisposable
     private TaskCompletionSource<string?>? _job;
     private Timer? _idle;
 
-    public async Task RenderAsync(string stlPath, RenderSettings settings, string outputPng, CancellationToken cancellationToken)
+    /// <summary>The graphics card Blender renders with, e.g. "NVIDIA GeForce RTX 5070 (OPTIX)"; empty when none is usable, null before Blender started.</summary>
+    public string? DeviceName { get; private set; }
+
+    private IProgress<double>? _progress;
+
+    public async Task RenderAsync(string stlPath, RenderSettings settings, string outputPng, CancellationToken cancellationToken, IProgress<double>? progress = null)
     {
         var settingsPath = Path.ChangeExtension(outputPng, ".json");
         try
         {
             await File.WriteAllTextAsync(settingsPath, ProductRenderer.SettingsJson(stlPath, outputPng, settings), cancellationToken);
+            _progress = progress;
             await RunAsync(settingsPath, cancellationToken);
             if (!File.Exists(outputPng)) throw new InvalidOperationException("Blender n’a pas produit d’image.");
         }
-        finally { try { File.Delete(settingsPath); } catch (IOException) { } }
+        finally
+        {
+            _progress = null;
+            try { File.Delete(settingsPath); } catch (IOException) { }
+        }
     }
 
     /// <summary>Starts Blender and renders a tiny scene with this engine ("eevee" or "cycles"), so the first real image is quick.</summary>
@@ -252,7 +262,13 @@ public sealed class BlenderSession(string blender) : IDisposable
     private void Received(string? line)
     {
         if (line is null) return;
-        if (line.StartsWith("MS3D-DONE", StringComparison.Ordinal)) Finish(null);
+        if (line.StartsWith("MS3D-PROGRESS ", StringComparison.Ordinal))
+        {
+            var parts = line["MS3D-PROGRESS ".Length..].Split('/');
+            if (parts.Length == 2 && double.TryParse(parts[0], out var done) && double.TryParse(parts[1], out var total) && total > 0) _progress?.Report(done / total);
+        }
+        else if (line.StartsWith("MS3D-DEVICE ", StringComparison.Ordinal)) DeviceName = line["MS3D-DEVICE ".Length..].Trim();
+        else if (line.StartsWith("MS3D-DONE", StringComparison.Ordinal)) Finish(null);
         else if (line.StartsWith("MS3D-ERROR ", StringComparison.Ordinal)) Finish(line["MS3D-ERROR ".Length..]);
         else Remember(line);
     }

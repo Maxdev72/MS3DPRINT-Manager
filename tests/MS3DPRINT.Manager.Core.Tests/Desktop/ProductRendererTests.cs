@@ -109,6 +109,37 @@ public sealed class ProductRendererTests : IDisposable
         Assert.Same(lying, ProductRenderer.Turned(lying, Quaternion.Identity));
     }
 
+    private sealed class Recorder : IProgress<double>
+    {
+        public double Highest;
+        public void Report(double value) { lock (this) Highest = Math.Max(Highest, value); }
+    }
+
+    [Fact]
+    public void Output_is_re_encoded_resized_and_flattened_for_jpeg()
+    {
+        var png = Path.Combine(_directory, "source.png");
+        using (var bitmap = new SkiaSharp.SKBitmap(800, 400))
+        {
+            using (var canvas = new SkiaSharp.SKCanvas(bitmap)) { canvas.Clear(SkiaSharp.SKColors.Transparent); canvas.DrawCircle(400, 200, 150, new SkiaSharp.SKPaint { Color = SkiaSharp.SKColors.Red }); }
+            File.WriteAllBytes(png, bitmap.Encode(SkiaSharp.SKEncodedImageFormat.Png, 100).ToArray());
+        }
+
+        var jpeg = RenderOutput.Encode(png, new OutputOptions("jpeg", 80, MaxSide: 400));
+        var webp = RenderOutput.Encode(png, new OutputOptions("webp", 80));
+        var small = RenderOutput.Encode(png, new OutputOptions("png", MaxSide: 200));
+
+        using var decodedJpeg = SkiaSharp.SKBitmap.Decode(jpeg);
+        Assert.Equal((400, 200), (decodedJpeg.Width, decodedJpeg.Height));
+        Assert.Equal(SkiaSharp.SKColors.White, decodedJpeg.GetPixel(2, 2)); // transparent corner on white
+        using var decodedWebp = SkiaSharp.SKBitmap.Decode(webp);
+        Assert.Equal(800, decodedWebp.Width);
+        using var decodedPng = SkiaSharp.SKBitmap.Decode(small);
+        Assert.Equal(0, decodedPng.GetPixel(2, 2).Alpha); // PNG keeps the transparency
+        using var sheet = RenderOutput.ContactSheet([(png, "Rouge mat"), (png, "Noir mat"), (png, "Blanc mat")], 200);
+        Assert.Equal(2 * 224 + 24, sheet.Width);
+    }
+
     [Fact]
     public void Palettes_are_bundled_with_their_finish()
     {
@@ -223,6 +254,13 @@ public sealed class ProductRendererTests : IDisposable
             await session.RenderAsync(stl, Small, png, CancellationToken.None);
             Assert.True(new FileInfo(png).Length > 0);
         }
+        // Cycles reports its samples (shown as a percentage) and can also write a 16-bit TIFF of the same render.
+        var progress = new Recorder();
+        var tiff = Path.Combine(_directory, "three.tif");
+        await session.RenderAsync(stl, Small with { Samples = 16, Tiff = tiff }, Path.Combine(_directory, "three.png"), CancellationToken.None, progress);
+        Assert.True(progress.Highest > 0.5, "avancement reçu : " + progress.Highest);
+        Assert.True(new FileInfo(tiff).Length > 0);
+        Assert.False(string.IsNullOrWhiteSpace(session.DeviceName) && session.DeviceName is null);
     }
 
     /// <summary>A real render when Blender is installed on this computer (a few seconds); nothing to check otherwise.</summary>

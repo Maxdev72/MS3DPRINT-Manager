@@ -125,7 +125,7 @@ public partial class MainWindow
                     if (!Directory.Exists(photos)) files.CreateFolder(Path.GetDirectoryName(photos)!, Path.GetFileName(photos));
                     return files.Import(temporaryPng, photos);
                 });
-                Notify("Image enregistrée dans " + Path.GetRelativePath(root, saved) + ".");
+                Notify("Image enregistrée : " + Path.GetFileName(saved), action: ("Ouvrir le dossier", () => RevealInExplorer(saved)));
                 return;
             }
             var target = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
@@ -137,7 +137,7 @@ public partial class MainWindow
             });
             if (target?.TryGetLocalPath() is not { } local) return;
             await Task.Run(() => File.Copy(temporaryPng, local, overwrite: true));
-            Notify("Image enregistrée : " + local);
+            Notify("Image enregistrée : " + Path.GetFileName(local), action: ("Ouvrir le dossier", () => RevealInExplorer(local)));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         { Notify(exception.Message, error: true); }

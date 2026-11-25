@@ -3,7 +3,7 @@
 #   Kept running: blender -b --factory-startup -P product_render.py -- --server
 #     then one settings.json path per line on stdin; each render answers "MS3D-DONE" or "MS3D-ERROR <reason>" on stdout.
 # The whole scene is built here (backdrop, lights, camera, material), so no .blend file has to be kept or configured.
-import bpy, json, math, sys, traceback
+import bpy, json, math, re, sys, traceback
 from mathutils import Matrix, Vector
 
 
@@ -60,15 +60,16 @@ def use_graphics_card(scene):
             continue
         preferences.get_devices()
         if any(d.type == kind for d in preferences.devices):
-            for device in preferences.devices:
-                device.use = device.type == kind
+            for entry in preferences.devices:
+                entry.use = entry.type == kind
             scene.cycles.device = "GPU"
             device["kind"] = kind
+            device["name"] = next(d.name for d in preferences.devices if d.type == kind)
             return
 
 
 # The graphics card API found; with OptiX the denoiser also runs on the card (measured: Cycles 960 px 32 samples 1.7 s -> 0.7 s).
-device = {"kind": None}
+device = {"kind": None, "name": None}
 
 
 def warm_up(engine):
@@ -270,6 +271,8 @@ def render(settings):
         scene.render.engine = "CYCLES"
         scene.cycles.samples = settings["samples"]
         scene.cycles.use_denoising = True
+        # Processor or graphics card, as chosen on the page (the graphics card by default when one is usable).
+        scene.cycles.device = "CPU" if settings.get("device") == "cpu" or device["kind"] is None else "GPU"
         if device["kind"] == "OPTIX":
             scene.cycles.denoiser = "OPTIX"
         else:
@@ -283,6 +286,13 @@ def render(settings):
     scene.view_settings.exposure = -0.9
     scene.render.filepath = settings["output"]
     bpy.ops.render.render(write_still=True)
+    if settings.get("tiff"):
+        # A 16-bit TIFF of the same render, for retouching or print.
+        scene.render.image_settings.file_format = "TIFF"
+        scene.render.image_settings.color_depth = "16"
+        bpy.data.images["Render Result"].save_render(settings["tiff"], scene=scene)
+        scene.render.image_settings.file_format = "PNG"
+        scene.render.image_settings.color_depth = "8"
 
 
 def read(path):
@@ -292,8 +302,19 @@ def read(path):
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 use_graphics_card(bpy.context.scene)
+
+
+def report_progress(stats):
+    # "... | Sample 12/128" during a Cycles render: the page shows it as a percentage.
+    match = re.search(r"Sample (\d+)/(\d+)", str(stats))
+    if match:
+        print("MS3D-PROGRESS " + match.group(1) + "/" + match.group(2), flush=True)
+
+
+bpy.app.handlers.render_stats.append(report_progress)
 arguments = sys.argv[sys.argv.index("--") + 1:]
 if arguments[0] == "--server":
+    print("MS3D-DEVICE " + (f"{device['name']} ({device['kind']})" if device["kind"] else ""), flush=True)
     print("MS3D-READY", flush=True)
     for line in sys.stdin:
         try:
