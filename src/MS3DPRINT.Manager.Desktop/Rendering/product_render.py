@@ -190,6 +190,10 @@ def render(settings):
     mesh.shade_smooth()
     backdrop = bpy.data.objects.new("Backdrop", mesh)
     scene.collection.objects.link(backdrop)
+    # A lifted product keeps its height above the studio floor; legacy callers keep the floor at its base.
+    ground = settings.get("groundZ")
+    if ground is not None:
+        backdrop.location.z = (ground - bottom.z) * fit
     paint = bpy.data.materials.new("Backdrop")
     paint.use_nodes = True
     set_input(paint.node_tree.nodes["Principled BSDF"], "Base Color", linear(backdrop_color))

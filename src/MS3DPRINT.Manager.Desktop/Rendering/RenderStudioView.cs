@@ -48,12 +48,12 @@ public sealed partial class RenderStudioView : UserControl
     private readonly Grid _frame = new() { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
     private readonly Image _image = new() { Stretch = Stretch.Uniform, IsHitTestVisible = false };
     private readonly OrientationGizmo _gizmo = new() { IsVisible = false };
+    private readonly TextBlock _viewHelp = new() { Text = "Glisser : tourner · Clic droit : déplacer · Molette : zoomer", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
     private readonly StackPanel _emptyState = new() { Spacing = 8, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, MaxWidth = 420 };
     private readonly Border _emptyCover;
     private readonly Grid _stageHost = new() { ClipToBounds = true };
     private readonly TextBlock _status = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
     private readonly ProgressBar _progress = new() { IsIndeterminate = true, IsVisible = false };
-    private readonly TextBlock _modelName = new() { Classes = { "muted" }, TextTrimming = TextTrimming.CharacterEllipsis };
     private readonly ComboBox _finish = Choice(Finishes.Select(f => f.Label));
     private readonly CheckBox _glowDark = new() { Content = "Dans le noir (lumières éteintes)" };
     private readonly ComboBox _layer = Choice(Layers.Select(l => l.Label));
@@ -148,7 +148,7 @@ public sealed partial class RenderStudioView : UserControl
         {
             Classes = { "toolbar" }, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(12),
             IsHitTestVisible = false, Padding = new Thickness(12, 4),
-            Child = new TextBlock { Text = "Glisser : tourner · Clic droit : déplacer · Molette : zoomer", Classes = { "caption" } }
+            Child = _viewHelp
         });
         _emptyCover = new Border { Background = (IBrush?)Application.Current?.FindResource("CanvasBrush"), Child = _emptyState };
         _stageHost.Children.Add(_frame);
@@ -159,11 +159,17 @@ public sealed partial class RenderStudioView : UserControl
             CornerRadius = new CornerRadius(Ui.Radius.Card), ClipToBounds = true, BorderThickness = new Thickness(1),
             BorderBrush = (IBrush?)Application.Current?.FindResource("SubtleBorderBrush"), Child = _stageHost
         };
-        var stageColumn = new Grid { RowDefinitions = new RowDefinitions("*,Auto,Auto"), RowSpacing = 8 };
+        var addPart = new Button { Content = Icons.Label("IconPlus", "Ajouter une pièce"), HorizontalAlignment = HorizontalAlignment.Left };
+        AutomationProperties.SetName(addPart, "Ajouter une pièce à la scène");
+        ToolTip.SetTip(addPart, "Ajouter un modèle STL, OBJ ou 3MF à côté des pièces déjà présentes.");
+        addPart.Click += async (_, _) => await BrowseAddAsync();
+        var stageColumn = new Grid { RowDefinitions = new RowDefinitions("Auto,*,Auto,Auto"), RowSpacing = 8 };
+        stageColumn.Children.Add(new WrapPanel { Orientation = Orientation.Horizontal, ItemSpacing = 8, LineSpacing = 4, Children = { addPart, _transformMode, BuildSceneFileMenu() } });
+        Grid.SetRow(stageFrame, 1);
         stageColumn.Children.Add(stageFrame);
-        Grid.SetRow(_progress, 1);
+        Grid.SetRow(_progress, 2);
         stageColumn.Children.Add(_progress);
-        Grid.SetRow(_status, 2);
+        Grid.SetRow(_status, 3);
         stageColumn.Children.Add(_status);
 
         foreach (var box in new[] { _layer, _environment }) box.SelectionChanged += (_, _) => SettingsChanged();
@@ -181,9 +187,9 @@ public sealed partial class RenderStudioView : UserControl
         addEnvironment.Click += async (_, _) => await BrowseEnvironmentAsync();
         _environmentField.Children.Add(FormKit.Field("Environnement", _environment, hint: "Ceux fournis avec Blender, ou vos images HDRI (Poly Haven par exemple)."));
         _environmentField.Children.Add(addEnvironment);
-        _environmentField.Children.Add(FormKit.Field("Rotation de l’environnement", _environmentRotation, hint: "L’ombre suit la lumière de l’environnement."));
-        _studioLightFields.Children.Add(FormKit.Field("Direction de la lumière", _lightAngle, hint: "Tourne les lumières autour de la pièce, et l’ombre avec."));
-        _studioLightFields.Children.Add(FormKit.Field("Hauteur de la lumière", _lightHeight, hint: "Basse : ombre longue ; haute : ombre courte sous la pièce."));
+        _environmentField.Children.Add(ResettableSlider("Rotation de l’environnement", _environmentRotation, RenderPreferences.Default.EnvironmentRotation, "L’ombre suit la lumière de l’environnement."));
+        _studioLightFields.Children.Add(ResettableSlider("Direction de la lumière", _lightAngle, RenderPreferences.Default.LightAngle, "Tourne les lumières autour de la pièce, et l’ombre avec."));
+        _studioLightFields.Children.Add(ResettableSlider("Hauteur de la lumière", _lightHeight, RenderPreferences.Default.LightHeight, "Basse : ombre longue ; haute : ombre courte sous la pièce."));
         _final.Click += async (_, _) => await RenderFinalAsync();
         _cancel.Click += (_, _) => _finalRender?.Cancel();
         _save.Click += (_, _) => Save();
@@ -223,19 +229,45 @@ public sealed partial class RenderStudioView : UserControl
         InitializePause();
     }
 
-    private Control BuildAmbianceTab() => new StackPanel
+    private static Control ResettableSlider(string label, Slider slider, double defaultValue, string hint)
     {
-        Spacing = 12,
-        Children =
+        var reset = new Button { Content = "Défaut", Classes = { "ghost" }, VerticalAlignment = VerticalAlignment.Center };
+        AutomationProperties.SetName(reset, "Rétablir : " + label);
+        ToolTip.SetTip(reset, "Rétablir la valeur par défaut : " + defaultValue.ToString(System.Globalization.CultureInfo.GetCultureInfo("fr-FR")));
+        reset.Click += (_, _) => slider.Value = defaultValue;
+        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 8 };
+        row.Children.Add(slider);
+        Grid.SetColumn(reset, 1);
+        row.Children.Add(reset);
+        return FormKit.Field(label, row, hint: hint);
+    }
+
+    private Control BuildAmbianceTab()
+    {
+        var reset = new Button { Content = "Réinitialiser les ombres et la lumière", HorizontalAlignment = HorizontalAlignment.Stretch };
+        reset.Click += (_, _) =>
         {
-            FormKit.Field("Ambiance", _scene), _backgroundField, _environmentField,
-            FormKit.SectionLabel("Ombres et lumière"), _shadow,
-            FormKit.Field("Intensité de l’ombre", _shadowStrength, hint: "Légère à gauche, marquée à droite."),
-            FormKit.Field("Douceur de l’ombre", _shadowSoftness, hint: "Nette à gauche (petite lumière), diffuse à droite (grande lumière)."),
-            _studioLightFields,
-            new TextBlock { Text = "Fond transparent ou HDRI : l’ombre au sol apparaît dans le rendu HD, pas dans l’aperçu en direct.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap }
-        }
-    };
+            var defaults = RenderPreferences.Default;
+            _shadow.IsChecked = defaults.Shadow;
+            _shadowStrength.Value = defaults.ShadowStrength;
+            _shadowSoftness.Value = defaults.ShadowSoftness;
+            _lightAngle.Value = defaults.LightAngle;
+            _lightHeight.Value = defaults.LightHeight;
+        };
+        return new StackPanel
+        {
+            Spacing = 12,
+            Children =
+            {
+                FormKit.Field("Ambiance", _scene), _backgroundField, _environmentField,
+                FormKit.SectionLabel("Ombres et lumière"), _shadow,
+                ResettableSlider("Intensité de l’ombre", _shadowStrength, RenderPreferences.Default.ShadowStrength, "Légère à gauche, marquée à droite."),
+                ResettableSlider("Douceur de l’ombre", _shadowSoftness, RenderPreferences.Default.ShadowSoftness, "Nette à gauche (petite lumière), diffuse à droite (grande lumière)."),
+                _studioLightFields, reset,
+                new TextBlock { Text = "Fond transparent ou HDRI : l’ombre au sol apparaît dans le rendu HD, pas dans l’aperçu en direct.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap }
+            }
+        };
+    }
 
     private void ShowTab(int index)
     {
@@ -244,8 +276,8 @@ public sealed partial class RenderStudioView : UserControl
             ((Control)_tabs[i].Parent!.Parent!).IsVisible = i == index;
             if (i == index) _tabButtons[i].Classes.Add("selected"); else _tabButtons[i].Classes.Remove("selected");
         }
-        // The orientation rings belong to the Pièce tab: shown there, out of the way elsewhere.
-        _gizmo.IsVisible = index == 0 && _mesh is not null;
+        if (index != 0) _transformMode.IsChecked = false;
+        UpdateRotationGizmo();
     }
 
     private int CurrentTab => Array.FindIndex(_tabButtons, b => b.Classes.Contains("selected"));
@@ -374,6 +406,7 @@ public sealed partial class RenderStudioView : UserControl
         if (_live is null || _refine is null || _stlPath is null) return;
         while (true)
         {
+            if (_gizmo.IsDragging) return;
             var generation = _generation;
             if (!await RenderPassAsync(Pass.Live, _live, CancellationToken.None)) return;
             if (generation != _generation) continue;
@@ -541,6 +574,7 @@ public sealed partial class RenderStudioView : UserControl
     /// <summary>One preview render, shown as soon as it is ready. False when it failed or was cancelled.</summary>
     private async Task<bool> RenderPassAsync(Pass pass, BlenderSession session, CancellationToken cancellationToken)
     {
+        var sceneVersion = _sceneVersion;
         if (_stlPath is not { } stl || _mesh is not { } mesh) return false;
         if (ReadSettings(pass, mesh) is not { } settings) return false;
         var output = Path.Combine(_work, $"render-{++_counter}.png");
@@ -548,7 +582,8 @@ public sealed partial class RenderStudioView : UserControl
         try
         {
             await session.RenderAsync(stl, settings, output, cancellationToken);
-            ShowImage(output);
+            if (sceneVersion == _sceneVersion && !_gizmo.IsDragging) ShowImage(output);
+            else TryDelete(output);
             _progress.IsVisible = false;
             return true;
         }
@@ -583,7 +618,7 @@ public sealed partial class RenderStudioView : UserControl
             rotation, 0, width, height, samples, environment, _environmentRotation.Value, camera, engine,
             _shadow.IsChecked == true, _shadowStrength.Value, _shadowSoftness.Value, _lightAngle.Value, _lightHeight.Value, _glowDark.IsChecked == true,
             null, 0,
-            Devices[Math.Max(0, _device.SelectedIndex)].Key, tiff, _zoneFiles.Select(z => new RenderZone(z.File, z.Zone.Hex, z.Zone.Finish)).ToList());
+            Devices[Math.Max(0, _device.SelectedIndex)].Key, tiff, _zoneFiles.Select(z => new RenderZone(z.File, z.Zone.Hex, z.Zone.Finish)).ToList(), GroundZ: 0);
     }
 
     private void ShowSceneFields()

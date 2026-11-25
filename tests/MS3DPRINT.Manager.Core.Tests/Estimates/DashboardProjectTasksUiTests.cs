@@ -29,6 +29,7 @@ public sealed partial class EstimateUiTests
         try
         {
             await owner.PreloadAsync(force:true);
+            Dispatcher.UIThread.RunJobs(); owner.UpdateLayout();
             var queue=owner.FindControl<StackPanel>("RecentProjectsList")!;
             var row=queue.Children.OfType<Button>().Single();
             var action=row.GetVisualDescendants().OfType<TextBlock>().Single(t=>t.Classes.Contains("queue-next-action"));

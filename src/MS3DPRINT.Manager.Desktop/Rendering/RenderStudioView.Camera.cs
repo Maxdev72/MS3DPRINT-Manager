@@ -19,7 +19,7 @@ public sealed partial class RenderStudioView
         var add = new Button { Content = Icons.Label("IconPlus", "Ajouter la vue actuelle"), HorizontalAlignment = HorizontalAlignment.Stretch };
         add.Click += async (_, _) => await AddCameraAsync();
         var recenter = new Button { Content = "Recentrer", HorizontalAlignment = HorizontalAlignment.Stretch };
-        recenter.Click += (_, _) => { var c = _viewport.Camera; Apply(new SavedCamera("", c.Yaw, c.Pitch, 1, 0, 0)); };
+        recenter.Click += async (_, _) => { _sceneFrame = null; await UseOrientationAsync(); var c = _viewport.Camera; Apply(new SavedCamera("", c.Yaw, c.Pitch, 1, 0, 0)); };
         _lockCamera.IsCheckedChanged += (_, _) => _viewport.Visual.IsHitTestVisible = _lockCamera.IsChecked != true;
         ToolTip.SetTip(_lockCamera, "La souris ne déplace plus la caméra : le cadrage trouvé ne bouge plus par erreur.");
         RebuildCameras();

@@ -99,7 +99,9 @@ Mesuré : réduction des rebonds (5 %) et réutilisation de la scène non retenu
     (une vue = un dossier, une image par couleur), planche(s) à la racine, plus un récapitulatif texte
     (réglages, couleurs, codes). Option : aussi les fichiers à plat.
 
-## Livraison 6 — Plusieurs produits dans la scène — FAITE (disposition automatique, flèches de position, fichier .ms3dscene ; déplacement libre à la souris non fait)
+## Livraison 6 — Plusieurs produits dans la scène — FAITE (disposition automatique, gizmo de déplacement et de rotation, fichier .ms3dscene)
+
+Complément du 25 novembre : outil « Déplacer / tourner » directement dans l’aperçu, flèches X/Y/Z, poignées de plan et anneaux. La pièce suit la souris ; Maj applique le pas de déplacement, Échap annule le geste et masque l’outil. Le pivot et le cadrage restent fixes, les autres pièces ne se déplacent pas. Positions verticales et pivots sont conservés dans les scènes ; aucune mise à l’échelle.
 
 19. **Scène à plusieurs pièces** : ajouter d'autres modèles à côté (liste des pièces dans l'onglet Pièce),
     chacun avec sa position, son orientation, sa matière et ses zones peintes ; disposition automatique

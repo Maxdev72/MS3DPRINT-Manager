@@ -8,39 +8,47 @@ using MS3DPRINT.Manager.Desktop.Viewer;
 namespace MS3DPRINT.Manager.Desktop.Rendering;
 
 /// <summary>A product of a saved scene: its file and how it was set (orientation as X, Y, Z, W; shift on the floor in mm).</summary>
-public sealed record SceneFilePart(string Path, float[] Turn, string Hex, string Finish, float[] Shift, IReadOnlyList<PaintZone> Zones);
+public sealed record SceneFilePart(string Path, float[] Turn, string Hex, string Finish, float[] Shift, IReadOnlyList<PaintZone> Zones, float[]? Anchor = null);
 
 /// <summary>A scene saved to a file (.ms3dscene): its products and how it is staged, lit and framed.</summary>
 public sealed record SceneFile(int Version, IReadOnlyList<SceneFilePart> Parts, int Active, double Spacing, int Scene, string Background, string? Environment,
     double EnvironmentRotation, bool Shadow, double ShadowStrength, double ShadowSoftness, double LightAngle, double LightHeight, int Format, int Layer,
-    double Yaw, double Pitch, double Zoom, double PanX, double PanY);
+    double Yaw, double Pitch, double Zoom, double PanX, double PanY, float[]? Frame = null);
 
 /// <summary>Saving a scene to a file and opening it again, to come back to a staging later or share it.</summary>
 public sealed partial class RenderStudioView
 {
     private static readonly FilePickerFileType SceneType = new("Scène de rendu MS3DPRINT") { Patterns = ["*.ms3dscene"] };
 
-    private Control BuildSceneFileButtons()
+    private Control BuildSceneFileMenu()
     {
-        var save = new Button { Content = Icons.Label("IconSave", "Enregistrer la scène…"), HorizontalAlignment = HorizontalAlignment.Stretch };
+        var save = new MenuItem { Header = "Enregistrer la scène…", Icon = Icons.Glyph("IconSave", 16) };
         save.Click += async (_, _) => await SaveSceneAsync();
-        var open = new Button { Content = Icons.Label("IconOpen", "Ouvrir une scène…"), HorizontalAlignment = HorizontalAlignment.Stretch };
+        var open = new MenuItem { Header = "Ouvrir une scène…", Icon = Icons.Glyph("IconOpen", 16) };
         open.Click += async (_, _) => await OpenSceneAsync();
-        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*"), ColumnSpacing = 8 };
-        row.Children.Add(save);
-        Grid.SetColumn(open, 1);
-        row.Children.Add(open);
-        return row;
+        var model = new MenuItem { Header = "Ouvrir un modèle…", Icon = Icons.Glyph("IconCube", 16) };
+        model.Click += async (_, _) => await BrowseAsync();
+        ToolTip.SetTip(model, "Commencer une nouvelle scène avec un modèle.");
+        var button = new Button
+        {
+            Content = Icons.Label("IconLayers", "Fichiers de scène"),
+            Flyout = new MenuFlyout { Items = { save, open, new Separator(), model } }
+        };
+        Avalonia.Automation.AutomationProperties.SetName(button, "Fichiers de scène");
+        return button;
     }
 
     private SceneFile CurrentScene()
     {
         StoreActive();
         var c = _viewport.Camera;
-        return new SceneFile(1, _parts.Select(p => new SceneFilePart(p.Path, [p.Turn.X, p.Turn.Y, p.Turn.Z, p.Turn.W], p.Hex, p.Finish, [p.Shift.X, p.Shift.Y], p.Zones)).ToList(),
+        return new SceneFile(1, _parts.Select(p => new SceneFilePart(p.Path, [p.Turn.X, p.Turn.Y, p.Turn.Z, p.Turn.W], p.Hex, p.Finish,
+            p.Shift.Z == 0 ? [p.Shift.X, p.Shift.Y] : [p.Shift.X, p.Shift.Y, p.Shift.Z], p.Zones,
+            p.Anchor is { } anchor ? [anchor.X, anchor.Y, anchor.Z] : null)).ToList(),
             _active, _spacing.Value, _scene.SelectedIndex, _background.Text?.Trim() ?? "#2F6FD6", (_environment.SelectedItem as RenderEnvironment)?.Path,
             _environmentRotation.Value, _shadow.IsChecked == true, _shadowStrength.Value, _shadowSoftness.Value, _lightAngle.Value, _lightHeight.Value,
-            _format.SelectedIndex, _layer.SelectedIndex, c.Yaw, c.Pitch, c.Zoom, c.PanX, c.PanY);
+            _format.SelectedIndex, _layer.SelectedIndex, c.Yaw, c.Pitch, c.Zoom, c.PanX, c.PanY,
+            _mesh is { } frame ? [frame.Min.X, frame.Min.Y, frame.Min.Z, frame.Max.X, frame.Max.Y, frame.Max.Z] : null);
     }
 
     private async Task SaveSceneAsync()
@@ -98,10 +106,14 @@ public sealed partial class RenderStudioView
             {
                 Path = part.Path, Loaded = mesh!, Hex = part.Hex, Finish = part.Finish, Zones = [.. part.Zones ?? []],
                 Turn = part.Turn is { Length: 4 } t ? new Quaternion(t[0], t[1], t[2], t[3]) : Quaternion.Identity,
-                Shift = part.Shift is { Length: 2 } s ? new Vector2(s[0], s[1]) : Vector2.Zero
+                Shift = part.Shift is { Length: >= 2 } s ? new Vector3(s[0], s[1], s.Length >= 3 ? s[2] : 0) : Vector3.Zero,
+                Anchor = part.Anchor is { Length: 3 } a ? new Vector3(a[0], a[1], a[2]) : null
             });
         _active = Math.Clamp(scene.Active, 0, _parts.Count - 1);
-        _spacing.Value = scene.Spacing;
+        _openingScene = true;
+        try { _spacing.Value = scene.Spacing; }
+        finally { _openingScene = false; }
+        _sceneFrame = scene.Frame is { Length: 6 } f ? new MeshModel([new(f[0], f[1], f[2]), new(f[3], f[4], f[5])], []) : null;
         _scene.SelectedIndex = Math.Clamp(scene.Scene, 0, Scenes.Length - 1);
         _background.Text = scene.Background;
         if (scene.Environment is { } environment && File.Exists(environment)) SelectEnvironment(environment);

@@ -1,6 +1,29 @@
 # Journal des modifications
 
+## Version 1.0.34 — 25 novembre 2026
+
+- Gizmo complet de déplacement et de rotation, manipulation en direct, annulation avec Échap et maintien du cadrage.
+- Onglet Pièce simplifié, réglages précis repliables et ajout de pièces accessible dans tous les onglets.
+- Retour aux valeurs par défaut pour les ombres, lumières et rotation HDRI.
+- Conservation des positions et pivots dans les scènes ; corrections de l’écrêtage GPU et du sol lors des déplacements verticaux.
+
 ## 25 novembre 2026
+
+### Rendu produit : manipulation directe de la pièce
+- Outil « Déplacer / tourner » dans la barre de l’aperçu : trois flèches X/Y/Z, trois poignées de plan, un déplacement libre au centre et trois anneaux de rotation. La pièce suit le glissement ; Maj applique le pas de déplacement choisi, Échap annule le geste et masque l’outil.
+- Le pivot et le cadrage restent fixes pendant les transformations ; les autres pièces gardent leur position. Le déplacement vertical, le pivot et le cadrage sont conservés dans les scènes, avec lecture des anciennes scènes.
+- Les commandes par boutons restent dans « Réglages précis ». « Poser au sol » reste directement accessible.
+
+### Rendu produit : onglet Pièce compact
+- Liste des pièces lisible, noms longs tronqués avec leur chemin en info-bulle ; menu par pièce pour réordonner ou retirer, avec confirmation avant retrait.
+- Commandes précises de déplacement et de rotation regroupées chacune sur une ligne, dans un volet repliable.
+- Les orientations supplémentaires et la disposition automatique se déplient à la demande. Ouvrir un modèle, ouvrir une scène et l’enregistrer sont regroupés dans « Fichiers de scène », au-dessus de l’aperçu.
+
+### Rendu produit : anneaux de rotation à la demande
+- Le gizmo est masqué par défaut. « Déplacer / tourner » l’active dans l’onglet Pièce ; changer d’onglet le désactive.
+- La pièce suit les anneaux pendant le glissement, avec le pas choisi. L'aperçu 3D suit immédiatement ; les fichiers du rendu et l'affinage Blender sont actualisés au relâchement, sans appliquer la rotation une seconde fois.
+- Bouton « Défaut » près de chaque curseur d'ombre, de lumière et de rotation HDRI ; remise à zéro groupée des ombres et de la lumière.
+- « Ajouter une pièce à la scène » reste visible au-dessus de l'aperçu, quel que soit l'onglet choisi.
 
 ### Rendu produit avec Blender
 - Nouvelle page Outils → Rendu produit : ouvrez ou déposez un STL, OBJ ou 3MF et obtenez une image produit sans préparer de scène. Blender (gratuit) doit être installé ; la page le détecte seule.

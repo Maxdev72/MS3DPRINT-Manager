@@ -359,8 +359,9 @@ public sealed class GpuMeshViewport : OpenGlControlBase
         var ky = (float)(-2 * Camera.PanY * panScale / height);
         // the clipping planes follow the camera, so the model is neither cut when the view dives into it nor flickers when it is far away:
         // from outside, the near plane sits halfway to the closest point of the model; from close or inside, it stays a sliver in front of the eye
-        var near = distance > radius * 1.5 ? (distance - radius) * 0.5 : Math.Max(distance * 0.02, radius * 1e-9);
-        var far = distance + radius * 1.5;
+        var extent = mesh.BoundingRadius;
+        var near = distance > extent * 1.5 ? (distance - extent) * 0.5 : Math.Max(distance * 0.02, extent * 1e-9);
+        var far = distance + extent * 1.5;
         var a = (float)((far + near) / (far - near));
         var b = (float)(-2 * far * near / (far - near));
         var d = (float)distance;

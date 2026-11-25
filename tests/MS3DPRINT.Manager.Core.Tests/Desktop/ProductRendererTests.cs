@@ -17,6 +17,38 @@ public sealed class ProductRendererTests : IDisposable
 
     private static readonly RenderSettings Small = new("#D93A3A", "matte", 0.2, "light", "#2F6FD6", 30, 20, 64, 48, 4);
 
+    [Theory]
+    [InlineData(0d, -50d)]
+    [InlineData(null, 0d)]
+    public async Task Blender_keeps_a_stable_ground_for_a_raised_part_and_preserves_legacy_defaults(double? ground, double expected)
+    {
+        if (BlenderLocator.Detect() is not { } blender) return;
+        var stl = Path.Combine(_directory, "raised.stl");
+        StlWriter.Write(stl, new MeshModel([new(0, 0, 50), new(20, 0, 50), new(0, 20, 50), new(0, 0, 70)], [0, 2, 1, 0, 1, 3, 0, 3, 2, 1, 2, 3]));
+        var settings = System.Text.Json.Nodes.JsonNode.Parse(ProductRenderer.SettingsJson(stl, Path.Combine(_directory, "raised.png"), Small with { Engine = "eevee" }))!;
+        if (ground is not null) settings["groundZ"] = ground.Value;
+        var settingsPath = Path.Combine(_directory, "raised.json");
+        File.WriteAllText(settingsPath, settings.ToJsonString());
+        var driver = Path.Combine(_directory, "inspect-floor.py");
+        var resultPath = Path.Combine(_directory, "floor.json");
+        var scriptPath = Path.Combine(_directory, "product_render.py");
+        using (var source = typeof(ProductRenderer).Assembly.GetManifestResourceStream("MS3DPRINT.Manager.Desktop.Rendering.product_render.py")!)
+        using (var destination = File.Create(scriptPath)) source.CopyTo(destination);
+        File.WriteAllText(driver, "import runpy, bpy, json\nrunpy.run_path(" + JsonSerializer.Serialize(scriptPath) + ")\n"
+            + "value = bpy.data.objects['Backdrop'].location.z / bpy.data.objects['Turntable'].scale.z\n"
+            + "json.dump(value, open(" + JsonSerializer.Serialize(resultPath) + ", 'w'))\n");
+        using var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(blender)
+        {
+            UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true,
+            ArgumentList = { "-b", "--factory-startup", "--python-exit-code", "1", "-P", driver, "--", settingsPath }
+        })!;
+        var output = process.StandardOutput.ReadToEndAsync();
+        var errors = process.StandardError.ReadToEndAsync();
+        await process.WaitForExitAsync();
+        Assert.True(process.ExitCode == 0, await errors + await output);
+        Assert.Equal(expected, JsonSerializer.Deserialize<double>(File.ReadAllText(resultPath)), 3);
+    }
+
     private string FakeBlender(string folder)
     {
         var path = Path.Combine(_directory, "Blender Foundation", folder, "blender.exe");

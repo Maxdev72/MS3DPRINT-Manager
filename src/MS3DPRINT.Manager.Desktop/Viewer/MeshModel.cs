@@ -19,6 +19,18 @@ public sealed class MeshModel
         Min = min;
         Max = max;
         Normals = BuildNormals(positions, indices);
+        BoundingRadius = Radius;
+    }
+
+    /// <summary>Shares the immutable geometry while retaining the camera's reference bounds during manipulation.</summary>
+    public MeshModel(MeshModel geometry, MeshModel frame)
+    {
+        Positions = geometry.Positions;
+        Indices = geometry.Indices;
+        Normals = geometry.Normals;
+        Min = frame.Min;
+        Max = frame.Max;
+        BoundingRadius = Vector3.Distance(geometry.Center, frame.Center) + geometry.BoundingRadius;
     }
 
     public Vector3[] Positions { get; }
@@ -27,6 +39,8 @@ public sealed class MeshModel
     public Vector3[] Normals { get; }
     public Vector3 Min { get; }
     public Vector3 Max { get; }
+    /// <summary>Radius around the reference centre containing all geometry, including parts moved outside the frame.</summary>
+    public float BoundingRadius { get; }
     public int TriangleCount => Indices.Length / 3;
     public Vector3 Size => Max - Min;
     public Vector3 Center => (Min + Max) / 2;
