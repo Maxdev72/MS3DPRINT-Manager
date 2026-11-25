@@ -90,7 +90,6 @@ public partial class MainWindow
             });
             if (!IsWorkspaceLoadCurrent(load)) return;
             var printers = result.Profiles;
-            RefreshLiveCards(printers);
             var errors = result.Reader.ReadErrors;
             var active = printers.Count(p => p.IsActive);
             _printerPageSummary.Text = $"{printers.Count} imprimante{(printers.Count > 1 ? "s" : "")} · {active} active{(active > 1 ? "s" : "")}";
@@ -120,37 +119,5 @@ public partial class MainWindow
             PrinterList.Children.Clear();
             PrinterList.Children.Add(CreateReadErrorState("Parc indisponible", "Vérifiez l’accès au dossier de l’atelier, puis réessayez.", exception, LoadPrintersAsync));
         }
-    }
-
-    private readonly Dictionary<Guid, PrinterLiveCard> _liveCards = [];
-    private bool _liveCardsHooked;
-
-    /// <summary>One live card per active printer that has a local connection; cards whose connection is unchanged keep running.</summary>
-    private void RefreshLiveCards(IReadOnlyList<PrinterProfile> printers)
-    {
-        if (!_liveCardsHooked)
-        {
-            _liveCardsHooked = true;
-            // Leaving the page closes the connections and cameras; coming back reopens them.
-            PrintersWorkspacePanel.PropertyChanged += (_, e) => { if (e.Property == IsVisibleProperty && !PrintersWorkspacePanel.IsVisible) StopLiveCards(); };
-            Closed += (_, _) => StopLiveCards();
-        }
-        var wanted = printers.Where(p => p.IsActive).Select(p => (Printer: p, Connection: PrinterConnectionStore.Default.Get(p.Id)))
-            .Where(x => x.Connection is not null).ToArray();
-        foreach (var id in _liveCards.Keys.ToArray())
-            if (!wanted.Any(x => x.Printer.Id == id && x.Connection == _liveCards[id].Connection && x.Printer.Name == _liveCards[id].Printer.Name && x.Printer.Model == _liveCards[id].Printer.Model)) { _liveCards[id].Dispose(); _liveCards.Remove(id); }
-        foreach (var (printer, connection) in wanted)
-            if (!_liveCards.ContainsKey(printer.Id)) _liveCards[printer.Id] = new PrinterLiveCard(printer, connection!);
-        PrinterLivePanel.Children.Clear();
-        foreach (var (printer, _) in wanted) PrinterLivePanel.Children.Add(_liveCards[printer.Id]);
-        PrinterLivePanel.IsVisible = wanted.Length > 0;
-    }
-
-    private void StopLiveCards()
-    {
-        foreach (var card in _liveCards.Values) card.Dispose();
-        _liveCards.Clear();
-        PrinterLivePanel.Children.Clear();
-        PrinterLivePanel.IsVisible = false;
     }
 }

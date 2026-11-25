@@ -45,7 +45,7 @@ public partial class MainWindow
         var icon = destination switch
         {
             "Projets" => "IconProjects", "Clients" => "IconClients", "Estimations" => "IconEstimates",
-            "Imprimantes" => "IconPrinters", "Recettes" => "IconBook", "Achats" => "IconCart", "Documents" => "IconProjects","Filaments" => "IconFilaments", "Collections" => "IconCollections",
+            "Imprimantes" => "IconPrinters", "Surveillance" => "IconCamera", "Recettes" => "IconBook", "Achats" => "IconCart", "Documents" => "IconProjects","Filaments" => "IconFilaments", "Collections" => "IconCollections",
             "Paramètres" => "IconSettings", "Corbeille" => "IconTrash", "Tâches" => "IconProjectTasks", "Modèles 3D" => "IconSearch", "Visualiseur 3D" => "IconCube", _ => "IconHome"
         };
         PageIcon.Data = (Geometry?)this.FindResource(icon);

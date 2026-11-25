@@ -46,6 +46,7 @@ public partial class MainWindow
         FilamentsWorkspacePanel.IsVisible = destination == "Filaments";
         EstimatesWorkspacePanel.IsVisible = destination == "Estimations";
         PrintersWorkspacePanel.IsVisible = destination == "Imprimantes";
+        MonitoringWorkspacePanel.IsVisible = destination == "Surveillance";
         RevenuesWorkspacePanel.IsVisible = destination == "Recettes";
         PurchasesWorkspacePanel.IsVisible = destination == "Achats";
         ModelSearchWorkspacePanel.IsVisible = destination == "Modèles 3D";
@@ -59,7 +60,7 @@ public partial class MainWindow
         RevealWorkspace(destination switch
         {
             "Projets" => ProjectsWorkspacePanel, "Tâches" => TasksWorkspacePanel, "Clients" => ClientsWorkspacePanel, "Collections" => CollectionsWorkspacePanel,
-            "Filaments" => FilamentsWorkspacePanel, "Estimations" => EstimatesWorkspacePanel, "Imprimantes" => PrintersWorkspacePanel, "Recettes" => RevenuesWorkspacePanel, "Achats" => PurchasesWorkspacePanel, "Documents" => DocumentsWorkspacePanel,
+            "Filaments" => FilamentsWorkspacePanel, "Estimations" => EstimatesWorkspacePanel, "Imprimantes" => PrintersWorkspacePanel, "Surveillance" => MonitoringWorkspacePanel, "Recettes" => RevenuesWorkspacePanel, "Achats" => PurchasesWorkspacePanel, "Documents" => DocumentsWorkspacePanel,
             "Modèles 3D" => ModelSearchWorkspacePanel, "Corbeille" => TrashWorkspacePanel, "Paramètres" => SettingsWorkspacePanel, _ => DashboardContent
         });
         _selectedNavigationButton = NavigationButtons().FirstOrDefault(button => button.Tag as string == destination);
@@ -168,6 +169,8 @@ public partial class MainWindow
                 await LoadDocumentsAsync();
             else if (printersVisible)
                 await LoadPrintersAsync();
+            else if (destination == "Surveillance")
+                await LoadMonitoringAsync();
             else if (trashVisible)
                 await LoadTrashAsync();
             else if (settingsVisible)
@@ -190,7 +193,7 @@ public partial class MainWindow
         Task? reload = page switch
         {
             "Projets" => LoadProjectsAsync(), "Tâches" => LoadTasksAsync(), "Clients" => LoadClientsAsync(), "Collections" => LoadCollectionsAsync(),
-            "Filaments" => LoadFilamentsAsync(), "Imprimantes" => LoadPrintersAsync(), "Recettes" => LoadRevenuesAsync(),
+            "Filaments" => LoadFilamentsAsync(), "Imprimantes" => LoadPrintersAsync(), "Surveillance" => LoadMonitoringAsync(), "Recettes" => LoadRevenuesAsync(),
             "Achats" => LoadPurchasesAsync(), "Documents" => LoadDocumentsAsync(), "Corbeille" => LoadTrashAsync(), _ => null
         };
         if (reload is not null) await reload;

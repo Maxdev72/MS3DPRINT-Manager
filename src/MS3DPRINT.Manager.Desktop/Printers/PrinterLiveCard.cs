@@ -23,6 +23,7 @@ public sealed class PrinterLiveCard : Border, IDisposable
     private readonly TextBlock _temperatures = new() { Classes = { "muted" }, TextWrapping = TextWrapping.Wrap, IsVisible = false };
     private readonly WrapPanel _trays = new() { IsVisible = false };
     private VlcCamera? _video;
+    private BambuLink.RtspRelay? _relay;
 
     public PrinterProfile Printer { get; }
     public PrinterConnection Connection { get; }
@@ -32,7 +33,7 @@ public sealed class PrinterLiveCard : Border, IDisposable
         Printer = printer;
         Connection = connection;
         Classes.Add("card");
-        Width = 360;
+        Width = 440;
         Margin = new(0, 0, 12, 12);
         AutomationProperties.SetName(_camera, "Caméra de " + printer.Name);
         Child = new StackPanel
@@ -41,7 +42,7 @@ public sealed class PrinterLiveCard : Border, IDisposable
             Children =
             {
                 new TextBlock { Text = printer.Name, Classes = { "card-title" }, TextWrapping = TextWrapping.Wrap },
-                new Border { Height = 200, Background = Brushes.Black, CornerRadius = new(6), ClipToBounds = true, Child = new Grid { Children = { _camera, _cameraNote } } },
+                new Border { Height = 248, Background = Brushes.Black, CornerRadius = new(6), ClipToBounds = true, Child = new Grid { Children = { _camera, _cameraNote } } },
                 _state, _job, _progress, _detail, _temperatures, _trays
             }
         };
@@ -64,9 +65,31 @@ public sealed class PrinterLiveCard : Border, IDisposable
             return;
         }
         if (VlcCamera.Unavailable is { } reason) { ShowCameraNote(reason); return; }
-        try { _video = new VlcCamera(BambuLink.RtspUrl(Connection), ShowFrame); }
-        catch (Exception exception) when (exception is InvalidOperationException or VLCException or UriFormatException)
+        StartVideo();
+    }
+
+    private void StartVideo()
+    {
+        if (_cancel.IsCancellationRequested) return;
+        StopVideo();
+        try
+        {
+            _relay = new BambuLink.RtspRelay(Connection);
+            _video = new VlcCamera(_relay.Url, ShowFrame, () =>
+            {
+                ShowCameraNote("Caméra injoignable, nouvelle tentative…");
+                StopVideo();
+                DispatcherTimer.RunOnce(StartVideo, TimeSpan.FromSeconds(10));
+            });
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or VLCException or UriFormatException or System.Net.Sockets.SocketException)
         { ShowCameraNote("Caméra indisponible : " + exception.Message); }
+    }
+
+    private void StopVideo()
+    {
+        _video?.Dispose(); _video = null;
+        _relay?.Dispose(); _relay = null;
     }
 
     private void ShowFrame(Bitmap frame)
@@ -81,7 +104,7 @@ public sealed class PrinterLiveCard : Border, IDisposable
 
     private void ShowCameraNote(string message)
     {
-        _cameraNote.Text = message + Environment.NewLine + "Pour les X1, H2 et X2, activez « LAN Mode Liveview » sur l’imprimante.";
+        _cameraNote.Text = BambuLink.HasJpegCamera(Printer.Model) ? message : message + Environment.NewLine + "Vérifiez que « LAN Mode Liveview » est activé sur l’imprimante.";
         _cameraNote.IsVisible = true;
     }
 
@@ -131,7 +154,6 @@ public sealed class PrinterLiveCard : Border, IDisposable
     public void Dispose()
     {
         _cancel.Cancel();
-        _video?.Dispose();
-        _video = null;
+        StopVideo();
     }
 }

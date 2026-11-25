@@ -41,6 +41,7 @@
             <Button Classes="nav-item" Tag="Achats" Click="NavigationButton_Click" AutomationProperties.Name="Achats"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconCart}" /><TextBlock Classes="nav-label" Text="Achats" /></StackPanel></Button>
             <Button Classes="nav-item" Tag="Documents" Click="NavigationButton_Click" AutomationProperties.Name="Documents"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconProjects}" /><TextBlock Classes="nav-label" Text="Documents" /></StackPanel></Button>
             <TextBlock Text="ATELIER" Classes="overline nav-label" Margin="16,12,0,4" />
+            <Button Classes="nav-item" Tag="Surveillance" Click="NavigationButton_Click" AutomationProperties.Name="Surveillance"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconCamera}" /><TextBlock Classes="nav-label" Text="Surveillance" /></StackPanel></Button>
             <Button Classes="nav-item" Tag="Imprimantes" Click="NavigationButton_Click" AutomationProperties.Name="Imprimantes"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconPrinters}" /><TextBlock Classes="nav-label" Text="Imprimantes" /></StackPanel></Button>
             <Button Classes="nav-item" Tag="Filaments" Click="NavigationButton_Click" AutomationProperties.Name="Filaments"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconFilaments}" /><TextBlock Classes="nav-label" Text="Filaments" /></StackPanel></Button>
             <Button Classes="nav-item" Tag="Collections" Click="NavigationButton_Click" AutomationProperties.Name="Collections"><StackPanel Orientation="Horizontal" Spacing="12"><Path Classes="icon" Data="{StaticResource IconCollections}" /><TextBlock Classes="nav-label" Text="Collections" /></StackPanel></Button>
@@ -329,8 +330,16 @@
       <Border x:Name="PrintersWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="panel">
         <Grid RowDefinitions="Auto,*" RowSpacing="16">
           <Grid ColumnDefinitions="*,Auto"><StackPanel /><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"><Button Classes="primary-action" Click="CreatePrinter_Click" AutomationProperties.Name="Ajouter"><StackPanel Orientation="Horizontal" Spacing="8"><Path Classes="icon icon-sm" Data="{StaticResource IconPlus}" /><TextBlock Text="Ajouter" /></StackPanel></Button></StackPanel></Grid>
-          <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel><WrapPanel x:Name="PrinterLivePanel" IsVisible="False" Margin="0,0,0,4" /><StackPanel x:Name="PrinterList" HorizontalAlignment="Stretch" Spacing="0" Margin="0,0,12,0" /></StackPanel></ScrollViewer>
+          <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"><StackPanel x:Name="PrinterList" HorizontalAlignment="Stretch" Spacing="0" Margin="0,0,12,0" /></ScrollViewer>
         </Grid>
+      </Border>
+      <Border x:Name="MonitoringWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="panel">
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
+          <StackPanel>
+            <StackPanel x:Name="MonitoringEmptyHost" />
+            <WrapPanel x:Name="PrinterLivePanel" />
+          </StackPanel>
+        </ScrollViewer>
       </Border>
       <Border x:Name="RevenuesWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="panel">
         <Grid RowDefinitions="Auto,*" RowSpacing="16">

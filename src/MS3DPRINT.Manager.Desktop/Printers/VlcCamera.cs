@@ -42,7 +42,8 @@ public sealed class VlcCamera : IDisposable
         return _vlc;
     }
 
-    public VlcCamera(string url, Action<WriteableBitmap> frame)
+    /// <param name="stopped">Called on the UI thread when the stream fails or ends.</param>
+    public VlcCamera(string url, Action<WriteableBitmap> frame, Action stopped)
     {
         _frame = frame;
         _format = Format; _cleanup = Cleanup; _lock = Lock; _display = Display;
@@ -50,6 +51,8 @@ public sealed class VlcCamera : IDisposable
         _player = new MediaPlayer(vlc);
         _player.SetVideoFormatCallbacks(_format, _cleanup);
         _player.SetVideoCallbacks(_lock, null, _display);
+        _player.EncounteredError += (_, _) => Dispatcher.UIThread.Post(() => { if (!_disposed) stopped(); });
+        _player.EndReached += (_, _) => Dispatcher.UIThread.Post(() => { if (!_disposed) stopped(); });
         using var media = new Media(vlc, new Uri(url), ":network-caching=800", ":rtsp-tcp");
         _player.Play(media);
     }

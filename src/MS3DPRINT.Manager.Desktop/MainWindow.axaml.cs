@@ -414,6 +414,7 @@ public partial class MainWindow : Window
         ["Documents"] = "Administratif, comptabilité, commercial : les documents de votre entreprise.",
         ["Recettes"] = "Registre chronologique de vos encaissements, avec exports pour la déclaration.",
         ["Imprimantes"] = "Votre parc machines et leurs coûts horaires.",
+        ["Surveillance"] = "Vos imprimantes en direct : avancement, températures et caméra.",
         ["Modèles 3D"] = "Cherchez un modèle sur plusieurs sites à la fois, dans des onglets.",
         ["Corbeille"] = "Retrouvez et restaurez ce que vous avez supprimé.",
         ["Paramètres"] = "Stockage, arborescence et journal des modifications."

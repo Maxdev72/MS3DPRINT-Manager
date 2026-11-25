@@ -10,6 +10,7 @@ public sealed class AvaloniaShellMarkupTests
     [InlineData("Filaments")]
     [InlineData("Estimations")]
     [InlineData("Imprimantes")]
+    [InlineData("Surveillance")]
     [InlineData("Corbeille")]
     [InlineData("Paramètres")]
     public void Main_window_exposes_each_workspace_destination(string label)
