@@ -62,7 +62,7 @@ public sealed partial class RenderStudioView
         };
     }
 
-    private readonly Button _splitParts = new() { Content = Icons.Label("IconLayers", "Dissocier les pièces du 3MF"), HorizontalAlignment = HorizontalAlignment.Stretch, IsVisible = false };
+    private readonly Button _splitParts = new() { Content = Icons.Label("IconLayers", "Dissocier les pièces"), HorizontalAlignment = HorizontalAlignment.Stretch, IsVisible = false };
 
     /// <summary>
     /// Takes the active 3MF apart: each object of its plate becomes a part of the scene, with the same orientation, colour and
@@ -205,8 +205,7 @@ public sealed partial class RenderStudioView
         _splitParts.IsVisible = Active is { } shown && shown.Path.EndsWith(".3mf", StringComparison.OrdinalIgnoreCase);
         _partList.Children.Clear();
         _sceneLayout.IsVisible = _parts.Count > 1;
-        _partTools.IsEnabled = _parts.Count > 0;
-        _transformMode.IsEnabled = _parts.Count > 0;
+        LockPartWhilePaused();
         _sceneTitle.Text = _parts.Count == 0 ? "Aucune pièce dans la scène" : $"Pièces de la scène ({_parts.Count})";
         for (var i = 0; i < _parts.Count; i++)
         {

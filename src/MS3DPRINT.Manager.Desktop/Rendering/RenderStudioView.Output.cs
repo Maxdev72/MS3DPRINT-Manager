@@ -122,7 +122,8 @@ public sealed partial class RenderStudioView
     /// <summary>Encodes the image on screen with the current options to show the size of the file before saving.</summary>
     private async Task EstimateSizeAsync()
     {
-        if (_shown is not { } shown) { _sizeEstimate.Text = string.Empty; return; }
+        // The finished render in the window when there is one, else the preview of the page.
+        if ((_resultWindow?.Png ?? _shown) is not { } shown) { _sizeEstimate.Text = string.Empty; return; }
         var options = CurrentOutput;
         if (options.Format == "tiff")
         {
@@ -231,6 +232,8 @@ public sealed partial class RenderStudioView
         var keep = Directory.CreateDirectory(Path.Combine(_work, "serie-" + Guid.NewGuid().ToString("N"))).FullName;
         var rendered = new List<(string Png, string? Tiff, SavedCamera View, RenderColor Color)>();
         var total = views.Count * colors.Count;
+        var window = _resultWindow;
+        window?.Start(RenderSummary() + $" · série de {total} image{(total > 1 ? "s" : "")}", SuggestedName());
         var finished = await RunExclusiveAsync(async (cancel, progress) =>
         {
             foreach (var view in views)
@@ -244,12 +247,14 @@ public sealed partial class RenderStudioView
                     var copy = Path.Combine(keep, $"{index}.png");
                     File.Copy(output, copy);
                     ShowImage(output);
+                    window?.ShowPreview(output);
+                    window?.Samples($"Image {index}/{total}", quality.Pass.Samples, quality.Pass.Samples);
                     rendered.Add((copy, tiff, view, color));
                     progress(1, index, total);
                 }
             return true;
-        }, "Série " + quality.Label);
-        if (!finished || rendered.Count == 0) return;
+        }, "Série " + quality.Label, (text, fraction) => window?.Progress(text, fraction));
+        if (!finished || rendered.Count == 0) { window?.Stopped(_status.Text ?? "Série arrêtée."); return; }
         ShowStatus("Enregistrement de la série…", busy: true);
         try
         {
@@ -258,8 +263,9 @@ public sealed partial class RenderStudioView
             var zip = await Task.Run(() => WriteSeries(model, rendered, views.Count, colors.Count, options, keep, sheet, summary));
             var where = SaveFiles is { } save ? await save([zip], model, false) : null;
             ShowStatus(where is null ? "Série terminée, non enregistrée." : $"Série terminée : {rendered.Count} image{(rendered.Count > 1 ? "s" : "")} dans {Path.GetFileName(zip)}.");
+            window?.Stopped(_status.Text!);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException) { ShowStatus(exception.Message); }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException) { ShowStatus(exception.Message); window?.Stopped(exception.Message); }
     }
 
     /// <summary>What the series was made of, written next to the images in the ZIP.</summary>

@@ -34,7 +34,7 @@ public sealed partial class RenderStudioView : UserControl
     private static readonly (string Label, double Height)[] Layers = [("Lisse, sans lignes", 0), ("0,12 mm", 0.12), ("0,16 mm", 0.16), ("0,20 mm", 0.2), ("0,28 mm", 0.28)];
     private static readonly (string Label, string Key)[] Scenes = [("Studio clair", "light"), ("Studio sombre", "dark"), ("Fond de couleur", "color"), ("Fond transparent (PNG)", "transparent"), ("Environnement (HDRI)", "environment")];
     private static readonly (string Label, int Width, int Height)[] Formats = [("Carré 1:1", 1, 1), ("Paysage 4:3", 4, 3), ("Portrait 3:4", 3, 4), ("Large 16:9", 16, 9)];
-    private static readonly string[] TabNames = ["Pièce", "Matière", "Ambiance", "Caméra", "Rendu"];
+    private static readonly string[] TabNames = ["Pièce", "Matière", "Ambiance", "Caméra"];
     /// <summary>A render step: long side in pixels, samples and engine.</summary>
     private readonly record struct Pass(int Side, int Samples, string Engine)
     {
@@ -106,6 +106,8 @@ public sealed partial class RenderStudioView : UserControl
     public Func<IReadOnlyList<string>, string, bool, Task<string?>>? SaveFiles { get; set; }
 
     private RenderResultWindow? _resultWindow;
+    /// <summary>Quality, device, file and series: shown in the render window, not on the page.</summary>
+    private readonly Control _outputPanel;
 
     public RenderStudioView(Func<IReadOnlyList<RenderColor>> loadColors, RenderPreferencesStore? store = null)
     {
@@ -193,11 +195,13 @@ public sealed partial class RenderStudioView : UserControl
         _environmentField.Children.Add(ResettableSlider("Rotation de l’environnement", _environmentRotation, RenderPreferences.Default.EnvironmentRotation, "L’ombre suit la lumière de l’environnement."));
         _studioLightFields.Children.Add(ResettableSlider("Direction de la lumière", _lightAngle, RenderPreferences.Default.LightAngle, "Tourne les lumières autour de la pièce, et l’ombre avec."));
         _studioLightFields.Children.Add(ResettableSlider("Hauteur de la lumière", _lightHeight, RenderPreferences.Default.LightHeight, "Basse : ombre longue ; haute : ombre courte sous la pièce."));
-        _final.Click += async (_, _) => await RenderFinalAsync();
+        _final.Click += (_, _) => OpenRenderWindow();
+        ToolTip.SetTip(_final, "Ouvre la fenêtre de rendu : qualité, fichier et séries, puis « Lancer le rendu ».");
         _cancel.Click += (_, _) => _finalRender?.Cancel();
         _save.Click += (_, _) => Save();
 
-        _tabs = [BuildPartTab(), BuildMaterialTab(), BuildAmbianceTab(), BuildCameraTab(), BuildOutputTab()];
+        _tabs = [BuildPartTab(), BuildMaterialTab(), BuildAmbianceTab(), BuildCameraTab()];
+        _outputPanel = BuildOutputTab();
         var tabRow = new UniformGrid { Columns = TabNames.Length, Margin = new Thickness(0, 0, 0, 4) };
         _tabButtons = TabNames.Select((name, index) =>
         {
@@ -438,27 +442,38 @@ public sealed partial class RenderStudioView : UserControl
         }
     }
 
+    private string RenderSummary() => $"{RenderModelKey.Name(_modelPath ?? "")} · {Qualities[Math.Max(0, _quality.SelectedIndex)].Label} · {Scenes[_scene.SelectedIndex].Label} · {Formats[_format.SelectedIndex].Label}";
+
+    private string SuggestedName() => $"{RenderModelKey.Name(_modelPath ?? "rendu")} - rendu {DateTime.Now:yyyy-MM-dd HHmmss}";
+
     /// <summary>
-    /// The final render, in a window of its own (as in KeyShot): progress while it renders, then the image and what to do with it.
-    /// The page keeps its preview image; the window keeps the final one until it is saved or closed.
+    /// The render window (as in KeyShot): opened by « Rendu final » with the settings on the right and the current preview;
+    /// the render starts from its « Lancer le rendu ».
     /// </summary>
-    private async Task RenderFinalAsync()
+    private RenderResultWindow? OpenRenderWindow()
     {
-        if (_modelPath is not { } model || _mesh is null) return;
-        var quality = Qualities[_quality.SelectedIndex];
+        if (_modelPath is null || _mesh is null) return null;
         var window = _resultWindow;
         if (window is null)
         {
-            window = _resultWindow = new RenderResultWindow("Rendu · " + Path.GetFileNameWithoutExtension(model), CurrentOutput) { Icon = (TopLevel.GetTopLevel(this) as Window)?.Icon };
+            window = _resultWindow = new RenderResultWindow("Rendu · " + RenderModelKey.Name(_modelPath), _outputPanel) { Icon = (TopLevel.GetTopLevel(this) as Window)?.Icon };
             window.CancelRequested += () => _finalRender?.Cancel();
-            window.RedoRequested += async () => await RenderFinalAsync();
-            window.SaveRequested += async (png, tiff, options, name, chooseFolder) => await SaveFinalAsync(window, png, tiff, options, name, chooseFolder);
+            window.RenderRequested += async () => await RenderFinalAsync();
+            window.SaveRequested += async (png, tiff, name, chooseFolder) => await SaveFinalAsync(window, png, tiff, CurrentOutput, name, chooseFolder);
             window.Closed += (_, _) => { if (ReferenceEquals(_resultWindow, window)) _resultWindow = null; _finalRender?.Cancel(); };
             if (TopLevel.GetTopLevel(this) is Window owner) window.Show(owner); else window.Show();
         }
         else window.Activate();
-        window.Start($"{Path.GetFileName(model)} · {quality.Label} · {Scenes[_scene.SelectedIndex].Label} · {Formats[_format.SelectedIndex].Label}",
-            $"{Path.GetFileNameWithoutExtension(model)} - rendu {DateTime.Now:yyyy-MM-dd HHmmss}");
+        window.Setup(RenderSummary(), SuggestedName(), _shown);
+        return window;
+    }
+
+    /// <summary>The final render in its window: a quick pass shown at once, then the full image; the page keeps its preview.</summary>
+    private async Task RenderFinalAsync()
+    {
+        if (_finalRender is not null || OpenRenderWindow() is not { } window) return;
+        var quality = Qualities[_quality.SelectedIndex];
+        window.Start(RenderSummary(), SuggestedName());
         string? done = null, doneTiff = null;
         var steps = FinalSteps(quality.Pass);
         var finished = await RunExclusiveAsync(async (cancel, progress) =>
@@ -469,18 +484,19 @@ public sealed partial class RenderStudioView : UserControl
             foreach (var step in steps)
             {
                 var last = step == steps[^1];
+                var samples = step.Samples;
                 var output = Path.Combine(_work, $"final-{++_counter}.png");
                 var tiff = last && Outputs[Math.Max(0, _outputFormat.SelectedIndex)].Format == "tiff" ? Path.ChangeExtension(output, ".tif") : null;
-                if (ReadSettings(quality.Pass with { Samples = step }, _mesh!, tiff: tiff) is not { } settings) return false;
+                if (ReadSettings(step, _mesh!, tiff: tiff) is not { } settings) return false;
                 var label = last ? "Rendu" : "Aperçu rapide";
                 var start = before;
-                window.Samples(label, 0, step);
+                window.Samples(label, 0, samples);
                 await SessionFor(quality.Pass).RenderAsync(_stlPath!, settings, output, cancel, new Progress<double>(f =>
                 {
-                    window.Samples(label, (int)Math.Round(f * step), step);
-                    progress((start + f * step) / steps.Sum(), 1, 1);
+                    window.Samples(label, (int)Math.Round(f * samples), samples);
+                    progress((start + f * samples) / steps.Sum(p => p.Samples), 1, 1);
                 }));
-                before += step;
+                before += samples;
                 if (preview is not null) TryDelete(preview);
                 if (last) (done, doneTiff) = (output, tiff);
                 else { window.ShowPreview(output); preview = output; }
@@ -488,15 +504,16 @@ public sealed partial class RenderStudioView : UserControl
             ShowStatus($"Rendu {quality.Label} terminé : il est dans sa fenêtre.");
             return true;
         }, $"Rendu {quality.Label}", (text, fraction) => window.Progress(text, fraction));
-        if (finished && done is not null) window.ShowResult(done, doneTiff);
+        if (finished && done is not null) { window.ShowResult(done, doneTiff); await EstimateSizeAsync(); }
         else window.Stopped(_status.Text ?? "Rendu arrêté.");
     }
 
     /// <summary>
-    /// The sample counts of a final render: a quick pass (16 samples, about 3 % of a 512-sample render) before the full one;
-    /// EEVEE and short renders go in one pass.
+    /// The passes of a final render: a quick one (16 samples, at most 1024 px so it shows in seconds even for « Très haute »)
+    /// before the full one; EEVEE and short renders go in one pass.
     /// </summary>
-    private static int[] FinalSteps(Pass pass) => pass.Engine == "cycles" && pass.Samples > 32 ? [16, pass.Samples] : [pass.Samples];
+    private static Pass[] FinalSteps(Pass pass)
+        => pass.Engine == "cycles" && pass.Samples > 32 ? [pass with { Side = Math.Min(pass.Side, 1024), Samples = 16 }, pass] : [pass];
 
     /// <summary>Writes the final image with the window's choices, then files it; the window learns where it went.</summary>
     private async Task SaveFinalAsync(RenderResultWindow window, string png, string? tiff, OutputOptions options, string name, bool chooseFolder)

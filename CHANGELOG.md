@@ -1,5 +1,12 @@
 # Journal des modifications
 
+## Version 1.0.36 — 26 novembre 2026
+
+- Rendu : l’onglet Rendu quitte la page ; « Rendu final » ouvre la fenêtre de rendu avec tous les réglages (qualité, calcul, fichier, séries) et « Lancer le rendu ».
+- Rendu : la passe rapide est limitée à 1024 px, l’image apparaît vite même en « Très haute ».
+- Rendu : en pause, la pièce est figée (déplacer, tourner, poser et dissocier sont désactivés).
+- Caméra : grille de composition en tiers (3 × 3) ou en quarts (4 × 4) ; bouton « Dissocier les pièces ».
+
 ## Version 1.0.35 — 26 novembre 2026
 
 - Projets : repasser un projet terminé en « À faire » ou « En cours » depuis sa fiche le ressort aussi des archives.

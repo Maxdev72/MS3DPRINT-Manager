@@ -15,7 +15,7 @@ public sealed partial class RenderStudioView
     private readonly UniformGrid _presetList = new() { Columns = 3 };
     private readonly StackPanel _cameraList = new() { Spacing = 4 };
     private readonly CheckBox _lockCamera = new() { Content = "Verrouiller la caméra" };
-    private readonly CheckBox _thirds = new() { Content = "Grille de composition (tiers)" };
+    private readonly ComboBox _thirds = Choice(["Aucune", "Tiers (3 × 3)", "Quarts (4 × 4)"]);
     private readonly Slider _orbit = new() { Minimum = -180, Maximum = 180, TickFrequency = 5, IsSnapToTickEnabled = true };
     private readonly Slider _height = new() { Minimum = 0, Maximum = 85, TickFrequency = 5, IsSnapToTickEnabled = true };
     private readonly Slider _distance = new() { Minimum = -2, Maximum = 2, TickFrequency = 0.1, IsSnapToTickEnabled = true };
@@ -30,7 +30,7 @@ public sealed partial class RenderStudioView
         recenter.Click += async (_, _) => { _sceneFrame = null; await UseOrientationAsync(); var c = _viewport.Camera; Apply(new SavedCamera("", c.Yaw, c.Pitch, 1, 0, 0)); };
         _lockCamera.IsCheckedChanged += (_, _) => _viewport.Visual.IsHitTestVisible = _lockCamera.IsChecked != true;
         ToolTip.SetTip(_lockCamera, "La souris ne déplace plus la caméra : le cadrage trouvé ne bouge plus par erreur.");
-        _thirds.IsCheckedChanged += (_, _) => _thirdsGrid.IsVisible = _thirds.IsChecked == true;
+        _thirds.SelectionChanged += (_, _) => { _thirdsGrid.Divisions = _thirds.SelectedIndex + 2; _thirdsGrid.IsVisible = _thirds.SelectedIndex > 0; _thirdsGrid.InvalidateVisual(); };
         ToolTip.SetTip(_thirds, "Repères de cadrage sur l’aperçu seulement : ils n’apparaissent pas dans l’image rendue.");
         _frame.Children.Add(_thirdsGrid);
         // Precise framing: the sliders follow the mouse, and move the camera when dragged.
@@ -49,7 +49,7 @@ public sealed partial class RenderStudioView
                 FormKit.Field("Orbite (°)", _orbit, hint: "Tourne autour de la pièce."),
                 FormKit.Field("Hauteur (°)", _height, hint: "0 : au ras du sol ; 85 : presque au-dessus."),
                 FormKit.Field("Distance", _distance, hint: "À gauche : plus près ; à droite : plus loin."),
-                FormKit.SectionLabel("Cadrage"), FormKit.Field("Format de l’image", _format), _thirds, _lockCamera, recenter
+                FormKit.SectionLabel("Cadrage"), FormKit.Field("Format de l’image", _format), FormKit.Field("Grille de composition", _thirds), _lockCamera, recenter
             }
         };
     }
@@ -174,19 +174,22 @@ public sealed partial class RenderStudioView
     }
 }
 
-/// <summary>Rule-of-thirds lines over the preview, to place the part; never rendered.</summary>
+/// <summary>Composition lines over the preview (thirds or quarters), to place the part; never rendered.</summary>
 public sealed class ThirdsGrid : Control
 {
     public ThirdsGrid() => IsHitTestVisible = false;
+
+    /// <summary>3 for thirds, 4 for quarters.</summary>
+    public int Divisions { get; set; } = 3;
 
     public override void Render(DrawingContext context)
     {
         var pen = new Pen(new SolidColorBrush(Colors.White, 0.55), 1, dashStyle: DashStyle.Dash);
         var (w, h) = (Bounds.Width, Bounds.Height);
-        for (var i = 1; i <= 2; i++)
+        for (var i = 1; i < Divisions; i++)
         {
-            context.DrawLine(pen, new Point(w * i / 3, 0), new Point(w * i / 3, h));
-            context.DrawLine(pen, new Point(0, h * i / 3), new Point(w, h * i / 3));
+            context.DrawLine(pen, new Point(w * i / Divisions, 0), new Point(w * i / Divisions, h));
+            context.DrawLine(pen, new Point(0, h * i / Divisions), new Point(w, h * i / Divisions));
         }
     }
 }

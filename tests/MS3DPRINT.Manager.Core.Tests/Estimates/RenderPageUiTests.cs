@@ -161,7 +161,7 @@ public sealed partial class EstimateUiTests
     public Task Render_part_tab_keeps_transforms_compact_and_secondary_settings_collapsed() => Run(async () =>
     {
         var store = new RenderPreferencesStore(Path.Combine(_root, "compact-part-preferences.json"));
-        store.Save(RenderPreferences.Default with { Paused = true });
+        store.Save(RenderPreferences.Default with { Paused = false }); // the part can only be moved while the preview runs
         var studio = new RenderStudioView(() => [], store);
         const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
         T Get<T>(string name) => (T)typeof(RenderStudioView).GetField(name, flags)!.GetValue(studio)!;
@@ -309,7 +309,7 @@ public sealed partial class EstimateUiTests
     public Task Render_rotation_rings_are_only_shown_on_request() => Run(async () =>
     {
         var store = new RenderPreferencesStore(Path.Combine(_root, "rotation-preferences.json"));
-        store.Save(RenderPreferences.Default with { Paused = true });
+        store.Save(RenderPreferences.Default with { Paused = false }); // the part can only be moved while the preview runs
         var studio = new RenderStudioView(() => [], store);
         const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
         object? Call(string method, params object[] args) => typeof(RenderStudioView).GetMethod(method, flags)!.Invoke(studio, args);
@@ -432,12 +432,14 @@ public sealed partial class EstimateUiTests
             // Pause: nothing is rendered until the preview resumes.
             var setPaused = typeof(RenderStudioView).GetMethod("SetPaused", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
             setPaused.Invoke(studio, [true]);
+            Assert.False(Get<ToggleButton>("_transformMode").IsEnabled); // paused, the part cannot be moved
             var shownBefore = Get<string>("_shown");
             typeof(RenderStudioView).GetMethod("SettingsChanged", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(studio, null);
             await Task.Delay(300);
             Assert.Equal(shownBefore, Get<string>("_shown"));
             Assert.StartsWith("Aperçu en pause", Get<TextBlock>("_status").Text);
             setPaused.Invoke(studio, [false]);
+            Assert.True(Get<ToggleButton>("_transformMode").IsEnabled);
             await (Task)typeof(RenderStudioView).GetMethod("RunPreviewsAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(studio, null)!;
 
             // A series: one view in two colours, as JPEG, with a contact sheet.
@@ -495,7 +497,7 @@ public sealed partial class EstimateUiTests
             var result = Assert.IsType<RenderResultWindow>(typeof(RenderStudioView).GetField("_resultWindow", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(studio));
             await Task.Delay(200);
             CaptureDraftUi(result, "render-window");
-            Assert.True(((StackPanel)typeof(RenderResultWindow).GetField("_savePanel", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(result)!).IsVisible);
+            Assert.True(((StackPanel)typeof(RenderResultWindow).GetField("_doneBar", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(result)!).IsVisible);
             result.Close();
         }
         finally { owner.Close(); }

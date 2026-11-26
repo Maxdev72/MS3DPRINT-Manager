@@ -58,7 +58,7 @@ public sealed partial class RenderStudioView
         if (paused)
         {
             _refineCancel?.Cancel();
-            ShowStatus("Aperçu en pause : réglez et cadrez librement, rien n’est calculé. Le rendu final reste disponible.");
+            ShowStatus("Aperçu en pause : la pièce est figée, la caméra et les réglages restent libres ; rien n’est calculé. Le rendu final reste disponible.");
         }
         else
         {
@@ -72,10 +72,21 @@ public sealed partial class RenderStudioView
         _pauseButton.Content = Icons.Label(_paused ? "IconPlay" : "IconPause", _paused ? "Reprendre" : "Pause", 16);
         if (_paused) _pauseButton.Classes.Add("primary-action"); else _pauseButton.Classes.Remove("primary-action");
         _pauseFrame.IsVisible = _paused;
+        LockPartWhilePaused();
         var tip = _paused ? "Reprendre l’aperçu (Espace)" : "Mettre l’aperçu en pause (Espace)";
         ToolTip.SetTip(_pauseButton, tip);
         AutomationProperties.SetName(_pauseButton, tip);
         _pauseBadge.IsVisible = _paused;
+    }
+
+    /// <summary>Paused, the parts stay where they are: moving, turning and laying them is off until the preview resumes.</summary>
+    private void LockPartWhilePaused()
+    {
+        var editable = !_paused && _parts.Count > 0;
+        if (!editable) { _transformMode.IsChecked = false; _faceMode.IsChecked = false; }
+        _partTools.IsEnabled = _transformMode.IsEnabled = _splitParts.IsEnabled = editable;
+        ToolTip.SetShowOnDisabled(_transformMode, true);
+        ToolTip.SetTip(_transformMode, _paused ? "Reprenez l’aperçu pour déplacer ou tourner la pièce" : "Flèches : déplacer · Anneaux : tourner · Maj : pas de déplacement · Échap : quitter");
     }
 
     /// <summary>The page is left: both Blenders close, giving back their memory; they start again on the next visit.</summary>
