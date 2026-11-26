@@ -1,5 +1,13 @@
 # Journal des modifications
 
+## Version 1.0.40 — 26 novembre 2026
+
+- Tâches : nouvelle page sur une seule feuille. Une ligne pour ajouter (aujourd’hui par défaut), les tâches par date (en retard, aujourd’hui, cette semaine, plus tard, terminées), et chaque ligne se modifie sur place : case, texte, drapeau Important, date, notes, projet.
+- Mises à jour : vérifiées toutes les 5 minutes et proposées dès que vous êtes disponible, sans passer par les paramètres.
+- Calendriers : le jour même est marqué partout.
+- Rendu : en quittant la page, l’aperçu se met en pause et Blender se ferme ; en pause, l’aperçu et le cadrage sont verrouillés.
+- Rendu : bouton Grille au-dessus de l’aperçu (tiers ou quarts), lignes plus lisibles et points d’intersection.
+
 ## Version 1.0.39 — 26 novembre 2026
 
 - Rendu : aperçu en direct un peu plus fluide (images d’aperçu écrites sans compression, environ 6 ms gagnées par image).

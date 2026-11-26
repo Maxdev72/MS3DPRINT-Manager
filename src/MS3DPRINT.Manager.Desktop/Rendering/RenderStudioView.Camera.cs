@@ -20,6 +20,11 @@ public sealed partial class RenderStudioView
     private readonly Slider _height = new() { Minimum = 0, Maximum = 85, TickFrequency = 5, IsSnapToTickEnabled = true };
     private readonly Slider _distance = new() { Minimum = -2, Maximum = 2, TickFrequency = 0.1, IsSnapToTickEnabled = true };
     private readonly ThirdsGrid _thirdsGrid = new() { IsVisible = false };
+    private static readonly string[] GridNames = ["Aucune", "Tiers", "Quarts"];
+    /// <summary>Above the preview: one click goes through no grid, thirds and quarters (same choice as the Caméra tab).</summary>
+    private readonly Button _gridButton = new() { Padding = new Thickness(12, 8), MinHeight = 40 };
+    /// <summary>Everything in the tab that moves the camera: locked with the preview while paused.</summary>
+    private readonly StackPanel _cameraMoves = new() { Spacing = 12 };
     private bool _syncingCamera;
 
     private Control BuildCameraTab()
@@ -28,30 +33,52 @@ public sealed partial class RenderStudioView
         add.Click += async (_, _) => await AddCameraAsync();
         var recenter = new Button { Content = "Recentrer", HorizontalAlignment = HorizontalAlignment.Stretch };
         recenter.Click += async (_, _) => { _sceneFrame = null; await UseOrientationAsync(); var c = _viewport.Camera; Apply(new SavedCamera("", c.Yaw, c.Pitch, 1, 0, 0)); };
-        _lockCamera.IsCheckedChanged += (_, _) => _viewport.Visual.IsHitTestVisible = _lockCamera.IsChecked != true;
+        _lockCamera.IsCheckedChanged += (_, _) => UpdateViewLock();
         ToolTip.SetTip(_lockCamera, "La souris ne déplace plus la caméra : le cadrage trouvé ne bouge plus par erreur.");
-        _thirds.SelectionChanged += (_, _) => { _thirdsGrid.Divisions = _thirds.SelectedIndex + 2; _thirdsGrid.IsVisible = _thirds.SelectedIndex > 0; _thirdsGrid.InvalidateVisual(); };
+        _thirds.SelectionChanged += (_, _) => ShowGrid();
+        _gridButton.Click += (_, _) => _thirds.SelectedIndex = (_thirds.SelectedIndex + 1) % GridNames.Length;
+        ToolTip.SetTip(_gridButton, "Grille de composition sur l’aperçu : aucune, tiers ou quarts. Elle n’apparaît pas dans l’image rendue.");
+        ShowGrid();
         ToolTip.SetTip(_thirds, "Repères de cadrage sur l’aperçu seulement : ils n’apparaissent pas dans l’image rendue.");
         _frame.Children.Add(_thirdsGrid);
         // Precise framing: the sliders follow the mouse, and move the camera when dragged.
         foreach (var slider in new[] { _orbit, _height, _distance })
             slider.PropertyChanged += (_, e) => { if (e.Property == Avalonia.Controls.Primitives.RangeBase.ValueProperty && !_syncingCamera) CameraFromSliders(); };
         RebuildCameras();
+        foreach (var control in new Control[]
+                 {
+                     FormKit.SectionLabel("Vues"), _presetList,
+                     FormKit.SectionLabel("Mes caméras"), _cameraList, add,
+                     new TextBlock { Text = "Clic droit sur une de vos caméras : mettre à jour, renommer ou retirer.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap },
+                     FormKit.SectionLabel("Réglage précis"),
+                     FormKit.Field("Orbite (°)", _orbit, hint: "Tourne autour de la pièce."),
+                     FormKit.Field("Hauteur (°)", _height, hint: "0 : au ras du sol ; 85 : presque au-dessus."),
+                     FormKit.Field("Distance", _distance, hint: "À gauche : plus près ; à droite : plus loin."), recenter
+                 })
+            _cameraMoves.Children.Add(control);
         return new StackPanel
         {
             Spacing = 12,
-            Children =
-            {
-                FormKit.SectionLabel("Vues"), _presetList,
-                FormKit.SectionLabel("Mes caméras"), _cameraList, add,
-                new TextBlock { Text = "Clic droit sur une de vos caméras : mettre à jour, renommer ou retirer.", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap },
-                FormKit.SectionLabel("Réglage précis"),
-                FormKit.Field("Orbite (°)", _orbit, hint: "Tourne autour de la pièce."),
-                FormKit.Field("Hauteur (°)", _height, hint: "0 : au ras du sol ; 85 : presque au-dessus."),
-                FormKit.Field("Distance", _distance, hint: "À gauche : plus près ; à droite : plus loin."),
-                FormKit.SectionLabel("Cadrage"), FormKit.Field("Format de l’image", _format), FormKit.Field("Grille de composition", _thirds), _lockCamera, recenter
-            }
+            Children = { _cameraMoves, FormKit.SectionLabel("Cadrage"), FormKit.Field("Format de l’image", _format), FormKit.Field("Grille de composition", _thirds), _lockCamera }
         };
+    }
+
+    private void ShowGrid()
+    {
+        var index = Math.Max(0, _thirds.SelectedIndex);
+        _thirdsGrid.Divisions = index + 2;
+        _thirdsGrid.IsVisible = index > 0;
+        _thirdsGrid.InvalidateVisual();
+        _gridButton.Content = Icons.Label("IconWireframe", "Grille : " + GridNames[index]);
+        if (index > 0) _gridButton.Classes.Add("selected"); else _gridButton.Classes.Remove("selected");
+        Avalonia.Automation.AutomationProperties.SetName(_gridButton, "Grille de composition : " + GridNames[index]);
+    }
+
+    /// <summary>The mouse frames the preview unless the camera is locked or the preview paused (pause locks the whole view).</summary>
+    private void UpdateViewLock()
+    {
+        _viewport.Visual.IsHitTestVisible = _lockCamera.IsChecked != true && !_paused;
+        _cameraMoves.IsEnabled = _format.IsEnabled = !_paused;
     }
 
     /// <summary>The sliders show the camera of the view (called whenever it moves).</summary>
@@ -174,7 +201,10 @@ public sealed partial class RenderStudioView
     }
 }
 
-/// <summary>Composition lines over the preview (thirds or quarters), to place the part; never rendered.</summary>
+/// <summary>
+/// Composition lines over the preview (thirds or quarters), to place the part: white with a dark edge so they read on a light
+/// as on a dark studio, and a dot where they cross. Never rendered.
+/// </summary>
 public sealed class ThirdsGrid : Control
 {
     public ThirdsGrid() => IsHitTestVisible = false;
@@ -184,12 +214,19 @@ public sealed class ThirdsGrid : Control
 
     public override void Render(DrawingContext context)
     {
-        var pen = new Pen(new SolidColorBrush(Colors.White, 0.55), 1, dashStyle: DashStyle.Dash);
         var (w, h) = (Bounds.Width, Bounds.Height);
+        var shade = new Pen(new SolidColorBrush(Colors.Black, 0.35), 3);
+        var line = new Pen(new SolidColorBrush(Colors.White, 0.9), 1.5);
+        for (var pass = 0; pass < 2; pass++)
+            for (var i = 1; i < Divisions; i++)
+            {
+                var pen = pass == 0 ? shade : line;
+                context.DrawLine(pen, new Point(w * i / Divisions, 0), new Point(w * i / Divisions, h));
+                context.DrawLine(pen, new Point(0, h * i / Divisions), new Point(w, h * i / Divisions));
+            }
+        // The crossings are where the eye lands: the strong points to place the part on.
         for (var i = 1; i < Divisions; i++)
-        {
-            context.DrawLine(pen, new Point(w * i / Divisions, 0), new Point(w * i / Divisions, h));
-            context.DrawLine(pen, new Point(0, h * i / Divisions), new Point(w, h * i / Divisions));
-        }
+            for (var j = 1; j < Divisions; j++)
+                context.DrawEllipse(Brushes.White, new Pen(new SolidColorBrush(Colors.Black, 0.45), 1.5), new Point(w * i / Divisions, h * j / Divisions), 4, 4);
     }
 }

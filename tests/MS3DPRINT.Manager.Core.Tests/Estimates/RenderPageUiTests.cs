@@ -306,6 +306,25 @@ public sealed partial class EstimateUiTests
     });
 
     [Fact]
+    public Task Leaving_the_render_page_pauses_the_preview_until_the_user_resumes() => Run(() =>
+    {
+        const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+        var studio = new RenderStudioView(() => [], new RenderPreferencesStore(Path.Combine(_root, "leave-preferences.json")));
+        // Sessions that never started a Blender: leaving must not need one.
+        typeof(RenderStudioView).GetField("_live", flags)!.SetValue(studio, new BlenderSession("absent-blender.exe"));
+        typeof(RenderStudioView).GetField("_refine", flags)!.SetValue(studio, new BlenderSession("absent-blender.exe"));
+        bool Paused() => (bool)typeof(RenderStudioView).GetField("_paused", flags)!.GetValue(studio)!;
+        Assert.False(Paused());
+
+        studio.Suspend();
+        Assert.True(Paused());
+        typeof(RenderStudioView).GetMethod("ResumeEngines", flags)!.Invoke(studio, null);
+        Assert.True(Paused()); // back on the page, nothing restarts by itself
+        Assert.Contains("Reprendre", ((TextBlock)typeof(RenderStudioView).GetField("_status", flags)!.GetValue(studio)!).Text);
+        return Task.CompletedTask;
+    });
+
+    [Fact]
     public Task Render_rotation_rings_are_only_shown_on_request() => Run(async () =>
     {
         var store = new RenderPreferencesStore(Path.Combine(_root, "rotation-preferences.json"));
@@ -433,6 +452,7 @@ public sealed partial class EstimateUiTests
             var setPaused = typeof(RenderStudioView).GetMethod("SetPaused", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
             setPaused.Invoke(studio, [true]);
             Assert.False(Get<ToggleButton>("_transformMode").IsEnabled); // paused, the part cannot be moved
+            Assert.False(Get<IMeshViewport>("_viewport").Visual.IsHitTestVisible); // nor the view framed with the mouse
             var shownBefore = Get<string>("_shown");
             typeof(RenderStudioView).GetMethod("SettingsChanged", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(studio, null);
             await Task.Delay(300);
@@ -440,6 +460,7 @@ public sealed partial class EstimateUiTests
             Assert.StartsWith("Aperçu en pause", Get<TextBlock>("_status").Text);
             setPaused.Invoke(studio, [false]);
             Assert.True(Get<ToggleButton>("_transformMode").IsEnabled);
+            Assert.True(Get<IMeshViewport>("_viewport").Visual.IsHitTestVisible);
             await (Task)typeof(RenderStudioView).GetMethod("RunPreviewsAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(studio, null)!;
 
             // A series: one view in two colours, as JPEG, with a contact sheet.

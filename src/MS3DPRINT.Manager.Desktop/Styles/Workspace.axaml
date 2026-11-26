@@ -241,6 +241,9 @@
   <Style Selector="Button.project-calendar-day:pointerover"><Setter Property="Background" Value="{DynamicResource HoverBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /></Style>
   <Style Selector="Button.project-calendar-day:focus-visible"><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /></Style>
   <Style Selector="Calendar.project-date-picker"><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /><Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" /><Setter Property="CornerRadius" Value="6" /></Style>
+  <!-- Every calendar shows today, whatever form it is in. -->
+  <Style Selector="Calendar"><Setter Property="IsTodayHighlighted" Value="True" /></Style>
+  <Style Selector="CalendarDatePicker"><Setter Property="IsTodayHighlighted" Value="True" /></Style>
   <Style Selector="CalendarDayButton, CalendarButton"><Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" /><Setter Property="MinWidth" Value="46" /></Style>
   <Style Selector="CalendarDayButton /template/ Border, CalendarButton /template/ Border"><Setter Property="CornerRadius" Value="6" /></Style>
   <Style Selector="CalendarDayButton:selected /template/ Border#Root"><Setter Property="Background" Value="{DynamicResource CyanSoftBrush}" /></Style>
@@ -251,17 +254,11 @@
   <Style Selector="CalendarDayButton:inactive:not(:today) > TextBlock, CalendarButton:inactive:not(:selected) > TextBlock"><Setter Property="Foreground" Value="{DynamicResource FaintTextBrush}" /></Style>
   <Style Selector="CalendarDayButton:focus-visible /template/ Border#Border, CalendarButton:focus-visible /template/ Border#Border"><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /></Style>
   <Style Selector="CalendarItem /template/ Button#PART_HeaderButton"><Setter Property="FontSize" Value="{DynamicResource FontSizeSection}" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
-  <Style Selector="Button.task-view"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /><Setter Property="Padding" Value="12,8" /><Setter Property="CornerRadius" Value="6" /></Style>
-  <Style Selector="Button.task-view:pointerover /template/ ContentPresenter"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /></Style>
-  <Style Selector="Button.task-view.selected /template/ ContentPresenter"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /></Style>
-  <Style Selector="Button.task-view.selected TextBlock"><Setter Property="FontWeight" Value="SemiBold" /></Style>
-  <Style Selector="Border.task-row.selected"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="CornerRadius" Value="6" /></Style>
-  <Style Selector="Border.task-detail"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" /><Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="10" /></Style>
-  <Style Selector="Border.task-detail TextBox, Border.task-detail ComboBox, Border.task-detail AutoCompleteBox, Border.task-detail CalendarDatePicker"><Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /></Style>
-  <Style Selector="Border.task-detail ComboBox:disabled /template/ Border#Background"><Setter Property="Background" Value="{DynamicResource SurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" /></Style>
-  <Style Selector="Border.task-detail.floating"><Setter Property="BoxShadow" Value="0 12 32 0 #66000000" /><Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" /></Style>
+  <Style Selector="Border.task-add"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" /><Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="6" /><Setter Property="Padding" Value="12,4" /></Style>
+  <Style Selector="Border.task-row.highlight"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="CornerRadius" Value="6" /></Style>
+  <Style Selector="Border.task-row Button.task-quiet"><Setter Property="Opacity" Value="0.35" /></Style>
+  <Style Selector="Border.task-row:pointerover Button.task-quiet, Border.task-row Button.task-quiet:focus-visible"><Setter Property="Opacity" Value="1" /></Style>
   <Style Selector="Border.task-chip"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" /><Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="10" /><Setter Property="Padding" Value="12,4" /></Style>
-  <Style Selector="Border.task-hint"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="CornerRadius" Value="6" /></Style>
   <Style Selector="Button.task-group"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /><Setter Property="Padding" Value="4,4" /></Style>
   <Style Selector="Button.task-group:pointerover /template/ ContentPresenter"><Setter Property="Background" Value="Transparent" /></Style>
   <Style Selector="Border.project-task-row"><Setter Property="BorderThickness" Value="0,0,0,1" /><Setter Property="BorderBrush" Value="{DynamicResource SubtleBorderBrush}" /></Style>

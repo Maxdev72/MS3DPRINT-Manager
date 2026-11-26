@@ -138,4 +138,29 @@ public sealed class TaskCoreTests : IDisposable
         Assert.Equal(["Achats"], TaskViews.Lists(tasks));
         Assert.Equal("Sans date", Assert.Single(TaskViews.Group(TaskViews.All, tasks, Monday, "sans")).Tasks.Single().Title);
     }
+
+    [Fact]
+    public void The_sheet_groups_by_date_puts_undated_tasks_later_and_keeps_a_week_of_done_tasks()
+    {
+        var project = Guid.NewGuid();
+        WorkTask Task(string title, DateOnly? due, ProjectPriority priority = ProjectPriority.None, DateTimeOffset? done = null, Guid? projectId = null)
+            => WorkTask.New(title, 0) with { DueDate = due, Priority = priority, CompletedAt = done, ProjectId = projectId };
+        var monday = new DateTimeOffset(Monday.ToDateTime(new TimeOnly(12, 0)));
+        var tasks = new[]
+        {
+            Task("Retard", Monday.AddDays(-2)), Task("Aujourd’hui", Monday), Task("Urgent", Monday, ProjectPriority.High),
+            Task("Vendredi", Monday.AddDays(4)), Task("Dans un mois", Monday.AddDays(30)), Task("Sans date", null, projectId: project),
+            Task("Fait hier", Monday, done: monday.AddDays(-1)), Task("Fait il y a longtemps", Monday, done: monday.AddDays(-20))
+        };
+
+        var sheet = TaskViews.Sheet(tasks, Monday);
+
+        Assert.Equal(["En retard", "Aujourd’hui", "Cette semaine", "Plus tard", "Terminées"], sheet.Select(g => g.Title));
+        Assert.True(sheet[0].Late);
+        Assert.Equal(["Urgent", "Aujourd’hui"], sheet[1].Tasks.Select(t => t.Title)); // flagged first
+        Assert.Equal(["Dans un mois", "Sans date"], sheet[3].Tasks.Select(t => t.Title));
+        Assert.Equal(["Fait hier"], sheet[4].Tasks.Select(t => t.Title));
+        Assert.Contains(TaskViews.Sheet(tasks, Monday, search: "longtemps").SelectMany(g => g.Tasks), t => t.Title == "Fait il y a longtemps");
+        Assert.Equal(["Sans date"], TaskViews.Sheet(tasks, Monday, project).SelectMany(g => g.Tasks).Select(t => t.Title));
+    }
 }

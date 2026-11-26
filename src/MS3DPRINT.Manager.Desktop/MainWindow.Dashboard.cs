@@ -165,7 +165,7 @@ public partial class MainWindow
     private void OpenTodayTasks(Guid? task)
     {
         if (NavigationButtons().FirstOrDefault(button => button.Tag as string == "Tâches") is not { } target) return;
-        _taskView = MS3DPRINT.Manager.Core.Tasks.TaskViews.Today;
+        _taskProjectFilter = null;
         _selectedTaskId = task;
         NavigationButton_Click(target, new RoutedEventArgs());
     }

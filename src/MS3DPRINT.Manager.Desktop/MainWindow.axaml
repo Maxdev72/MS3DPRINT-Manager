@@ -173,35 +173,27 @@
         </Grid>
       </Border>
       <Border x:Name="TasksWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="panel">
-        <Grid ColumnDefinitions="210,*,Auto" ColumnSpacing="24">
-          <ScrollViewer HorizontalScrollBarVisibility="Disabled"><StackPanel x:Name="TaskViewList" Spacing="2" Margin="0,0,8,0" /></ScrollViewer>
-          <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" RowSpacing="12">
-            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="16">
-              <TextBlock x:Name="TaskViewTitle" Classes="section-title" FontSize="{DynamicResource FontSizeTitle}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-              <TextBlock x:Name="TasksSummary" Grid.Column="1" Classes="caption" VerticalAlignment="Center" />
-              <Border Grid.Column="2" Classes="search-box" Height="40" Width="220"><Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"><Path Classes="icon" Data="{StaticResource IconSearch}" /><TextBox x:Name="TaskFilterBox" Grid.Column="1" Classes="search-input" PlaceholderText="Rechercher · Ctrl+F" TextChanged="TaskFilterText_Changed" AutomationProperties.Name="Rechercher une tâche" /></Grid></Border>
-            </Grid>
-            <StackPanel x:Name="TaskAddArea" Grid.Row="1" Spacing="8">
-              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                <TextBox x:Name="NewTaskBox" MaxLength="600" KeyDown="NewTaskBox_KeyDown" TextChanged="NewTaskBox_TextChanged" AutomationProperties.Name="Ajouter une tâche" ToolTip.Tip="Entrée pour ajouter · N pour revenir ici · @projet +client #liste !haute demain" />
-                <Button x:Name="AddTaskButton" Grid.Column="1" Classes="primary-action" IsVisible="False" Click="AddTask_Click" AutomationProperties.Name="Ajouter la tâche"><StackPanel Orientation="Horizontal" Spacing="8"><Path Classes="icon icon-sm" Data="{StaticResource IconPlus}" /><TextBlock Text="Ajouter" /></StackPanel></Button>
-              </Grid>
-              <WrapPanel x:Name="TaskQuickPreview" ItemSpacing="8" LineSpacing="8" />
-            </StackPanel>
-            <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
-              <StackPanel x:Name="TaskList" HorizontalAlignment="Stretch" Spacing="0" Margin="0,0,12,0" Focusable="True" />
-            </ScrollViewer>
+        <!-- One sheet, like the paper one: add a line, then the tasks grouped by date. -->
+        <Grid RowDefinitions="Auto,Auto,*" RowSpacing="16" MaxWidth="960">
+          <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="16">
+            <TextBlock x:Name="TaskViewTitle" Classes="section-title" FontSize="{DynamicResource FontSizeTitle}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            <TextBlock x:Name="TasksSummary" Grid.Column="1" Classes="caption" VerticalAlignment="Center" />
+            <ComboBox x:Name="TaskProjectFilter" Grid.Column="3" MinWidth="220" MaxWidth="320" VerticalAlignment="Center" SelectionChanged="TaskProjectFilter_Changed" AutomationProperties.Name="Filtrer par projet" />
+            <Border Grid.Column="4" Classes="search-box" Height="40" Width="220"><Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"><Path Classes="icon" Data="{StaticResource IconSearch}" /><TextBox x:Name="TaskFilterBox" Grid.Column="1" Classes="search-input" PlaceholderText="Rechercher · Ctrl+F" TextChanged="TaskFilterText_Changed" AutomationProperties.Name="Rechercher une tâche" /></Grid></Border>
           </Grid>
-          <Border x:Name="TaskDetailEmpty" Grid.Column="2" Width="340" Classes="task-detail" IsHitTestVisible="False">
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12" Margin="24">
-              <Path Classes="icon" Data="{StaticResource IconProjectTasks}" Width="32" Height="32" HorizontalAlignment="Center" />
-              <TextBlock Text="Sélectionnez une tâche" Classes="card-title" HorizontalAlignment="Center" />
-              <TextBlock Text="Ses notes, sa date et ses étapes s’affichent ici. N ajoute une tâche, ↑ ↓ naviguent, Espace la termine." Classes="caption" TextWrapping="Wrap" TextAlignment="Center" />
-            </StackPanel>
-          </Border>
-          <Border x:Name="TaskDetailHost" Grid.Column="2" Width="340" IsVisible="False" Classes="task-detail">
-            <ScrollViewer HorizontalScrollBarVisibility="Disabled"><StackPanel x:Name="TaskDetail" Spacing="16" Margin="16" /></ScrollViewer>
-          </Border>
+          <StackPanel x:Name="TaskAddArea" Grid.Row="1" Spacing="8">
+            <Border Classes="task-add">
+              <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+                <Path Classes="icon icon-sm" Data="{StaticResource IconPlus}" VerticalAlignment="Center" />
+                <TextBox x:Name="NewTaskBox" Grid.Column="1" Classes="search-input" MaxLength="500" KeyDown="NewTaskBox_KeyDown" PlaceholderText="Ajouter une tâche… puis Entrée" AutomationProperties.Name="Ajouter une tâche" ToolTip.Tip="Entrée pour ajouter · N pour revenir ici" />
+                <Button x:Name="NewTaskDateButton" Grid.Column="2" Classes="filter-chip" VerticalAlignment="Center" AutomationProperties.Name="Date de la nouvelle tâche" />
+                <Button x:Name="NewTaskProjectButton" Grid.Column="3" Classes="filter-chip" VerticalAlignment="Center" AutomationProperties.Name="Projet de la nouvelle tâche" />
+              </Grid>
+            </Border>
+          </StackPanel>
+          <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
+            <StackPanel x:Name="TaskList" HorizontalAlignment="Stretch" Spacing="0" Margin="0,0,12,0" Focusable="True" />
+          </ScrollViewer>
         </Grid>
       </Border>
       <Border x:Name="ClientsWorkspacePanel" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" Classes="panel">

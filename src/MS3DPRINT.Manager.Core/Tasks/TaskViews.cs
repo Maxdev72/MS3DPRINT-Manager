@@ -1,3 +1,5 @@
+using MS3DPRINT.Manager.Core.Projects;
+
 namespace MS3DPRINT.Manager.Core.Tasks;
 
 public sealed record TaskGroup(string Title, IReadOnlyList<WorkTask> Tasks, bool Late = false);
@@ -48,6 +50,31 @@ public static class TaskViews
         Add("Sans date", t => t.DueDate is null);
         var done = all.Where(t => t.IsCompleted).OrderByDescending(t => t.CompletedAt).ToArray();
         if (view != Done && done.Length > 0) groups.Add(new("Terminées", done));
+        return groups;
+    }
+
+    /// <summary>
+    /// The « Tâches » page, one sheet by date: late, today, this week (up to 7 days), later (further or undated), then the tasks
+    /// done in the last 7 days (every done one when searching). Flagged tasks come first in their group.
+    /// </summary>
+    public static IReadOnlyList<TaskGroup> Sheet(IEnumerable<WorkTask> tasks, DateOnly today, Guid? projectId = null, string? search = null)
+    {
+        var shown = tasks.Where(t => !t.IsDeleted && (projectId is null || t.ProjectId == projectId) && Matches(t, search)).ToArray();
+        var open = shown.Where(t => !t.IsCompleted).ToArray();
+        var groups = new List<TaskGroup>();
+        void Add(string title, IEnumerable<WorkTask> items, bool late = false)
+        {
+            var sorted = items.OrderByDescending(t => t.Priority != ProjectPriority.None).ThenBy(t => t.DueDate is null).ThenBy(t => t.DueDate).ThenBy(t => t.Order).ToArray();
+            if (sorted.Length > 0) groups.Add(new(title, sorted, late));
+        }
+        Add("En retard", open.Where(t => t.DueDate < today), late: true);
+        Add("Aujourd’hui", open.Where(t => t.DueDate == today));
+        Add("Cette semaine", open.Where(t => t.DueDate > today && t.DueDate <= today.AddDays(7)));
+        Add("Plus tard", open.Where(t => t.DueDate is null || t.DueDate > today.AddDays(7)));
+        var since = today.AddDays(-7);
+        var done = shown.Where(t => t.CompletedAt is { } at && (!string.IsNullOrWhiteSpace(search) || DateOnly.FromDateTime(at.ToLocalTime().DateTime) > since))
+            .OrderByDescending(t => t.CompletedAt).ToArray();
+        if (done.Length > 0) groups.Add(new("Terminées", done));
         return groups;
     }
 

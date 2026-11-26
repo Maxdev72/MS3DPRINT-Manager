@@ -22,7 +22,7 @@ public sealed partial class RenderStudioView
         Child = new StackPanel
         {
             Orientation = Orientation.Horizontal, Spacing = 8,
-            Children = { Icons.Glyph("IconPause", 16), new TextBlock { Text = "APERÇU EN PAUSE · Espace pour reprendre", FontWeight = Avalonia.Media.FontWeight.SemiBold, Foreground = Avalonia.Media.Brushes.Black } }
+            Children = { Icons.Glyph("IconLock", 16), new TextBlock { Text = "APERÇU EN PAUSE ET VERROUILLÉ · Espace pour reprendre", FontWeight = Avalonia.Media.FontWeight.SemiBold, Foreground = Avalonia.Media.Brushes.Black } }
         }
     };
     private readonly Border _pauseFrame = new()
@@ -58,7 +58,7 @@ public sealed partial class RenderStudioView
         if (paused)
         {
             _refineCancel?.Cancel();
-            ShowStatus("Aperçu en pause : la pièce est figée, la caméra et les réglages restent libres ; rien n’est calculé. Le rendu final reste disponible.");
+            ShowStatus("Aperçu en pause : la pièce et le cadrage sont figés, rien n’est calculé. Matière et ambiance restent réglables ; le rendu final reste disponible.");
         }
         else
         {
@@ -73,6 +73,7 @@ public sealed partial class RenderStudioView
         if (_paused) _pauseButton.Classes.Add("primary-action"); else _pauseButton.Classes.Remove("primary-action");
         _pauseFrame.IsVisible = _paused;
         LockPartWhilePaused();
+        UpdateViewLock();
         var tip = _paused ? "Reprendre l’aperçu (Espace)" : "Mettre l’aperçu en pause (Espace)";
         ToolTip.SetTip(_pauseButton, tip);
         AutomationProperties.SetName(_pauseButton, tip);
@@ -89,10 +90,14 @@ public sealed partial class RenderStudioView
         ToolTip.SetTip(_transformMode, _paused ? "Reprenez l’aperçu pour déplacer ou tourner la pièce" : "Flèches : déplacer · Anneaux : tourner · Maj : pas de déplacement · Échap : quitter");
     }
 
-    /// <summary>The page is left: both Blenders close, giving back their memory; they start again on the next visit.</summary>
+    /// <summary>
+    /// The page is left: the preview goes on pause (it stays paused on the way back, nothing is computed until « Reprendre ») and
+    /// both Blenders close, giving back their memory.
+    /// </summary>
     public void Suspend()
     {
         if (_live is null || _suspended) return;
+        SetPaused(true);
         _refineCancel?.Cancel();
         _finalRender?.Cancel();
         _live.Dispose();
@@ -100,11 +105,16 @@ public sealed partial class RenderStudioView
         _suspended = true;
     }
 
-    /// <summary>Back on the page after <see cref="Suspend"/>: the engines warm up again and the preview catches up.</summary>
+    /// <summary>Back on the page after <see cref="Suspend"/>: still paused, Blender stays closed; a resume or a render starts it.</summary>
     private void ResumeEngines()
     {
         if (!_suspended || _live is null || _refine is null) return;
         _suspended = false;
+        if (_paused)
+        {
+            ShowStatus("Aperçu en pause depuis que vous avez quitté la page : « Reprendre » ou Espace pour le relancer.");
+            return;
+        }
         _ = _live.WarmUpAsync("eevee");
         WarmRefine(_refine);
         if (!_paused && _stlPath is not null) { _generation++; RunPreviews(); }

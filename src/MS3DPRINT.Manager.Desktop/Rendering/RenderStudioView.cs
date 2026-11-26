@@ -171,7 +171,7 @@ public sealed partial class RenderStudioView : UserControl
         ToolTip.SetTip(addPart, "Ajouter un modèle STL, OBJ ou 3MF à côté des pièces déjà présentes.");
         addPart.Click += async (_, _) => await BrowseAddAsync();
         var stageColumn = new Grid { RowDefinitions = new RowDefinitions("Auto,*,Auto,Auto"), RowSpacing = 8 };
-        stageColumn.Children.Add(new WrapPanel { Orientation = Orientation.Horizontal, ItemSpacing = 8, LineSpacing = 4, Children = { addPart, _transformMode, BuildSceneFileMenu() } });
+        stageColumn.Children.Add(new WrapPanel { Orientation = Orientation.Horizontal, ItemSpacing = 8, LineSpacing = 4, Children = { addPart, _transformMode, _gridButton, BuildSceneFileMenu() } });
         Grid.SetRow(stageFrame, 1);
         stageColumn.Children.Add(stageFrame);
         Grid.SetRow(_progress, 2);
@@ -324,6 +324,7 @@ public sealed partial class RenderStudioView : UserControl
         _viewport.Clicked -= FaceClicked;
         _viewport = next;
         Hook(next);
+        UpdateViewLock();
         (next.Camera.Yaw, next.Camera.Pitch, next.Camera.Zoom, next.Camera.PanX, next.Camera.PanY) = (camera.Yaw, camera.Pitch, camera.Zoom, camera.PanX, camera.PanY);
         _frame.Children.Insert(0, next.Visual);
         next.SetMesh(_mesh);
