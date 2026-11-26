@@ -115,9 +115,10 @@ public sealed partial class EstimateUiTests
             Assert.Equal(project.Id, store.LoadActive().Single(t => t.Title == "Modéliser le support").ProjectId);
             Settle(owner);
 
-            var headers = TaskListOf(owner).Children.OfType<Button>().Select(AutomationProperties.GetName).ToArray();
-            // The project's tasks sit under its client and name, never under a bare code.
-            Assert.Equal(["Replier En retard", "Replier Aujourd’hui", "Projet Fabrice Romby · Pièce vélo"], headers);
+            // One block per project, its name first and the client under it; the tasks without project come last.
+            var headings = TaskListOf(owner).GetVisualDescendants().OfType<Button>().Select(AutomationProperties.GetName).Where(n => n!.StartsWith("Replier ")).ToArray();
+            Assert.Equal(["Replier Pièce vélo", "Replier Sans projet"], headings);
+            Assert.Contains(TaskListOf(owner).GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "Fabrice Romby · FR-2026-001");
             foreach (var width in new[] { 1100d, 1440d }) { owner.Width = width; await Task.Delay(280); CaptureDraftUi(owner, "tasks-page-" + width); }
 
             // Ticking strikes it through where it is, like on paper; it only joins « Terminées » the next day.
@@ -125,7 +126,15 @@ public sealed partial class EstimateUiTests
             await Until(owner, () => store.LoadActive().Single(t => t.Title == "Envoyer le devis").CompletedAt is not null);
             await Until(owner, () => TaskListOf(owner).GetVisualDescendants().OfType<CheckBox>().Any(c => AutomationProperties.GetName(c) == "Rouvrir : Envoyer le devis"));
             Assert.DoesNotContain(TaskListOf(owner).Children.OfType<Button>(), b => AutomationProperties.GetName(b)!.EndsWith("Terminées"));
-            Assert.Contains(TaskListOf(owner).Children.OfType<Button>(), b => AutomationProperties.GetName(b) == "Replier En retard");
+
+            // A project shown alone has a way back, by its button or Échap.
+            ClickNamed(TaskListOf(owner), "Projet Fabrice Romby · Pièce vélo"); Settle(owner);
+            Assert.Equal("Pièce vélo", owner.FindControl<TextBlock>("TaskViewTitle")!.Text);
+            var back = owner.FindControl<Button>("TaskBackButton")!;
+            Assert.True(back.IsVisible);
+            back.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Settle(owner);
+            Assert.Equal("Tâches", owner.FindControl<TextBlock>("TaskViewTitle")!.Text);
+            Assert.False(back.IsVisible);
         }
         finally { CloseInvoiceTestPanel(owner); owner.Close(); }
     });
@@ -145,7 +154,7 @@ public sealed partial class EstimateUiTests
             var date = (Flyout)RowButton(owner, "Date : Relancer").Flyout!;
             ((StackPanel)((StackPanel)date.Content!).Children[0]).Children.OfType<Button>().Single(b => b.Content as string == "Demain").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             await Until(owner, () => store.Find(original.Id)!.DueDate == today.AddDays(1));
-            Assert.Contains(TaskListOf(owner).Children.OfType<Button>(), b => AutomationProperties.GetName(b) == "Replier Cette semaine");
+            Assert.Contains(TaskListOf(owner).GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "Demain");
 
             RowButton(owner, "Modifier : Relancer").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Settle(owner);
             var title = Named<TextBox>(TaskListOf(owner), "Texte de la tâche");

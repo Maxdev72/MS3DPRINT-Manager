@@ -121,6 +121,19 @@ public sealed class ProfileSyncTests
         Assert.Equal(new ProfileSyncResult(1, 0, 0), await Run());
         Assert.Equal("Commander PLA noir", store.Find(free.Id)!.Title);
 
+        // A phone whose clock runs 5 minutes ahead: the server dates its change by its own clock, so an edit made on the PC
+        // afterwards still wins instead of being silently dropped.
+        var phone = (await remote.GetTasksAsync()).Single(t => t.Id == free.Id);
+        var ahead = await remote.PutTaskAsync(phone with { Title = "Commander PLA rouge", UpdatedAt = DateTimeOffset.UtcNow.AddMinutes(5) });
+        Assert.True(ahead.UpdatedAt < DateTimeOffset.UtcNow.AddMinutes(1));
+        await Run();
+        Assert.Equal("Commander PLA rouge", store.Find(free.Id)!.Title);
+        store.Update(store.Find(free.Id)! with { Title = "Commander PLA blanc" });
+        await Run();
+        Assert.Equal("Commander PLA blanc", (await remote.GetTasksAsync()).Single(t => t.Id == free.Id).Title);
+        Assert.Equal(new ProfileSyncResult(0, 0, 0), await Run()); // both sides agree: nothing is sent again
+        server = (await remote.GetTasksAsync()).Single(t => t.Id == free.Id);
+
         // Removed on the PC: the server keeps the removal, and the next sync does not bring it back.
         store.Remove(store.Find(free.Id)!);
         Assert.Equal(new ProfileSyncResult(0, 1, 0), await Run());

@@ -4,6 +4,9 @@ namespace MS3DPRINT.Manager.Core.Tasks;
 
 public sealed record TaskGroup(string Title, IReadOnlyList<WorkTask> Tasks, bool Late = false);
 
+/// <summary>The tasks of one project (null: without project) with what its heading shows: how many to do, late, next date.</summary>
+public sealed record TaskProjectBlock(Guid? ProjectId, IReadOnlyList<WorkTask> Tasks, int Open, bool Late, DateOnly? Next);
+
 /// <summary>What each view of the « Tâches » page shows, and in which sections. Pure, so the page and the tests agree.</summary>
 public static class TaskViews
 {
@@ -54,31 +57,26 @@ public static class TaskViews
     }
 
     /// <summary>
-    /// The « Tâches » page, one sheet by date: late, today, this week (up to 7 days), later (further or undated), then the tasks
-    /// done before today in the last 7 days (every done one when searching). Flagged tasks come first in their group; a task
-    /// ticked today keeps its place.
+    /// The « Tâches » page by project: one block per project (then the tasks without project), its tasks by date — late, then
+    /// soonest, undated last, flagged first on the same day. A task ticked today keeps its place, struck through. Blocks come
+    /// by urgency: a late one first, then the nearest date; « Terminées » holds the last 7 days (every done one when searching).
     /// </summary>
-    public static IReadOnlyList<TaskGroup> Sheet(IEnumerable<WorkTask> tasks, DateOnly today, Guid? projectId = null, string? search = null)
+    public static (IReadOnlyList<TaskProjectBlock> Projects, IReadOnlyList<WorkTask> Done) ByProject(IEnumerable<WorkTask> tasks, DateOnly today, Guid? projectId = null, string? search = null)
     {
         var shown = tasks.Where(t => !t.IsDeleted && (projectId is null || t.ProjectId == projectId) && Matches(t, search)).ToArray();
-        // A task ticked today stays where it was, struck through, like on paper; it joins « Terminées » the next day.
         bool DoneToday(WorkTask t) => t.CompletedAt is { } at && DateOnly.FromDateTime(at.ToLocalTime().DateTime) == today;
-        var open = shown.Where(t => !t.IsCompleted || DoneToday(t)).ToArray();
-        var groups = new List<TaskGroup>();
-        void Add(string title, IEnumerable<WorkTask> items, bool late = false)
-        {
-            var sorted = items.OrderByDescending(t => t.Priority != ProjectPriority.None).ThenBy(t => t.DueDate is null).ThenBy(t => t.DueDate).ThenBy(t => t.Order).ToArray();
-            if (sorted.Length > 0) groups.Add(new(title, sorted, late));
-        }
-        Add("En retard", open.Where(t => t.DueDate < today), late: true);
-        Add("Aujourd’hui", open.Where(t => t.DueDate == today));
-        Add("Cette semaine", open.Where(t => t.DueDate > today && t.DueDate <= today.AddDays(7)));
-        Add("Plus tard", open.Where(t => t.DueDate is null || t.DueDate > today.AddDays(7)));
+        var blocks = shown.Where(t => !t.IsCompleted || DoneToday(t)).GroupBy(t => t.ProjectId)
+            .Select(g =>
+            {
+                var items = g.OrderBy(t => t.DueDate is null).ThenBy(t => t.DueDate).ThenByDescending(t => t.Priority != ProjectPriority.None).ThenBy(t => t.Order).ToArray();
+                var open = items.Where(t => !t.IsCompleted).ToArray();
+                return new TaskProjectBlock(g.Key, items, open.Length, open.Any(t => t.DueDate < today), open.Where(t => t.DueDate is not null).Min(t => t.DueDate));
+            })
+            .OrderBy(b => b.ProjectId is null).ThenByDescending(b => b.Late).ThenBy(b => b.Next is null).ThenBy(b => b.Next).ThenByDescending(b => b.Open).ToArray();
         var since = today.AddDays(-7);
         var done = shown.Where(t => t.CompletedAt is { } at && !DoneToday(t) && (!string.IsNullOrWhiteSpace(search) || DateOnly.FromDateTime(at.ToLocalTime().DateTime) > since))
             .OrderByDescending(t => t.CompletedAt).ToArray();
-        if (done.Length > 0) groups.Add(new("Terminées", done));
-        return groups;
+        return (blocks, done);
     }
 
     public static IReadOnlyList<string> Lists(IEnumerable<WorkTask> tasks) => tasks.Where(t => !t.IsDeleted && t.List is not null)

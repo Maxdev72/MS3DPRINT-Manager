@@ -1,4 +1,5 @@
-# Push a tag like v1.0.1: GitHub builds the installer and publishes the release; installed apps update silently.
+# Push a tag like v1.0.1: GitHub builds the installer and publishes the release; installed apps offer it and install on yes.
+# Actions are pinned to a commit and vpk to the Velopack version of the app: a moved tag or a new package cannot change a release.
 name: release-windows
 on:
   push:
@@ -9,10 +10,10 @@ jobs:
   release:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with: { global-json-file: global.json }
-      - run: dotnet tool install -g vpk
+      - run: dotnet tool install -g vpk --version 1.2.161 # same as the Velopack package of the app
       - run: |
           $v = '${{ github.ref_name }}'.TrimStart('v')
           dotnet publish src/MS3DPRINT.Manager.Windows.App -c Release -r win-x64 --self-contained true -p:Version=$v -o publish

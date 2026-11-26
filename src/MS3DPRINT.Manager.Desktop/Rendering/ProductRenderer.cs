@@ -176,6 +176,9 @@ public static class ProductRenderer
 public sealed class BlenderSession(string blender) : IDisposable
 {
     private static readonly TimeSpan IdleLimit = TimeSpan.FromMinutes(3);
+    /// <summary>Blender prints its progress all along a render: this long without a line, it is stuck and is stopped.</summary>
+    private static readonly TimeSpan SilenceLimit = TimeSpan.FromMinutes(5);
+    private long _lastOutput;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly object _sync = new();
     private readonly Queue<string> _tail = new();
@@ -225,8 +228,19 @@ public sealed class BlenderSession(string blender) : IDisposable
             await process.StandardInput.WriteLineAsync(command);
             await process.StandardInput.FlushAsync(cancellationToken);
             string? error;
+            Interlocked.Exchange(ref _lastOutput, Environment.TickCount64);
             using (cancellationToken.Register(() => { Stop(); job.TrySetCanceled(cancellationToken); }))
+            {
+                // A hung Blender would block the page until a manual cancel: silence past the limit stops it.
+                while (!job.Task.IsCompleted)
+                {
+                    await Task.WhenAny(job.Task, Task.Delay(TimeSpan.FromSeconds(30)));
+                    if (job.Task.IsCompleted || Environment.TickCount64 - Interlocked.Read(ref _lastOutput) < SilenceLimit.TotalMilliseconds) continue;
+                    Stop();
+                    job.TrySetResult($"Blender ne répond plus depuis {SilenceLimit.TotalMinutes:0} minutes : le rendu est arrêté. Relancez-le.");
+                }
                 error = await job.Task;
+            }
             if (error is not null) throw new InvalidOperationException("Blender a échoué : " + error);
         }
         catch (IOException exception) when (!cancellationToken.IsCancellationRequested)
@@ -265,6 +279,7 @@ public sealed class BlenderSession(string blender) : IDisposable
     private void Received(string? line)
     {
         if (line is null) return;
+        Interlocked.Exchange(ref _lastOutput, Environment.TickCount64);
         if (line.StartsWith("MS3D-PROGRESS ", StringComparison.Ordinal))
         {
             var parts = line["MS3D-PROGRESS ".Length..].Split('/');
@@ -279,6 +294,7 @@ public sealed class BlenderSession(string blender) : IDisposable
     private void Remember(string? line)
     {
         if (string.IsNullOrWhiteSpace(line)) return;
+        Interlocked.Exchange(ref _lastOutput, Environment.TickCount64);
         lock (_tail) { _tail.Enqueue(line.Trim()); while (_tail.Count > 3) _tail.Dequeue(); }
     }
 

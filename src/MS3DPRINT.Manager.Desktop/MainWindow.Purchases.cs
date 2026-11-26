@@ -171,6 +171,8 @@ public partial class MainWindow
         if (sender is not Button { Tag: PurchaseEntry entry }) return;
         var path = RevenueInvoiceArchive.Resolve(WorkspaceRoot, entry.DocumentPath);
         if (path is null) { Notify("Le justificatif joint est introuvable dans l’espace de travail.", error: true); return; }
+        // The path comes from the synchronised journal: a program put in its place must never be run by this button.
+        if (MS3DPRINT.Manager.Core.Files.ExecutableFileGuard.IsExecutable(path)) { Notify("Ouverture refusée : « " + Path.GetFileName(path) + " » est un programme, pas un document.", error: true); return; }
         try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true }); }
         catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or IOException or InvalidOperationException)
         { Notify("Impossible d’ouvrir le justificatif : " + exception.Message, error: true); }

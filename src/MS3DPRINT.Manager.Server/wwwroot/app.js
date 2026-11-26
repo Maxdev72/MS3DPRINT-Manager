@@ -94,28 +94,15 @@ async function refresh(showToast = false) {
 }
 function navigate(view) {
   state.view = view; state.project = null; state.client = null; state.page = 1; $("search-input").value = ""; render();
-  if (view === "downloads") loadDownloads();
-}
-async function loadDownloads() {
-  try { state.downloads = await api("/api/v1/downloads"); }
-  catch (error) { state.downloads = []; if (error.status !== 401) message($("global-error"), error.message); }
-  if (state.view === "downloads") render();
 }
 function renderDownloads() {
+  // The installer is the one the installed apps update from: the latest GitHub release, never a copy kept on this server.
   const section = $("downloads-section"); section.replaceChildren();
-  const size = bytes => (bytes / 1048576).toLocaleString("fr-FR", { maximumFractionDigits: 1 }) + " Mo";
-  const when = value => new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeStyle: "short" }).format(new Date(value));
-  for (const [kind, title, help] of [["windows", "Windows", "Lancez « MS3DPRINT Manager.exe ». Aucune installation n’est nécessaire."],
-    ["linux", "Linux", "Extrayez l’archive, puis lancez « MS3DPRINT Manager ». Le fichier LISEZ-MOI.md liste les dépendances."]]) {
-    const item = (state.downloads || []).find(download => download.kind === kind);
-    const card = el("article", "download-card"); card.append(el("h2", "", title));
-    if (!item) { card.append(el("p", "muted", "Pas encore publiée. Dans MS3DPRINT Manager : Paramètres › Publier sur ms3dforge.fr.")); section.append(card); continue; }
-    card.append(el("p", "muted", item.label), el("p", "", help));
-    const link = el("a", "button primary"); link.href = "/api/v1/downloads/" + kind; link.setAttribute("download", item.fileName);
-    link.append(icon("download"), el("span", "", "Télécharger · " + size(item.size)));
-    card.append(link, el("p", "download-meta", "Publiée le " + when(item.publishedAt)), el("p", "download-hash", "SHA256 " + item.sha256));
-    section.append(card);
-  }
+  const card = el("article", "download-card"); card.append(el("h2", "", "Windows"));
+  card.append(el("p", "muted", "Windows 10 et 11 (64 bits)"), el("p", "", "Lancez l’installeur : le logiciel se met ensuite à jour tout seul, après votre accord."));
+  const link = el("a", "button primary"); link.href = "https://github.com/Maxdev72/MS3DPRINT-Manager/releases/latest/download/MS3DPRINTManager-win-Setup.exe"; link.rel = "noopener";
+  link.append(icon("download"), el("span", "", "Télécharger l’installeur"));
+  card.append(link); section.append(card);
 }
 function render() {
   const detail = state.project || state.client;

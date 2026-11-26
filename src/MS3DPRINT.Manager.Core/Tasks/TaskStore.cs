@@ -56,6 +56,31 @@ public sealed class TaskStore
         return true;
     }
 
+    /// <summary>
+    /// Server side of the sync: a copy newer than the held one is kept, dated by the server's clock (never earlier than the
+    /// held one), so a device whose clock runs ahead cannot make later changes made elsewhere lose. Returns the held copy.
+    /// </summary>
+    public WorkTask MergeDated(WorkTask incoming, DateTimeOffset now)
+    {
+        WorkTask.Validate(incoming);
+        using var mutation = ProfileMutationLock.Acquire(FilePath(incoming.Id));
+        var current = Find(incoming.Id);
+        if (current is not null && current.UpdatedAt >= incoming.UpdatedAt) return current;
+        var kept = incoming with { UpdatedAt = current is not null && current.UpdatedAt >= now ? current.UpdatedAt.AddTicks(1) : now };
+        Write(kept);
+        return kept;
+    }
+
+    /// <summary>Takes the server's dated copy of a change sent from here, unless the task changed here meanwhile.</summary>
+    public bool Adopt(WorkTask kept, DateTimeOffset sentVersion)
+    {
+        WorkTask.Validate(kept);
+        using var mutation = ProfileMutationLock.Acquire(FilePath(kept.Id));
+        if (Find(kept.Id) is { } current && current.UpdatedAt != sentVersion) return false;
+        Write(kept);
+        return true;
+    }
+
     private void Write(WorkTask task)
     {
         Directory.CreateDirectory(_directory);

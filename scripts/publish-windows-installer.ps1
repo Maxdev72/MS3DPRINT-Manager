@@ -1,7 +1,8 @@
 # Builds the installer (Setup.exe) and the update packages with Velopack.
 # Usage: scripts\publish-windows-installer.ps1 -Version 1.0.1
 # Normally unnecessary: pushing a v* tag runs .github/workflows/release-windows.yml, which does all this.
-# Then upload everything in outputs\velopack to a GitHub release tagged v<Version>: installed apps pick it up and update silently.
+# Then upload everything in outputs\velopack to a GitHub release tagged v<Version>: installed apps offer it and install on yes.
+# Use vpk 1.2.161, the Velopack version of the app: dotnet tool install -g vpk --version 1.2.161
 param([Parameter(Mandatory)][string]$Version)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot

@@ -90,7 +90,7 @@ public partial class MainWindow
     private Flyout ProjectPicker(Guid? current, string none, bool withOpenTasks, Func<Guid?, Task> apply)
     {
         var flyout = new Flyout { Placement = PlacementMode.BottomEdgeAlignedRight };
-        var search = new TextBox { PlaceholderText = "Chercher un projet, un client…", Width = 360 };
+        var search = new TextBox { PlaceholderText = "Chercher un projet, un client…" };
         AutomationProperties.SetName(search, "Chercher un projet");
         var heading = new TextBlock { Classes = { "caption" } };
         var results = new StackPanel { Spacing = 4 };
@@ -123,7 +123,8 @@ public partial class MainWindow
         };
         flyout.Opened += (_, _) => { search.Text = ""; Fill(); Dispatcher.UIThread.Post(() => search.Focus()); };
         Fill();
-        flyout.Content = new StackPanel { Spacing = 8, Children = { search, heading, results } };
+        // A fixed width: long project names are cut with « … » instead of widening the popup past the screen.
+        flyout.Content = new StackPanel { Spacing = 8, Width = 420, Children = { search, heading, results } };
         return flyout;
     }
 
@@ -158,59 +159,106 @@ public partial class MainWindow
         RenderTaskProjectFilter();
         RenderNewTaskChips(today);
 
+        TaskBackButton.IsVisible = _taskProjectFilter is not null;
         TaskList.Children.Clear();
-        var groups = TaskViews.Sheet(_tasks, today, _taskProjectFilter, TaskFilterBox.Text);
-        if (groups.Count == 0)
+        var searching = !string.IsNullOrWhiteSpace(TaskFilterBox.Text);
+        var (blocks, done) = TaskViews.ByProject(_tasks, today, _taskProjectFilter, TaskFilterBox.Text);
+        if (blocks.Count == 0 && done.Count == 0)
         {
-            TaskList.Children.Add(!string.IsNullOrWhiteSpace(TaskFilterBox.Text)
+            TaskList.Children.Add(searching
                 ? CreateEmptyState("IconSearch", "Aucune tâche trouvée", "Essayez un autre mot, ou videz la recherche.")
                 : CreateEmptyState("IconCheck", "Rien à faire", "Tapez une tâche dans la ligne ci-dessus, puis Entrée."));
             return;
         }
         Control? highlighted = null;
-        foreach (var group in groups)
+        void Rows(IEnumerable<WorkTask> tasks)
         {
-            // A search shows every match, even in a folded group.
-            var collapsed = _collapsedTaskGroups.Contains(group.Title) && string.IsNullOrWhiteSpace(TaskFilterBox.Text);
-            var header = new Button { Classes = { "task-group" }, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 16, 0, 4) };
-            var text = new TextBlock { Text = group.Title, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center };
-            if (group.Late) text.Foreground = (IBrush?)Application.Current?.FindResource("WarningBrush") ?? Brushes.Orange;
-            var count = new Border { Classes = { "task-chip" }, Padding = new Thickness(8, 0), Child = new TextBlock { Text = group.Tasks.Count.ToString(), Classes = { "caption" } } };
-            header.Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { Icons.Glyph(collapsed ? "IconArrowRight" : "IconChevronDown", 14), text, count } };
-            AutomationProperties.SetName(header, (collapsed ? "Déplier " : "Replier ") + group.Title);
-            header.Click += (_, _) => { if (!_collapsedTaskGroups.Add(group.Title)) _collapsedTaskGroups.Remove(group.Title); RenderTasks(); };
-            TaskList.Children.Add(header);
-            if (collapsed) continue;
-            // Tasks without project first, then one block per project under « Client · Projet », so a line never needs a code to decode.
-            foreach (var block in group.Tasks.GroupBy(t => _taskProjectFilter is null ? TaskProject(t.ProjectId)?.Profile!.Id : null).OrderBy(b => b.Key is not null))
+            foreach (var task in tasks)
             {
-                if (block.Key is { } projectId && TaskProject(projectId) is { } project) TaskList.Children.Add(BuildTaskProjectHeading(project));
-                foreach (var task in block)
-                {
-                    var row = BuildTaskRow(task, today);
-                    if (task.Id == _selectedTaskId) highlighted = row;
-                    TaskList.Children.Add(row);
-                    if (_openTaskNotes.Contains(task.Id)) TaskList.Children.Add(BuildTaskNotes(task));
-                }
+                var row = BuildTaskRow(task, today);
+                if (task.Id == _selectedTaskId) highlighted = row;
+                TaskList.Children.Add(row);
+                if (_openTaskNotes.Contains(task.Id)) TaskList.Children.Add(BuildTaskNotes(task));
             }
+        }
+        foreach (var block in blocks)
+        {
+            var key = block.ProjectId?.ToString() ?? "Sans projet";
+            // A search shows every match, even in a folded project.
+            var collapsed = _collapsedTaskGroups.Contains(key) && !searching;
+            // Showing one project, its name is already the page title.
+            if (_taskProjectFilter is null) TaskList.Children.Add(BuildTaskProjectHeading(block, key, collapsed, today));
+            if (!collapsed) Rows(block.Tasks);
+        }
+        if (done.Count > 0)
+        {
+            var collapsed = _collapsedTaskGroups.Contains("Terminées") && !searching;
+            var header = new Button { Classes = { "task-group" }, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 24, 0, 4) };
+            var count = new Border { Classes = { "task-chip" }, Padding = new Thickness(8, 0), Child = new TextBlock { Text = done.Count.ToString(), Classes = { "caption" } } };
+            header.Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { Icons.Glyph(collapsed ? "IconArrowRight" : "IconChevronDown", 14), new TextBlock { Text = "Terminées", FontWeight = FontWeight.SemiBold }, count } };
+            AutomationProperties.SetName(header, (collapsed ? "Déplier " : "Replier ") + "Terminées");
+            header.Click += (_, _) => { if (!_collapsedTaskGroups.Add("Terminées")) _collapsedTaskGroups.Remove("Terminées"); RenderTasks(); };
+            TaskList.Children.Add(header);
+            if (!collapsed) Rows(done);
         }
         // Opened from the dashboard: that task shows once, highlighted, then the page behaves as usual.
         if (highlighted is not null) { highlighted.Classes.Add("highlight"); Dispatcher.UIThread.Post(() => highlighted.BringIntoView()); }
         _selectedTaskId = null;
     }
 
-    /// <summary>The client and the project name above its tasks; a click shows that project alone.</summary>
-    private Control BuildTaskProjectHeading(ProjectSummary project)
+    /// <summary>
+    /// A project's heading, the strongest line of the page: its name, the client and reference under it, how many tasks are left
+    /// and whether one is late or when the next is due. The chevron folds it; the name shows that project alone.
+    /// </summary>
+    private Control BuildTaskProjectHeading(TaskProjectBlock block, string key, bool collapsed, DateOnly today)
     {
-        var name = new TextBlock { Text = $"{project.ClientTitle()} · {project.Title()}", FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
-        var reference = new TextBlock { Text = project.Reference, Classes = { "caption" }, VerticalAlignment = VerticalAlignment.Center };
-        var glyph = Icons.Glyph("IconProjects", 14); glyph.VerticalAlignment = VerticalAlignment.Center;
-        var line = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { glyph, name, reference } };
-        var button = new Button { Content = line, Classes = { "task-group" }, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(8, 8, 0, 0) };
-        AutomationProperties.SetName(button, "Projet " + project.ClientTitle() + " · " + project.Title());
-        ToolTip.SetTip(button, "Afficher seulement ce projet");
-        button.Click += (_, _) => { _taskProjectFilter = project.Profile!.Id; _newTaskProject = _taskProjectFilter; RenderTasks(); };
-        return button;
+        var project = TaskProject(block.ProjectId);
+        var label = project is null ? "Sans projet" : project.Title();
+        var fold = new Button { Content = Icons.Glyph(collapsed ? "IconArrowRight" : "IconChevronDown", 16), Classes = { "tool" }, VerticalAlignment = VerticalAlignment.Center };
+        AutomationProperties.SetName(fold, (collapsed ? "Déplier " : "Replier ") + label);
+        fold.Click += (_, _) => { if (!_collapsedTaskGroups.Add(key)) _collapsedTaskGroups.Remove(key); RenderTasks(); };
+
+        var name = new TextBlock { Text = label, FontSize = Ui.Text.Section, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis };
+        var text = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center, Children = { name } };
+        if (project is not null) text.Children.Add(new TextBlock { Text = $"{project.ClientTitle()} · {project.Reference}", Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis });
+        // Without a project the name is plain text: the button padding is added so both names line up.
+        Control title = text;
+        if (project is null) text.Margin = new Thickness(16, 0, 0, 0);
+        if (project is not null)
+        {
+            var open = new Button { Content = text, Classes = { "task-row-action" }, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left };
+            AutomationProperties.SetName(open, "Projet " + project.ClientTitle() + " · " + project.Title());
+            ToolTip.SetTip(open, "Afficher seulement ce projet");
+            open.Click += (_, _) => { _taskProjectFilter = project.Profile!.Id; _newTaskProject = _taskProjectFilter; RenderTasks(); };
+            title = open;
+        }
+
+        var facts = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
+        Border Chip(string value, bool warning = false)
+        {
+            var caption = new TextBlock { Text = value, Classes = { "caption" } };
+            if (warning) caption.Foreground = (IBrush?)Application.Current?.FindResource("WarningBrush") ?? Brushes.Orange;
+            return new Border { Classes = { "task-chip" }, Padding = new Thickness(8, 0), Child = caption };
+        }
+        facts.Children.Add(Chip(block.Open switch { 0 => "Tout est fait", 1 => "1 à faire", _ => $"{block.Open} à faire" }));
+        if (block.Late) facts.Children.Add(Chip("En retard", warning: true));
+        else if (block.Next is { } next) facts.Children.Add(Chip("Prochaine : " + DueLabel(next, today)));
+
+        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 8 };
+        Grid.SetColumn(title, 1); Grid.SetColumn(facts, 2);
+        grid.Children.Add(fold); grid.Children.Add(title); grid.Children.Add(facts);
+        var card = new Border { Child = grid, Classes = { "task-project" }, Margin = new Thickness(0, 16, 0, 4) };
+        card.Classes.Set("late", block.Late);
+        return card;
+    }
+
+    private void TaskBack_Click(object? sender, RoutedEventArgs e) => ShowAllTaskProjects();
+
+    private void ShowAllTaskProjects()
+    {
+        _taskProjectFilter = null;
+        _newTaskProject = null;
+        RenderTasks();
     }
 
     // ───────────── Adding: one line, today by default, the project of the filter ─────────────
@@ -426,6 +474,7 @@ public partial class MainWindow
         if (_panel is not null || e.Source is not Visual source || source.FindAncestorOfType<TextBox>(includeSelf: true) is not null) return;
         if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.F) { TaskFilterBox.Focus(); e.Handled = true; }
         else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.N) { NewTaskBox.Focus(); e.Handled = true; }
+        else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Escape && _taskProjectFilter is not null) { ShowAllTaskProjects(); e.Handled = true; }
     }
 
     // ───────────── Writing ─────────────

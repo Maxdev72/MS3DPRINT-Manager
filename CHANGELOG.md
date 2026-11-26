@@ -1,5 +1,14 @@
 # Journal des modifications
 
+## Version 1.0.42 — 26 novembre 2026
+
+- Tâches : regroupées par projet, chaque projet avec un en-tête bien visible (nom, client, référence, nombre à faire, prochaine échéance ou retard) ; bouton « Tous les projets » et Échap pour revenir ; le choix du projet ne déborde plus de l’écran.
+- Sécurité : « Ouvrir la facture » et « Ouvrir le justificatif » refusent d’ouvrir un programme.
+- Sécurité : l’envoi d’installeur vers le site est retiré ; la page Téléchargements propose l’installeur officiel de la dernière version.
+- Synchronisation : le serveur date les tâches qu’il reçoit, un appareil à l’heure décalée n’écrase plus une modification plus récente.
+- Rendu : un Blender bloqué (5 minutes sans réponse) est arrêté avec un message.
+- Publication : outils de construction figés sur des versions précises.
+
 ## Version 1.0.41 — 26 novembre 2026
 
 - Tâches : les tâches d’un même projet sont regroupées sous « Client · Nom du projet » (un clic affiche ce projet seul).

@@ -37,8 +37,7 @@ public sealed class WorkspaceReader(ServerStorage storage)
     {
         if (input is null || input.Id != id) return Results.BadRequest();
         var store = new TaskStore(new WorkspaceMetadataPaths(storage.WorkspaceRoot));
-        try { store.Merge(input); }
+        try { return Results.Ok(store.MergeDated(input, DateTimeOffset.UtcNow)); }
         catch (ArgumentException) { return Results.BadRequest(); }
-        return Results.Ok(store.Find(id));
     }
 }

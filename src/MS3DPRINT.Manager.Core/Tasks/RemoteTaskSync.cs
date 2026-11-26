@@ -3,7 +3,7 @@ using MS3DPRINT.Manager.Core.Workspace;
 
 namespace MS3DPRINT.Manager.Core.Tasks;
 
-/// <summary>PC ⇄ server for independent tasks: each side keeps the copy with the latest date, removals included.</summary>
+/// <summary>PC ⇄ server for independent tasks: the latest copy wins, removals included; the server dates what it accepts.</summary>
 public static class RemoteTaskSync
 {
     public static async Task<ProfileSyncResult> RunAsync(string root, IReadOnlyList<WorkTask> server, Func<WorkTask, Task<WorkTask>> put)
@@ -24,14 +24,19 @@ public static class RemoteTaskSync
             try
             {
                 var kept = await put(local).ConfigureAwait(false);
-                // The server answers with what it holds: a newer copy made elsewhere comes back here.
-                if (kept.UpdatedAt > local.UpdatedAt && store.Merge(kept)) pulled++;
+                // The server answers with what it holds, dated by its clock: a newer copy made elsewhere, or this change
+                // with the server's date. Either way this side takes it, so both agree and the task is not sent again.
+                var newer = kept.UpdatedAt > local.UpdatedAt && !SameContent(kept, local);
+                if (store.Adopt(kept, local.UpdatedAt) && newer) pulled++;
                 else pushed++;
             }
             catch (RemoteWorkspaceException) { failed++; }
         }
         return new ProfileSyncResult(pulled, pushed, failed);
     }
+
+    private static bool SameContent(WorkTask a, WorkTask b) => a with { UpdatedAt = default, Steps = null } == b with { UpdatedAt = default, Steps = null }
+        && (a.Steps ?? []).SequenceEqual(b.Steps ?? []);
 
     /// <summary>Lists (empty ones included): merge the server's, then send ours when the server lacks a newer state.</summary>
     public static async Task<ProfileSyncResult> RunListsAsync(string root, IReadOnlyList<TaskListEntry> server, Func<IReadOnlyList<TaskListEntry>, Task<IReadOnlyList<TaskListEntry>>> put)

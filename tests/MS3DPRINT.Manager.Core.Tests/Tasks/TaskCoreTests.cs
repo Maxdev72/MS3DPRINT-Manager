@@ -140,28 +140,27 @@ public sealed class TaskCoreTests : IDisposable
     }
 
     [Fact]
-    public void The_sheet_groups_by_date_puts_undated_tasks_later_and_keeps_a_week_of_done_tasks()
+    public void Tasks_gather_under_their_project_the_late_project_first_and_dates_inside()
     {
-        var project = Guid.NewGuid();
-        WorkTask Task(string title, DateOnly? due, ProjectPriority priority = ProjectPriority.None, DateTimeOffset? done = null, Guid? projectId = null)
-            => WorkTask.New(title, 0) with { DueDate = due, Priority = priority, CompletedAt = done, ProjectId = projectId };
+        Guid late = Guid.NewGuid(), soon = Guid.NewGuid();
         var monday = new DateTimeOffset(Monday.ToDateTime(new TimeOnly(12, 0)));
+        WorkTask Task(string title, Guid? project, DateOnly? due, DateTimeOffset? done = null, ProjectPriority priority = ProjectPriority.None)
+            => WorkTask.New(title, 0) with { ProjectId = project, DueDate = due, CompletedAt = done, Priority = priority };
         var tasks = new[]
         {
-            Task("Retard", Monday.AddDays(-2)), Task("Aujourd’hui", Monday), Task("Urgent", Monday, ProjectPriority.High),
-            Task("Vendredi", Monday.AddDays(4)), Task("Dans un mois", Monday.AddDays(30)), Task("Sans date", null, projectId: project),
-            Task("Fait hier", Monday, done: monday.AddDays(-1)), Task("Fait il y a longtemps", Monday, done: monday.AddDays(-20)),
-            Task("Coché ce matin", Monday, done: monday)
+            Task("Livrer", soon, Monday.AddDays(3)), Task("Imprimer", soon, Monday.AddDays(1)),
+            Task("Sans date", soon, null), Task("Relancer", late, Monday.AddDays(-1)), Task("Coché ce matin", late, Monday, monday),
+            Task("Ranger l'atelier", null, Monday), Task("Fait hier", soon, Monday, monday.AddDays(-1))
         };
 
-        var sheet = TaskViews.Sheet(tasks, Monday);
+        var (projects, done) = TaskViews.ByProject(tasks, Monday);
 
-        Assert.Equal(["En retard", "Aujourd’hui", "Cette semaine", "Plus tard", "Terminées"], sheet.Select(g => g.Title));
-        Assert.True(sheet[0].Late);
-        Assert.Equal(["Urgent", "Aujourd’hui", "Coché ce matin"], sheet[1].Tasks.Select(t => t.Title)); // flagged first; ticked today stays
-        Assert.Equal(["Dans un mois", "Sans date"], sheet[3].Tasks.Select(t => t.Title));
-        Assert.Equal(["Fait hier"], sheet[4].Tasks.Select(t => t.Title));
-        Assert.Contains(TaskViews.Sheet(tasks, Monday, search: "longtemps").SelectMany(g => g.Tasks), t => t.Title == "Fait il y a longtemps");
-        Assert.Equal(["Sans date"], TaskViews.Sheet(tasks, Monday, project).SelectMany(g => g.Tasks).Select(t => t.Title));
+        Assert.Equal([late, soon, null], projects.Select(p => p.ProjectId)); // the late project first, tasks without project last
+        Assert.Equal((1, true), (projects[0].Open, projects[0].Late));
+        Assert.Equal(["Relancer", "Coché ce matin"], projects[0].Tasks.Select(t => t.Title));
+        Assert.Equal(["Imprimer", "Livrer", "Sans date"], projects[1].Tasks.Select(t => t.Title)); // by date, undated last
+        Assert.Equal(Monday.AddDays(1), projects[1].Next);
+        Assert.Equal(["Fait hier"], done.Select(t => t.Title));
+        Assert.Equal([soon], TaskViews.ByProject(tasks, Monday, soon).Projects.Select(p => p.ProjectId));
     }
 }

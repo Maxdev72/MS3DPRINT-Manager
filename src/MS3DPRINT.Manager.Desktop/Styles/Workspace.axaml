@@ -254,6 +254,8 @@
   <Style Selector="CalendarDayButton:inactive:not(:today) > TextBlock, CalendarButton:inactive:not(:selected) > TextBlock"><Setter Property="Foreground" Value="{DynamicResource FaintTextBrush}" /></Style>
   <Style Selector="CalendarDayButton:focus-visible /template/ Border#Border, CalendarButton:focus-visible /template/ Border#Border"><Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" /></Style>
   <Style Selector="CalendarItem /template/ Button#PART_HeaderButton"><Setter Property="FontSize" Value="{DynamicResource FontSizeSection}" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
+  <Style Selector="Border.task-project"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="CornerRadius" Value="6" /><Setter Property="Padding" Value="8,8,12,8" /><Setter Property="BorderThickness" Value="4,0,0,0" /><Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Style>
+  <Style Selector="Border.task-project.late"><Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}" /></Style>
   <Style Selector="Border.task-add"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" /><Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="6" /><Setter Property="Padding" Value="12,4" /></Style>
   <Style Selector="Border.task-row.highlight"><Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" /><Setter Property="CornerRadius" Value="6" /></Style>
   <Style Selector="Border.task-row Button.task-quiet"><Setter Property="Opacity" Value="0.35" /></Style>

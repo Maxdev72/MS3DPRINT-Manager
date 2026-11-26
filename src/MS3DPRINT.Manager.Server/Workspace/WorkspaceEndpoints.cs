@@ -35,7 +35,7 @@ public static class WorkspaceEndpoints
         group.MapGet("/clients/{id:guid}", (Guid id, CommandStore receipts, WorkspaceCommands commands) => Detail(receipts, () => commands.Client(id)));
         group.MapGet("/projects/{id:guid}", (Guid id, CommandStore receipts, WorkspaceCommands commands) => Detail(receipts, () => commands.Project(id)));
         group.MapGet("/tasks", (CommandStore receipts, WorkspaceReader reader) => receipts.Read(() => Results.Ok(reader.ReadTasks())));
-        // Independent tasks sync by date: the latest copy wins, so sending the same task twice is harmless.
+        // Independent tasks sync by date: the latest copy wins, dated by the server, so sending the same task twice is harmless.
         group.MapPut("/tasks/{id:guid}", (Guid id, MS3DPRINT.Manager.Core.Tasks.WorkTask input, CommandStore receipts, WorkspaceReader reader)
             => receipts.Read(() => reader.MergeTask(id, input)));
         group.MapGet("/task-lists", (CommandStore receipts, WorkspaceReader reader) => receipts.Read(() => Results.Ok(reader.ReadTaskLists())));
