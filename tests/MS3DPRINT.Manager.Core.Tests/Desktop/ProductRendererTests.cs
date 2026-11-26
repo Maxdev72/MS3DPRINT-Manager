@@ -176,6 +176,19 @@ public sealed class ProductRendererTests : IDisposable
     }
 
     [Fact]
+    public void Selection_glow_follows_the_contour_of_the_part_not_its_inner_edges()
+    {
+        System.Numerics.Vector3 V(float x, float y, float z) => new(x, y, z);
+        var cube = new MS3DPRINT.Manager.Desktop.Viewer.MeshModel(
+            [V(0, 0, 0), V(10, 0, 0), V(10, 10, 0), V(0, 10, 0), V(0, 0, 10), V(10, 0, 10), V(10, 10, 10), V(0, 10, 10)],
+            [0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7, 0, 1, 5, 0, 5, 4, 1, 2, 6, 1, 6, 5, 2, 3, 7, 2, 7, 6, 3, 0, 4, 3, 4, 7]);
+        var (triangles, edges) = MS3DPRINT.Manager.Desktop.Rendering.SelectionHighlight.Outline(cube, cube, new MS3DPRINT.Manager.Desktop.Viewer.ViewCamera(), 400, 400);
+
+        Assert.Equal(36, triangles.Length); // every face, wound the same way so they merge into one silhouette
+        Assert.Equal(6, edges.Length / 2);  // a cube seen from three-quarters: its six outer edges, none of the inner ones
+    }
+
+    [Fact]
     public void Palettes_are_bundled_with_their_finish()
     {
         Assert.Equal(["Mat", "Brillant", "Soie", "Phosphorescent", "Chargé carbone", "Chargé fibre de verre"], RenderPalettes.All.Select(g => g.Name));

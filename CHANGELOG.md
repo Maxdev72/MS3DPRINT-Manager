@@ -1,5 +1,11 @@
 # Journal des modifications
 
+## Version 1.0.37 — 26 novembre 2026
+
+- Rendu : la pièce cliquée s’éclaire sur sa forme exacte (silhouette et contour), plus sur une enveloppe approchée.
+- Rendu : calcul automatique sur la carte graphique quand elle est utilisable, sinon sur le processeur ; le choix manuel disparaît.
+- Rendu : aperçu en direct deux fois plus rapide (lissage fait une fois à l’ouverture) et image nette plus tôt (affinage en deux étapes).
+
 ## Version 1.0.36 — 26 novembre 2026
 
 - Rendu : l’onglet Rendu quitte la page ; « Rendu final » ouvre la fenêtre de rendu avec tous les réglages (qualité, calcul, fichier, séries) et « Lancer le rendu ».

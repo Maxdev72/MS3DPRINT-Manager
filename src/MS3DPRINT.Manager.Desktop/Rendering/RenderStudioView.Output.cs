@@ -20,13 +20,11 @@ public sealed partial class RenderStudioView
         ("HD", "Cycles 2048 px : environ 11 s.", new(2048, 256, "cycles"), 11),
         ("Très haute", "Cycles 4096 px : environ 1 min 30.", new(4096, 512, "cycles"), 90)
     ];
-    private static readonly (string Label, string Key)[] Devices = [("Automatique", "auto"), ("Carte graphique (GPU)", "gpu"), ("Processeur (CPU)", "cpu")];
     private static readonly (string Label, string Format)[] Outputs = [("PNG (transparence, sans perte)", "png"), ("JPEG (léger, web et e-mail)", "jpeg"), ("WebP (très léger, transparence)", "webp"), ("TIFF 16 bits (retouche)", "tiff")];
     private static readonly (string Label, int Side)[] Sizes = [("Taille du rendu", 0), ("2048 px", 2048), ("1600 px", 1600), ("1200 px", 1200), ("1000 px", 1000), ("800 px", 800)];
 
     private readonly ComboBox _quality = Choice(Qualities.Select(q => q.Label));
     private readonly TextBlock _qualityHint = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
-    private readonly ComboBox _device = Choice(Devices.Select(d => d.Label));
     private readonly TextBlock _deviceNote = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
     private readonly ComboBox _outputFormat = Choice(Outputs.Select(o => o.Label));
     private readonly Slider _outputQuality = new() { Minimum = 50, Maximum = 100, TickFrequency = 5, IsSnapToTickEnabled = true };
@@ -56,7 +54,7 @@ public sealed partial class RenderStudioView
             Children =
             {
                 FormKit.Field("Qualité du rendu", _quality), _qualityHint,
-                FormKit.Field("Calcul sur", _device), _deviceNote,
+                _deviceNote,
                 FormKit.SectionLabel("Fichier"), FormKit.Field("Format", _outputFormat), _outputQualityField, _maxCompression,
                 FormKit.Field("Taille de l’image enregistrée", _maxSide, hint: "Réduit l’image à l’enregistrement, sans refaire le rendu."),
                 _sizeEstimate, _outputWarning,
@@ -82,14 +80,12 @@ public sealed partial class RenderStudioView
     private void InitializeOutput()
     {
         _quality.SelectedIndex = Math.Clamp(_saved.Quality, 0, Qualities.Length - 1);
-        _device.SelectedIndex = Math.Max(0, Array.FindIndex(Devices, d => d.Key == _saved.Device));
         _outputFormat.SelectedIndex = Math.Max(0, Array.FindIndex(Outputs, o => o.Format == _saved.OutputFormat));
         _outputQuality.Value = _saved.OutputQuality;
         _maxCompression.IsChecked = _saved.MaxCompression;
         _maxSide.SelectedIndex = Math.Max(0, Array.FindIndex(Sizes, s => s.Side == _saved.MaxSide));
         _contactSheet.IsChecked = _saved.ContactSheet;
         _quality.SelectionChanged += (_, _) => { ShowOutputHints(); SavePreferences(); };
-        _device.SelectionChanged += (_, _) => { ShowOutputHints(); SavePreferences(); };
         _outputFormat.SelectionChanged += async (_, _) => { ShowOutputHints(); SavePreferences(); await EstimateSizeAsync(); };
         _maxSide.SelectionChanged += async (_, _) => { SavePreferences(); await EstimateSizeAsync(); };
         _maxCompression.IsCheckedChanged += async (_, _) => { SavePreferences(); await EstimateSizeAsync(); };
@@ -105,10 +101,9 @@ public sealed partial class RenderStudioView
     {
         _qualityHint.Text = Qualities[Math.Max(0, _quality.SelectedIndex)].Hint;
         var card = _refine?.DeviceName;
-        _deviceNote.Text = Devices[Math.Max(0, _device.SelectedIndex)].Key == "cpu"
-            ? "Le processeur est bien plus lent : sur ce type de PC, environ 10 fois plus long qu’avec la carte graphique. L’aperçu en direct reste sur la carte."
-            : string.IsNullOrEmpty(card) ? (card is null ? "Carte graphique : détection au démarrage de Blender." : "Aucune carte graphique utilisable : le rendu se fait sur le processeur.")
-            : $"Carte détectée : {card}.";
+        // The device is chosen for speed: the graphics card when Blender can use one, else the processor.
+        _deviceNote.Text = string.IsNullOrEmpty(card) ? (card is null ? "Calcul automatique : détection de la carte graphique au démarrage de Blender." : "Calcul automatique sur le processeur : aucune carte graphique utilisable.")
+            : $"Calcul automatique sur la carte graphique, la plus rapide : {card}.";
         var format = Outputs[Math.Max(0, _outputFormat.SelectedIndex)].Format;
         _outputQualityField.IsVisible = format is "jpeg" or "webp";
         _maxCompression.IsVisible = format == "png";
@@ -213,7 +208,7 @@ public sealed partial class RenderStudioView
         var (views, colors) = SeriesPlan();
         var images = views.Count * colors.Count;
         var quality = Qualities[_quality.SelectedIndex];
-        var time = TimeSpan.FromSeconds(images * quality.Seconds * (Devices[Math.Max(0, _device.SelectedIndex)].Key == "cpu" && quality.Pass.Engine == "cycles" ? 10 : 1));
+        var time = TimeSpan.FromSeconds(images * quality.Seconds * (_refine?.DeviceName == "" && quality.Pass.Engine == "cycles" ? 10 : 1));
         _seriesSummary.Text = images == 0 ? "Cochez au moins une caméra."
             : $"{views.Count} vue{(views.Count > 1 ? "s" : "")} × {colors.Count} couleur{(colors.Count > 1 ? "s" : "")} = {images} image{(images > 1 ? "s" : "")} · environ "
               + (time.TotalMinutes >= 1 ? $"{(int)time.TotalMinutes} min {time.Seconds:00}" : $"{Math.Max(1, (int)time.TotalSeconds)} s") + $" en {quality.Label}"

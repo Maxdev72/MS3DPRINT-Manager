@@ -38,9 +38,11 @@ public sealed partial class RenderStudioView : UserControl
     /// <summary>A render step: long side in pixels, samples and engine.</summary>
     private readonly record struct Pass(int Side, int Samples, string Engine)
     {
-        // Live: small and without ray tracing, so the image follows the mouse; Cycles then refines, first at a lower size.
+        // Live: small and without ray tracing, so the image follows the mouse; Cycles then refines in two steps. Each Cycles pass
+        // costs about 0.3 s of set-up whatever its samples (measured, 300k triangles, RTX), so a middle step only delayed the
+        // sharp image (2.7 s -> 2.0 s once the camera rests).
         public static readonly Pass Live = new(400, 8, "eevee");
-        public static readonly Pass[] Refine = [new(640, 8, "cycles"), new(960, 32, "cycles"), new(960, 128, "cycles")];
+        public static readonly Pass[] Refine = [new(640, 8, "cycles"), new(960, 128, "cycles")];
     }
 
     private readonly Func<IReadOnlyList<RenderColor>> _loadColors;
@@ -403,7 +405,7 @@ public sealed partial class RenderStudioView : UserControl
 
     /// <summary>
     /// Progressive preview, like KeyShot. While the settings change, a Blender kept for EEVEE (real time) renders small images
-    /// one after the other; as soon as they rest, a second Blender kept for Cycles refines the view in steps (8, 32, then 128
+    /// one after the other; as soon as they rest, a second Blender kept for Cycles refines the view in steps (8, then 128
     /// samples, denoised on the graphics card), each image replacing the previous one. A change stops the refining Blender at once
     /// (it restarts in the background) so the live images never wait behind it.
     /// </summary>
@@ -663,7 +665,7 @@ public sealed partial class RenderStudioView : UserControl
             rotation, 0, width, height, samples, environment, _environmentRotation.Value, camera, engine,
             _shadow.IsChecked == true, _shadowStrength.Value, _shadowSoftness.Value, _lightAngle.Value, _lightHeight.Value, _glowDark.IsChecked == true,
             null, 0,
-            Devices[Math.Max(0, _device.SelectedIndex)].Key, tiff, _zoneFiles.Select(z => new RenderZone(z.File, z.Zone.Hex, z.Zone.Finish)).ToList(), GroundZ: 0);
+            "auto", tiff, _zoneFiles.Select(z => new RenderZone(z.File, z.Zone.Hex, z.Zone.Finish)).ToList(), GroundZ: 0);
     }
 
     private void ShowSceneFields()
@@ -714,7 +716,7 @@ public sealed partial class RenderStudioView : UserControl
             EnvironmentRotation = _environmentRotation.Value, Yaw = camera.Yaw, Pitch = camera.Pitch, Zoom = camera.Zoom, Tab = Math.Max(0, CurrentTab),
             RotationStep = _gizmo.Step, Shadow = _shadow.IsChecked == true, ShadowStrength = _shadowStrength.Value, ShadowSoftness = _shadowSoftness.Value,
             LightAngle = _lightAngle.Value, LightHeight = _lightHeight.Value, GlowDark = _glowDark.IsChecked == true, Orientations = orientations,
-            Quality = Math.Max(0, _quality.SelectedIndex), Device = Devices[Math.Max(0, _device.SelectedIndex)].Key, OutputFormat = CurrentOutput.Format,
+            Quality = Math.Max(0, _quality.SelectedIndex), OutputFormat = CurrentOutput.Format,
             Paused = _paused, OutputQuality = _outputQuality.Value, MaxCompression = _maxCompression.IsChecked == true, MaxSide = CurrentOutput.MaxSide, ContactSheet = _contactSheet.IsChecked == true
         };
         _store.Save(_saved);

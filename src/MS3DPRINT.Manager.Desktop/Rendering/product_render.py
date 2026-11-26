@@ -32,6 +32,11 @@ def load_parts(paths):
         if path not in cache:
             bpy.ops.wm.stl_import(filepath=path)
             imported = bpy.context.view_layer.objects.active
+            # Smoothing once at import, not on every render: it rewrites the whole mesh (measured on 300k triangles).
+            try:
+                bpy.ops.object.shade_smooth_by_angle(angle=math.radians(35))
+            except (AttributeError, RuntimeError):
+                bpy.ops.object.shade_flat()
             corners = [Vector(c) for c in imported.bound_box]
             cache[path] = (imported.data, Vector(map(min, *corners)), Vector(map(max, *corners)))
             bpy.data.objects.remove(imported)
@@ -187,13 +192,6 @@ def render(settings):
         mesh.materials.clear()
         mesh.materials.append(filament(color, finish_key, base))
         shown.append(piece)
-    for piece in shown:
-        piece.select_set(True)
-    bpy.context.view_layer.objects.active = shown[0]
-    try:
-        bpy.ops.object.shade_smooth_by_angle(angle=math.radians(35))
-    except (AttributeError, RuntimeError):
-        bpy.ops.object.shade_flat()
 
     # --- set: curved studio backdrop, or a shadow-catching floor for a transparent background or an environment (HDRI)
     style = settings["scene"]
