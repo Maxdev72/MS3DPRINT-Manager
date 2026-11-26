@@ -323,6 +323,9 @@ def render(settings):
     scene.render.resolution_x, scene.render.resolution_y = width, height
     scene.render.resolution_percentage = 100
     scene.render.image_settings.file_format = "PNG"
+    # Previews are read once then deleted: no compression saves about 6 ms per live image (measured, 400 px); larger
+    # images keep Blender's default so a 4096 px render does not weigh 50 MB on disk before it is saved.
+    scene.render.image_settings.compression = 0 if width * height <= 1000 * 1000 else 15
     scene.render.image_settings.color_mode = "RGBA" if style == "transparent" else "RGB"
     # Standard keeps the filament colour as picked; AgX would wash it out.
     scene.view_settings.view_transform = "Standard"
