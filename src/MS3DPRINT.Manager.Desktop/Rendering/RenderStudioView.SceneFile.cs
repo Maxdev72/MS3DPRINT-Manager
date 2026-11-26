@@ -58,7 +58,7 @@ public sealed partial class RenderStudioView
         var target = await storage.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = "Enregistrer la scène",
-            SuggestedFileName = Path.GetFileNameWithoutExtension(_parts[0].Path) + (_parts.Count > 1 ? " et autres" : "") + ".ms3dscene",
+            SuggestedFileName = RenderModelKey.Name(_parts[0].Path) + (_parts.Count > 1 ? " et autres" : "") + ".ms3dscene",
             DefaultExtension = "ms3dscene",
             FileTypeChoices = [SceneType]
         });
@@ -93,11 +93,11 @@ public sealed partial class RenderStudioView
         var loaded = await Task.Run(() => saved.Select(p =>
         {
             MeshModel? mesh;
-            try { mesh = File.Exists(p.Path) ? MeshLoader.Load(p.Path) : null; }
+            try { mesh = File.Exists(RenderModelKey.File(p.Path)) ? RenderModelKey.Load(p.Path) : null; }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException or NotSupportedException or ArgumentException) { mesh = null; }
             return (Part: p, Mesh: mesh);
         }).ToList());
-        var missing = loaded.Where(l => l.Mesh is null).Select(l => Path.GetFileName(l.Part.Path)).ToList();
+        var missing = loaded.Where(l => l.Mesh is null).Select(l => RenderModelKey.Name(l.Part.Path)).ToList();
         if (missing.Count == saved.Count) { ShowStatus("Aucune pièce de la scène n’a été trouvée : " + string.Join(", ", missing)); return; }
         foreach (var part in _parts) DeleteFiles(part);
         _parts.Clear();

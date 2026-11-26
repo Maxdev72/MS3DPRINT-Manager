@@ -1,5 +1,14 @@
 # Journal des modifications
 
+## Version 1.0.35 — 26 novembre 2026
+
+- Projets : repasser un projet terminé en « À faire » ou « En cours » depuis sa fiche le ressort aussi des archives.
+- Recherche : un projet ou un client trouvé s’ouvre directement sur son dossier, sans écran intermédiaire.
+- Notifications uniquement dans le logiciel (plus de notification Windows) ; « Ouvrir le dossier » ouvre le bon emplacement.
+- Matières : finitions « Chargé carbone » et « Chargé fibre de verre », reconnues d’après le nom du filament.
+- Rendu : fenêtre de rendu avec image qui s’affine et échantillons en direct, puis barre Enregistrer et zoom ; aperçu plus rapide ; pause bien visible.
+- Rendu : séries dans un volet repliable, dissociation des pièces d’un 3MF, surbrillance de la pièce cliquée, onglet Caméra avec réglages précis et grille des tiers.
+
 ## Version 1.0.34 — 25 novembre 2026
 
 - Gizmo complet de déplacement et de rotation, manipulation en direct, annulation avec Échap et maintien du cadrage.

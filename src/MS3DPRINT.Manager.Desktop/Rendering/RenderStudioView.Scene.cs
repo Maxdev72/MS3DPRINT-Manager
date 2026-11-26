@@ -45,6 +45,8 @@ public sealed partial class RenderStudioView
 
     private Control BuildSceneSection()
     {
+        ToolTip.SetTip(_splitParts, "Chaque objet du plateau devient une pièce de la scène, avec sa couleur et sa place.");
+        _splitParts.Click += async (_, _) => await SplitActiveAsync();
         _sceneLayout.Content = FormKit.Field("Espacement entre les pièces", _spacing, hint: "Les pièces sont rangées côte à côte. Leur menu permet de changer cet ordre.");
         _spacing.PropertyChanged += async (_, e) =>
         {
@@ -56,8 +58,38 @@ public sealed partial class RenderStudioView
         return new StackPanel
         {
             Spacing = 8,
-            Children = { _sceneTitle, new ScrollViewer { Content = _partList, MaxHeight = 176, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled } }
+            Children = { _sceneTitle, _splitParts, new ScrollViewer { Content = _partList, MaxHeight = 176, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled } }
         };
+    }
+
+    private readonly Button _splitParts = new() { Content = Icons.Label("IconLayers", "Dissocier les pièces du 3MF"), HorizontalAlignment = HorizontalAlignment.Stretch, IsVisible = false };
+
+    /// <summary>
+    /// Takes the active 3MF apart: each object of its plate becomes a part of the scene, with the same orientation, colour and
+    /// finish, so each one can get its own colour, place and cameras.
+    /// </summary>
+    private async Task SplitActiveAsync()
+    {
+        if (Active is not { } part || !part.Path.EndsWith(".3mf", StringComparison.OrdinalIgnoreCase)) return;
+        ShowStatus("Lecture des objets du 3MF…", busy: true);
+        IReadOnlyList<(string Name, MeshModel Mesh)> objects;
+        try { objects = await Task.Run(() => ThreeMfReader.LoadObjects(part.Path)); }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException) { ShowStatus("Impossible de lire ce 3MF : " + exception.Message); return; }
+        if (objects.Count < 2) { ShowStatus("Ce 3MF ne contient qu’une seule pièce : rien à dissocier."); return; }
+        StoreActive();
+        DeleteFiles(part);
+        var index = _parts.IndexOf(part);
+        _parts.RemoveAt(index);
+        _parts.InsertRange(index, objects.Select((o, i) => new ScenePart
+        {
+            Path = RenderModelKey.For(part.Path, i), Loaded = o.Mesh, Turn = part.Turn, Hex = part.Hex, Finish = part.Finish
+        }));
+        foreach (var other in _parts) other.Anchor = null;
+        _active = index;
+        _sceneFrame = null;
+        LoadActive();
+        _orientationNote.Text = $"{objects.Count} pièces séparées : cliquez-en une dans l’image pour la régler.";
+        await UseOrientationAsync();
     }
 
     private ScenePart? Active => _parts.Count == 0 ? null : _parts[Math.Clamp(_active, 0, _parts.Count - 1)];
@@ -145,7 +177,7 @@ public sealed partial class RenderStudioView
         Quaternion turn;
         try
         {
-            loaded = await Task.Run(() => MeshLoader.Load(path));
+            loaded = await Task.Run(() => RenderModelKey.Load(path));
             turn = _saved.Orientations.TryGetValue(path, out var known) && known.Length == 4
                 ? new Quaternion(known[0], known[1], known[2], known[3])
                 : await Task.Run(() => RenderOrientation.AutoStraighten(loaded));
@@ -170,6 +202,7 @@ public sealed partial class RenderStudioView
 
     private void RebuildPartList()
     {
+        _splitParts.IsVisible = Active is { } shown && shown.Path.EndsWith(".3mf", StringComparison.OrdinalIgnoreCase);
         _partList.Children.Clear();
         _sceneLayout.IsVisible = _parts.Count > 1;
         _partTools.IsEnabled = _parts.Count > 0;
@@ -181,12 +214,12 @@ public sealed partial class RenderStudioView
             var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,40"), ColumnSpacing = 4 };
             var name = new Button
             {
-                Content = new TextBlock { Text = $"{index + 1}. {System.IO.Path.GetFileNameWithoutExtension(_parts[index].Path)}", TextTrimming = TextTrimming.CharacterEllipsis }, Classes = { "filter-chip" },
+                Content = new TextBlock { Text = $"{index + 1}. {RenderModelKey.Name(_parts[index].Path)}", TextTrimming = TextTrimming.CharacterEllipsis }, Classes = { "filter-chip" },
                 HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left
             };
             if (index == _active) name.Classes.Add("selected");
             ToolTip.SetTip(name, _parts[index].Path);
-            AutomationProperties.SetName(name, $"Sélectionner la pièce {index + 1} : {System.IO.Path.GetFileNameWithoutExtension(_parts[index].Path)}");
+            AutomationProperties.SetName(name, $"Sélectionner la pièce {index + 1} : {RenderModelKey.Name(_parts[index].Path)}");
             name.Click += (_, _) => SelectPart(index);
             row.Children.Add(name);
             MenuItem Action(string text, string icon, Func<Task> act, bool enabled)
@@ -231,7 +264,7 @@ public sealed partial class RenderStudioView
 
     private async Task RemovePartAsync(int index)
     {
-        var name = System.IO.Path.GetFileName(_parts[index].Path);
+        var name = RenderModelKey.Name(_parts[index].Path);
         if (!await ConfirmRemovalWindow.AskAsync(this, name, "La pièce est retirée de la scène ; son fichier, son orientation et ses zones peintes sont conservés.")) return;
         StoreActive();
         DeleteFiles(_parts[index]);
@@ -336,7 +369,7 @@ public sealed partial class RenderStudioView
         _zoneFiles = [.. active.ZoneFiles];
         foreach (var other in _parts.Where(p => p != active && p.Body is not null))
         {
-            _zoneFiles.Add((new PaintZone(System.IO.Path.GetFileNameWithoutExtension(other.Path), other.Hex, other.Finish, []), other.Body!));
+            _zoneFiles.Add((new PaintZone(RenderModelKey.Name(other.Path), other.Hex, other.Finish, []), other.Body!));
             _zoneFiles.AddRange(other.ZoneFiles);
         }
     }

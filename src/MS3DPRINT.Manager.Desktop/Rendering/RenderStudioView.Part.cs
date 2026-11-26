@@ -173,7 +173,7 @@ public sealed partial class RenderStudioView
     {
         ShowStatus("Préparation du modèle…", busy: true);
         MeshModel loaded;
-        try { loaded = await Task.Run(() => MeshLoader.Load(path)); }
+        try { loaded = await Task.Run(() => RenderModelKey.Load(path)); }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException or NotSupportedException or ArgumentException)
         {
             ShowStatus("Impossible d’ouvrir ce modèle : " + exception.Message);
@@ -217,6 +217,7 @@ public sealed partial class RenderStudioView
         // A click on another product of the scene selects it.
         var (clicked, _) = PartAt(triangle);
         if (clicked != _active) SelectPart(clicked);
+        if (Active?.Placed is { } placed && _mesh is { } frame) _highlight.Flash(placed, frame, _viewport.Camera);
         if (_faceMode.IsChecked != true) return;
         _faceMode.IsChecked = false;
         _turn = Quaternion.Normalize(Quaternion.Concatenate(_turn, OrientationMath.Between(mesh.Normals[triangle], -Vector3.UnitZ)));

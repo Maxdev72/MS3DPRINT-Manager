@@ -81,6 +81,18 @@ public sealed class ThreeMfReaderTests : IDisposable
     }
 
     [Fact]
+    public void Each_item_of_the_plate_can_be_read_apart_with_its_name()
+    {
+        var path = Archive(("3D/3dmodel.model", Model($"""<resources><object id="1" name="Socle">{CubeMesh}</object><object id="2">{CubeMesh}</object></resources><build><item objectid="1"/><item objectid="2" transform="1 0 0 0 1 0 0 0 1 50 0 0"/></build>""")));
+
+        var objects = ThreeMfReader.LoadObjects(path);
+
+        Assert.Equal(["Socle", "Objet 2"], objects.Select(o => o.Name));
+        Assert.All(objects, o => Assert.Equal(12, o.Mesh.TriangleCount));
+        Assert.Equal(50f, objects[1].Mesh.Min.X, 3);
+    }
+
+    [Fact]
     public void Components_kept_in_another_model_file_are_assembled_like_a_Bambu_Studio_plate()
     {
         var root = Model("""

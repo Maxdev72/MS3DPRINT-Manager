@@ -110,8 +110,8 @@ public partial class MainWindow
             var option = new Button { Content = StatusName(status) };
             option.Click += async (_, _) =>
             {
-                if (project.Profile?.Status == status) return;
-                await UpdateProjectProfileAsync(project, profile => profile with { Status = status }, "Statut « " + StatusName(status) + " » enregistré.");
+                // same path as the list: the folder follows the status in and out of 99_ARCHIVES
+                await SetProjectStatusAsync(project, status);
             };
             return option;
         }).ToArray();

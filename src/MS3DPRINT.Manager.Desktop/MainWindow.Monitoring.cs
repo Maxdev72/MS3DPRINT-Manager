@@ -99,13 +99,8 @@ public partial class MainWindow
             AnnouncePrinter(card, $"Alerte · {name}", BambuHmsCatalog.Describe(alert, BambuHmsTexts.Current), error: true);
     }
 
-    /// <summary>The in-window toast at once; the Windows notification follows with a picture of the print when the camera gives one.</summary>
-    private async void AnnouncePrinter(PrinterLiveCard card, string title, string body, bool error)
-    {
-        Notify(title + " : " + body, error);
-        if (DesktopApplication.SystemNotification is not { } notify) return;
-        notify(title, body, await card.SnapshotAsync());
-    }
+    /// <summary>In-window notification only: the user asked for no Windows notification.</summary>
+    private void AnnouncePrinter(PrinterLiveCard card, string title, string body, bool error) => Notify(title + " : " + body, error);
 
     private readonly StatStage _watchedTile = new("Imprimantes"), _printingTile = new("En impression", "CyanBrush"), _offlineTile = new("Hors ligne", "WarningBrush"), _nextTile = new("Prochaine fin", "SuccessBrush");
 

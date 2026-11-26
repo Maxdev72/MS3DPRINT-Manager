@@ -105,7 +105,8 @@ def render(settings):
     turntable.scale = (fit, fit, fit)
     turntable.rotation_euler = (0, 0, math.radians(settings["rotation"]))
     glow_dark = settings.get("glowDark", False) and any(part[2] == "glow" for part in parts)
-    finishes = {"matte": (0.62, 0.0, 0.0), "silk": (0.3, 0.45, 0.0), "glossy": (0.12, 0.0, 0.35), "glow": (0.5, 0.0, 0.0)}
+    finishes = {"matte": (0.62, 0.0, 0.0), "silk": (0.3, 0.45, 0.0), "glossy": (0.12, 0.0, 0.35), "glow": (0.5, 0.0, 0.0),
+                "carbon": (0.78, 0.0, 0.0), "glassfiber": (0.55, 0.0, 0.08)}
 
     def filament(color, finish_key, base):
         finish = finishes[finish_key]
@@ -117,6 +118,23 @@ def render(settings):
         set_input(bsdf, "Roughness", finish[0])
         set_input(bsdf, "Metallic", finish[1])
         set_input(bsdf, "Coat Weight", finish[2])
+        grain = None
+        if finish_key in ("carbon", "glassfiber"):
+            # Filled filament: short fibres show as a fine grain (rougher here, smoother there) and a faint relief.
+            noise = nodes.new("ShaderNodeTexNoise")
+            noise.inputs["Scale"].default_value = 900 if finish_key == "carbon" else 600
+            noise.inputs["Detail"].default_value = 2
+            links.new(nodes.new("ShaderNodeTexCoord").outputs["Object"], noise.inputs["Vector"])
+            rough = nodes.new("ShaderNodeMapRange")
+            rough.inputs["To Min"].default_value = finish[0] - (0.12 if finish_key == "carbon" else 0.3)
+            rough.inputs["To Max"].default_value = finish[0] + 0.12
+            links.new(noise.outputs["Fac"], rough.inputs["Value"])
+            links.new(rough.outputs["Result"], bsdf.inputs["Roughness"])
+            grain = nodes.new("ShaderNodeBump")
+            grain.inputs["Strength"].default_value = 0.25
+            set_input(grain, "Distance", fit * 0.002)
+            links.new(noise.outputs["Fac"], grain.inputs["Height"])
+            links.new(grain.outputs["Normal"], bsdf.inputs["Normal"])
         band = settings.get("bandColor") if base else None
         if band:
             # Colour change at a height, like a filament change at a layer: below it (millimetres from the bottom of the
@@ -154,6 +172,7 @@ def render(settings):
             links.new(split.outputs["Z"], wave.inputs[0])
             links.new(wave.outputs[0], sine.inputs[0])
             links.new(sine.outputs[0], bump.inputs["Height"])
+            if grain is not None: links.new(grain.outputs["Normal"], bump.inputs["Normal"])
             links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
         return material
 
@@ -288,7 +307,8 @@ def render(settings):
     if eevee:
         scene.render.engine = "BLENDER_EEVEE"
         scene.eevee.taa_render_samples = settings["samples"]
-        scene.eevee.use_raytracing = True
+        # Ray tracing (reflections) for the « Rapide » final image; the live previews (8 samples) skip it to stay quick.
+        scene.eevee.use_raytracing = settings["samples"] > 8
     else:
         scene.render.engine = "CYCLES"
         scene.cycles.samples = settings["samples"]

@@ -182,10 +182,11 @@ public partial class MainWindow
         {
             // The server copy also lists items that already have a folder on this PC: open that local sheet.
             var copy = _serverConnection?.Copy;
+            var root = WorkspaceRoot;
             if (result.Kind == MS3DPRINT.Manager.Core.Search.GlobalSearchResultKind.Client)
             {
                 var remote = copy?.Clients.FirstOrDefault(c => c.Id == serverId);
-                var local = remote is null ? null : _allClients.FirstOrDefault(c => string.Equals(c.ClientCode, remote.ClientCode, StringComparison.OrdinalIgnoreCase));
+                var local = remote is null ? null : await FindLocalAsync(_allClients, () => new WorkspaceClientReader().Load(root), c => string.Equals(c.ClientCode, remote.ClientCode, StringComparison.OrdinalIgnoreCase));
                 if (local is null) { await OpenServerClientAsync(serverId); return; }
                 ShowWorkspaceForDetail("Clients");
                 PageTitle.Text = "Clients";
@@ -195,7 +196,7 @@ public partial class MainWindow
             else
             {
                 var remote = copy?.Projects.FirstOrDefault(p => p.Id == serverId);
-                var local = remote is null ? null : _allProjects.FirstOrDefault(p => string.Equals(p.Reference, remote.Reference, StringComparison.OrdinalIgnoreCase));
+                var local = remote is null ? null : await FindLocalAsync(_allProjects, () => new WorkspaceProjectReader().Load(root), p => string.Equals(p.Reference, remote.Reference, StringComparison.OrdinalIgnoreCase));
                 if (local is null) { await OpenServerProjectAsync(serverId); return; }
                 _projectOriginClient = null;
                 ShowWorkspaceForDetail("Projets");
@@ -224,5 +225,13 @@ public partial class MainWindow
         {
             await OpenFileAsync(result.Path);
         }
+    }
+
+    /// <summary>The local folder of a server result: the loaded list first, else the disk, so a search works before its page was ever opened.</summary>
+    private static async Task<T?> FindLocalAsync<T>(IEnumerable<T> loaded, Func<IEnumerable<T>> read, Func<T, bool> match) where T : class
+    {
+        if (loaded.FirstOrDefault(match) is { } found) return found;
+        try { return await Task.Run(() => read().FirstOrDefault(match)); }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException) { return null; }
     }
 }

@@ -110,6 +110,9 @@ public sealed class ProductRendererTests : IDisposable
     [InlineData("PLA Soie cuivre", "silk")]
     [InlineData("PETG HF Bleu", "glossy")]
     [InlineData("PLA Basic", "matte")]
+    [InlineData("PETG-CF Noir", "carbon")]
+    [InlineData("PA6 GF Gris", "glassfiber")]
+    [InlineData("PLA Chargé fibre de verre", "glassfiber")]
     public void Finish_follows_the_filament_name(string text, string finish)
         => Assert.Equal(finish, MainWindow.RenderFinish(text));
 
@@ -175,8 +178,8 @@ public sealed class ProductRendererTests : IDisposable
     [Fact]
     public void Palettes_are_bundled_with_their_finish()
     {
-        Assert.Equal(["Mat", "Brillant", "Soie", "Phosphorescent"], RenderPalettes.All.Select(g => g.Name));
-        Assert.Equal(30, RenderPalettes.All.Sum(g => g.Colors.Count));
+        Assert.Equal(["Mat", "Brillant", "Soie", "Phosphorescent", "Chargé carbone", "Chargé fibre de verre"], RenderPalettes.All.Select(g => g.Name));
+        Assert.Equal(36, RenderPalettes.All.Sum(g => g.Colors.Count));
         Assert.All(RenderPalettes.All, g => Assert.All(g.Colors, c => Assert.Equal(g.Finish, c.Finish)));
         Assert.Contains(RenderPalettes.All.SelectMany(g => g.Colors), c => c.Label == "Rouge mat" && c.Hex == "#DE4343");
     }

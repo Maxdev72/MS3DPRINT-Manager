@@ -15,6 +15,10 @@
       { "nom": "Gris argent soie", "hex": "#C8C8C8" }, { "nom": "Jaune or soie", "hex": "#F4A925" }, { "nom": "Bleu azur soie", "hex": "#008BDA" },
       { "nom": "Rose poudré soie", "hex": "#BA9594" }, { "nom": "Rouge soie", "hex": "#D02727" }, { "nom": "Vert menthe soie", "hex": "#96DCB9" } ] },
     { "nom": "Phosphorescent", "finition": "glow", "couleurs": [
-      { "nom": "Vert phosphorescent", "hex": "#A1FFAC" }, { "nom": "Bleu phosphorescent", "hex": "#7AC0E9" } ] }
+      { "nom": "Vert phosphorescent", "hex": "#A1FFAC" }, { "nom": "Bleu phosphorescent", "hex": "#7AC0E9" } ] },
+    { "nom": "Chargé carbone", "finition": "carbon", "couleurs": [
+      { "nom": "Noir carbone", "hex": "#262626" }, { "nom": "Gris carbone", "hex": "#4A4C4E" }, { "nom": "Blanc carbone", "hex": "#D6D6D2" } ] },
+    { "nom": "Chargé fibre de verre", "finition": "glassfiber", "couleurs": [
+      { "nom": "Noir fibre de verre", "hex": "#2B2B2B" }, { "nom": "Gris fibre de verre", "hex": "#8A8C8E" }, { "nom": "Naturel fibre de verre", "hex": "#E3DFD2" } ] }
   ]
 }

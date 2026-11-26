@@ -60,11 +60,21 @@ public sealed partial class RenderStudioView
                 FormKit.SectionLabel("Fichier"), FormKit.Field("Format", _outputFormat), _outputQualityField, _maxCompression,
                 FormKit.Field("Taille de l’image enregistrée", _maxSide, hint: "Réduit l’image à l’enregistrement, sans refaire le rendu."),
                 _sizeEstimate, _outputWarning,
-                FormKit.SectionLabel("Série de rendus"),
-                FormKit.Field("Caméras", _seriesCameras),
-                FormKit.Field("Couleurs", new StackPanel { Spacing = 8, Children = { _seriesGroups, _seriesColors } },
-                    hint: "Aucune couleur cochée : la couleur actuelle seulement."),
-                _contactSheet, _seriesSummary, _runSeries
+                // By default « Rendu final » renders one image of the scene; the series stays folded until asked for.
+                new Expander
+                {
+                    Header = "Série de rendus (plusieurs vues ou couleurs)", IsExpanded = false, HorizontalAlignment = HorizontalAlignment.Stretch, Classes = { "estimate-section" },
+                    Content = new StackPanel
+                    {
+                        Spacing = 12, Children =
+                        {
+                            FormKit.Field("Caméras", _seriesCameras),
+                            FormKit.Field("Couleurs", new StackPanel { Spacing = 8, Children = { _seriesGroups, _seriesColors } },
+                                hint: "Aucune couleur cochée : la couleur actuelle seulement."),
+                            _contactSheet, _seriesSummary, _runSeries
+                        }
+                    }
+                }
             }
         };
     }

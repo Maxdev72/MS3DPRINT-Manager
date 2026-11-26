@@ -234,7 +234,8 @@ public sealed class DownloadDialog : DialogWindow
         try
         {
             var start = new ProcessStartInfo(OperatingSystem.IsWindows() ? "explorer.exe" : "xdg-open") { UseShellExecute = false };
-            start.ArgumentList.Add(OperatingSystem.IsWindows() ? "/select," + first : Path.GetDirectoryName(Path.GetFullPath(first))!);
+            if (OperatingSystem.IsWindows()) start.Arguments = $"/select,\"{Path.GetFullPath(first)}\""; // see RevealInExplorer
+            else start.ArgumentList.Add(Path.GetDirectoryName(Path.GetFullPath(first))!);
             Process.Start(start);
         }
         catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)

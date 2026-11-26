@@ -182,41 +182,6 @@ public sealed class PrinterLiveCard : Border, IDisposable
         _relay?.Dispose(); _relay = null;
     }
 
-    /// <summary>
-    /// A picture of the print for a notification: the image on screen when the camera is open, otherwise one frame
-    /// fetched for the occasion. Null when the camera does not answer within 10 seconds.
-    /// </summary>
-    public async Task<string?> SnapshotAsync()
-    {
-        var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify), "MS3DPRINT Manager", "snapshots");
-        var path = Path.Combine(folder, Printer.Id.ToString("N") + ".png");
-        try
-        {
-            Directory.CreateDirectory(folder);
-            if (_camera.Source is Bitmap shown) { shown.Save(path, new PngBitmapEncoderOptions()); return path; }
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(_cancel.Token);
-            timeout.CancelAfter(TimeSpan.FromSeconds(10));
-            if (BambuLink.HasJpegCamera(Printer.Model))
-            {
-                var jpeg = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
-                _ = BambuLink.WatchJpegCameraAsync(Connection, frame => jpeg.TrySetResult(frame), _ => { }, timeout.Token);
-                var bytes = await jpeg.Task.WaitAsync(timeout.Token);
-                timeout.Cancel();
-                path = Path.ChangeExtension(path, ".jpg");
-                await File.WriteAllBytesAsync(path, bytes);
-                return path;
-            }
-            if (VlcCamera.Unavailable is not null) return null;
-            var saved = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            using var relay = new BambuLink.RtspRelay(Connection);
-            using var video = new VlcCamera(relay.Url, frame => { if (!saved.Task.IsCompleted) { frame.Save(path, new PngBitmapEncoderOptions()); saved.TrySetResult(); } }, () => saved.TrySetCanceled());
-            await saved.Task.WaitAsync(timeout.Token);
-            return path;
-        }
-        catch (Exception exception) when (exception is OperationCanceledException or IOException or UnauthorizedAccessException or InvalidOperationException or VLCException or System.Net.Sockets.SocketException)
-        { return null; }
-    }
-
     private void ShowFrame(Bitmap frame)
     {
         if (_cameraCancel is null) { if (frame is not WriteableBitmap) frame.Dispose(); return; }

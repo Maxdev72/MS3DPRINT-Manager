@@ -305,7 +305,8 @@ public partial class MainWindow
             else if (profile.Status == status && project.IsArchived == (status == ProjectStatus.Completed)) return;
             var updated = await Task.Run(() => new WorkspaceProfileEditor().UpdateProject(root, profile, status, profile.DueDate, profile.Description, profile.Notes));
             var (path, archiveNote) = await SyncProjectArchiveAsync(root, project with { Profile = updated }, status);
-            if (path != project.ProjectPath) await LoadProjectsAsync(); // the fiche now holds the new folder: read it back
+            if (!_projectListMode) await LoadProjectDirectoryAsync(project with { Profile = updated, ProjectPath = path }, path);
+            else if (path != project.ProjectPath) await LoadProjectsAsync(); // the fiche now holds the new folder: read it back
             else
             {
                 _allProjects = _allProjects.Select(candidate => candidate.ProjectPath == project.ProjectPath ? project with { Profile = updated } : candidate).ToList();

@@ -12,21 +12,31 @@ namespace MS3DPRINT.Manager.Desktop.Rendering;
 /// </summary>
 public sealed partial class RenderStudioView
 {
-    private readonly Button _pauseButton = new() { Classes = { "tool" }, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(12) };
+    private readonly Button _pauseButton = new() { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(12), Padding = new Thickness(12, 8) };
+    // Paused must be obvious at a glance: a coloured frame around the image and a banner on it.
     private readonly Border _pauseBadge = new()
     {
-        Classes = { "toolbar" }, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(12),
-        Padding = new Thickness(12, 4), IsHitTestVisible = false, IsVisible = false,
-        Child = new TextBlock { Text = "Pause · Espace pour reprendre", Classes = { "caption" } }
+        Background = (Avalonia.Media.IBrush?)Application.Current?.FindResource("WarningBrush"), CornerRadius = new CornerRadius(Ui.Radius.Pill),
+        HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(12),
+        Padding = new Thickness(16, 8), IsHitTestVisible = false, IsVisible = false,
+        Child = new StackPanel
+        {
+            Orientation = Orientation.Horizontal, Spacing = 8,
+            Children = { Icons.Glyph("IconPause", 16), new TextBlock { Text = "APERÇU EN PAUSE · Espace pour reprendre", FontWeight = Avalonia.Media.FontWeight.SemiBold, Foreground = Avalonia.Media.Brushes.Black } }
+        }
+    };
+    private readonly Border _pauseFrame = new()
+    {
+        BorderBrush = (Avalonia.Media.IBrush?)Application.Current?.FindResource("WarningBrush"), BorderThickness = new Thickness(4), IsHitTestVisible = false, IsVisible = false
     };
     private bool _paused;
     private bool _suspended;
 
     private void InitializePause()
     {
+        _frame.Children.Add(_pauseFrame);
         _frame.Children.Add(_pauseBadge);
-        _frame.Children.Add(new Border { Classes = { "toolbar" }, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(12), Child = _pauseButton });
-        _pauseButton.Margin = new Thickness(0);
+        _frame.Children.Add(_pauseButton);
         _pauseButton.Click += (_, _) => SetPaused(!_paused);
         AddHandler(KeyDownEvent, (_, e) =>
         {
@@ -59,7 +69,9 @@ public sealed partial class RenderStudioView
 
     private void ShowPause()
     {
-        _pauseButton.Content = Icons.Glyph(_paused ? "IconPlay" : "IconPause", 18);
+        _pauseButton.Content = Icons.Label(_paused ? "IconPlay" : "IconPause", _paused ? "Reprendre" : "Pause", 16);
+        if (_paused) _pauseButton.Classes.Add("primary-action"); else _pauseButton.Classes.Remove("primary-action");
+        _pauseFrame.IsVisible = _paused;
         var tip = _paused ? "Reprendre l’aperçu (Espace)" : "Mettre l’aperçu en pause (Espace)";
         ToolTip.SetTip(_pauseButton, tip);
         AutomationProperties.SetName(_pauseButton, tip);

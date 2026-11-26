@@ -27,6 +27,7 @@ public partial class MainWindow
     /// </summary>
     private async Task<string?> SaveRendersAsync(IReadOnlyList<string> temporaryFiles, string modelPath, bool chooseFolder)
     {
+        modelPath = RenderModelKey.File(modelPath); // an object of a 3MF taken apart is filed with its file
         try
         {
             var root = WorkspaceRoot;
@@ -70,7 +71,9 @@ public partial class MainWindow
         try
         {
             var start = new System.Diagnostics.ProcessStartInfo(OperatingSystem.IsWindows() ? "explorer.exe" : "xdg-open") { UseShellExecute = false };
-            start.ArgumentList.Add(OperatingSystem.IsWindows() ? "/select," + Path.GetFullPath(path) : Path.GetDirectoryName(Path.GetFullPath(path))!);
+            // Explorer only reads /select,"path": quoting the whole argument (ArgumentList) opens Documents instead.
+            if (OperatingSystem.IsWindows()) start.Arguments = $"/select,\"{Path.GetFullPath(path)}\"";
+            else start.ArgumentList.Add(Path.GetDirectoryName(Path.GetFullPath(path))!);
             System.Diagnostics.Process.Start(start)?.Dispose();
         }
         catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException) { ErrorLog.Write(exception); }
@@ -94,9 +97,11 @@ public partial class MainWindow
         return stock.DistinctBy(c => c.Key).ToList();
     }
 
-    /// <summary>Silk filaments shine like metal, PETG is glossy, everything else renders matte.</summary>
+    /// <summary>Carbon or glass filled (CF, GF) renders grainy, silk shines like metal, PETG is glossy, everything else matte.</summary>
     public static string RenderFinish(string materialAndName)
-        => materialAndName.Contains("phospho", StringComparison.OrdinalIgnoreCase) || materialAndName.Contains("glow", StringComparison.OrdinalIgnoreCase) ? "glow"
+        => System.Text.RegularExpressions.Regex.IsMatch(materialAndName, @"\bCF\b|carbon", System.Text.RegularExpressions.RegexOptions.IgnoreCase) ? "carbon"
+            : System.Text.RegularExpressions.Regex.IsMatch(materialAndName, @"\bGF\b|glass|verre", System.Text.RegularExpressions.RegexOptions.IgnoreCase) ? "glassfiber"
+            : materialAndName.Contains("phospho", StringComparison.OrdinalIgnoreCase) || materialAndName.Contains("glow", StringComparison.OrdinalIgnoreCase) ? "glow"
             : materialAndName.Contains("silk", StringComparison.OrdinalIgnoreCase) || materialAndName.Contains("soie", StringComparison.OrdinalIgnoreCase) ? "silk"
             : materialAndName.Contains("PETG", StringComparison.OrdinalIgnoreCase) ? "glossy" : "matte";
 }

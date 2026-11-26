@@ -30,7 +30,7 @@ public sealed record RenderColor(string Label, string Hex, string Finish)
 /// </summary>
 public sealed partial class RenderStudioView : UserControl
 {
-    private static readonly (string Label, string Key)[] Finishes = [("Mat", "matte"), ("Satiné / soie", "silk"), ("Brillant", "glossy"), ("Phosphorescent", "glow")];
+    private static readonly (string Label, string Key)[] Finishes = [("Mat", "matte"), ("Satiné / soie", "silk"), ("Brillant", "glossy"), ("Phosphorescent", "glow"), ("Chargé carbone", "carbon"), ("Chargé fibre de verre", "glassfiber")];
     private static readonly (string Label, double Height)[] Layers = [("Lisse, sans lignes", 0), ("0,12 mm", 0.12), ("0,16 mm", 0.16), ("0,20 mm", 0.2), ("0,28 mm", 0.28)];
     private static readonly (string Label, string Key)[] Scenes = [("Studio clair", "light"), ("Studio sombre", "dark"), ("Fond de couleur", "color"), ("Fond transparent (PNG)", "transparent"), ("Environnement (HDRI)", "environment")];
     private static readonly (string Label, int Width, int Height)[] Formats = [("Carré 1:1", 1, 1), ("Paysage 4:3", 4, 3), ("Portrait 3:4", 3, 4), ("Large 16:9", 16, 9)];
@@ -38,8 +38,9 @@ public sealed partial class RenderStudioView : UserControl
     /// <summary>A render step: long side in pixels, samples and engine.</summary>
     private readonly record struct Pass(int Side, int Samples, string Engine)
     {
-        public static readonly Pass Live = new(480, 16, "eevee");
-        public static readonly Pass[] Refine = [new(960, 8, "cycles"), new(960, 32, "cycles"), new(960, 128, "cycles")];
+        // Live: small and without ray tracing, so the image follows the mouse; Cycles then refines, first at a lower size.
+        public static readonly Pass Live = new(400, 8, "eevee");
+        public static readonly Pass[] Refine = [new(640, 8, "cycles"), new(960, 32, "cycles"), new(960, 128, "cycles")];
     }
 
     private readonly Func<IReadOnlyList<RenderColor>> _loadColors;
@@ -48,6 +49,7 @@ public sealed partial class RenderStudioView : UserControl
     private readonly Grid _frame = new() { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
     private readonly Image _image = new() { Stretch = Stretch.Uniform, IsHitTestVisible = false };
     private readonly OrientationGizmo _gizmo = new() { IsVisible = false };
+    private readonly SelectionHighlight _highlight = new();
     private readonly TextBlock _viewHelp = new() { Text = "Glisser : tourner · Clic droit : déplacer · Molette : zoomer", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
     private readonly StackPanel _emptyState = new() { Spacing = 8, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, MaxWidth = 420 };
     private readonly Border _emptyCover;
@@ -143,6 +145,7 @@ public sealed partial class RenderStudioView : UserControl
         _viewport = CreateViewport();
         _frame.Children.Add(_viewport.Visual);
         _frame.Children.Add(_image);
+        _frame.Children.Add(_highlight);
         _frame.Children.Add(_gizmo);
         _frame.Children.Add(new Border
         {
@@ -371,6 +374,7 @@ public sealed partial class RenderStudioView : UserControl
     {
         _gizmo.InvalidateVisual();
         if (_mesh is null || _settingMesh) return;
+        _highlight.Hide();
         // Paused: the last image would hide the new framing, so the simple 3D view shows through until the preview resumes.
         if (_paused) _image.Opacity = 0;
         // The studio has a floor: the camera stops at its level, in the 3D view as in the render.
@@ -456,19 +460,43 @@ public sealed partial class RenderStudioView : UserControl
         window.Start($"{Path.GetFileName(model)} · {quality.Label} · {Scenes[_scene.SelectedIndex].Label} · {Formats[_format.SelectedIndex].Label}",
             $"{Path.GetFileNameWithoutExtension(model)} - rendu {DateTime.Now:yyyy-MM-dd HHmmss}");
         string? done = null, doneTiff = null;
+        var steps = FinalSteps(quality.Pass);
         var finished = await RunExclusiveAsync(async (cancel, progress) =>
         {
-            var output = Path.Combine(_work, $"final-{++_counter}.png");
-            var tiff = Outputs[Math.Max(0, _outputFormat.SelectedIndex)].Format == "tiff" ? Path.ChangeExtension(output, ".tif") : null;
-            if (ReadSettings(quality.Pass, _mesh!, tiff: tiff) is not { } settings) return false;
-            await SessionFor(quality.Pass).RenderAsync(_stlPath!, settings, output, cancel, new Progress<double>(f => progress(f, 1, 1)));
-            (done, doneTiff) = (output, tiff);
+            // Like KeyShot, the image appears quickly and refines: a short pass first (shown in the window), then the full one.
+            var before = 0;
+            string? preview = null;
+            foreach (var step in steps)
+            {
+                var last = step == steps[^1];
+                var output = Path.Combine(_work, $"final-{++_counter}.png");
+                var tiff = last && Outputs[Math.Max(0, _outputFormat.SelectedIndex)].Format == "tiff" ? Path.ChangeExtension(output, ".tif") : null;
+                if (ReadSettings(quality.Pass with { Samples = step }, _mesh!, tiff: tiff) is not { } settings) return false;
+                var label = last ? "Rendu" : "Aperçu rapide";
+                var start = before;
+                window.Samples(label, 0, step);
+                await SessionFor(quality.Pass).RenderAsync(_stlPath!, settings, output, cancel, new Progress<double>(f =>
+                {
+                    window.Samples(label, (int)Math.Round(f * step), step);
+                    progress((start + f * step) / steps.Sum(), 1, 1);
+                }));
+                before += step;
+                if (preview is not null) TryDelete(preview);
+                if (last) (done, doneTiff) = (output, tiff);
+                else { window.ShowPreview(output); preview = output; }
+            }
             ShowStatus($"Rendu {quality.Label} terminé : il est dans sa fenêtre.");
             return true;
         }, $"Rendu {quality.Label}", (text, fraction) => window.Progress(text, fraction));
         if (finished && done is not null) window.ShowResult(done, doneTiff);
         else window.Stopped(_status.Text ?? "Rendu arrêté.");
     }
+
+    /// <summary>
+    /// The sample counts of a final render: a quick pass (16 samples, about 3 % of a 512-sample render) before the full one;
+    /// EEVEE and short renders go in one pass.
+    /// </summary>
+    private static int[] FinalSteps(Pass pass) => pass.Engine == "cycles" && pass.Samples > 32 ? [16, pass.Samples] : [pass.Samples];
 
     /// <summary>Writes the final image with the window's choices, then files it; the window learns where it went.</summary>
     private async Task SaveFinalAsync(RenderResultWindow window, string png, string? tiff, OutputOptions options, string name, bool chooseFolder)

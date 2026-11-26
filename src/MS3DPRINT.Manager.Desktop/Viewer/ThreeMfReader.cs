@@ -25,6 +25,7 @@ public static class ThreeMfReader
     private sealed class ModelObject
     {
         public string? Type { get; init; }
+        public string? Name { get; init; }
         public List<Vector3> Vertices { get; } = [];
         public List<int> Triangles { get; } = [];
         public List<Component> Components { get; } = [];
@@ -39,6 +40,22 @@ public static class ThreeMfReader
     }
 
     public static MeshModel Load(string path, CancellationToken cancellationToken = default)
+    {
+        var objects = LoadObjects(path, cancellationToken);
+        if (objects.Count == 1) return objects[0].Mesh;
+        var positions = new List<Vector3>();
+        var indices = new List<int>();
+        foreach (var (_, mesh) in objects)
+        {
+            var first = positions.Count;
+            positions.AddRange(mesh.Positions);
+            indices.AddRange(mesh.Indices.Select(index => first + index));
+        }
+        return new MeshModel([.. positions], [.. indices]);
+    }
+
+    /// <summary>The objects of the build plate one by one (name, mesh in millimetres, in place), for a scene that separates them.</summary>
+    public static IReadOnlyList<(string Name, MeshModel Mesh)> LoadObjects(string path, CancellationToken cancellationToken = default)
     {
         using var archive = ZipFile.OpenRead(path);
         var unpacked = archive.Entries.Where(entry => entry.FullName.EndsWith(".model", StringComparison.OrdinalIgnoreCase)).Sum(entry => entry.Length);
@@ -55,8 +72,10 @@ public static class ThreeMfReader
 
         var rootPath = RootModelPath(archive);
         var root = Part(rootPath);
-        var positions = new List<Vector3>();
-        var indices = new List<int>();
+        var objects = new List<(string, MeshModel)>();
+        var triangles = 0;
+        List<Vector3> positions = [];
+        List<int> indices = [];
 
         void Emit(string partPath, int objectId, Matrix4x4 transform, int depth)
         {
@@ -76,21 +95,27 @@ public static class ThreeMfReader
                 Emit(component.Path ?? partPath, component.ObjectId, component.Transform * transform, depth + 1);
         }
 
+        void Item(int objectId, Matrix4x4 transform)
+        {
+            (positions, indices) = ([], []);
+            Emit(rootPath, objectId, transform, 0);
+            if (indices.Count == 0) return;
+            triangles += indices.Count / 3;
+            // the model is shown in millimetres whatever unit the file was drawn in
+            var scale = (float)root.MillimetresPerUnit;
+            var name = root.Objects.TryGetValue(objectId, out var model) && !string.IsNullOrWhiteSpace(model.Name) ? model.Name.Trim() : "Objet " + (objects.Count + 1);
+            objects.Add((name, new MeshModel(positions.Select(p => p * scale).ToArray(), [.. indices])));
+        }
+
         if (root.Build.Count > 0)
-            foreach (var (objectId, transform) in root.Build) Emit(rootPath, objectId, transform, 0);
+            foreach (var (objectId, transform) in root.Build) Item(objectId, transform);
         else
             // a file without a build section: show every object that has a shape of its own
-            foreach (var (objectId, model) in root.Objects.Where(pair => pair.Value.HasMesh))
-                Emit(rootPath, objectId, Matrix4x4.Identity, 0);
+            foreach (var (objectId, _) in root.Objects.Where(pair => pair.Value.HasMesh)) Item(objectId, Matrix4x4.Identity);
 
-        if (indices.Count == 0) throw new InvalidDataException("Le fichier 3MF ne contient aucune géométrie affichable.");
-        if (indices.Count / 3 > MaxTriangles) throw new InvalidDataException("Ce fichier 3MF contient trop de triangles pour être affiché.");
-
-        // the model is shown in millimetres whatever unit the file was drawn in
-        var scale = (float)root.MillimetresPerUnit;
-        var points = new Vector3[positions.Count];
-        for (var i = 0; i < points.Length; i++) points[i] = positions[i] * scale;
-        return new MeshModel(points, indices.ToArray());
+        if (objects.Count == 0) throw new InvalidDataException("Le fichier 3MF ne contient aucune géométrie affichable.");
+        if (triangles > MaxTriangles) throw new InvalidDataException("Ce fichier 3MF contient trop de triangles pour être affiché.");
+        return objects;
     }
 
     // ---- archive ------------------------------------------------------------------------------------------------------
@@ -145,7 +170,7 @@ public static class ThreeMfReader
                     break;
                 case "object":
                     currentId = Int(reader.GetAttribute("id"));
-                    current = new ModelObject { Type = reader.GetAttribute("type") };
+                    current = new ModelObject { Type = reader.GetAttribute("type"), Name = reader.GetAttribute("name") };
                     if (reader.IsEmptyElement) { part.Objects[currentId] = current; current = null; }
                     break;
                 case "vertex" when current is not null:
