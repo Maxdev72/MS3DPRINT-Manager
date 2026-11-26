@@ -35,14 +35,14 @@ public sealed partial class RenderStudioView : UserControl
     private static readonly (string Label, string Key)[] Scenes = [("Studio clair", "light"), ("Studio sombre", "dark"), ("Fond de couleur", "color"), ("Fond transparent (PNG)", "transparent"), ("Environnement (HDRI)", "environment")];
     private static readonly (string Label, int Width, int Height)[] Formats = [("Carré 1:1", 1, 1), ("Paysage 4:3", 4, 3), ("Portrait 3:4", 3, 4), ("Large 16:9", 16, 9)];
     private static readonly string[] TabNames = ["Pièce", "Matière", "Ambiance", "Caméra"];
-    /// <summary>A render step: long side in pixels, samples and engine.</summary>
-    private readonly record struct Pass(int Side, int Samples, string Engine)
+    /// <summary>A render step: long side in pixels, samples, engine, and Cycles' noise threshold (0: Blender's default).</summary>
+    private readonly record struct Pass(int Side, int Samples, string Engine, double Noise = 0)
     {
         // Live: small and without ray tracing, so the image follows the mouse; Cycles then refines in two steps. Each Cycles pass
         // costs about 0.3 s of set-up whatever its samples (measured, 300k triangles, RTX), so a middle step only delayed the
         // sharp image (2.7 s -> 2.0 s once the camera rests).
         public static readonly Pass Live = new(400, 8, "eevee");
-        public static readonly Pass[] Refine = [new(640, 8, "cycles"), new(960, 128, "cycles")];
+        public static readonly Pass[] Refine = [new(640, 8, "cycles", 0.05), new(960, 128, "cycles", 0.05)];
     }
 
     private readonly Func<IReadOnlyList<RenderColor>> _loadColors;
@@ -665,7 +665,7 @@ public sealed partial class RenderStudioView : UserControl
             rotation, 0, width, height, samples, environment, _environmentRotation.Value, camera, engine,
             _shadow.IsChecked == true, _shadowStrength.Value, _shadowSoftness.Value, _lightAngle.Value, _lightHeight.Value, _glowDark.IsChecked == true,
             null, 0,
-            "auto", tiff, _zoneFiles.Select(z => new RenderZone(z.File, z.Zone.Hex, z.Zone.Finish)).ToList(), GroundZ: 0);
+            "auto", tiff, _zoneFiles.Select(z => new RenderZone(z.File, z.Zone.Hex, z.Zone.Finish)).ToList(), GroundZ: 0, NoiseThreshold: pass.Noise);
     }
 
     private void ShowSceneFields()

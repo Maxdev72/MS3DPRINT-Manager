@@ -12,7 +12,7 @@ namespace MS3DPRINT.Manager.Desktop.Rendering;
 /// <summary>What the render script needs besides the model: names match the keys read by product_render.py.</summary>
 public sealed record RenderSettings(string Color, string Finish, double LayerHeight, string Scene, string Background,
     double Rotation, double Elevation, int Width, int Height, int Samples, string Environment = "", double EnvironmentRotation = 0, RenderCamera? Camera = null, string Engine = "cycles",
-    bool Shadow = true, double ShadowStrength = 0.3, double ShadowSoftness = 0.5, double LightAngle = 0, double LightHeight = 39, bool GlowDark = false, string? BandColor = null, double BandHeight = 0, string Device = "auto", string? Tiff = null, IReadOnlyList<RenderZone>? Zones = null, double? GroundZ = null);
+    bool Shadow = true, double ShadowStrength = 0.3, double ShadowSoftness = 0.5, double LightAngle = 0, double LightHeight = 39, bool GlowDark = false, string? BandColor = null, double BandHeight = 0, string Device = "auto", string? Tiff = null, IReadOnlyList<RenderZone>? Zones = null, double? GroundZ = null, double NoiseThreshold = 0);
 
 /// <summary>A painted zone sent to Blender: its own STL file, colour and finish.</summary>
 public sealed record RenderZone(string Model, string Color, string Finish);

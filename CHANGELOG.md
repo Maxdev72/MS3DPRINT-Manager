@@ -1,5 +1,9 @@
 # Journal des modifications
 
+## Version 1.0.38 — 26 novembre 2026
+
+- Rendu : l’aperçu net arrive en 1 s au lieu de 1,6 s (Cycles s’arrête là où l’image est déjà propre, sans différence visible) ; le rendu final garde la qualité la plus fine.
+
 ## Version 1.0.37 — 26 novembre 2026
 
 - Rendu : la pièce cliquée s’éclaire sur sa forme exacte (silhouette et contour), plus sur une enveloppe approchée.
