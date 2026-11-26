@@ -150,14 +150,15 @@ public sealed class TaskCoreTests : IDisposable
         {
             Task("Retard", Monday.AddDays(-2)), Task("Aujourd’hui", Monday), Task("Urgent", Monday, ProjectPriority.High),
             Task("Vendredi", Monday.AddDays(4)), Task("Dans un mois", Monday.AddDays(30)), Task("Sans date", null, projectId: project),
-            Task("Fait hier", Monday, done: monday.AddDays(-1)), Task("Fait il y a longtemps", Monday, done: monday.AddDays(-20))
+            Task("Fait hier", Monday, done: monday.AddDays(-1)), Task("Fait il y a longtemps", Monday, done: monday.AddDays(-20)),
+            Task("Coché ce matin", Monday, done: monday)
         };
 
         var sheet = TaskViews.Sheet(tasks, Monday);
 
         Assert.Equal(["En retard", "Aujourd’hui", "Cette semaine", "Plus tard", "Terminées"], sheet.Select(g => g.Title));
         Assert.True(sheet[0].Late);
-        Assert.Equal(["Urgent", "Aujourd’hui"], sheet[1].Tasks.Select(t => t.Title)); // flagged first
+        Assert.Equal(["Urgent", "Aujourd’hui", "Coché ce matin"], sheet[1].Tasks.Select(t => t.Title)); // flagged first; ticked today stays
         Assert.Equal(["Dans un mois", "Sans date"], sheet[3].Tasks.Select(t => t.Title));
         Assert.Equal(["Fait hier"], sheet[4].Tasks.Select(t => t.Title));
         Assert.Contains(TaskViews.Sheet(tasks, Monday, search: "longtemps").SelectMany(g => g.Tasks), t => t.Title == "Fait il y a longtemps");

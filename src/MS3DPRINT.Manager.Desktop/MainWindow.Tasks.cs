@@ -16,12 +16,6 @@ using MS3DPRINT.Manager.Desktop.Dashboard;
 
 namespace MS3DPRINT.Manager.Desktop;
 
-/// <summary>A project offered in the task filter and menus, or none.</summary>
-public sealed record TaskProjectChoice(Guid? Id, string Label, Guid? ClientId = null)
-{
-    public override string ToString() => Label;
-}
-
 /// <summary>
 /// « Tâches » page, a single sheet like the paper one: a line to add a task (today by default), then the tasks by date —
 /// late, today, this week, later, and the last week's done ones. Each line edits in place: tick, title, flag, date, menu.
@@ -39,7 +33,6 @@ public partial class MainWindow
     private readonly HashSet<string> _collapsedTaskGroups = ["Terminées"];
     private DateOnly? _newTaskDate;
     private Guid? _newTaskProject;
-    private bool _syncingTaskFilter;
     private readonly SemaphoreSlim _taskGate = new(1, 1);
     private bool _taskBusy;
     private bool _taskKeysHooked;
@@ -76,7 +69,6 @@ public partial class MainWindow
             _taskProjects = projects.Where(p => p.Profile is not null).ToArray();
             _newTaskDate = TaskToday;
             _newTaskProject = _taskProjectFilter;
-            FillTaskProjectFilter();
             RenderTasks();
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
@@ -91,29 +83,66 @@ public partial class MainWindow
 
     private ProjectSummary? TaskProject(Guid? id) => id is null ? null : _taskProjects.FirstOrDefault(p => p.Profile!.Id == id);
 
-    /// <summary>Active projects, plus the one a task or the filter already points to.</summary>
-    private IReadOnlyList<TaskProjectChoice> TaskProjectChoices(string none, Guid? keep = null) =>
-        [new(null, none), .. _taskProjects.Where(p => !p.IsArchived && p.Profile!.Status != ProjectStatus.Completed || p.Profile!.Id == keep)
-            .OrderBy(p => p.Title(), StringComparer.CurrentCultureIgnoreCase).Select(p => new TaskProjectChoice(p.Profile!.Id, p.Reference + " · " + p.Title(), p.Profile.ClientId))];
-
-    private void FillTaskProjectFilter()
+    /// <summary>
+    /// The project picker of the page (adding, filter, each task): a search box, the recent projects when nothing is typed,
+    /// up to 8 matches otherwise, and the « none » choice. Enter takes the first match.
+    /// </summary>
+    private Flyout ProjectPicker(Guid? current, string none, bool withOpenTasks, Func<Guid?, Task> apply)
     {
-        var choices = TaskProjectChoices("Tous les projets", _taskProjectFilter);
-        _syncingTaskFilter = true;
-        try
+        var flyout = new Flyout { Placement = PlacementMode.BottomEdgeAlignedRight };
+        var search = new TextBox { PlaceholderText = "Chercher un projet, un client…", Width = 360 };
+        AutomationProperties.SetName(search, "Chercher un projet");
+        var heading = new TextBlock { Classes = { "caption" } };
+        var results = new StackPanel { Spacing = 4 };
+        Button Choice(Guid? id, string label)
         {
-            TaskProjectFilter.ItemsSource = choices;
-            TaskProjectFilter.SelectedItem = choices.FirstOrDefault(c => c.Id == _taskProjectFilter) ?? choices[0];
+            var button = new Button { Content = new TextBlock { Text = label, TextTrimming = TextTrimming.CharacterEllipsis }, Classes = { "filter-chip" },
+                HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left };
+            button.Classes.Set("selected", id == current);
+            AutomationProperties.SetName(button, "Projet : " + label);
+            ToolTip.SetTip(button, label);
+            button.Click += async (_, _) => { flyout.Hide(); await apply(id); };
+            return button;
         }
-        finally { _syncingTaskFilter = false; }
+        void Fill()
+        {
+            results.Children.Clear();
+            var typed = !string.IsNullOrWhiteSpace(search.Text);
+            var found = TaskProjectPicker.Rank(_taskProjects, _tasks, search.Text, withOpenTasks, current);
+            heading.Text = typed ? (found.Count == 0 ? "Aucun projet trouvé" : found.Count == TaskProjectPicker.Matches ? "Premiers résultats · précisez pour affiner" : "Résultats")
+                : found.Count == 0 ? "Tapez pour chercher un projet" : "Récents";
+            foreach (var project in found) results.Children.Add(Choice(project.Profile!.Id, $"{project.Title()} · {project.ClientTitle()} · {project.Reference}"));
+            results.Children.Add(Choice(null, none));
+        }
+        search.TextChanged += (_, _) => Fill();
+        search.KeyDown += (_, e) =>
+        {
+            if (e.Key != Key.Enter || results.Children.FirstOrDefault() is not Button first) return;
+            e.Handled = true;
+            first.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        };
+        flyout.Opened += (_, _) => { search.Text = ""; Fill(); Dispatcher.UIThread.Post(() => search.Focus()); };
+        Fill();
+        flyout.Content = new StackPanel { Spacing = 8, Children = { search, heading, results } };
+        return flyout;
     }
 
-    private void TaskProjectFilter_Changed(object? sender, SelectionChangedEventArgs e)
+    private void RenderTaskProjectFilter()
     {
-        if (_syncingTaskFilter || TaskProjectFilter.SelectedItem is not TaskProjectChoice choice) return;
-        _taskProjectFilter = choice.Id;
-        _newTaskProject = choice.Id;
-        RenderTasks();
+        var project = TaskProject(_taskProjectFilter);
+        TaskProjectFilterButton.Content = new StackPanel
+        {
+            Orientation = Orientation.Horizontal, Spacing = 8,
+            Children = { new TextBlock { Text = project?.Title() ?? "Tous les projets", MaxWidth = 260, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center }, Icons.Glyph("IconChevronDown", 14) }
+        };
+        ToolTip.SetTip(TaskProjectFilterButton, project is null ? "Afficher les tâches d’un seul projet" : project.Title() + " · changer de projet");
+        TaskProjectFilterButton.Flyout = ProjectPicker(_taskProjectFilter, "Tous les projets", withOpenTasks: true, id =>
+        {
+            _taskProjectFilter = id;
+            _newTaskProject = id;
+            RenderTasks();
+            return Task.CompletedTask;
+        });
     }
 
     // Typing can arrive before the first load: rendering then would judge the page on empty data.
@@ -126,6 +155,7 @@ public partial class MainWindow
         TaskViewTitle.Text = TaskProject(_taskProjectFilter)?.Title() ?? "Tâches";
         var open = _tasks.Count(t => !t.IsDeleted && !t.IsCompleted && (_taskProjectFilter is null || t.ProjectId == _taskProjectFilter));
         TasksSummary.Text = open switch { 0 => "Rien à faire", 1 => "1 tâche", _ => $"{open} tâches" };
+        RenderTaskProjectFilter();
         RenderNewTaskChips(today);
 
         TaskList.Children.Clear();
@@ -151,17 +181,36 @@ public partial class MainWindow
             header.Click += (_, _) => { if (!_collapsedTaskGroups.Add(group.Title)) _collapsedTaskGroups.Remove(group.Title); RenderTasks(); };
             TaskList.Children.Add(header);
             if (collapsed) continue;
-            foreach (var task in group.Tasks)
+            // Tasks without project first, then one block per project under « Client · Projet », so a line never needs a code to decode.
+            foreach (var block in group.Tasks.GroupBy(t => _taskProjectFilter is null ? TaskProject(t.ProjectId)?.Profile!.Id : null).OrderBy(b => b.Key is not null))
             {
-                var row = BuildTaskRow(task, today);
-                if (task.Id == _selectedTaskId) highlighted = row;
-                TaskList.Children.Add(row);
-                if (_openTaskNotes.Contains(task.Id)) TaskList.Children.Add(BuildTaskNotes(task));
+                if (block.Key is { } projectId && TaskProject(projectId) is { } project) TaskList.Children.Add(BuildTaskProjectHeading(project));
+                foreach (var task in block)
+                {
+                    var row = BuildTaskRow(task, today);
+                    if (task.Id == _selectedTaskId) highlighted = row;
+                    TaskList.Children.Add(row);
+                    if (_openTaskNotes.Contains(task.Id)) TaskList.Children.Add(BuildTaskNotes(task));
+                }
             }
         }
         // Opened from the dashboard: that task shows once, highlighted, then the page behaves as usual.
         if (highlighted is not null) { highlighted.Classes.Add("highlight"); Dispatcher.UIThread.Post(() => highlighted.BringIntoView()); }
         _selectedTaskId = null;
+    }
+
+    /// <summary>The client and the project name above its tasks; a click shows that project alone.</summary>
+    private Control BuildTaskProjectHeading(ProjectSummary project)
+    {
+        var name = new TextBlock { Text = $"{project.ClientTitle()} · {project.Title()}", FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
+        var reference = new TextBlock { Text = project.Reference, Classes = { "caption" }, VerticalAlignment = VerticalAlignment.Center };
+        var glyph = Icons.Glyph("IconProjects", 14); glyph.VerticalAlignment = VerticalAlignment.Center;
+        var line = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { glyph, name, reference } };
+        var button = new Button { Content = line, Classes = { "task-group" }, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(8, 8, 0, 0) };
+        AutomationProperties.SetName(button, "Projet " + project.ClientTitle() + " · " + project.Title());
+        ToolTip.SetTip(button, "Afficher seulement ce projet");
+        button.Click += (_, _) => { _taskProjectFilter = project.Profile!.Id; _newTaskProject = _taskProjectFilter; RenderTasks(); };
+        return button;
     }
 
     // ───────────── Adding: one line, today by default, the project of the filter ─────────────
@@ -172,9 +221,9 @@ public partial class MainWindow
         NewTaskDateButton.Flyout = DateFlyout(_newTaskDate, value => { _newTaskDate = value; RenderNewTaskChips(TaskToday); return Task.CompletedTask; });
         ToolTip.SetTip(NewTaskDateButton, "Date de la nouvelle tâche");
         var project = TaskProject(_newTaskProject);
-        NewTaskProjectButton.Content = Icons.Label("IconProjects", project?.Reference ?? "Projet", 14);
-        ToolTip.SetTip(NewTaskProjectButton, project is null ? "Rattacher la nouvelle tâche à un projet" : project.Title());
-        NewTaskProjectButton.Flyout = ProjectMenu(_newTaskProject, id => { _newTaskProject = id; RenderNewTaskChips(TaskToday); return Task.CompletedTask; });
+        NewTaskProjectButton.Content = Icons.Label("IconProjects", project is null ? "Projet" : project.Title().Length > 28 ? project.Title()[..27] + "…" : project.Title(), 14);
+        ToolTip.SetTip(NewTaskProjectButton, project is null ? "Rattacher la nouvelle tâche à un projet" : $"{project.Title()} · {project.ClientTitle()}");
+        NewTaskProjectButton.Flyout = ProjectPicker(_newTaskProject, "Aucun projet", withOpenTasks: false, id => { _newTaskProject = id; RenderNewTaskChips(TaskToday); return Task.CompletedTask; });
     }
 
     private async void NewTaskBox_KeyDown(object? sender, KeyEventArgs e)
@@ -267,12 +316,6 @@ public partial class MainWindow
             notes.Click += (_, _) => ToggleTaskNotes(task.Id);
             cells.Add(notes);
         }
-        if (task.ProjectId is { } projectId && projectId != _taskProjectFilter && TaskProject(projectId) is { } project)
-        {
-            var pill = new Border { Classes = { "task-chip" }, VerticalAlignment = VerticalAlignment.Center, MaxWidth = 160, Child = new TextBlock { Text = project.Reference, Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis } };
-            ToolTip.SetTip(pill, project.Title());
-            cells.Add(pill);
-        }
         var flagged = task.Priority != ProjectPriority.None;
         var flag = new Button { Content = Icons.Glyph("IconFlag", 16), Classes = { "tool" }, VerticalAlignment = VerticalAlignment.Center };
         if (flagged) flag.Foreground = (IBrush?)Application.Current?.FindResource("WarningBrush") ?? Brushes.Orange;
@@ -295,13 +338,10 @@ public partial class MainWindow
         AutomationProperties.SetName(more, "Actions : " + task.Title); ToolTip.SetTip(more, "Notes, projet, supprimer");
         var notesItem = new MenuItem { Header = string.IsNullOrWhiteSpace(task.Notes) ? "Ajouter une note" : "Notes", Icon = Icons.Glyph("IconEdit", 14) };
         notesItem.Click += (_, _) => { _openTaskNotes.Add(task.Id); RenderTasks(); };
-        var projectItem = new MenuItem { Header = "Projet", Icon = Icons.Glyph("IconProjects", 14) };
-        foreach (var choice in TaskProjectChoices("Aucun projet", task.ProjectId))
-        {
-            var item = new MenuItem { Header = choice.Label, IsChecked = choice.Id == task.ProjectId, ToggleType = MenuItemToggleType.Radio };
-            item.Click += async (_, _) => await SaveTaskChangeAsync(task.Id, t => t with { ProjectId = choice.Id, ClientId = choice.Id is null ? t.ClientId : choice.ClientId });
-            projectItem.Items.Add(item);
-        }
+        var projectItem = new MenuItem { Header = "Projet…", Icon = Icons.Glyph("IconProjects", 14) };
+        // The picker opens from the line once the menu has closed.
+        projectItem.Click += (_, _) => Dispatcher.UIThread.Post(() => ProjectPicker(task.ProjectId, "Aucun projet", withOpenTasks: false, id =>
+            SaveTaskChangeAsync(task.Id, t => t with { ProjectId = id, ClientId = id is null ? t.ClientId : TaskProject(id)?.Profile!.ClientId ?? t.ClientId })).ShowAt(more));
         var remove = new MenuItem { Header = "Supprimer…", Icon = Icons.Glyph("IconTrash", 14), Classes = { "menu-destructive" } };
         remove.Click += async (_, _) => await RemoveTaskAsync(task);
         more.Flyout = new MenuFlyout { Placement = PlacementMode.BottomEdgeAlignedRight, Items = { notesItem, projectItem, new Separator(), remove } };
@@ -363,18 +403,6 @@ public partial class MainWindow
         };
         flyout.Content = new StackPanel { Spacing = 8, Children = { quick, calendar } };
         return flyout;
-    }
-
-    private MenuFlyout ProjectMenu(Guid? current, Func<Guid?, Task> apply)
-    {
-        var menu = new MenuFlyout { Placement = PlacementMode.BottomEdgeAlignedRight };
-        foreach (var choice in TaskProjectChoices("Aucun projet", current))
-        {
-            var item = new MenuItem { Header = choice.Label, IsChecked = choice.Id == current, ToggleType = MenuItemToggleType.Radio };
-            item.Click += async (_, _) => await apply(choice.Id);
-            menu.Items.Add(item);
-        }
-        return menu;
     }
 
     private static string DueLabel(DateOnly due, DateOnly today) => (due.DayNumber - today.DayNumber) switch

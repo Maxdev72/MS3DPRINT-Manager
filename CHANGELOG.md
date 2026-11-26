@@ -1,5 +1,11 @@
 # Journal des modifications
 
+## Version 1.0.41 — 26 novembre 2026
+
+- Tâches : les tâches d’un même projet sont regroupées sous « Client · Nom du projet » (un clic affiche ce projet seul).
+- Tâches : une tâche cochée reste à sa place, barrée, jusqu’au lendemain.
+- Tâches : choix du projet avec recherche (référence, nom ou client, accents ignorés) et les 5 projets récents ; le filtre ne propose que les projets qui ont des tâches en cours.
+
 ## Version 1.0.40 — 26 novembre 2026
 
 - Tâches : nouvelle page sur une seule feuille. Une ligne pour ajouter (aujourd’hui par défaut), les tâches par date (en retard, aujourd’hui, cette semaine, plus tard, terminées), et chaque ligne se modifie sur place : case, texte, drapeau Important, date, notes, projet.

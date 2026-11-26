@@ -178,7 +178,7 @@
           <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="16">
             <TextBlock x:Name="TaskViewTitle" Classes="section-title" FontSize="{DynamicResource FontSizeTitle}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
             <TextBlock x:Name="TasksSummary" Grid.Column="1" Classes="caption" VerticalAlignment="Center" />
-            <ComboBox x:Name="TaskProjectFilter" Grid.Column="3" MinWidth="220" MaxWidth="320" VerticalAlignment="Center" SelectionChanged="TaskProjectFilter_Changed" AutomationProperties.Name="Filtrer par projet" />
+            <Button x:Name="TaskProjectFilterButton" Grid.Column="3" MinWidth="160" MaxWidth="320" Height="40" VerticalAlignment="Center" AutomationProperties.Name="Filtrer par projet" />
             <Border Grid.Column="4" Classes="search-box" Height="40" Width="220"><Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"><Path Classes="icon" Data="{StaticResource IconSearch}" /><TextBox x:Name="TaskFilterBox" Grid.Column="1" Classes="search-input" PlaceholderText="Rechercher · Ctrl+F" TextChanged="TaskFilterText_Changed" AutomationProperties.Name="Rechercher une tâche" /></Grid></Border>
           </Grid>
           <StackPanel x:Name="TaskAddArea" Grid.Row="1" Spacing="8">
